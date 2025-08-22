@@ -8,6 +8,7 @@ import Signup from "./pages/Signup";
 import { Toaster } from "@/components/ui/sonner";
 import { toast } from "sonner";
 import { LogOut } from "lucide-react";
+import UnauthorizedPage from "./components/UnauthorizedPage";
 
 // Layout wrapper for all authenticated pages
 // Includes Sidebar + Logout button + main content area
@@ -108,7 +109,7 @@ export default function App() {
         />
 
         {/* Unauthorized route (when role doesn’t match) */}
-        <Route path="/unauthorized" element={<div>Not allowed</div>} />
+        <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
         {/* Catch-all: redirect unknown routes to dashboard */}
         <Route path="*" element={<Navigate to="/dashboard" />} />
