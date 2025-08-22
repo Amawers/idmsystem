@@ -19,6 +19,7 @@ import imageThree from "../assets/login/example_login_3.jpeg"
 import Autoplay from "embla-carousel-autoplay"
 import { useRef, useState } from "react"
 import { Eye, EyeOff } from "lucide-react"
+import { Loader } from "lucide-react"
 
 export function LoginForm({ onSubmit, userName, setUserName, password, setPassword, className, ...props }) {
 	// PLUGIN REFERENCE FOR AUTOPLAY (Embla Carousel Autoplay plugin)
@@ -28,6 +29,16 @@ export function LoginForm({ onSubmit, userName, setUserName, password, setPasswo
 	// LOCAL STATE TO TOGGLE PASSWORD VISIBILITY (hidden by default)
 	const [showPassword, setShowPassword] = useState(false)
 
+	// wrapper to handle loading
+	const [isLoading, setIsLoading] = useState(false) // loading state
+
+	const handleSubmit = async (e) => {
+		e.preventDefault()
+		setIsLoading(true)
+		await onSubmit(e)   // call parent submit
+		setIsLoading(false)
+	}
+
 	return (
 		<div className={cn("flex flex-col gap-6", className)} {...props}>
 			{/* MAIN LOGIN CARD */}
@@ -35,7 +46,7 @@ export function LoginForm({ onSubmit, userName, setUserName, password, setPasswo
 				<CardContent className="grid p-0 md:grid-cols-2">
 
 					{/* ================= LOGIN FORM SECTION ================= */}
-					<form onSubmit={onSubmit} className="p-6 md:p-8">
+					<form onSubmit={handleSubmit} className="p-6 md:p-8">
 						<div className="flex flex-col gap-6">
 
 							{/* LOGIN HEADER */}
@@ -84,7 +95,9 @@ export function LoginForm({ onSubmit, userName, setUserName, password, setPasswo
 
 							{/* LOGIN BUTTON */}
 							<Button type="submit" className="w-full cursor-pointer">
-								Login
+								{isLoading ? (
+									<><Loader className="mr-2 h-4 w-4 animate-spin" />Logging in...</>
+								) : ("Login")}							
 							</Button>
 
 							{/* DISCLAIMER DIVIDER */}
