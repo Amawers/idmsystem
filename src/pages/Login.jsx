@@ -1,0 +1,91 @@
+import { useState } from "react";
+import { useAuthStore } from "../store/authStore";
+import { useNavigate } from "react-router-dom";
+import { LoginForm } from "@/components/login-form"
+import { toast } from "sonner";
+import { CheckCircle, XCircle } from "lucide-react"
+
+export default function Login() {
+	// ------------------------------
+	// STATE VARIABLES
+	// ------------------------------
+	// userName → stores the username input value
+	// password → stores the password input value
+	// error → stores any login error message for display
+	const [userName, setUserName] = useState("");
+	const [password, setPassword] = useState("");
+	const [error, setError] = useState(null);
+
+	// ------------------------------
+	// AUTH STORE HOOK
+	// ------------------------------
+	// Pulls the "login" function from global auth store (Zustand).
+	// This handles calling Supabase login under the hood.
+	const login = useAuthStore((s) => s.login);
+
+	// ------------------------------
+	// NAVIGATION HOOK
+	// ------------------------------
+	// Provides navigation (redirecting) functionality using react-router.
+	const navigate = useNavigate();
+
+	// ------------------------------
+	// HANDLE LOGIN FUNCTION
+	// ------------------------------
+	// Triggered when the user submits the login form.
+	// 1. Prevents page refresh
+	// 2. Attempts login using auth store
+	// 3. Shows success/error toast
+	// 4. Redirects to dashboard on success
+	const handleLogin = async (e) => {
+		e.preventDefault()
+		try {
+			// Attempt to login with entered credentials
+			await login(userName, password)
+
+			// Show green success toast if login works
+			toast.success("Login successful!", {
+				icon: <CheckCircle className="text-green-500" size={20}/>
+			})
+
+			// Redirect user to dashboard
+			navigate("/dashboard")
+		} catch (err) {
+			// If login fails, store error message
+			setError(err.message)
+
+			// Show red error toast with icon
+			toast.error("Invalid username or password", {
+				icon: <XCircle className="text-red-500" size={20}/>
+			})
+		}
+	}
+
+	return (
+		// ------------------------------
+		// PAGE CONTAINER
+		// ------------------------------
+		// Outer flexbox wrapper: centers login form
+		// bg-muted = subtle background color
+		// min-h-svh = full viewport height
+		<div className="bg-muted flex min-h-svh flex-col items-center justify-center p-6 md:p-10">
+			{/* ------------------------------
+			    LOGIN FORM CONTAINER
+			    ------------------------------ */}
+			<div className="w-full max-w-sm md:max-w-3xl">
+				{/* LOGIN FORM COMPONENT
+				    - Handles rendering input fields & submit button
+				    - Passes down props for form values + state setters
+				    - Calls "handleLogin" when submitted */}
+				<LoginForm 
+					onSubmit={handleLogin}
+					userName={userName}
+					setUserName={setUserName}
+					password={password}
+					setPassword={setPassword}
+					error={error}
+				/>
+			</div>
+		</div>
+	);
+}
