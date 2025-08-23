@@ -1,41 +1,45 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import Sidebar from "./components/Sidebar";
+import Sidebar from "./components/sidebar/Sidebar";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { useAuthStore } from "./store/authStore";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import { Toaster } from "@/components/ui/sonner";
-import { toast } from "sonner";
-import { LogOut } from "lucide-react";
 import UnauthorizedPage from "./components/UnauthorizedPage";
+import {SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SiteHeader } from "./components/site-header";
+import Case from "./pages/Case";
 
 // Layout wrapper for all authenticated pages
 // Includes Sidebar + Logout button + main content area
 function Layout({ children }) {
-  const logout = useAuthStore((s) => s.logout);
+
 
   return (
     <div className="flex">
-      {/* Sidebar always visible for logged-in users */}
-      <Sidebar />
-      <main className="flex-1 p-4">
-        {/* Logout button at top of every page */}
-        <button
-          onClick={() => {
-            logout(); // clear session + store
-            toast.success("Account logged out.", {
-              icon: <LogOut className="text-red-500" size={20} />,
-            });
-          }}
-          className="bg-red-500 text-white p-2 rounded mb-4"
-        >
-          Logout
-        </button>
+      <SidebarProvider
+      style={
+        {
+          "--sidebar-width": "calc(var(--spacing) * 72)",
+          "--header-height": "calc(var(--spacing) * 12)",
+        }
+      }
+      >
+        {/* Sidebar always visible for logged-in users */}
+        <Sidebar  variant="inset"/>
+        <SidebarInset>
+        <SiteHeader />
+        <div className="flex flex-1 flex-col">
+          <div className="@container/main flex flex-1 flex-col gap-2">
+            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+               {children}
 
-        {/* Page content (passed as children) */}
-        {children}
-      </main>
+            </div>
+          </div>
+        </div>
+        </SidebarInset>
+      </SidebarProvider>
     </div>
   );
 }
@@ -53,6 +57,8 @@ export default function App() {
 
   return (
     <BrowserRouter>
+    {/* SidebarProvider wraps everything that uses Sidebar */}
+      
       <Routes>
         {/* Temporary signup page (for dev/testing only) */}
         <Route path="/signup" element={<Signup />} />
@@ -60,49 +66,62 @@ export default function App() {
         {/* Public route: Login page */}
         <Route path="/login" element={<Login />} />
 
-        {/* Protected route: Dashboard (admin + admin_staff) */}
+        {/* Protected route: Case Management (admin staff + case manager + head) */}
         <Route
-          path="/dashboard"
+          path="/case"
           element={
-            <ProtectedRoute allowedRoles={["admin", "admin_staff"]}>
+            <ProtectedRoute allowedRoles={["admin_staff", "case_manager", "head"]}>
               <Layout>
-                <div>Dashboard</div>
+                <Case />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+        
+        {/* Protected route: Program Management (admin staff + case manager + head) */}
+        <Route
+          path="/program"
+          element={
+            <ProtectedRoute allowedRoles={["admin_staff", "case_manager", "head"]}>
+              <Layout>
+                <div>Program Management Page</div>
               </Layout>
             </ProtectedRoute>
           }
         />
 
-        {/* Protected route: Records page (admin + admin_staff) */}
+
+        {/* Protected route: Resource Allocation (case manager + head) */}
         <Route
-          path="/records"
+          path="/resource"
           element={
-            <ProtectedRoute allowedRoles={["admin", "admin_staff"]}>
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
               <Layout>
-                <div>Records Page</div>
+                <div>Resource Allocation Page</div>
               </Layout>
             </ProtectedRoute>
           }
         />
 
-        {/* Protected route: Manage Users (admin only) */}
+        {/* Protected route: Account Management (head) */}
         <Route
-          path="/users"
+          path="/account"
           element={
-            <ProtectedRoute allowedRoles={["admin"]}>
+            <ProtectedRoute allowedRoles={["head"]}>
               <Layout>
-                <div>Manage Users</div>
+                <div>Account Management Page</div>
               </Layout>
             </ProtectedRoute>
           }
         />
 
-        {/* Protected route: Requests page (admin_staff only) */}
+         {/* Protected route: Security & Audit (admin staff + case manager + head) */}
         <Route
-          path="/requests"
+          path="/controls"
           element={
-            <ProtectedRoute allowedRoles={["admin_staff"]}>
+            <ProtectedRoute allowedRoles={["admin_staff", "case_manager", "head"]}>
               <Layout>
-                <div>Requests Page</div>
+                <div>Security & Audit Page</div>
               </Layout>
             </ProtectedRoute>
           }
@@ -112,11 +131,12 @@ export default function App() {
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
 
         {/* Catch-all: redirect unknown routes to dashboard */}
-        <Route path="*" element={<Navigate to="/dashboard" />} />
+        <Route path="*" element={<Navigate to="/case" />} />
       </Routes>
 
       {/* Sonner toast system (global notifications) */}
       <Toaster />
+      
     </BrowserRouter>
   );
 }

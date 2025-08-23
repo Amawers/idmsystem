@@ -1,0 +1,91 @@
+import * as React from "react"
+import { Link } from "react-router-dom"
+import { useAuthStore } from "../../store/authStore"
+import { NavUser } from "@/components/sidebar/nav-user"
+
+import {
+  Sidebar as ShadcnSidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarFooter,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+} from "@/components/ui/sidebar"
+import { NavMain } from "@/components/sidebar/nav-main"
+
+import { 
+	IconHeartHandshake, 
+	IconClipboardData, 
+	IconListDetails, 
+	IconChartBar,
+	IconUsersGroup,
+	IconLogs
+} from "@tabler/icons-react"
+
+const data = {
+  user: {
+    name: "shadcn",
+    email: "m@example.com",
+    avatar: "/avatars/shadcn.jpg",
+  }
+}
+
+export default function Sidebar(props) {
+  const { role } = useAuthStore() // get logged-in user's role
+
+  // ================= ROLE-BASED NAVIGATION =================
+  const roleNavs = {
+    admin_staff: [
+      { path: "/case", label: "Case Management", icon: IconHeartHandshake },
+      { path: "/program", label: "Program Management", icon: IconClipboardData },
+      { path: "/controls", label: "Security & Audit", icon: IconLogs },
+    ],
+    case_manager: [
+      { path: "/case", label: "Case Management", icon: IconHeartHandshake },
+      { path: "/program", label: "Program Management", icon: IconListDetails },
+      { path: "/resource", label: "Resource Allocation", icon: IconChartBar },
+      { path: "/controls", label: "Security & Audit", icon: IconLogs },
+    ],
+    head: [
+      { path: "/case", label: "Case Management", icon: IconHeartHandshake },
+      { path: "/program", label: "Program Management", icon: IconListDetails },
+      { path: "/resource", label: "Resource Allocation", icon: IconChartBar },
+      { path: "/account", label: "Account Management", icon: IconUsersGroup },
+      { path: "/controls", label: "Security & Audit", icon: IconLogs },
+    ],
+  }
+
+  const navItems = roleNavs[role] || [] // get items based on role
+
+  return (
+    <ShadcnSidebar collapsible="offcanvas" {...props}>
+      
+      {/* ================= HEADER ================= */}
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild>
+              <Link to="/dashboard">
+                <span className="font-semibold">Menu</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarHeader>
+
+      {/* ================= CONTENT ================= */}
+      <SidebarContent>
+        {/* Dynamic navigation menu (based on role) */}
+        <NavMain items={navItems} />
+      </SidebarContent>
+
+      {/* ================= FOOTER ================= */}
+      <SidebarFooter>
+        {/* User dropdown (profile, account, logout, etc.) */}
+        <NavUser user={data.user} />
+      </SidebarFooter>
+
+    </ShadcnSidebar>
+  )
+}
