@@ -28,6 +28,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar"
+import { DatePicker } from "../../components/date-picker";
 
 const data = {
   user: {
@@ -88,6 +89,8 @@ export default function Sidebar(props) {
       <SidebarContent>
         {/* Dynamic navigation menu (based on role) */}
         <NavMain items={navItems} />
+        <DatePicker />
+
       </SidebarContent>
 
       {/* ================= FOOTER ================= */}
