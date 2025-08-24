@@ -22,6 +22,12 @@ import {
 	IconUsersGroup,
 	IconLogs
 } from "@tabler/icons-react"
+import logo from "../../assets/example_logo.png"
+import {
+  Avatar,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar"
 
 const data = {
   user: {
@@ -67,7 +73,11 @@ export default function Sidebar(props) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <Link to="/dashboard">
-                <span className="font-semibold">Menu</span>
+               <Avatar className="h-8 w-8 rounded-lg grayscale">
+                <AvatarImage src={logo} alt="IDMS" />
+                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
+              </Avatar>
+                <span className="font-semibold">IDMS</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
