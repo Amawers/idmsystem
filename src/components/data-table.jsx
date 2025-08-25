@@ -3,6 +3,8 @@
 //! ===========================================
 
 import * as React from "react"
+
+// DnD-kit imports for drag-and-drop functionality
 import {
   closestCenter,
   DndContext,
@@ -20,6 +22,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable"
 import { CSS } from "@dnd-kit/utilities"
+
+// Icons
 import {
   IconChevronDown,
   IconChevronLeft,
@@ -34,6 +38,8 @@ import {
   IconPlus,
   IconTrendingUp,
 } from "@tabler/icons-react"
+
+// React Table imports (tanstack)
 import {
   flexRender,
   getCoreRowModel,
@@ -44,11 +50,17 @@ import {
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
+
+// Chart (Recharts)
 import { Area, AreaChart, CartesianGrid, XAxis } from "recharts"
+
+// Other utilities
 import { toast } from "sonner"
 import { z } from "zod"
 
 import { useIsMobile } from "@/hooks/use-mobile"
+
+// UI components from shadcn
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
@@ -96,6 +108,9 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs"
 
+// ====================
+// Data validation schema (Zod)
+// ====================
 export const schema = z.object({
   id: z.number(),
   header: z.string(),
@@ -106,7 +121,9 @@ export const schema = z.object({
   reviewer: z.string(),
 })
 
-// Create a separate component for the drag handle
+// ====================
+// Drag handle component (grip icon for rows)
+// ====================
 function DragHandle({
   id
 }) {
@@ -127,12 +144,17 @@ function DragHandle({
   );
 }
 
+// ====================
+// Table column definitions
+// ====================
 const columns = [
   {
     id: "drag",
     header: () => null,
     cell: ({ row }) => <DragHandle id={row.original.id} />,
   },
+  
+  // Checkbox column (select rows)
   {
     id: "select",
     header: ({ table }) => (
@@ -157,6 +179,8 @@ const columns = [
     enableSorting: false,
     enableHiding: false,
   },
+  
+  // Other data columns (header, type, status, etc.)
   {
     accessorKey: "header",
     header: "Header",
@@ -194,6 +218,7 @@ const columns = [
     accessorKey: "target",
     header: () => <div className="w-full text-right">Target</div>,
     cell: ({ row }) => (
+      // Input form for editing target
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -217,6 +242,8 @@ const columns = [
     accessorKey: "limit",
     header: () => <div className="w-full text-right">Limit</div>,
     cell: ({ row }) => (
+
+      // Input form for editing limit
       <form
         onSubmit={(e) => {
           e.preventDefault()
@@ -240,12 +267,14 @@ const columns = [
     accessorKey: "reviewer",
     header: "Reviewer",
     cell: ({ row }) => {
+      // If already assigned → show name
       const isAssigned = row.original.reviewer !== "Assign reviewer"
 
       if (isAssigned) {
         return row.original.reviewer
       }
 
+      // If not assigned → show dropdown
       return (
         <>
           <Label htmlFor={`${row.original.id}-reviewer`} className="sr-only">
@@ -272,6 +301,7 @@ const columns = [
   {
     id: "actions",
     cell: () => (
+      // Row actions dropdown
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
@@ -294,6 +324,9 @@ const columns = [
   },
 ]
 
+// ====================
+// Row component with drag-and-drop applied
+// ====================
 function DraggableRow({
   row
 }) {
@@ -320,6 +353,9 @@ function DraggableRow({
   );
 }
 
+// ====================
+// Main DataTable component
+// ====================
 export function DataTable({
   data: initialData
 }) {
@@ -333,6 +369,8 @@ export function DataTable({
     pageIndex: 0,
     pageSize: 10,
   })
+
+  // Setup sensors for drag-and-drop
   const sortableId = React.useId()
   const sensors = useSensors(
     useSensor(MouseSensor, {}),
@@ -340,8 +378,10 @@ export function DataTable({
     useSensor(KeyboardSensor, {})
   )
 
+  // Extract row IDs for DnD
   const dataIds = React.useMemo(() => data?.map(({ id }) => id) || [], [data])
 
+  // Initialize react-table
   const table = useReactTable({
     data,
     columns,
@@ -367,6 +407,7 @@ export function DataTable({
     getFacetedUniqueValues: getFacetedUniqueValues(),
   })
 
+  // Handle row drag end (reorder rows)
   function handleDragEnd(event) {
     const { active, over } = event
     if (active && over && active.id !== over.id) {
@@ -378,6 +419,9 @@ export function DataTable({
     }
   }
 
+   // ====================
+  // UI render
+  // ====================
   return (
     <Tabs defaultValue="outline" className="w-full flex-col justify-start gap-6">
       <div className="flex items-center justify-between px-4 lg:px-6">
@@ -571,6 +615,9 @@ export function DataTable({
   );
 }
 
+// ====================
+// Chart + Drawer (when clicking header cell)
+// ====================
 const chartData = [
   { month: "January", desktop: 186, mobile: 80 },
   { month: "February", desktop: 305, mobile: 200 },
