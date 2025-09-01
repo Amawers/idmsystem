@@ -36,17 +36,21 @@ export function LoginForm({
 	};
 
 	return (
-		<div className={cn("flex flex-col gap-6", className)} {...props}>
+		<div
+			className={cn("flex flex-col gap-6 items-center", className)}
+			{...props}
+		>
 			{/* MAIN LOGIN CARD */}
-			<Card className="overflow-hidden p-0">
-				<CardContent className="grid p-0 md:grid-cols-2">
+			<Card className="overflow-hidden p-0 md:w-3/5">
+				<CardContent className="p-0">
 					{/* ================= LOGIN FORM SECTION ================= */}
 					<form onSubmit={handleSubmit} className="p-6 md:p-8">
 						<div className="flex flex-col gap-6">
 							{/* LOGIN HEADER */}
 							<div className="flex flex-col items-center text-center">
+								<img src={logo} className="h-16" />
 								<h1 className="text-2xl font-bold">
-									Welcome back
+									IDMSystem
 								</h1>
 								<p className="text-muted-foreground text-balance">
 									Login to your account
@@ -62,9 +66,7 @@ export function LoginForm({
 									placeholder="ex.JuanCruz04@gmail.com"
 									required
 									value={email}
-									onChange={(e) =>
-										setEmail(e.target.value)
-									} // sync input to parent state
+									onChange={(e) => setEmail(e.target.value)} // sync input to parent state
 								/>
 							</div>
 
@@ -142,9 +144,9 @@ export function LoginForm({
 					</form>
 
 					{/* ================= RIGHT SIDE LOGO IMAGE ================= */}
-					<div className="h-full min-h-0 hidden md:flex items-center justify-center">
+					{/* <div className="h-full min-h-0 hidden md:flex items-center justify-center">
 						<img src={logo} className="h-72" />
-					</div>
+					</div> */}
 				</CardContent>
 			</Card>
 		</div>

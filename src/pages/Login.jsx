@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { useAuthStore } from "../store/authStore";
 import { useNavigate } from "react-router-dom";
-import { LoginForm } from "@/components/login-form"
+import { LoginForm } from "@/components/login-form";
 import { toast } from "sonner";
-import { CheckCircle, XCircle } from "lucide-react"
-
+import { CheckCircle, XCircle } from "lucide-react";
+import bg from "../assets/barangay-background-blur.jpg";
 export default function Login() {
 	// ------------------------------
 	// STATE VARIABLES
@@ -38,28 +38,28 @@ export default function Login() {
 	// 3. Shows success/error toast
 	// 4. Redirects to dashboard on success
 	const handleLogin = async (e) => {
-		e.preventDefault()
+		e.preventDefault();
 		try {
 			// Attempt to login with entered credentials
-			await login(email, password)
+			await login(email, password);
 
 			// Show green success toast if login works
 			toast.success("Login successful!", {
-				icon: <CheckCircle className="text-green-500" size={20}/>
-			})
+				icon: <CheckCircle className="text-green-500" size={20} />,
+			});
 
 			// Redirect user to dashboard
-			navigate("/dashboard")
+			navigate("/dashboard");
 		} catch (err) {
 			// If login fails, store error message
-			setError(err.message)
+			setError(err.message);
 
 			// Show red error toast with icon
 			toast.error("Invalid username or password", {
-				icon: <XCircle className="text-red-500" size={20}/>
-			})
+				icon: <XCircle className="text-red-500" size={20} />,
+			});
 		}
-	}
+	};
 
 	return (
 		// ------------------------------
@@ -68,7 +68,11 @@ export default function Login() {
 		// Outer flexbox wrapper: centers login form
 		// bg-muted = subtle background color
 		// min-h-svh = full viewport height
-		<div className="bg-muted flex min-h-svh flex-col items-center justify-center p-6 md:p-10">
+		<div
+			className="bg-muted flex min-h-svh flex-col items-center justify-center p-6 md:p-10 bg-cover bg-center"
+			style={{ backgroundImage: `url(${bg})` }}
+		>
+			{" "}
 			{/* ------------------------------
 			    LOGIN FORM CONTAINER
 			    ------------------------------ */}
@@ -77,7 +81,7 @@ export default function Login() {
 				    - Handles rendering input fields & submit button
 				    - Passes down props for form values + state setters
 				    - Calls "handleLogin" when submitted */}
-				<LoginForm 
+				<LoginForm
 					onSubmit={handleLogin}
 					email={email}
 					setEmail={setEmail}
