@@ -11,6 +11,9 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Eye, EyeOff } from "lucide-react";
+import { Input } from "@/components/ui/input";
+
 //! ==================================================>
 //! DEVELOPMENT PURPOSE COMPONENT, DELETED IN FINAL APP
 //! ==================================================>
@@ -22,7 +25,7 @@ export default function Signup() {
 	const [role, setRole] = useState("");
 	const [error, setError] = useState(null);
 	const [success, setSuccess] = useState(null);
-
+	const [showPassword, setShowPassword] = useState(false);
 	const navigate = useNavigate();
 
 	const handleSignup = async (e) => {
@@ -74,13 +77,31 @@ export default function Signup() {
 					onChange={(e) => setEmail(e.target.value)}
 				/>
 
-				<input
-					type="password"
-					placeholder="Password"
-					className="border p-2 w-full mb-3 rounded"
-					value={password}
-					onChange={(e) => setPassword(e.target.value)}
-				/>
+				<div className="grid gap-3 mb-3">
+					<div className="relative">
+						<Input
+							id="password"
+							type={showPassword ? "text" : "password"} // toggle input type
+							placeholder="Password"
+							required
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+							className="pr-10" // space for eye icon
+						/>
+						{/* BUTTON TO SHOW/HIDE PASSWORD */}
+						<button
+							type="button"
+							onClick={() => setShowPassword(!showPassword)}
+							className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 hover:text-gray-700 outline-0 cursor-pointer"
+						>
+							{showPassword ? (
+								<EyeOff size={18} />
+							) : (
+								<Eye size={18} />
+							)}
+						</button>
+					</div>
+				</div>
 
 				<DropdownMenu>
 					<DropdownMenuTrigger asChild className="w-full mb-3">
@@ -95,13 +116,13 @@ export default function Signup() {
 							value={role}
 							onValueChange={setRole}
 						>
-							<DropdownMenuRadioItem value="Head">
+							<DropdownMenuRadioItem value="head">
 								Head
 							</DropdownMenuRadioItem>
-							<DropdownMenuRadioItem value="Case Manager">
+							<DropdownMenuRadioItem value="case_manager">
 								Case Manager
 							</DropdownMenuRadioItem>
-							<DropdownMenuRadioItem value="Admin Staff">
+							<DropdownMenuRadioItem value="admin_staff">
 								Admin Staff
 							</DropdownMenuRadioItem>
 						</DropdownMenuRadioGroup>

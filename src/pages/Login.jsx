@@ -9,10 +9,10 @@ export default function Login() {
 	// ------------------------------
 	// STATE VARIABLES
 	// ------------------------------
-	// userName → stores the username input value
+	// email → stores the email input value
 	// password → stores the password input value
 	// error → stores any login error message for display
-	const [userName, setUserName] = useState("");
+	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState(null);
 
@@ -41,7 +41,7 @@ export default function Login() {
 		e.preventDefault()
 		try {
 			// Attempt to login with entered credentials
-			await login(userName, password)
+			await login(email, password)
 
 			// Show green success toast if login works
 			toast.success("Login successful!", {
@@ -79,8 +79,8 @@ export default function Login() {
 				    - Calls "handleLogin" when submitted */}
 				<LoginForm 
 					onSubmit={handleLogin}
-					userName={userName}
-					setUserName={setUserName}
+					email={email}
+					setEmail={setEmail}
 					password={password}
 					setPassword={setPassword}
 					error={error}

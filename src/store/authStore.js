@@ -29,9 +29,9 @@ export const useAuthStore = create((set) => ({
       // 2. After successful login, fetch user role from 'profiles' table
       //    We link the profile to the auth user via user_id
       const { data: profile, error: profileError } = await supabase
-        .from("profiles")
+        .from("profile")
         .select("role")
-        .eq("user_id", data.user.id)
+        .eq("id", data.user.id)
         .maybeSingle(); // maybeSingle() = return 1 row or null (safe)
 
       if (profileError) throw profileError;
