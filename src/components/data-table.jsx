@@ -31,6 +31,8 @@ import {
   IconChevronsLeft,
   IconChevronsRight,
   IconCircleCheckFilled,
+  IconClipboardText,
+  IconCheckbox,
   IconDotsVertical,
   IconGripVertical,
   IconLayoutColumns,
@@ -118,7 +120,7 @@ export const schema = z.object({
   status: z.string(),
   target: z.string(),
   limit: z.string(),
-  reviewer: z.string(),
+  caseManager: z.string(),
 })
 
 // ====================
@@ -204,12 +206,20 @@ const columns = [
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => (
-      <Badge variant="outline" className="text-muted-foreground px-1.5">
-        {row.original.status === "Done" ? (
-          <IconCircleCheckFilled className="fill-green-500 dark:fill-green-400" />
-        ) : (
-          <IconLoader />
+      <Badge variant="outline" className="text-muted-foreground px-1.5 flex items-center gap-1">
+        {row.original.status === "Filed" && (
+          <IconClipboardText className="text-gray-500" size={16} />
         )}
+        {row.original.status === "Assessed" && (
+          <IconCheckbox className="text-blue-500" size={16} />
+        )}
+        {row.original.status === "In Process" && (
+          <IconLoader className="text-orange-500 animate-spin" size={16} />
+        )}
+        {row.original.status === "Resolved" ? (
+          <IconCircleCheckFilled className="text-green-500" size={16} />
+        ) : null}
+        
         {row.original.status}
       </Badge>
     ),
@@ -264,28 +274,28 @@ const columns = [
     ),
   },
   {
-    accessorKey: "reviewer",
-    header: "Reviewer",
+    accessorKey: "caseManager",
+    header: "Case Manager",
     cell: ({ row }) => {
       // If already assigned → show name
-      const isAssigned = row.original.reviewer !== "Assign reviewer"
+      const isAssigned = row.original.case_manager !== null
 
       if (isAssigned) {
-        return row.original.reviewer
+        return row.original.case_manager
       }
 
       // If not assigned → show dropdown
       return (
         <>
-          <Label htmlFor={`${row.original.id}-reviewer`} className="sr-only">
-            Reviewer
+          <Label htmlFor={`${row.original.id}-caseManager`} className="sr-only">
+            Case Manager
           </Label>
           <Select>
             <SelectTrigger
               className="w-38 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
               size="sm"
-              id={`${row.original.id}-reviewer`}>
-              <SelectValue placeholder="Assign reviewer" />
+              id={`${row.original.id}-caseManager`}>
+              <SelectValue placeholder="Case Manager" />
             </SelectTrigger>
             <SelectContent align="end">
               <SelectItem value="Eddie Lake">Eddie Lake</SelectItem>
@@ -766,10 +776,10 @@ function TableCellViewer({
               </div>
             </div>
             <div className="flex flex-col gap-3">
-              <Label htmlFor="reviewer">Reviewer</Label>
-              <Select defaultValue={item.reviewer}>
-                <SelectTrigger id="reviewer" className="w-full">
-                  <SelectValue placeholder="Select a reviewer" />
+              <Label htmlFor="caseManager">Case Manager</Label>
+              <Select defaultValue={item.case_manager}>
+                <SelectTrigger id="caseManager" className="w-full">
+                  <SelectValue placeholder="Select a Case Manager" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Eddie Lake">Eddie Lake</SelectItem>

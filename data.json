@@ -6,34 +6,34 @@
     "status": "In Process",
     "target": "18",
     "limit": "5",
-    "reviewer": "Eddie Lake"
+    "case_manager": "Eddie Lake"
   },
   {
     "id": 2,
     "header": "Table of contents",
     "type": "Table of contents",
-    "status": "Done",
+    "status": "Filed",
     "target": "29",
     "limit": "24",
-    "reviewer": "Eddie Lake"
+    "case_manager": "Eddie Lake"
   },
   {
     "id": 3,
     "header": "Executive summary",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Filed",
     "target": "10",
     "limit": "13",
-    "reviewer": "Eddie Lake"
+    "case_manager": "Eddie Lake"
   },
   {
     "id": 4,
     "header": "Technical approach",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Filed",
     "target": "27",
     "limit": "23",
-    "reviewer": "Jamik Tashpulatov"
+    "case_manager": "Jamik Tashpulatov"
   },
   {
     "id": 5,
@@ -42,7 +42,7 @@
     "status": "In Process",
     "target": "2",
     "limit": "16",
-    "reviewer": "Jamik Tashpulatov"
+    "case_manager": "Jamik Tashpulatov"
   },
   {
     "id": 6,
@@ -51,7 +51,7 @@
     "status": "In Process",
     "target": "20",
     "limit": "8",
-    "reviewer": "Jamik Tashpulatov"
+    "case_manager": "Jamik Tashpulatov"
   },
   {
     "id": 7,
@@ -60,79 +60,79 @@
     "status": "In Process",
     "target": "19",
     "limit": "21",
-    "reviewer": "Jamik Tashpulatov"
+    "case_manager": "Jamik Tashpulatov"
   },
   {
     "id": 8,
     "header": "Innovation and Advantages",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Filed",
     "target": "25",
     "limit": "26",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 9,
     "header": "Overview of EMR's Innovative Solutions",
     "type": "Technical content",
-    "status": "Done",
+    "status": "Resolved",
     "target": "7",
     "limit": "23",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 10,
     "header": "Advanced Algorithms and Machine Learning",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Resolved",
     "target": "30",
     "limit": "28",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 11,
     "header": "Adaptive Communication Protocols",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Resolved",
     "target": "9",
     "limit": "31",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 12,
     "header": "Advantages Over Current Technologies",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Resolved",
     "target": "12",
     "limit": "0",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 13,
     "header": "Past Performance",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Resolved",
     "target": "22",
     "limit": "33",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 14,
     "header": "Customer Feedback and Satisfaction Levels",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Resolved",
     "target": "15",
     "limit": "34",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 15,
     "header": "Implementation Challenges and Solutions",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Resolved",
     "target": "3",
     "limit": "35",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 16,
@@ -141,43 +141,43 @@
     "status": "In Process",
     "target": "6",
     "limit": "36",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 17,
     "header": "Scalability and Future Proofing",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Resolved",
     "target": "4",
     "limit": "37",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 18,
     "header": "Cost-Benefit Analysis",
     "type": "Plain language",
-    "status": "Done",
+    "status": "Assessed",
     "target": "14",
     "limit": "38",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 19,
     "header": "User Training and Onboarding Experience",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Assessed",
     "target": "17",
     "limit": "39",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 20,
     "header": "Future Development Roadmap",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Assessed",
     "target": "11",
     "limit": "40",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 21,
@@ -186,16 +186,16 @@
     "status": "In Process",
     "target": "24",
     "limit": "18",
-    "reviewer": "Maya Johnson"
+    "case_manager": "Maya Johnson"
   },
   {
     "id": 22,
     "header": "Risk Management Plan",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Resolved",
     "target": "15",
     "limit": "22",
-    "reviewer": "Carlos Rodriguez"
+    "case_manager": "Carlos Rodriguez"
   },
   {
     "id": 23,
@@ -204,16 +204,16 @@
     "status": "In Process",
     "target": "31",
     "limit": "27",
-    "reviewer": "Sarah Chen"
+    "case_manager": "Sarah Chen"
   },
   {
     "id": 24,
     "header": "API Documentation",
     "type": "Technical content",
-    "status": "Done",
+    "status": "Resolved",
     "target": "8",
     "limit": "12",
-    "reviewer": "Raj Patel"
+    "case_manager": "Raj Patel"
   },
   {
     "id": 25,
@@ -222,16 +222,16 @@
     "status": "In Process",
     "target": "19",
     "limit": "25",
-    "reviewer": "Leila Ahmadi"
+    "case_manager": "Leila Ahmadi"
   },
   {
     "id": 26,
     "header": "Database Schema",
     "type": "Technical content",
-    "status": "Done",
+    "status": "Resolved",
     "target": "22",
     "limit": "20",
-    "reviewer": "Thomas Wilson"
+    "case_manager": "Thomas Wilson"
   },
   {
     "id": 27,
@@ -240,16 +240,16 @@
     "status": "In Process",
     "target": "17",
     "limit": "14",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 28,
     "header": "Deployment Strategy",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Resolved",
     "target": "26",
     "limit": "30",
-    "reviewer": "Eddie Lake"
+    "case_manager": "Eddie Lake"
   },
   {
     "id": 29,
@@ -258,16 +258,16 @@
     "status": "In Process",
     "target": "13",
     "limit": "16",
-    "reviewer": "Jamik Tashpulatov"
+    "case_manager": "Jamik Tashpulatov"
   },
   {
     "id": 30,
     "header": "Market Analysis",
     "type": "Research",
-    "status": "Done",
+    "status": "Resolved",
     "target": "29",
     "limit": "32",
-    "reviewer": "Sophia Martinez"
+    "case_manager": "Sophia Martinez"
   },
   {
     "id": 31,
@@ -276,16 +276,16 @@
     "status": "In Process",
     "target": "21",
     "limit": "19",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 32,
     "header": "Maintenance Plan",
     "type": "Technical content",
-    "status": "Done",
+    "status": "Resolved",
     "target": "16",
     "limit": "23",
-    "reviewer": "Alex Thompson"
+    "case_manager": "Alex Thompson"
   },
   {
     "id": 33,
@@ -294,16 +294,16 @@
     "status": "In Process",
     "target": "27",
     "limit": "24",
-    "reviewer": "Nina Patel"
+    "case_manager": "Nina Patel"
   },
   {
     "id": 34,
     "header": "Accessibility Compliance",
     "type": "Legal",
-    "status": "Done",
+    "status": "Resolved",
     "target": "18",
     "limit": "21",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 35,
@@ -312,16 +312,16 @@
     "status": "In Process",
     "target": "23",
     "limit": "26",
-    "reviewer": "David Kim"
+    "case_manager": "David Kim"
   },
   {
     "id": 36,
     "header": "Disaster Recovery Plan",
     "type": "Technical content",
-    "status": "Done",
+    "status": "Resolved",
     "target": "14",
     "limit": "17",
-    "reviewer": "Jamik Tashpulatov"
+    "case_manager": "Jamik Tashpulatov"
   },
   {
     "id": 37,
@@ -330,16 +330,16 @@
     "status": "In Process",
     "target": "25",
     "limit": "28",
-    "reviewer": "Eddie Lake"
+    "case_manager": "Eddie Lake"
   },
   {
     "id": 38,
     "header": "User Feedback Summary",
     "type": "Research",
-    "status": "Done",
+    "status": "Resolved",
     "target": "20",
     "limit": "15",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 39,
@@ -348,16 +348,16 @@
     "status": "In Process",
     "target": "12",
     "limit": "19",
-    "reviewer": "Maria Garcia"
+    "case_manager": "Maria Garcia"
   },
   {
     "id": 40,
     "header": "Mobile Compatibility",
     "type": "Technical content",
-    "status": "Done",
+    "status": "Resolved",
     "target": "28",
     "limit": "31",
-    "reviewer": "James Wilson"
+    "case_manager": "James Wilson"
   },
   {
     "id": 41,
@@ -366,16 +366,16 @@
     "status": "In Process",
     "target": "19",
     "limit": "22",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 42,
     "header": "Quality Assurance Protocols",
     "type": "Technical content",
-    "status": "Done",
+    "status": "Resolved",
     "target": "30",
     "limit": "33",
-    "reviewer": "Priya Singh"
+    "case_manager": "Priya Singh"
   },
   {
     "id": 43,
@@ -384,16 +384,16 @@
     "status": "In Process",
     "target": "11",
     "limit": "14",
-    "reviewer": "Eddie Lake"
+    "case_manager": "Eddie Lake"
   },
   {
     "id": 44,
     "header": "Environmental Impact Assessment",
     "type": "Research",
-    "status": "Done",
+    "status": "Resolved",
     "target": "24",
     "limit": "27",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 45,
@@ -402,16 +402,16 @@
     "status": "In Process",
     "target": "17",
     "limit": "20",
-    "reviewer": "Sarah Johnson"
+    "case_manager": "Sarah Johnson"
   },
   {
     "id": 46,
     "header": "Customer Support Framework",
     "type": "Narrative",
-    "status": "Done",
+    "status": "Resolved",
     "target": "22",
     "limit": "25",
-    "reviewer": "Jamik Tashpulatov"
+    "case_manager": "Jamik Tashpulatov"
   },
   {
     "id": 47,
@@ -420,16 +420,16 @@
     "status": "In Process",
     "target": "15",
     "limit": "18",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 48,
     "header": "Continuous Integration Pipeline",
     "type": "Technical content",
-    "status": "Done",
+    "status": "Resolved",
     "target": "26",
     "limit": "29",
-    "reviewer": "Michael Chen"
+    "case_manager": "Michael Chen"
   },
   {
     "id": 49,
@@ -438,16 +438,16 @@
     "status": "In Process",
     "target": "13",
     "limit": "16",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 50,
     "header": "User Authentication System",
     "type": "Technical content",
-    "status": "Done",
+    "status": "Resolved",
     "target": "28",
     "limit": "31",
-    "reviewer": "Eddie Lake"
+    "case_manager": "Eddie Lake"
   },
   {
     "id": 51,
@@ -456,16 +456,16 @@
     "status": "In Process",
     "target": "21",
     "limit": "24",
-    "reviewer": "Jamik Tashpulatov"
+    "case_manager": "Jamik Tashpulatov"
   },
   {
     "id": 52,
     "header": "Cloud Infrastructure",
     "type": "Technical content",
-    "status": "Done",
+    "status": "Resolved",
     "target": "16",
     "limit": "19",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 53,
@@ -474,16 +474,16 @@
     "status": "In Process",
     "target": "29",
     "limit": "32",
-    "reviewer": "Lisa Wong"
+    "case_manager": "Lisa Wong"
   },
   {
     "id": 54,
     "header": "Project Timeline",
     "type": "Planning",
-    "status": "Done",
+    "status": "Resolved",
     "target": "14",
     "limit": "17",
-    "reviewer": "Eddie Lake"
+    "case_manager": "Eddie Lake"
   },
   {
     "id": 55,
@@ -492,16 +492,16 @@
     "status": "In Process",
     "target": "27",
     "limit": "30",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 56,
     "header": "Team Structure and Roles",
     "type": "Planning",
-    "status": "Done",
+    "status": "Resolved",
     "target": "20",
     "limit": "23",
-    "reviewer": "Jamik Tashpulatov"
+    "case_manager": "Jamik Tashpulatov"
   },
   {
     "id": 57,
@@ -510,16 +510,16 @@
     "status": "In Process",
     "target": "15",
     "limit": "18",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 58,
     "header": "Success Metrics",
     "type": "Planning",
-    "status": "Done",
+    "status": "Resolved",
     "target": "30",
     "limit": "33",
-    "reviewer": "Eddie Lake"
+    "case_manager": "Eddie Lake"
   },
   {
     "id": 59,
@@ -528,16 +528,16 @@
     "status": "In Process",
     "target": "23",
     "limit": "26",
-    "reviewer": "Jamik Tashpulatov"
+    "case_manager": "Jamik Tashpulatov"
   },
   {
     "id": 60,
     "header": "Backup and Recovery Procedures",
     "type": "Technical content",
-    "status": "Done",
+    "status": "Resolved",
     "target": "18",
     "limit": "21",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 61,
@@ -546,16 +546,16 @@
     "status": "In Process",
     "target": "25",
     "limit": "28",
-    "reviewer": "Daniel Park"
+    "case_manager": "Daniel Park"
   },
   {
     "id": 62,
     "header": "Code Review Guidelines",
     "type": "Technical content",
-    "status": "Done",
+    "status": "Resolved",
     "target": "12",
     "limit": "15",
-    "reviewer": "Eddie Lake"
+    "case_manager": "Eddie Lake"
   },
   {
     "id": 63,
@@ -564,16 +564,16 @@
     "status": "In Process",
     "target": "27",
     "limit": "30",
-    "reviewer": "Jamik Tashpulatov"
+    "case_manager": "Jamik Tashpulatov"
   },
   {
     "id": 64,
     "header": "Release Management Process",
     "type": "Planning",
-    "status": "Done",
+    "status": "Resolved",
     "target": "22",
     "limit": "25",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   },
   {
     "id": 65,
@@ -582,16 +582,16 @@
     "status": "In Process",
     "target": "19",
     "limit": "22",
-    "reviewer": "Emma Davis"
+    "case_manager": "Emma Davis"
   },
   {
     "id": 66,
     "header": "Technical Debt Assessment",
     "type": "Technical content",
-    "status": "Done",
+    "status": "Resolved",
     "target": "24",
     "limit": "27",
-    "reviewer": "Eddie Lake"
+    "case_manager": "Eddie Lake"
   },
   {
     "id": 67,
@@ -600,15 +600,15 @@
     "status": "In Process",
     "target": "21",
     "limit": "24",
-    "reviewer": "Jamik Tashpulatov"
+    "case_manager": "Jamik Tashpulatov"
   },
   {
     "id": 68,
     "header": "Service Level Agreements",
     "type": "Legal",
-    "status": "Done",
+    "status": "Resolved",
     "target": "26",
     "limit": "29",
-    "reviewer": "Assign reviewer"
+    "case_manager": null
   }
 ]
