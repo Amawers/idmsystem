@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Link } from "react-router-dom"
-import { useAuthStore } from "../../store/authStore"
+import { useAuthStore } from "@/store/authStore"
 import { NavUser } from "@/components/sidebar/nav-user"
 
 import {
@@ -22,13 +22,13 @@ import {
 	IconUsersGroup,
 	IconLogs
 } from "@tabler/icons-react"
-import logo from "../../assets/logo.jpg"
+import logo from "@/assets/logo.jpg"
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar"
-import { DatePicker } from "../../components/date-picker";
+import { DatePicker } from "@/components/date-picker";
 
 const data = {
   user: {
@@ -74,11 +74,11 @@ export default function Sidebar(props) {
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
               <Link to="/dashboard">
-               <Avatar className="h-8 w-8 rounded-lg grayscale">
+               <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={logo} alt="IDMS" />
                 <AvatarFallback className="rounded-lg">CN</AvatarFallback>
               </Avatar>
-                <span className="font-semibold">IDMS</span>
+                <span className="font-semibold">IDMSystem</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>

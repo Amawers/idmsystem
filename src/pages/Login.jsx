@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { useAuthStore } from "../store/authStore";
+import { useAuthStore } from "@/store/authStore";
 import { useNavigate } from "react-router-dom";
 import { LoginForm } from "@/components/login-form";
 import { toast } from "sonner";
 import { CheckCircle, XCircle } from "lucide-react";
-import bg from "../assets/barangay-background-blur.jpg";
+import bg from "@/assets/barangay-background-blur.jpg";
 export default function Login() {
 	// ------------------------------
 	// STATE VARIABLES
