@@ -45,7 +45,7 @@ export const useAuthStore = create((set) => ({
 				avatarSignedUrl = signedData?.signedUrl;
 			}
 
-      // 4. Save user + signed avatar URL + role
+			// 4. Save user + signed avatar URL + role
 			set({
 				user: data.user,
 				avatar_url: avatarSignedUrl,
@@ -140,5 +140,37 @@ export const useAuthStore = create((set) => ({
 		set({ avatar_url: signedData?.signedUrl });
 
 		return signedData?.signedUrl;
+	},
+
+	// ===============================
+	// UPDATE PASSWORD (with old password check)
+	// ===============================
+	updatePassword: async (oldPassword, newPassword) => {
+		const { user } = useAuthStore.getState();
+		if (!user) throw new Error("No user logged in");
+
+		// Step 1: Re-authenticate with old password
+		const { data: signInData, error: signInError } =
+			await supabase.auth.signInWithPassword({
+				email: user.email,
+				password: oldPassword,
+			});
+
+		if (signInError || !signInData.user) {
+			// old password incorrect
+			return false;
+		}
+
+		// Step 2: Update to new password
+		const { error: updateError } = await supabase.auth.updateUser({
+			password: newPassword,
+		});
+
+		if (updateError) {
+			console.error("Password update error:", updateError);
+			return false;
+		}
+
+		return true; // password updated successfully
 	},
 }));
