@@ -29,12 +29,9 @@ import {
   AvatarImage,
 } from "@/components/ui/avatar"
 import { DatePicker } from "@/components/date-picker";
-import { useAvatarUrl } from "@/hooks/useAvatarUrl"
-export default function Sidebar(props) {
-  const { user, avatar_url, role } = useAuthStore();
 
-  // Get public avatar url (auto-updates on re-render)
-  const avatarSrc = useAvatarUrl(avatar_url);
+export default function Sidebar(props) {
+  const { user, role, avatar_url } = useAuthStore();
 
   // ================= ROLE-BASED NAVIGATION =================
   const roleNavs = {
@@ -91,7 +88,7 @@ export default function Sidebar(props) {
       {/* ================= FOOTER ================= */}
       <SidebarFooter>
         {/* User dropdown (profile, account, logout, etc.) */}
-        <NavUser user={user.user_metadata} avatar={avatarSrc}/>
+        <NavUser user={user.user_metadata} avatar={avatar_url}/>
       </SidebarFooter>
 
     </ShadcnSidebar>
