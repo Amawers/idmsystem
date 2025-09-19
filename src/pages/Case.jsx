@@ -1,6 +1,10 @@
 import { DataTable } from "@/components/cases/data-table"
 import React, { useEffect, useState, useRef } from "react"
-import data from "../../data.json"
+
+//! TEMPORARY DATA
+import CASEDATA from "../../SAMPLE_CASE-TABLE.json"
+import FARDATA from "../../SAMPLE_FAR-TABLE.json"
+
 import { SectionCards } from "@/components/section-cards"
 import { ChartAreaInteractive } from "@/components/chart-area-interactive"
 import { Button } from "@/components/ui/button"
@@ -48,7 +52,7 @@ export default function Case() {
       {/* ================= DATA TABLE ================= */}
       {/* Attach ref so we know where this section is on the page */}
       <div ref={dataTableRef}>
-        <DataTable data={data} />
+        <DataTable caseData={CASEDATA} farData={FARDATA}/>
       </div>
 
       {/* ================= FLOATING SCROLL BUTTON ================= */}
