@@ -1,4 +1,4 @@
-import { DataTable } from "@/components/data-table"
+import { DataTable } from "@/components/cases/data-table"
 import React, { useEffect, useState, useRef } from "react"
 import data from "../../data.json"
 import { SectionCards } from "@/components/section-cards"
