@@ -65,7 +65,7 @@ const chartConfig = {
 // ====================
 //! Drawer with Chart + Form (opens on header click)
 // ====================
-export default function TableCellViewer({ item }) {
+export default function CaseTableCellViewer({ item }) {
 	const isMobile = useIsMobile(); // detect mobile for drawer direction
 
 	return (
@@ -76,7 +76,7 @@ export default function TableCellViewer({ item }) {
 					variant="link"
 					className="text-foreground w-fit px-0 text-left"
 				>
-					{item.header}
+					{item.id}
 				</Button>
 			</DrawerTrigger>
 

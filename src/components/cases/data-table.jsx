@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/rules-of-hooks */
 //! ===========================================
 //! TO BE MODIFIED, SAMPLE DATA ONLY FOR RENDER
 //! ===========================================
@@ -18,6 +19,7 @@ import {
 // Other utilities
 import { toast } from "sonner";
 import { z } from "zod";
+import { formatDistanceToNow } from "date-fns";
 
 // UI components from shadcn
 import { Badge } from "@/components/ui/badge";
@@ -42,11 +44,19 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 
+import { Calendar } from "@/components/ui/calendar";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
+import { CalendarIcon } from "lucide-react";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import IntakeSheet from "@/pages/case manager/IntakeSheet";
 import DragHandle from "@/components/cases/tables/DragHandle";
-import TableCellViewer from "@/components/cases/tables/TableCellViewer";
+import CaseTableCellViewer from "@/components/cases/tables/CaseTableCellViewer";
 import useDataTable from "@/hooks/useDataTable";
 import TableRenderer from "@/components/cases/tables/TableRenderer";
 // ====================
@@ -63,10 +73,371 @@ export const schema = z.object({
 	caseManager: z.string(),
 });
 
+function formatDateTime(isoString) {
+	const date = new Date(isoString);
+	const options = {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+		hour: "numeric",
+		minute: "2-digit",
+		hour12: true,
+	};
+	return date.toLocaleString("en-US", options);
+}
+
+//! SAMPLE DATA FOR RENDER ONLY, SOON IMPLEMENT THIS IN AUTH STORE
+//! UPON LOGGING IN AND INIT RETRIEVE CASE MANAGERS FROM PROFILES TABLE
+const caseManagers = [
+	{ id: "case-b83947bb", case_manager: "Elaiza Claire Q. Gamolo" },
+	{ id: "case-a92d4c1f", case_manager: "Aaron S. Namoc" },
+];
+
 // =================================
 //! CASE Table COLUMN DEFINITIONS
 // =================================
 const caseColumns = [
+	{
+		id: "drag",
+		header: () => null,
+		cell: ({ row }) => <DragHandle id={row.original.id} />,
+	},
+
+	// Checkbox column (select rows)
+	{
+		id: "select",
+		header: ({ table }) => (
+			<div className="flex items-center justify-center">
+				<Checkbox
+					checked={
+						table.getIsAllPageRowsSelected() ||
+						(table.getIsSomePageRowsSelected() && "indeterminate")
+					}
+					onCheckedChange={(value) =>
+						table.toggleAllPageRowsSelected(!!value)
+					}
+					aria-label="Select all"
+				/>
+			</div>
+		),
+		cell: ({ row }) => (
+			<div className="flex items-center justify-center">
+				<Checkbox
+					checked={row.getIsSelected()}
+					onCheckedChange={(value) => row.toggleSelected(!!value)}
+					aria-label="Select row"
+				/>
+			</div>
+		),
+		enableSorting: false,
+		enableHiding: false,
+	},
+
+	//! START OF DATA COLUMNS
+	//* CASE ID
+	{
+		accessorKey: "case ID",
+		header: "Case ID",
+		cell: ({ row }) => {
+			return <CaseTableCellViewer item={row.original} />;
+		},
+		enableHiding: false,
+	},
+	//* NAME
+	{
+		accessorKey: "name",
+		header: () => <div className="w-full text-center">Name</div>,
+		cell: ({ row }) => (
+			// Input form for editing target
+			<form
+				onSubmit={(e) => {
+					e.preventDefault();
+					toast.promise(
+						new Promise((resolve) => setTimeout(resolve, 1000)),
+						{
+							loading: `Saving ${row.original.name}`,
+							success: "Done",
+							error: "Error",
+						}
+					);
+				}}
+			>
+				<Label
+					htmlFor={`${row.original.id}-target`}
+					className="sr-only"
+				>
+					Name
+				</Label>
+				<Input
+					className="hover:bg-input/30 focus-visible:bg-background dark:hover:bg-input/30 dark:focus-visible:bg-input/30 h-8 w-32 border-transparent bg-transparent text-center shadow-none focus-visible:border dark:bg-transparent"
+					defaultValue={row.original.name}
+					id={`${row.original.id}-target`}
+				/>
+			</form>
+		),
+	},
+
+	//* CASE MANAGER
+	{
+		accessorKey: "case manager",
+		header: "Case Manager",
+		cell: ({ row }) => {
+			return (
+				<>
+					<Label
+						htmlFor={`${row.original.id}-caseManager`}
+						className="sr-only"
+					>
+						Case Manager
+					</Label>
+					<Select>
+						<SelectTrigger
+							className="w-38 bg-white text-black [&_[data-slot=select-value]]:text-black"
+							size="sm"
+							id={`${row.original.id}-caseManager`}
+						>
+							<SelectValue
+								placeholder={
+									row.original.case_manager ?? "None"
+								}
+							/>
+						</SelectTrigger>
+						<SelectContent align="end">
+							{caseManagers.map((item) => (
+								<SelectItem
+									key={item.id}
+									value={item.case_manager}
+								>
+									{item.case_manager}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</>
+			);
+		},
+	},
+	//* STATUS
+	{
+		accessorKey: "status",
+		header: "Status",
+		cell: ({ row }) => {
+			const statuses = [
+				{
+					value: "Filed",
+					label: "Filed",
+					icon: (
+						<IconClipboardText
+							className="text-gray-500"
+							size={16}
+						/>
+					),
+				},
+				{
+					value: "Assessed",
+					label: "Assessed",
+					icon: <IconCheckbox className="text-blue-500" size={16} />,
+				},
+				{
+					value: "In Process",
+					label: "In Process",
+					icon: (
+						<IconLoader
+							className="text-orange-500 animate-spin"
+							size={16}
+						/>
+					),
+				},
+				{
+					value: "Resolved",
+					label: "Resolved",
+					icon: (
+						<IconCircleCheckFilled
+							className="text-green-500"
+							size={16}
+						/>
+					),
+				},
+			];
+
+			return (
+				<Select defaultValue={row.original.status}>
+					<SelectTrigger className="w-[150px]">
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{statuses.map((status) => (
+							<SelectItem key={status.value} value={status.value}>
+								<div className="flex items-center gap-2">
+									{status.icon}
+									{status.label}
+								</div>
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			);
+		},
+	},
+	//* PRIORITY
+	{
+		accessorKey: "priority",
+		header: "Priority",
+		cell: ({ row }) => {
+			const priorities = [
+				{
+					value: "Low",
+					label: "Low",
+					className: "bg-green-100 text-green-700",
+				},
+				{
+					value: "Medium",
+					label: "Medium",
+					className: "bg-yellow-100 text-yellow-700",
+				},
+				{
+					value: "High",
+					label: "High",
+					className: "bg-red-100 text-red-700",
+				},
+			];
+
+			const [value, setValue] = useState(row.original.priority);
+			const current = priorities.find((p) => p.value === value);
+
+			return (
+				<Select value={value} onValueChange={setValue}>
+					<SelectTrigger
+						className={`w-[130px] rounded-md font-medium ${
+							current?.className || ""
+						}`}
+					>
+						<SelectValue />
+					</SelectTrigger>
+					<SelectContent>
+						{priorities.map((p) => (
+							<SelectItem
+								key={p.value}
+								value={p.value}
+								className={`px-2 py-0.5 rounded-md text-sm font-medium cursor-pointer ${p.className}`}
+							>
+								{p.label}
+							</SelectItem>
+						))}
+					</SelectContent>
+				</Select>
+			);
+		},
+	},
+	//* DATE FILED
+	{
+		accessorKey: "date filed",
+		header: "Date Filed",
+		cell: ({ row }) => {
+			const [date, setDate] = useState(
+				row.original.date_filed
+					? new Date(row.original.date_filed)
+					: null
+			);
+
+			return (
+				<Popover>
+					<PopoverTrigger asChild>
+						<Button
+							variant="outline"
+							className="flex items-center justify-start text-left font-normal"
+						>
+							<CalendarIcon className="mr-2 h-4 w-4" />
+							{date
+								? formatDateTime(date, "yyyy-MM-dd HH:mm:ss")
+								: "Pick a date"}
+						</Button>
+					</PopoverTrigger>
+					<PopoverContent className="w-auto p-0" align="start">
+						<Calendar
+							mode="single"
+							selected={date}
+							onSelect={(newDate) => setDate(newDate)}
+							initialFocus
+						/>
+					</PopoverContent>
+				</Popover>
+			);
+		},
+	},
+	//* TIME OPEN
+	{
+		accessorKey: "time open",
+		header: "Time Open",
+		cell: ({ row }) => {
+			const filedDate = row.original.date_filed
+				? new Date(row.original.date_filed)
+				: null;
+
+			return (
+				<div>
+					{filedDate
+						? formatDistanceToNow(filedDate, { addSuffix: false })
+						: "N/A"}
+				</div>
+			);
+		},
+	},
+	//* VISIBILITY
+	{
+		accessorKey: "visibility",
+		header: "Visibility",
+		cell: ({ row }) => {
+			return (
+				<>
+					<Label
+						htmlFor={`${row.original.id}-visibility`}
+						className="sr-only"
+					>
+						Visibility
+					</Label>
+					<Select>
+						<SelectTrigger
+							className="w-38 bg-white text-black [&_[data-slot=select-value]]:text-black"
+							size="sm"
+							id={`${row.original.id}-visibility`}
+						>
+							<SelectValue
+								className="text-black"
+								placeholder={row.original.visibility}
+							/>
+						</SelectTrigger>
+						<SelectContent align="end">
+							<SelectItem value="head">Head</SelectItem>
+							<SelectItem value="case_manager">
+								Case Manager
+							</SelectItem>
+							<SelectItem value="admin_staff">
+								Admin Staff
+							</SelectItem>
+						</SelectContent>
+					</Select>
+				</>
+			);
+		},
+	},
+
+	//* LAST UPDATED
+	{
+		accessorKey: "last updated",
+		header: "Last Updated",
+		cell: ({ row }) => (
+			<div className="w-32">
+				{formatDateTime(row.original.last_updated)}
+			</div>
+		),
+	},
+];
+
+// =================================
+//! CICLCAR Table COLUMN DEFINITIONS
+// =================================
+const ciclcarColumns = [
 	{
 		id: "drag",
 		header: () => null,
@@ -512,10 +883,11 @@ const farColumns = [
 		),
 	},
 ];
+
 // ==========================
 //! Main DataTable wrapper
 // ==========================
-export function DataTable({ caseData, farData }) {
+export function DataTable({ caseData, ciclcarData, farData }) {
 	// State to control Intake Sheet modal visibility (open/close)
 	const [openIntakeSheet, setOpenIntakeSheet] = useState(false);
 
@@ -526,6 +898,12 @@ export function DataTable({ caseData, farData }) {
 	const caseTable = useDataTable({
 		initialData: caseData,
 		columns: caseColumns,
+	});
+
+	// Table instance for CICLCAR tab with its own data and column definitions
+	const ciclcarTable = useDataTable({
+		initialData: ciclcarData,
+		columns: ciclcarColumns,
 	});
 
 	// Table instance for FAR tab with its own data and column definitions
@@ -562,6 +940,7 @@ export function DataTable({ caseData, farData }) {
 					</SelectTrigger>
 					<SelectContent>
 						<SelectItem value="CASE">Cases</SelectItem>
+						<SelectItem value="CICLCAR">CICL/CAR</SelectItem>
 						<SelectItem value="FAR">
 							Family Assistance Record
 						</SelectItem>
@@ -577,6 +956,7 @@ export function DataTable({ caseData, farData }) {
 				<div className="hidden items-center gap-2 @4xl/main:flex">
 					<TabsList>
 						<TabsTrigger value="CASE">Cases</TabsTrigger>
+						<TabsTrigger value="CICLCAR">CICL/CAR</TabsTrigger>
 						<TabsTrigger value="FAR">Assistance Record</TabsTrigger>
 						<TabsTrigger value="IVAC">Incidence on VAC</TabsTrigger>
 						<TabsTrigger value="FAC">
@@ -598,12 +978,7 @@ export function DataTable({ caseData, farData }) {
 								<DropdownMenuTrigger asChild>
 									<Button variant="outline" size="sm">
 										<IconLayoutColumns />
-										<span className="hidden lg:inline">
-											Customize Columns
-										</span>
-										<span className="lg:hidden">
-											Columns
-										</span>
+										<span>COLUMNS</span>
 										<IconChevronDown />
 									</Button>
 								</DropdownMenuTrigger>
@@ -634,18 +1009,7 @@ export function DataTable({ caseData, farData }) {
 								</DropdownMenuContent>
 							</DropdownMenu>
 
-							{/* Intake buttons */}
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => setOpenIntakeSheet(true)}
-							>
-								<IconPlus />
-								<span className="hidden lg:inline">
-									INTAKE CICL/CAR
-								</span>
-							</Button>
-
+							{/* INTAKE SHEET BUTTON*/}
 							<Button
 								variant="outline"
 								size="sm"
@@ -664,6 +1028,64 @@ export function DataTable({ caseData, farData }) {
 						</>
 					)}
 
+					{/*//! CICLCAR SECTION */}
+					{activeTab === "CICLCAR" && (
+						<>
+							{/* Customize Columns Dropdown */}
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" size="sm">
+										<IconLayoutColumns />
+										<span>COLUMNS</span>
+										<IconChevronDown />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent
+									align="end"
+									className="w-56"
+								>
+									{ciclcarTable.table
+										.getAllColumns()
+										.filter(
+											(c) =>
+												typeof c.accessorFn !==
+													"undefined" &&
+												c.getCanHide()
+										)
+										.map((c) => (
+											<DropdownMenuCheckboxItem
+												key={c.id}
+												checked={c.getIsVisible()}
+												onCheckedChange={(v) =>
+													c.toggleVisibility(!!v)
+												}
+												className="capitalize"
+											>
+												{c.id}
+											</DropdownMenuCheckboxItem>
+										))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+
+							{/* INTAKE CICL/CAR BUTTON*/}
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => setOpenIntakeSheet(true)}
+							>
+								<IconPlus />
+								<span className="hidden lg:inline">
+									INTAKE CICL/CAR
+								</span>
+							</Button>
+
+							<IntakeSheet
+								open={openIntakeSheet}
+								setOpen={setOpenIntakeSheet}
+							/>
+						</>
+					)}
+
 					{/*//! FAR SECTION */}
 					{activeTab === "FAR" && (
 						<>
@@ -672,12 +1094,7 @@ export function DataTable({ caseData, farData }) {
 								<DropdownMenuTrigger asChild>
 									<Button variant="outline" size="sm">
 										<IconLayoutColumns />
-										<span className="hidden lg:inline">
-											Customize Columns far
-										</span>
-										<span className="lg:hidden">
-											Columns
-										</span>
+										<span>COLUMNS</span>
 										<IconChevronDown />
 									</Button>
 								</DropdownMenuTrigger>
@@ -728,6 +1145,21 @@ export function DataTable({ caseData, farData }) {
 			</TabsContent>
 			{/*
         //! =====================
+        //! CICL/CAR VIEW
+        //! =====================
+        */}
+			<TabsContent
+				value="CICLCAR"
+				className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+			>
+				<TableRenderer
+					table={ciclcarTable.table}
+					setData={ciclcarTable.setData}
+					columns={ciclcarColumns}
+				/>
+			</TabsContent>
+			{/*
+        //! =====================
         //! FAR VIEW
         //! =====================
         */}
@@ -741,6 +1173,7 @@ export function DataTable({ caseData, farData }) {
 					columns={farColumns}
 				/>
 			</TabsContent>
+
 			{/*
         //! =====================
         //! IVAC VIEW
