@@ -10,6 +10,7 @@ import UnauthorizedPage from "@/pages/UnauthorizedPage";
 import {SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "./components/site-header";
 import Case from "./pages/Case";
+import TestFileGenerator from "./pages/TestFileGenerator";
 
 // Layout wrapper for all authenticated pages
 // Includes Sidebar + Logout button + main content area
@@ -84,7 +85,7 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["admin_staff", "case_manager", "head"]}>
               <Layout>
-                <div>Program Management Page</div>
+                <TestFileGenerator />
               </Layout>
             </ProtectedRoute>
           }
