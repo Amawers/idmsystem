@@ -55,6 +55,7 @@ import { CalendarIcon } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import IntakeSheet from "@/pages/case manager/IntakeSheet";
+import IntakeSheetCICLCAR from "@/pages/case manager/IntakeSheetCICLCAR";
 import DragHandle from "@/components/cases/tables/DragHandle";
 import CaseTableCellViewer from "@/components/cases/tables/CaseTableCellViewer";
 import useDataTable from "@/hooks/useDataTable";
@@ -1079,7 +1080,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 								</span>
 							</Button>
 
-							<IntakeSheet
+							<IntakeSheetCICLCAR
 								open={openIntakeSheet}
 								setOpen={setOpenIntakeSheet}
 							/>
@@ -1152,11 +1153,12 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 				value="CICLCAR"
 				className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
 			>
-				<TableRenderer
+				{/* <TableRenderer
 					table={ciclcarTable.table}
 					setData={ciclcarTable.setData}
 					columns={ciclcarColumns}
-				/>
+				/> */}
+				cilcar
 			</TabsContent>
 			{/*
         //! =====================

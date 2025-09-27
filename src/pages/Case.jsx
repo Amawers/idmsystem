@@ -43,12 +43,12 @@ export default function Case() {
 	return (
 		<>
 			{/* ================= SECTION CARDS ================= */}
-			<SectionCards />
+			{/* <SectionCards /> */}
 
 			{/* ================= INTERACTIVE CHART ================= */}
-			<div className="px-4 lg:px-6">
+			{/* <div className="px-4 lg:px-6">
 				<ChartAreaInteractive />
-			</div>
+			</div> */}
 
 			{/* ================= DATA TABLE ================= */}
 			{/* Attach ref so we know where this section is on the page */}
