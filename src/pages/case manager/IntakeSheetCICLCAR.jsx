@@ -8,15 +8,9 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { IdentifyingDataForm } from "@/components/intake sheet/IdentifyingDataForm";
-import { FamilyCompositionForm } from "@/components/intake sheet/FamilyCompositionForm";
-import { PerpetratorInfoForm } from "@/components/intake sheet/PerpetratorInfoForm";
-import { ProblemForm } from "@/components/intake sheet/ProblemForm";
-import { BackgroundInfoForm } from "@/components/intake sheet/BackgroundInfoForm";
-import { CommunityInfoForm } from "@/components/intake sheet/CommunityInforForm";
-import { AssessmentForm } from "@/components/intake sheet/AssessmentForm";
-import { RecommendationForm } from "@/components/intake sheet/RecommendationForm";
-
+import { ProfileCICLCARForm } from "@/components/intake sheet CICLCAR/ProfileCICLCARForm";
+import { FamilyBackgroundForm } from "@/components/intake sheet CICLCAR/FamilyBackgroundForm";
+import { ViolationCICLCARForm } from "@/components/intake sheet CICLCAR/ViolationCICLCARForm";
 //* PROFILE OF CICL/CAR
 //* FAMILY BACKGROUND
 //* VIOLATION OFFENSE OF CICL/CAR
@@ -95,31 +89,35 @@ export default function IntakeSheetCICLCAR({ open, setOpen }) {
               ))}
             </TabsList>
           </div>
-
           {/*//* MAIN TAB CONTENT */}
           <TabsContent value="Profile-of-CICL/CAR">
-            {/* <IdentifyingDataForm
-                            sectionKey="IdentifyingData"
-                            goNext={goNext}
-                            goBack={goBack}
-                        /> */}
-            Profile-of-CICL/CAR
+            <ProfileCICLCARForm
+              sectionKey="profileOfCICLCar"
+              goNext={goNext}
+              goBack={goBack}
+            />
           </TabsContent>
 
-          <TabsContent value="Family-Background">Family-Background</TabsContent>
+          <TabsContent value="Family-Background">
+            <FamilyBackgroundForm
+              sectionKey="familyBackground"
+              goNext={goNext}
+              goBack={goBack}
+            />
+          </TabsContent>
 
           <TabsContent value="Violation-Offense-of-CICL/CAR">
-            Violation-Offense-of-CICL/CAR
+            <ViolationCICLCARForm
+              sectionKey="violationOfCICLCar"
+              goNext={goNext}
+              goBack={goBack}
+            />
           </TabsContent>
 
           <TabsContent value="Record-Details">Record-Details</TabsContent>
-
           <TabsContent value="Complainant">Complainant</TabsContent>
-
           <TabsContent value="Remarks">Remarks</TabsContent>
-
           <TabsContent value="Services">Services</TabsContent>
-
           <TabsContent value="Referral">Referral</TabsContent>
         </Tabs>
       </DialogContent>

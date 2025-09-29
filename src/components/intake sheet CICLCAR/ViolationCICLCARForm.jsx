@@ -41,7 +41,7 @@ const schema = z.object({
   educationalStatus: z.string().min(2, "Required"),
 });
 
-export function ProfileCICLCARForm({ sectionKey, goNext, goBack }) {
+export function ViolationCICLCARForm({ sectionKey, goNext, goBack }) {
   const { data, setSectionField } = useIntakeFormStore();
 
   const form = useForm({
@@ -65,21 +65,21 @@ export function ProfileCICLCARForm({ sectionKey, goNext, goBack }) {
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         {/* Grid layout: 2 columns */}
         <div className="grid grid-cols-2 gap-4">
-          {/*//* NAME & ALIAS */}
+          {/*//* VIOLATION & DATE TIME COMMITED */}
           <div className="flex gap-2">
-            {/* NAME */}
+            {/* VIOLATION */}
             <FormField
               control={form.control}
-              name="name"
+              name="violation"
               render={({ field }) => (
                 <FormItem className="flex-[2]">
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>violation</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
                       onChange={(e) => {
                         field.onChange(e);
-                        setSectionField(sectionKey, "name", e.target.value);
+                        setSectionField(sectionKey, "violation", e.target.value);
                       }}
                     />
                   </FormControl>
