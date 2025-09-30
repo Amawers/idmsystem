@@ -65,7 +65,7 @@ export function ViolationCICLCARForm({ sectionKey, goNext, goBack }) {
 							control={form.control}
 							name="violation"
 							render={({ field }) => (
-								<FormItem className="flex-[2]">
+								<FormItem className="flex-2">
 									<FormLabel>Violation</FormLabel>
 									<FormControl>
 										<Input
@@ -86,36 +86,32 @@ export function ViolationCICLCARForm({ sectionKey, goNext, goBack }) {
 						/>
 
 						{/* DATE & TIME COMMITTED */}
-						<div className="flex-1">
-							<FormField
-								control={form.control}
-								name="dateTimeCommitted"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>
-											Date & Time Committed
-										</FormLabel>
-										<FormControl>
-											<input
-												type="datetime-local"
-												className="border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 w-1/2 justify-start text-left font-normal py-1 px-2  rounded-md"
-												value={field.value || ""}
-												onChange={(e) => {
-													const val = e.target.value;
-													field.onChange(val);
-													setSectionField(
-														sectionKey,
-														"dateTimeCommitted",
-														val
-													);
-												}}
-											/>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
-						</div>
+						<FormField
+							control={form.control}
+							name="dateTimeCommitted"
+							render={({ field }) => (
+								<FormItem className="flex-1">
+									<FormLabel>Date & Time Committed</FormLabel>
+									<FormControl>
+										<input
+											type="datetime-local"
+											className="border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 w-full text-left font-normal py-1 px-2 rounded-md"
+											value={field.value || ""}
+											onChange={(e) => {
+												const val = e.target.value;
+												field.onChange(val);
+												setSectionField(
+													sectionKey,
+													"dateTimeCommitted",
+													val
+												);
+											}}
+										/>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
 					</div>
 
 					{/*//* STATUS */}
