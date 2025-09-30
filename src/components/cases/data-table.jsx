@@ -144,39 +144,6 @@ const caseColumns = [
 		},
 		enableHiding: false,
 	},
-	//* NAME
-	{
-		accessorKey: "name",
-		header: () => <div className="w-full text-center">Name</div>,
-		cell: ({ row }) => (
-			// Input form for editing target
-			<form
-				onSubmit={(e) => {
-					e.preventDefault();
-					toast.promise(
-						new Promise((resolve) => setTimeout(resolve, 1000)),
-						{
-							loading: `Saving ${row.original.name}`,
-							success: "Done",
-							error: "Error",
-						}
-					);
-				}}
-			>
-				<Label
-					htmlFor={`${row.original.id}-target`}
-					className="sr-only"
-				>
-					Name
-				</Label>
-				<Input
-					className="hover:bg-input/30 focus-visible:bg-background dark:hover:bg-input/30 dark:focus-visible:bg-input/30 h-8 w-32 border-transparent bg-transparent text-center shadow-none focus-visible:border dark:bg-transparent"
-					defaultValue={row.original.name}
-					id={`${row.original.id}-target`}
-				/>
-			</form>
-		),
-	},
 
 	//* CASE MANAGER
 	{
@@ -433,6 +400,30 @@ const caseColumns = [
 			</div>
 		),
 	},
+	{
+		id: "actions",
+		cell: () => (
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						variant="ghost"
+						className="data-[state=open]:bg-muted text-muted-foreground flex size-8 ml-5"
+						size="icon"
+					>
+						<IconDotsVertical />
+						<span className="sr-only">Open menu</span>
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="w-32">
+					<DropdownMenuItem>Edit</DropdownMenuItem>
+					<DropdownMenuSeparator />
+					<DropdownMenuItem variant="destructive">
+						Delete
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		),
+	},
 ];
 
 // =================================
@@ -480,7 +471,7 @@ const ciclcarColumns = [
 		accessorKey: "header",
 		header: "Header",
 		cell: ({ row }) => {
-			return <TableCellViewer item={row.original} />;
+			return <CaseTableCellViewer item={row.original} />;
 		},
 		enableHiding: false,
 	},
@@ -702,164 +693,48 @@ const farColumns = [
 
 	// Other data columns (header, type, status, etc.)
 	{
-		accessorKey: "header",
-		header: "Header",
-		cell: ({ row }) => {
-			return <TableCellViewer item={row.original} />;
-		},
-		enableHiding: false,
+		accessorKey: "date",
+		header: "Date",
+		cell: () => <div>Date</div>,
 	},
 	{
-		accessorKey: "type",
-		header: "Section Type",
-		cell: ({ row }) => (
-			<div className="w-32">
-				<Badge
-					variant="outline"
-					className="text-muted-foreground px-1.5"
-				>
-					{row.original.type}
-				</Badge>
-			</div>
-		),
+		accessorKey: "member",
+		header: "Receiving Member",
+		cell: () => <div>Receiving member</div>,
 	},
 	{
-		accessorKey: "status",
-		header: "Status",
-		cell: ({ row }) => (
-			<Badge
-				variant="outline"
-				className="text-muted-foreground px-1.5 flex items-center gap-1"
-			>
-				{row.original.status === "Filed" && (
-					<IconClipboardText className="text-gray-500" size={16} />
-				)}
-				{row.original.status === "Assessed" && (
-					<IconCheckbox className="text-blue-500" size={16} />
-				)}
-				{row.original.status === "In Process" && (
-					<IconLoader
-						className="text-orange-500 animate-spin"
-						size={16}
-					/>
-				)}
-				{row.original.status === "Resolved" ? (
-					<IconCircleCheckFilled
-						className="text-green-500"
-						size={16}
-					/>
-				) : null}
-
-				{row.original.status}
-			</Badge>
-		),
+		accessorKey: "emergency",
+		header: "Emergency",
+		cell: () => <div>Emergency</div>,
 	},
 	{
-		accessorKey: "target",
-		header: () => <div className="w-full text-right">Target</div>,
-		cell: ({ row }) => (
-			// Input form for editing target
-			<form
-				onSubmit={(e) => {
-					e.preventDefault();
-					toast.promise(
-						new Promise((resolve) => setTimeout(resolve, 1000)),
-						{
-							loading: `Saving ${row.original.header}`,
-							success: "Done",
-							error: "Error",
-						}
-					);
-				}}
-			>
-				<Label
-					htmlFor={`${row.original.id}-target`}
-					className="sr-only"
-				>
-					Target
-				</Label>
-				<Input
-					className="hover:bg-input/30 focus-visible:bg-background dark:hover:bg-input/30 dark:focus-visible:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
-					defaultValue={row.original.target}
-					id={`${row.original.id}-target`}
-				/>
-			</form>
-		),
+		accessorKey: "assistance",
+		header: "Assistance",
+		cell: () => <div>Assistance</div>,
 	},
 	{
-		accessorKey: "limit",
-		header: () => <div className="w-full text-right">Limit</div>,
-		cell: ({ row }) => (
-			// Input form for editing limit
-			<form
-				onSubmit={(e) => {
-					e.preventDefault();
-					toast.promise(
-						new Promise((resolve) => setTimeout(resolve, 1000)),
-						{
-							loading: `Saving ${row.original.header}`,
-							success: "Done",
-							error: "Error",
-						}
-					);
-				}}
-			>
-				<Label htmlFor={`${row.original.id}-limit`} className="sr-only">
-					Limit
-				</Label>
-				<Input
-					className="hover:bg-input/30 focus-visible:bg-background dark:hover:bg-input/30 dark:focus-visible:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
-					defaultValue={row.original.limit}
-					id={`${row.original.id}-limit`}
-				/>
-			</form>
-		),
+		accessorKey: "unit",
+		header: "Unit",
+		cell: () => <div>Unit</div>,
 	},
 	{
-		accessorKey: "caseManager",
-		header: "Case Manager",
-		cell: ({ row }) => {
-			// If already assigned → show name
-			const isAssigned = row.original.case_manager !== null;
-
-			if (isAssigned) {
-				return row.original.case_manager;
-			}
-
-			// If not assigned → show dropdown
-			return (
-				<>
-					<Label
-						htmlFor={`${row.original.id}-caseManager`}
-						className="sr-only"
-					>
-						Case Manager
-					</Label>
-					<Select>
-						<SelectTrigger
-							className="w-38 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
-							size="sm"
-							id={`${row.original.id}-caseManager`}
-						>
-							<SelectValue placeholder="Case Manager" />
-						</SelectTrigger>
-						<SelectContent align="end">
-							<SelectItem value="Eddie Lake">
-								Eddie Lake
-							</SelectItem>
-							<SelectItem value="Jamik Tashpulatov">
-								Jamik Tashpulatov
-							</SelectItem>
-						</SelectContent>
-					</Select>
-				</>
-			);
-		},
+		accessorKey: "quantiy",
+		header: "Quantity",
+		cell: () => <div>Quantity</div>,
+	},
+	{
+		accessorKey: "cost",
+		header: "Cost",
+		cell: () => <div>Cost</div>,
+	},
+	{
+		accessorKey: "provider",
+		header: "Provider",
+		cell: () => <div>Provider</div>,
 	},
 	{
 		id: "actions",
 		cell: () => (
-			// Row actions dropdown
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
@@ -873,8 +748,6 @@ const farColumns = [
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-32">
 					<DropdownMenuItem>Edit</DropdownMenuItem>
-					<DropdownMenuItem>Make a copy</DropdownMenuItem>
-					<DropdownMenuItem>Favorite</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem variant="destructive">
 						Delete
@@ -958,7 +831,9 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 					<TabsList>
 						<TabsTrigger value="CASE">Cases</TabsTrigger>
 						<TabsTrigger value="CICLCAR">CICL/CAR</TabsTrigger>
-						<TabsTrigger value="FAR">Assistance Record</TabsTrigger>
+						<TabsTrigger value="FAR">
+							Family Assistance Record
+						</TabsTrigger>
 						<TabsTrigger value="IVAC">Incidence on VAC</TabsTrigger>
 						<TabsTrigger value="FAC">
 							Family Access Card
