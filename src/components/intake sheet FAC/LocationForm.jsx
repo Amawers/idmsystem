@@ -44,54 +44,49 @@ export function LocationForm({ sectionKey, goNext, goBack }) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Grid layout: 2 columns with maximum 5 rows each */}
+        {/* Two columns: left has Barangay/CityMunicipality/District, right has Region/Province/Evacuation */}
         <div className="grid grid-cols-2 gap-4">
-          {/* LEFT COLUMN */}
           <div className="space-y-4">
-            {/* ROW 1: REGION & PROVINCE */}
-            <div className="flex gap-2">
-              <FormField
-                control={form.control}
-                name="region"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>Region</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setSectionField(sectionKey, "region", e.target.value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="barangay"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Barangay</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        setSectionField(sectionKey, "barangay", e.target.value);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="province"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>Province</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setSectionField(sectionKey, "province", e.target.value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="cityMunicipality"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City/Municipality</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        setSectionField(sectionKey, "cityMunicipality", e.target.value);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            {/* ROW 2: DISTRICT */}
             <FormField
               control={form.control}
               name="district"
@@ -113,52 +108,47 @@ export function LocationForm({ sectionKey, goNext, goBack }) {
             />
           </div>
 
-          {/* RIGHT COLUMN */}
           <div className="space-y-4">
-            {/* ROW 1: CITY/MUNICIPALITY & BARANGAY */}
-            <div className="flex gap-2">
-              <FormField
-                control={form.control}
-                name="cityMunicipality"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>City/Municipality</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setSectionField(sectionKey, "cityMunicipality", e.target.value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="province"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Province</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        setSectionField(sectionKey, "province", e.target.value);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-              <FormField
-                control={form.control}
-                name="barangay"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>Barangay</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setSectionField(sectionKey, "barangay", e.target.value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            <FormField
+              control={form.control}
+              name="region"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Region</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        setSectionField(sectionKey, "region", e.target.value);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            {/* ROW 2: EVACUATION CENTER */}
             <FormField
               control={form.control}
               name="evacuationCenter"
