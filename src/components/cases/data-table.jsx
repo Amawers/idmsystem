@@ -1028,12 +1028,11 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 				value="CICLCAR"
 				className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
 			>
-				{/* <TableRenderer
+				<TableRenderer
 					table={ciclcarTable.table}
 					setData={ciclcarTable.setData}
 					columns={ciclcarColumns}
-				/> */}
-				cilcar
+				/>
 			</TabsContent>
 			{/*
         //! =====================
