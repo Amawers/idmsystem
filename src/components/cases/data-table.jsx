@@ -57,6 +57,7 @@ import { useState } from "react";
 import IntakeSheet from "@/pages/case manager/IntakeSheet";
 import IntakeSheetCICLCAR from "@/pages/case manager/IntakeSheetCICLCAR";
 import IntakeSheetFAR from "@/pages/case manager/IntakeSheetFAR";
+import IntakeSheetFAC from "@/pages/case manager/IntakeSheetFAC";
 import DragHandle from "@/components/cases/tables/DragHandle";
 import CaseTableCellViewer from "@/components/cases/tables/CaseTableCellViewer";
 import useDataTable from "@/hooks/useDataTable";
@@ -1084,8 +1085,27 @@ export function DataTable({ caseData, ciclcarData, farData }) {
       //! =====================
       */}
 			<TabsContent value="FAC" className="flex flex-col px-4 lg:px-6">
+				<div className="mb-4 flex items-center justify-between">
+					<h2 className="text-lg font-semibold">Family Assistance Card</h2>
+					{/* INTAKE FAC BUTTON*/}
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => setOpenIntakeSheet(true)}
+					>
+						<IconPlus />
+						<span className="hidden lg:inline">
+							INTAKE FAC
+						</span>
+					</Button>
+
+					<IntakeSheetFAC
+						open={openIntakeSheet}
+						setOpen={setOpenIntakeSheet}
+					/>
+				</div>
 				<div className="aspect-video w-full flex-1 rounded-lg border border-dashed">
-					Family Assistance Card PAGE
+					Family Assistance Card entries will be displayed here
 				</div>
 			</TabsContent>
 		</Tabs>
