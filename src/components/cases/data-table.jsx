@@ -59,7 +59,6 @@ import IntakeSheetCICLCAR from "@/pages/case manager/IntakeSheetCICLCAR";
 import IntakeSheetFAR from "@/pages/case manager/IntakeSheetFAR";
 import IntakeSheetFAC from "@/pages/case manager/IntakeSheetFAC";
 import DragHandle from "@/components/cases/tables/DragHandle";
-import CaseTableCellViewer from "@/components/cases/tables/CaseTableCellViewer";
 import useDataTable from "@/hooks/useDataTable";
 import TableRenderer from "@/components/cases/tables/TableRenderer";
 // ====================
@@ -142,7 +141,9 @@ const caseColumns = [
 		accessorKey: "case ID",
 		header: "Case ID",
 		cell: ({ row }) => {
-			return <CaseTableCellViewer item={row.original} />;
+			// Render plain text instead of a clickable viewer
+			const caseId = row.original["case ID"] ?? row.original.id;
+			return <div className="font-medium">{caseId}</div>;
 		},
 		enableHiding: false,
 	},
@@ -473,7 +474,9 @@ const ciclcarColumns = [
 		accessorKey: "header",
 		header: "Header",
 		cell: ({ row }) => {
-			return <CaseTableCellViewer item={row.original} />;
+			// Render header as plain text (no clickable viewer)
+			const headerText = row.original.header ?? row.original.id;
+			return <div className="font-medium">{headerText}</div>;
 		},
 		enableHiding: false,
 	},
