@@ -7,7 +7,80 @@
     "priority": "High",
     "date_filed": "2025-09-18 12:35:54.582575+00",
     "visibility": "Case Manager",
-    "last_updated": "2025-09-17 14:30:00.000000+00"
+    "last_updated": "2025-09-17 14:30:00.000000+00",
+    "intake": {
+      "IdentifyingData": {
+        "name": "Juan Dela Cruz",
+        "alias": "JD",
+        "age": "28",
+        "status": "single",
+        "address": "Brgy. San Miguel, Cityville",
+        "religion": "Roman Catholic",
+        "educationalAttainment": "College - partially",
+        "sex": "male",
+        "birthday": "1997-03-05",
+        "birthPlace": "Cityville",
+        "referralSource": "Self",
+        "occupation": "Construction worker",
+        "income": "12000",
+        "intakeDate": "2025-09-18",
+        "caseType": "Labor Assistance",
+        "contactPerson": "Maria Dela Cruz (mother)",
+        "respondentName": ""
+      },
+      "FamilyData": {
+        "members": [
+          { "name": "Maria Dela Cruz", "age": "50", "relation": "mother", "status": "", "education": "", "occupation": "Vendor", "income": "N/A" }
+        ]
+      },
+      "PerpetratorInfo": {
+        "name": "",
+        "age": "",
+        "alias": "",
+        "sex": "",
+        "address": "",
+        "victimRelation": "",
+        "offenceType": "",
+        "commissionDateTime": ""
+      },
+      "PresentingProblem": { "presentingProblem": "Lost employment due to company closure; requests livelihood support and referral for temporary work." },
+      "BackgroundInfo": { "backgroundInfo": "Works as daily-paid construction worker for past 6 years. Recently laid off; family depends on his earnings." },
+      "CommunityInfo": { "communityInfo": "Barangay livelihood officer informed; possible inclusion in skilling program." },
+      "Assessment": { "assessment": "Household income insufficient; immediate referral to livelihood program and short-term cash support recommended." },
+      "Recommendation": { "recommendation": "Refer to livelihood training and temporary cash assistance. Assign social worker for follow-up." },
+      "caseDetails": { "caseManager": null, "priority": "High", "status": "Filed", "visibility": "Case Manager" },
+
+      "IdentifyingData2": {
+        "name": "Maria Dela Cruz",
+        "alias": "",
+        "age": "50",
+        "status": "widowed",
+        "address": "Brgy. San Miguel, Cityville",
+        "religion": "Roman Catholic",
+        "educationalAttainment": "Elementary",
+        "sex": "female",
+        "birthday": "1975-02-10",
+        "birthPlace": "Cityville",
+        "referralSource": "Relative",
+        "occupation": "Vendor",
+        "income": "4000",
+        "intakeDate": "2025-09-18",
+        "caseType": "Household Support",
+        "contactPerson": "Juan Dela Cruz",
+        "respondentName": ""
+      },
+      "FamilyData2": {
+        "members": [
+          { "name": "Carlos Dela Cruz", "age": "30", "relation": "son", "status": "single", "education": "High School", "occupation": "Helper", "income": "7000" }
+        ]
+      },
+      "VictimInfo2": { "name": "Juan Dela Cruz", "age": "28", "alias": "JD", "sex": "male", "address": "Brgy. San Miguel", "victimRelation": "self", "offenceType": "", "commissionDateTime": "" },
+      "PresentingProblem2": { "presentingProblem": "Mother also lost identification documents and household goods in the fire and needs support to recover IDs and immediate items." },
+      "BackgroundInfo2": { "backgroundInfo": "Elderly mother relies on son's income; has limited mobility and lost important documents during incident." },
+      "CommunityInfo2": { "communityInfo": "Barangay relief committee arranged temporary food packs and will assist with ID replacement process." },
+      "Assessment2": { "assessment": "Secondary household member (mother) has vulnerabilities: elderly, no steady income—recommend cash for IDs and transport assistance." },
+      "Recommendation2": { "recommendation": "Assist mother with civil registry for replacement IDs, provide transport subsidy, and include her in monitoring visits." }
+    }
   },
   {
     "id": "case-a92d4c1f",
@@ -17,7 +90,77 @@
     "priority": "Medium",
     "date_filed": "2025-09-10 00:00:00.000000+00",
     "visibility": "Head",
-    "last_updated": "2025-09-18 09:10:00.000000+00"
+    "last_updated": "2025-09-18 09:10:00.000000+00",
+    "intake": {
+      "IdentifyingData": {
+        "name": "Maria Santos",
+        "alias": "",
+        "age": "34",
+        "status": "married",
+        "address": "Brgy. San Roque, Townsville",
+        "religion": "Roman Catholic",
+        "educationalAttainment": "High School",
+        "sex": "female",
+        "birthday": "1991-05-11",
+        "birthPlace": "Townsville",
+        "referralSource": "School Principal",
+        "occupation": "Vendor",
+        "income": "7000",
+        "intakeDate": "2025-09-10",
+        "caseType": "Child Protection",
+        "contactPerson": "Mrs. Santos",
+        "respondentName": "Mr. Santos"
+      },
+      "FamilyData": {
+        "members": [
+          { "name": "Mrs. Santos", "age": "30", "relation": "mother", "status": "", "education": "", "occupation": "Vendor", "income": "N/A" },
+          { "name": "Mr. Santos", "age": "35", "relation": "father", "status": "", "education": "", "occupation": "Informal", "income": "N/A" }
+        ]
+      },
+      "PerpetratorInfo": {
+        "name": "Mr. Santos",
+        "age": "35",
+        "alias": "",
+        "sex": "male",
+        "address": "Brgy. San Roque",
+        "victimRelation": "father",
+        "offenceType": "",
+        "commissionDateTime": ""
+      },
+      "PresentingProblem": { "presentingProblem": "Child frequently absent from school, signs of neglect and bruises observed; school reported concerns." },
+      "BackgroundInfo": { "backgroundInfo": "Household with intermittent income; caregiver stressed; history of alcohol use by father reported." },
+      "CommunityInfo": { "communityInfo": "School and barangay social worker engaged; family monitored." },
+      "Assessment": { "assessment": "High risk for neglect. Protective interventions and coordinated support with education and barangay recommended." },
+      "Recommendation": { "recommendation": "Open protective case, assign social worker, coordinate with school and barangay; consider temporary alternative care if risk escalates." },
+      "caseDetails": { "caseManager": "Aaron S. Namoc", "priority": "High", "status": "Assessed", "visibility": "Head" },
+
+      "IdentifyingData2": {
+        "name": "Anna Santos",
+        "alias": "",
+        "age": "9",
+        "status": "minor",
+        "address": "Brgy. San Roque, Townsville",
+        "religion": "Roman Catholic",
+        "educationalAttainment": "Grade 3",
+        "sex": "female",
+        "birthday": "2016-02-20",
+        "birthPlace": "Townsville",
+        "referralSource": "School",
+        "occupation": "student",
+        "income": "0",
+        "intakeDate": "2025-09-10",
+        "caseType": "Child (Victim)",
+        "contactPerson": "Mrs. Santos",
+        "respondentName": "Mr. Santos"
+      },
+      "FamilyData2": { "members": [ { "name": "Mrs. Santos", "age": "30", "relation": "mother", "status": "", "education": "", "occupation": "Vendor", "income": "N/A" } ] },
+      "VictimInfo2": { "name": "Anna Santos", "age": "9", "alias": "", "sex": "female", "address": "Brgy. San Roque", "victimRelation": "daughter", "offenceType": "neglect", "commissionDateTime": "" },
+      "PresentingProblem2": { "presentingProblem": "Child shows signs of neglect and physical marks; additional protective needs for schooling and counseling." },
+      "BackgroundInfo2": { "backgroundInfo": "Mother struggles with income; father has periods of absence and alcohol use; home environment unstable." },
+      "CommunityInfo2": { "communityInfo": "School guidance counselor and barangay SW monitor; referrals to child protection committee made." },
+      "Assessment2": { "assessment": "Child requires protective plan, coordination with education, and monitoring of caregiver capacity." },
+      "Recommendation2": { "recommendation": "Immediate referral to child protection, regular monitoring visits, enroll child support services and consider temporary alternative care if situation worsens." }
+    }
   },
   {
     "id": "case-ff23ac8e",
@@ -27,7 +170,68 @@
     "priority": "Low",
     "date_filed": "2025-09-05 00:00:00.000000+00",
     "visibility": "Admin Staff",
-    "last_updated": "2025-09-19 16:45:00.000000+00"
+    "last_updated": "2025-09-19 16:45:00.000000+00",
+    "intake": {
+      "IdentifyingData": {
+        "name": "Pedro Ramirez",
+        "alias": "P.R.",
+        "age": "42",
+        "status": "married",
+        "address": "Brgy. Mabini, Townsville",
+        "religion": "Iglesia",
+        "educationalAttainment": "Elementary",
+        "sex": "male",
+        "birthday": "1983-11-22",
+        "birthPlace": "Townsville",
+        "referralSource": "Barangay",
+        "occupation": "Driver",
+        "income": "10000",
+        "intakeDate": "2025-09-05",
+        "caseType": "Family Mediation",
+        "contactPerson": "Ana Ramirez (wife)",
+        "respondentName": ""
+      },
+      "FamilyData": {
+        "members": [
+          { "name": "Ana Ramirez", "age": "39", "relation": "wife", "status": "", "education": "", "occupation": "Housewife", "income": "N/A" },
+          { "name": "Miguel Ramirez", "age": "12", "relation": "son", "status": "", "education": "Grade 6", "occupation": "", "income": "N/A" }
+        ]
+      },
+      "PerpetratorInfo": { "name": "", "age": "", "alias": "", "sex": "", "address": "", "victimRelation": "", "offenceType": "", "commissionDateTime": "" },
+      "PresentingProblem": { "presentingProblem": "Marital conflict affecting family functioning; request for counseling and mediation." },
+      "BackgroundInfo": { "backgroundInfo": "History of disagreements over finances; no reported physical violence." },
+      "CommunityInfo": { "communityInfo": "Barangay mediation services aware and willing to assist." },
+      "Assessment": { "assessment": "Low-to-moderate risk. Family mediation and counseling appropriate." },
+      "Recommendation": { "recommendation": "Refer to family counselor and schedule mediation sessions. Monitor progress." },
+      "caseDetails": { "caseManager": null, "priority": "Medium", "status": "In Process", "visibility": "Admin Staff" },
+
+      "IdentifyingData2": {
+        "name": "Miguel Ramirez",
+        "alias": "",
+        "age": "12",
+        "status": "minor",
+        "address": "Brgy. Mabini, Townsville",
+        "religion": "Iglesia",
+        "educationalAttainment": "Grade 6",
+        "sex": "male",
+        "birthday": "2013-04-02",
+        "birthPlace": "Townsville",
+        "referralSource": "School",
+        "occupation": "student",
+        "income": "0",
+        "intakeDate": "2025-09-05",
+        "caseType": "Child (secondary)",
+        "contactPerson": "Ana Ramirez",
+        "respondentName": ""
+      },
+      "FamilyData2": { "members": [ { "name": "Ana Ramirez", "age": "39", "relation": "mother", "status": "", "education": "", "occupation": "Housewife", "income": "N/A" } ] },
+      "VictimInfo2": { "name": "Miguel Ramirez", "age": "12", "alias": "", "sex": "male", "address": "Brgy. Mabini", "victimRelation": "son", "offenceType": "", "commissionDateTime": "" },
+      "PresentingProblem2": { "presentingProblem": "Child exposed to parental conflict; requires monitoring and emotional support." },
+      "BackgroundInfo2": { "backgroundInfo": "Parents experiencing financial stress leading to frequent arguments; child reports anxiety at school." },
+      "CommunityInfo2": { "communityInfo": "Barangay mediation and school counselor aware; child support services advised." },
+      "Assessment2": { "assessment": "Child may benefit from counseling and parenting support for caregivers." },
+      "Recommendation2": { "recommendation": "Provide family counseling, refer child to school guidance, and include in follow-up visits." }
+    }
   },
   {
     "id": "case-74bc901d",
@@ -37,7 +241,67 @@
     "priority": "High",
     "date_filed": "2025-08-30 00:00:00.000000+00",
     "visibility": "Head",
-    "last_updated": "2025-09-20 08:00:00.000000+00"
+    "last_updated": "2025-09-20 08:00:00.000000+00",
+    "intake": {
+      "IdentifyingData": {
+        "name": "Liza Cruz",
+        "alias": "",
+        "age": "26",
+        "status": "single",
+        "address": "Brgy. Del Pilar, Cityville",
+        "religion": "Roman Catholic",
+        "educationalAttainment": "Vocational",
+        "sex": "female",
+        "birthday": "1999-12-01",
+        "birthPlace": "Cityville",
+        "referralSource": "Health Center",
+        "occupation": "Seamstress",
+        "income": "6500",
+        "intakeDate": "2025-08-30",
+        "caseType": "Health Referral",
+        "contactPerson": "Dr. Reyes",
+        "respondentName": ""
+      },
+      "FamilyData": {
+        "members": [
+          { "name": "Carlos Cruz", "age": "52", "relation": "father", "status": "", "education": "", "occupation": "Farmer", "income": "N/A" }
+        ]
+      },
+      "PerpetratorInfo": { "name": "", "age": "", "alias": "", "sex": "", "address": "", "victimRelation": "", "offenceType": "", "commissionDateTime": "" },
+      "PresentingProblem": { "presentingProblem": "Referred for follow-up care after minor surgery; requires support for medication and transport." },
+      "BackgroundInfo": { "backgroundInfo": "Underwent minor procedure; limited funds for follow-up." },
+      "CommunityInfo": { "communityInfo": "Health center provided initial assistance; no further community issues reported." },
+      "Assessment": { "assessment": "Low urgency. Provide one-time transport subsidy and medication support." },
+      "Recommendation": { "recommendation": "Provide transport cost and medication referral; case closed after confirmation of receipt." },
+      "caseDetails": { "caseManager": "Aaron S. Namoc", "priority": "Low", "status": "Resolved", "visibility": "Head" },
+
+      "IdentifyingData2": {
+        "name": "Carlos Cruz",
+        "alias": "",
+        "age": "52",
+        "status": "married",
+        "address": "Brgy. Del Pilar, Cityville",
+        "religion": "Roman Catholic",
+        "educationalAttainment": "Elementary",
+        "sex": "male",
+        "birthday": "1973-06-18",
+        "birthPlace": "Cityville",
+        "referralSource": "Relative",
+        "occupation": "Farmer",
+        "income": "8000",
+        "intakeDate": "2025-08-30",
+        "caseType": "Family Support",
+        "contactPerson": "Liza Cruz",
+        "respondentName": ""
+      },
+      "FamilyData2": { "members": [ { "name": "Liza Cruz", "age": "26", "relation": "daughter", "status": "single", "education": "Vocational", "occupation": "Seamstress", "income": "6500" } ] },
+      "VictimInfo2": { "name": "Liza Cruz", "age": "26", "alias": "", "sex": "female", "address": "Brgy. Del Pilar", "victimRelation": "self", "offenceType": "", "commissionDateTime": "" },
+      "PresentingProblem2": { "presentingProblem": "Elder family member requires follow-up care arrangements; transport support requested." },
+      "BackgroundInfo2": { "backgroundInfo": "Family recovering from surgery; limited cash for medications and travel." },
+      "CommunityInfo2": { "communityInfo": "Health center and barangay notified; volunteer drivers available." },
+      "Assessment2": { "assessment": "Low priority; provide transport subsidy and confirm medication adherence." },
+      "Recommendation2": { "recommendation": "Provide transport and medication referrals; close once receipt confirmed." }
+    }
   },
   {
     "id": "case-cd6721ef",
@@ -47,6 +311,67 @@
     "priority": "Medium",
     "date_filed": "2025-09-12 00:00:00.000000+00",
     "visibility": "Case Manager",
-    "last_updated": "2025-09-19 20:20:00.000000+00"
+    "last_updated": "2025-09-19 20:20:00.000000+00",
+    "intake": {
+      "IdentifyingData": {
+        "name": "Mark Villanueva",
+        "alias": "Mark",
+        "age": "45",
+        "status": "married",
+        "address": "Brgy. Sto Niño, Cityville",
+        "religion": "Roman Catholic",
+        "educationalAttainment": "College",
+        "sex": "male",
+        "birthday": "1980-07-19",
+        "birthPlace": "Cityville",
+        "referralSource": "Barangay",
+        "occupation": "Small business owner",
+        "income": "20000",
+        "intakeDate": "2025-09-12",
+        "caseType": "Economic",
+        "contactPerson": "Ana Villanueva",
+        "respondentName": ""
+      },
+      "FamilyData": {
+        "members": [
+          { "name": "Ana Villanueva", "age": "43", "relation": "wife", "status": "", "education": "", "occupation": "Teacher", "income": "N/A" },
+          { "name": "Ella Villanueva", "age": "8", "relation": "daughter", "status": "", "education": "Grade 2", "occupation": "", "income": "N/A" }
+        ]
+      },
+      "PerpetratorInfo": { "name": "", "age": "", "alias": "", "sex": "", "address": "", "victimRelation": "", "offenceType": "", "commissionDateTime": "" },
+      "PresentingProblem": { "presentingProblem": "Business affected by recent flooding; requests business recovery assistance and guidance on accessing small loans." },
+      "BackgroundInfo": { "backgroundInfo": "Owner of sari-sari store impacted by natural disaster; stock damaged." },
+      "CommunityInfo": { "communityInfo": "Barangay disaster response team engaged; available microfinance referral options." },
+      "Assessment": { "assessment": "Medium priority for economic recovery support. Recommend linkage to microfinance and temporary livelihood grant." },
+      "Recommendation": { "recommendation": "Refer to microfinance partner and provide short-term livelihood support. Assign case manager for follow-up." },
+      "caseDetails": { "caseManager": "Elaiza Claire Q. Gamolo", "priority": "Medium", "status": "In Process", "visibility": "Case Manager" },
+
+      "IdentifyingData2": {
+        "name": "Ana Villanueva",
+        "alias": "",
+        "age": "43",
+        "status": "married",
+        "address": "Brgy. Sto Niño, Cityville",
+        "religion": "Roman Catholic",
+        "educationalAttainment": "College",
+        "sex": "female",
+        "birthday": "1982-03-22",
+        "birthPlace": "Cityville",
+        "referralSource": "Husband",
+        "occupation": "Teacher",
+        "income": "15000",
+        "intakeDate": "2025-09-12",
+        "caseType": "Household",
+        "contactPerson": "Mark Villanueva",
+        "respondentName": ""
+      },
+      "FamilyData2": { "members": [ { "name": "Ella Villanueva", "age": "8", "relation": "daughter", "status": "", "education": "Grade 2", "occupation": "", "income": "N/A" } ] },
+      "VictimInfo2": { "name": "Ella Villanueva", "age": "8", "alias": "", "sex": "female", "address": "Brgy. Sto Niño", "victimRelation": "daughter", "offenceType": "", "commissionDateTime": "" },
+      "PresentingProblem2": { "presentingProblem": "Children affected by flooding; need psycho-social support and school re-enrollment assistance." },
+      "BackgroundInfo2": { "backgroundInfo": "Flood damaged home and inventory; children out of school for two weeks." },
+      "CommunityInfo2": { "communityInfo": "Disaster response team identified temporary market stalls and cash-for-work opportunities." },
+      "Assessment2": { "assessment": "Family needs livelihood and education support; prioritize child's psychosocial care." },
+      "Recommendation2": { "recommendation": "Link family to livelihood grants, coordinate with school for catch-up classes, and schedule psychosocial sessions for child." }
+    }
   }
 ]
