@@ -40,6 +40,7 @@ const schema = z.object({
   idCardNumber: z.string().min(2, "Required"),
   contactNumber: z.string().min(10, "Valid contact number required"),
   permanentAddress: z.string().min(5, "Required"),
+  alternateContactNumber: z.string().min(10, "Valid contact number required").optional(),
   fourPsBeneficiary: z.boolean().default(false),
   ipEthnicity: z.boolean().default(false),
   ipEthnicityType: z.string().optional(),
@@ -55,6 +56,7 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
       birthdate: data[sectionKey]?.birthdate || "",
       fourPsBeneficiary: data[sectionKey]?.fourPsBeneficiary || false,
       ipEthnicity: data[sectionKey]?.ipEthnicity || false,
+      alternateContactNumber: data[sectionKey]?.alternateContactNumber || "",
     },
   });
 
@@ -136,7 +138,7 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
               />
             </div>
 
-            {/* ROW 2: NAME EXTENSION, BIRTHDATE, AGE */}
+            {/* ROW 2: EXTENSION, AGE, SEX */}
             <div className="flex gap-2">
               <FormField
                 control={form.control}
@@ -158,6 +160,58 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
                 )}
               />
 
+              <FormField
+                control={form.control}
+                name="age"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>Age</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="number"
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setSectionField(sectionKey, "age", e.target.value);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="sex"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>Sex</FormLabel>
+                    <Select
+                      onValueChange={(val) => {
+                        field.onChange(val);
+                        setSectionField(sectionKey, "sex", val);
+                      }}
+                      defaultValue={field.value}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select sex" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* ROW 3: BIRTHDATE, BIRTHPLACE, CIVIL STATUS */}
+            <div className="flex gap-2">
               <FormField
                 control={form.control}
                 name="birthdate"
@@ -183,30 +237,6 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
 
               <FormField
                 control={form.control}
-                name="age"
-                render={({ field }) => (
-                  <FormItem className="w-20">
-                    <FormLabel>Age</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="number"
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setSectionField(sectionKey, "age", e.target.value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* ROW 3: BIRTHPLACE, SEX */}
-            <div className="flex gap-2">
-              <FormField
-                control={form.control}
                 name="birthplace"
                 render={({ field }) => (
                   <FormItem className="flex-1">
@@ -227,37 +257,6 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
 
               <FormField
                 control={form.control}
-                name="sex"
-                render={({ field }) => (
-                  <FormItem className="w-32">
-                    <FormLabel>Sex</FormLabel>
-                    <Select
-                      onValueChange={(val) => {
-                        field.onChange(val);
-                        setSectionField(sectionKey, "sex", val);
-                      }}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select sex" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="male">Male</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* ROW 4: CIVIL STATUS, MOTHER'S MAIDEN NAME */}
-            <div className="flex gap-2">
-              <FormField
-                control={form.control}
                 name="civilStatus"
                 render={({ field }) => (
                   <FormItem className="flex-1">
@@ -271,7 +270,7 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
+                          <SelectValue placeholder="Select Status" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -286,29 +285,35 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="mothersMaidenName"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>Mother's Maiden Name</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        onChange={(e) => {
-                          field.onChange(e);
-                          setSectionField(sectionKey, "mothersMaidenName", e.target.value);
-                        }}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
 
-            {/* ROW 5: RELIGION, OCCUPATION */}
+            {/* ROW 4: MOTHER'S MAIDEN NAME */}
+            <FormField
+              control={form.control}
+              name="mothersMaidenName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mother's Maiden Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      onChange={(e) => {
+                        field.onChange(e);
+                        setSectionField(sectionKey, "mothersMaidenName", e.target.value);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* ROW 5: (moved) religion & occupation removed from left column - now in right column */}
+          </div>
+
+          {/* RIGHT COLUMN */}
+          <div className="space-y-4">
+            {/* ROW 1: RELIGION, OCCUPATION (column 2 top) */}
             <div className="flex gap-2">
               <FormField
                 control={form.control}
@@ -350,11 +355,8 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
                 )}
               />
             </div>
-          </div>
 
-          {/* RIGHT COLUMN */}
-          <div className="space-y-4">
-            {/* ROW 1: MONTHLY INCOME, ID CARD PRESENTED */}
+            {/* ROW 2: MONTHLY INCOME, PERMANENT ADDRESS */}
             <div className="flex gap-2">
               <FormField
                 control={form.control}
@@ -380,6 +382,29 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
 
               <FormField
                 control={form.control}
+                name="permanentAddress"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>Permanent Address</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setSectionField(sectionKey, "permanentAddress", e.target.value);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* ROW 2: ID CARD PRESENTED, ID CARD NUMBER */}
+            <div className="flex gap-2">
+              <FormField
+                control={form.control}
                 name="idCardPresented"
                 render={({ field }) => (
                   <FormItem className="flex-1">
@@ -397,10 +422,7 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
                   </FormItem>
                 )}
               />
-            </div>
 
-            {/* ROW 2: ID CARD NUMBER, CONTACT NUMBER */}
-            <div className="flex gap-2">
               <FormField
                 control={form.control}
                 name="idCardNumber"
@@ -420,13 +442,16 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
                   </FormItem>
                 )}
               />
+            </div>
 
+            {/* ROW 3: CONTACT NUMBER (PRIMARY), CONTACT NUMBER (ALTERNATE) */}
+            <div className="flex gap-2">
               <FormField
                 control={form.control}
                 name="contactNumber"
                 render={({ field }) => (
                   <FormItem className="flex-1">
-                    <FormLabel>Contact Number</FormLabel>
+                    <FormLabel>Contact Number (Primary)</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -440,38 +465,37 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
                   </FormItem>
                 )}
               />
+
+              <FormField
+                control={form.control}
+                name="alternateContactNumber"
+                render={({ field }) => (
+                  <FormItem className="flex-1">
+                    <FormLabel>Contact Number (Alternate)</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setSectionField(sectionKey, "alternateContactNumber", e.target.value);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
 
-            {/* ROW 3: PERMANENT ADDRESS */}
-            <FormField
-              control={form.control}
-              name="permanentAddress"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Permanent Address</FormLabel>
-                  <FormControl>
-                    <Input
-                      {...field}
-                      onChange={(e) => {
-                        field.onChange(e);
-                        setSectionField(sectionKey, "permanentAddress", e.target.value);
-                      }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* ROW 4: OTHERS - CHECKBOXES */}
-            <div className="space-y-3">
+            {/* ROW 4: OTHERS - CHECKBOXES (side-by-side) */}
+            <div className="flex items-center gap-6">
               <FormLabel>Others</FormLabel>
-              
+
               <FormField
                 control={form.control}
                 name="fourPsBeneficiary"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormItem className="flex items-center space-x-3">
                     <FormControl>
                       <Checkbox
                         checked={field.value}
@@ -481,7 +505,7 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
                         }}
                       />
                     </FormControl>
-                    <FormLabel className="font-normal">
+                    <FormLabel className="font-normal m-0">
                       4Ps Beneficiary
                     </FormLabel>
                   </FormItem>
@@ -492,7 +516,7 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
                 control={form.control}
                 name="ipEthnicity"
                 render={({ field }) => (
-                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormItem className="flex items-center space-x-3">
                     <FormControl>
                       <Checkbox
                         checked={field.value}
@@ -502,7 +526,7 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
                         }}
                       />
                     </FormControl>
-                    <FormLabel className="font-normal">
+                    <FormLabel className="font-normal m-0">
                       IP Type of Ethnicity
                     </FormLabel>
                   </FormItem>
