@@ -130,25 +130,26 @@ export function FamilyInformationForm({ sectionKey, goNext, goBack }) {
               onSubmit={form.handleSubmit(onSubmit)}
               className="space-y-3"
             >
-              <FormField
-                control={form.control}
-                name="familyMember"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Family Member Name</FormLabel>
-                    <FormControl>
-                      <Input {...field} />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
+              {/* Row 1: Name + Relation to Head */}
               <div className="flex gap-4">
+                <FormField
+                  control={form.control}
+                  name="familyMember"
+                  render={({ field }) => (
+                    <FormItem className="w-2/3">
+                      <FormLabel>Family Member Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                   control={form.control}
                   name="relationToHead"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="w-1/3">
                       <FormLabel>Relation to Head</FormLabel>
                       <Select
                         onValueChange={(val) => field.onChange(val)}
@@ -181,12 +182,28 @@ export function FamilyInformationForm({ sectionKey, goNext, goBack }) {
                     </FormItem>
                   )}
                 />
+              </div>
+
+              {/* Row 2: Age + Birthdate + Sex */}
+              <div className="flex gap-4">
+                <FormField
+                  control={form.control}
+                  name="age"
+                  render={({ field }) => (
+                    <FormItem className="w-28">
+                      <FormLabel>Age</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="number" />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
                   name="birthdate"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="flex-1">
                       <FormLabel>Birthdate</FormLabel>
                       <FormControl>
                         <input
@@ -199,27 +216,12 @@ export function FamilyInformationForm({ sectionKey, goNext, goBack }) {
                     </FormItem>
                   )}
                 />
-              </div>
-
-              <div className="flex gap-4">
-                <FormField
-                  control={form.control}
-                  name="age"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Age</FormLabel>
-                      <FormControl>
-                        <Input {...field} type="number" />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
 
                 <FormField
                   control={form.control}
                   name="sex"
                   render={({ field }) => (
-                    <FormItem>
+                    <FormItem className="w-40">
                       <FormLabel>Sex</FormLabel>
                       <Select
                         onValueChange={(val) => field.onChange(val)}
