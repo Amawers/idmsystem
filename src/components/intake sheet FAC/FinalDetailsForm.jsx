@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/form";
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const schema = z.object({
   houseOwnership: z.string().min(1, "Required"),
@@ -38,6 +39,8 @@ export function FinalDetailsForm({ sectionKey, goNext, goBack }) {
     defaultValues: {
       ...data[sectionKey],
       dateRegistered: data[sectionKey]?.dateRegistered || "",
+      houseOwnership: data[sectionKey]?.houseOwnership || "",
+      shelterDamage: data[sectionKey]?.shelterDamage || "",
     },
   });
 
@@ -72,71 +75,10 @@ export function FinalDetailsForm({ sectionKey, goNext, goBack }) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Grid layout: 2 columns with maximum 5 rows each */}
+        {/* Grid layout: 2 columns */}
         <div className="grid grid-cols-2 gap-4">
-          {/* LEFT COLUMN */}
+          {/* LEFT COLUMN: Barangay Captain + LSWDO Name (stacked) */}
           <div className="space-y-4">
-            {/* ROW 1: HOUSE OWNERSHIP & SHELTER DAMAGE */}
-            <div className="flex gap-2">
-              <FormField
-                control={form.control}
-                name="houseOwnership"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>House Ownership</FormLabel>
-                    <Select
-                      onValueChange={(val) => {
-                        field.onChange(val);
-                        setSectionField(sectionKey, "houseOwnership", val);
-                      }}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select ownership" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="owner">Owner</SelectItem>
-                        <SelectItem value="renter">Renter</SelectItem>
-                        <SelectItem value="sharer">Sharer</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="shelterDamage"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormLabel>Shelter Damage Classification</FormLabel>
-                    <Select
-                      onValueChange={(val) => {
-                        field.onChange(val);
-                        setSectionField(sectionKey, "shelterDamage", val);
-                      }}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select damage level" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="partially-damaged">Partially Damaged</SelectItem>
-                        <SelectItem value="totally-damaged">Totally Damaged</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            {/* ROW 2: BARANGAY CAPTAIN */}
             <FormField
               control={form.control}
               name="barangayCaptain"
@@ -156,35 +98,7 @@ export function FinalDetailsForm({ sectionKey, goNext, goBack }) {
                 </FormItem>
               )}
             />
-          </div>
 
-          {/* RIGHT COLUMN */}
-          <div className="space-y-4">
-            {/* ROW 1: DATE REGISTERED */}
-            <FormField
-              control={form.control}
-              name="dateRegistered"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Date Registered</FormLabel>
-                  <FormControl>
-                    <input
-                      type="date"
-                      className="border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 w-full text-left font-normal py-1 px-2 rounded-md"
-                      value={field.value || ""}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        field.onChange(val);
-                        setSectionField(sectionKey, "dateRegistered", val);
-                      }}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            {/* ROW 2: LSWDO NAME */}
             <FormField
               control={form.control}
               name="lswdoName"
@@ -200,6 +114,119 @@ export function FinalDetailsForm({ sectionKey, goNext, goBack }) {
                       }}
                     />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {/* RIGHT COLUMN: stacked rows */}
+          <div className="space-y-4">
+            {/* ROW 1: Date Registered (half width) */}
+            <FormField
+              control={form.control}
+              name="dateRegistered"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Date Registered</FormLabel>
+                  <FormControl>
+                    <input
+                      type="date"
+                      className="border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50 w-1/2 text-left font-normal py-1 px-2 rounded-md"
+                      value={field.value || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        field.onChange(val);
+                        setSectionField(sectionKey, "dateRegistered", val);
+                      }}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* ROW 2: House Ownership as a set of checkboxes (one per option) */}
+            <FormField
+              control={form.control}
+              name="houseOwnership"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>House Ownership</FormLabel>
+                  <div className="flex items-center gap-4">
+                    <label className="inline-flex items-center gap-2">
+                      <Checkbox
+                        checked={field.value === "owner"}
+                        onCheckedChange={(checked) => {
+                          const val = checked ? "owner" : "";
+                          field.onChange(val);
+                          setSectionField(sectionKey, "houseOwnership", val);
+                        }}
+                      />
+                      <span>Owner</span>
+                    </label>
+
+                    <label className="inline-flex items-center gap-2">
+                      <Checkbox
+                        checked={field.value === "renter"}
+                        onCheckedChange={(checked) => {
+                          const val = checked ? "renter" : "";
+                          field.onChange(val);
+                          setSectionField(sectionKey, "houseOwnership", val);
+                        }}
+                      />
+                      <span>Renter</span>
+                    </label>
+
+                    <label className="inline-flex items-center gap-2">
+                      <Checkbox
+                        checked={field.value === "sharer"}
+                        onCheckedChange={(checked) => {
+                          const val = checked ? "sharer" : "";
+                          field.onChange(val);
+                          setSectionField(sectionKey, "houseOwnership", val);
+                        }}
+                      />
+                      <span>Sharer</span>
+                    </label>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* ROW 3: Shelter Damage as checkboxes (partially / totally) */}
+            <FormField
+              control={form.control}
+              name="shelterDamage"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Shelter Damage</FormLabel>
+                  <div className="flex items-center gap-4">
+                    <label className="inline-flex items-center gap-2">
+                      <Checkbox
+                        checked={field.value === "partially-damaged"}
+                        onCheckedChange={(checked) => {
+                          const val = checked ? "partially-damaged" : "";
+                          field.onChange(val);
+                          setSectionField(sectionKey, "shelterDamage", val);
+                        }}
+                      />
+                      <span>Partially Damaged</span>
+                    </label>
+
+                    <label className="inline-flex items-center gap-2">
+                      <Checkbox
+                        checked={field.value === "totally-damaged"}
+                        onCheckedChange={(checked) => {
+                          const val = checked ? "totally-damaged" : "";
+                          field.onChange(val);
+                          setSectionField(sectionKey, "shelterDamage", val);
+                        }}
+                      />
+                      <span>Totally Damaged</span>
+                    </label>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
