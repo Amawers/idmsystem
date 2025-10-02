@@ -56,6 +56,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import IntakeSheet from "@/pages/case manager/IntakeSheet";
 import IntakeSheetCICLCAR from "@/pages/case manager/IntakeSheetCICLCAR";
+import IntakeSheetFAR from "@/pages/case manager/IntakeSheetFAR";
 import DragHandle from "@/components/cases/tables/DragHandle";
 import CaseTableCellViewer from "@/components/cases/tables/CaseTableCellViewer";
 import useDataTable from "@/hooks/useDataTable";
@@ -1000,6 +1001,23 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 										))}
 								</DropdownMenuContent>
 							</DropdownMenu>
+
+							{/* INTAKE FAR BUTTON*/}
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => setOpenIntakeSheet(true)}
+							>
+								<IconPlus />
+								<span className="hidden lg:inline">
+									INTAKE FAR
+								</span>
+							</Button>
+
+							<IntakeSheetFAR
+								open={openIntakeSheet}
+								setOpen={setOpenIntakeSheet}
+							/>
 						</>
 					)}
 				</div>
