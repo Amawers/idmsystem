@@ -820,7 +820,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 							Family Assistance Record
 						</SelectItem>
 						<SelectItem value="IVAC">Incidence on VAC</SelectItem>
-						<SelectItem value="FAC">Family Access Card</SelectItem>
+						<SelectItem value="FAC">Family Assistance Card</SelectItem>
 					</SelectContent>
 				</Select>
 				{/*
@@ -837,7 +837,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 						</TabsTrigger>
 						<TabsTrigger value="IVAC">Incidence on VAC</TabsTrigger>
 						<TabsTrigger value="FAC">
-							Family Access Card
+							Family Assistance Card
 						</TabsTrigger>
 					</TabsList>
 				</div>
@@ -1085,7 +1085,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
       */}
 			<TabsContent value="FAC" className="flex flex-col px-4 lg:px-6">
 				<div className="aspect-video w-full flex-1 rounded-lg border border-dashed">
-					FAC PAGE
+					Family Assistance Card PAGE
 				</div>
 			</TabsContent>
 		</Tabs>
