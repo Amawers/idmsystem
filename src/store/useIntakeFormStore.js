@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-export const useIntakeFormStore = create((set) => ({
+export const useIntakeFormStore = create((set, get) => ({
   data: {},
 
   setSectionField: (section, fieldOrValues, maybeValue) =>
@@ -25,4 +25,10 @@ export const useIntakeFormStore = create((set) => ({
         },
       };
     }),
+
+  // Clear everything
+  resetAll: () => set({ data: {} }),
+
+  // Getter for all data (useful for final submit)
+  getAllData: () => get().data,
 }));

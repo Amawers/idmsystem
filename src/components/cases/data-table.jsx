@@ -56,8 +56,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import IntakeSheet from "@/pages/case manager/IntakeSheet";
 import IntakeSheetCICLCAR from "@/pages/case manager/IntakeSheetCICLCAR";
+import IntakeSheetFAR from "@/pages/case manager/IntakeSheetFAR";
+import IntakeSheetFAC from "@/pages/case manager/IntakeSheetFAC";
 import DragHandle from "@/components/cases/tables/DragHandle";
-import CaseTableCellViewer from "@/components/cases/tables/CaseTableCellViewer";
 import useDataTable from "@/hooks/useDataTable";
 import TableRenderer from "@/components/cases/tables/TableRenderer";
 // ====================
@@ -140,7 +141,9 @@ const caseColumns = [
 		accessorKey: "case ID",
 		header: "Case ID",
 		cell: ({ row }) => {
-			return <CaseTableCellViewer item={row.original} />;
+			// Render plain text instead of a clickable viewer
+			const caseId = row.original["case ID"] ?? row.original.id;
+			return <div className="font-medium">{caseId}</div>;
 		},
 		enableHiding: false,
 	},
@@ -471,7 +474,9 @@ const ciclcarColumns = [
 		accessorKey: "header",
 		header: "Header",
 		cell: ({ row }) => {
-			return <CaseTableCellViewer item={row.original} />;
+			// Render header as plain text (no clickable viewer)
+			const headerText = row.original.header ?? row.original.id;
+			return <div className="font-medium">{headerText}</div>;
 		},
 		enableHiding: false,
 	},
@@ -819,7 +824,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 							Family Assistance Record
 						</SelectItem>
 						<SelectItem value="IVAC">Incidence on VAC</SelectItem>
-						<SelectItem value="FAC">Family Access Card</SelectItem>
+						<SelectItem value="FAC">Family Assistance Card</SelectItem>
 					</SelectContent>
 				</Select>
 				{/*
@@ -836,7 +841,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 						</TabsTrigger>
 						<TabsTrigger value="IVAC">Incidence on VAC</TabsTrigger>
 						<TabsTrigger value="FAC">
-							Family Access Card
+							Family Assistance Card
 						</TabsTrigger>
 					</TabsList>
 				</div>
@@ -1000,6 +1005,23 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 										))}
 								</DropdownMenuContent>
 							</DropdownMenu>
+
+							{/* INTAKE FAR BUTTON*/}
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => setOpenIntakeSheet(true)}
+							>
+								<IconPlus />
+								<span className="hidden lg:inline">
+									INTAKE FAR
+								</span>
+							</Button>
+
+							<IntakeSheetFAR
+								open={openIntakeSheet}
+								setOpen={setOpenIntakeSheet}
+							/>
 						</>
 					)}
 				</div>
@@ -1066,8 +1088,27 @@ export function DataTable({ caseData, ciclcarData, farData }) {
       //! =====================
       */}
 			<TabsContent value="FAC" className="flex flex-col px-4 lg:px-6">
+				<div className="mb-4 flex items-center justify-between">
+					<h2 className="text-lg font-semibold">Family Assistance Card</h2>
+					{/* INTAKE FAC BUTTON*/}
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => setOpenIntakeSheet(true)}
+					>
+						<IconPlus />
+						<span className="hidden lg:inline">
+							INTAKE FAC
+						</span>
+					</Button>
+
+					<IntakeSheetFAC
+						open={openIntakeSheet}
+						setOpen={setOpenIntakeSheet}
+					/>
+				</div>
 				<div className="aspect-video w-full flex-1 rounded-lg border border-dashed">
-					FAC PAGE
+					Family Assistance Card entries will be displayed here
 				</div>
 			</TabsContent>
 		</Tabs>
