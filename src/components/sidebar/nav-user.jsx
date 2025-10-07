@@ -34,7 +34,6 @@ export function NavUser({ user, avatar }) {
 
 	const roleLabels = {
 		case_manager: "Case Manager",
-		admin_staff: "Admin Staff",
 		head: "Head",
 	};
 

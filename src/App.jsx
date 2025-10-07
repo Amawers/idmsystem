@@ -67,11 +67,11 @@ export default function App() {
         {/* Public route: Login page */}
         <Route path="/login" element={<Login />} />
 
-        {/* Protected route: Case Management (admin staff + case manager + head) */}
+        {/* Protected route: Case Management (case manager + head) */}
         <Route
           path="/case"
           element={
-            <ProtectedRoute allowedRoles={["admin_staff", "case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
               <Layout>
                 <Case />
               </Layout>
@@ -79,11 +79,11 @@ export default function App() {
           }
         />
         
-        {/* Protected route: Program Management (admin staff + case manager + head) */}
+        {/* Protected route: Program Management (case manager + head) */}
         <Route
           path="/program"
           element={
-            <ProtectedRoute allowedRoles={["admin_staff", "case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
               <Layout>
                 <TestFileGenerator />
               </Layout>
@@ -116,11 +116,11 @@ export default function App() {
           }
         />
 
-         {/* Protected route: Security & Audit (admin staff + case manager + head) */}
+         {/* Protected route: Security & Audit (case manager + head) */}
         <Route
           path="/controls"
           element={
-            <ProtectedRoute allowedRoles={["admin_staff", "case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
               <Layout>
                 <div>Security & Audit Page</div>
               </Layout>

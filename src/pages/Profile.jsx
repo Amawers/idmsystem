@@ -21,7 +21,6 @@ export default function Profile({ open, setOpen }) {
 	// Map roles from DB to readable labels
 	const roleLabels = {
 		case_manager: "Case Manager",
-		admin_staff: "Admin Staff",
 		head: "Head",
 	};
 
