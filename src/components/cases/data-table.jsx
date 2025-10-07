@@ -871,6 +871,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 	// ============================
 	return (
 		<Tabs
+			value={activeTab}
 			defaultValue="CASE"
 			onValueChange={setActiveTab}
 			className="w-full flex-col justify-start gap-6"
