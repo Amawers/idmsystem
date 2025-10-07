@@ -881,9 +881,9 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 					View
 				</Label>
 				{/*
-         //! =====================
-         //! MOBILE SCREEN - logic not yet implemented
-         //! =====================
+         // ==============
+         // *MOBILE SCREEN
+         // ==============
          */}
 				<Select value={activeTab} onValueChange={setActiveTab}>
 					<SelectTrigger
