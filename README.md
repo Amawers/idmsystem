@@ -1,3 +1,6 @@
+![Uploading logo.jpg…]()
+
+
 ## 📌 Project Overview
 
 This project is called **Integrated Digital Management System for Municipal Social Welfare Services of Villanueva**. This system is designed to automate client and case management, enhance resource tracking, support documentation processes, and facilitate real-time data monitoring through an intuitive, secure, and partially offline-capable platform. By addressing the MSWDO’s operational bottlenecks, this system aims to improve service delivery and enable more effective decision-making, benefiting both the staff and the communities they serve.
