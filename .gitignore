@@ -26,3 +26,6 @@ dist-ssr
 # Environment variables and developer configurations
 config/supabase.js
 .env
+
+# Co pilot configurations
+copilot-instructions.md

@@ -122,9 +122,6 @@ export default function Signup() {
 							<DropdownMenuRadioItem value="case_manager">
 								Case Manager
 							</DropdownMenuRadioItem>
-							<DropdownMenuRadioItem value="admin_staff">
-								Admin Staff
-							</DropdownMenuRadioItem>
 						</DropdownMenuRadioGroup>
 					</DropdownMenuContent>
 				</DropdownMenu>

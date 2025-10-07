@@ -98,7 +98,7 @@ export const useAuthStore = create((set) => ({
 			set({
 				user: data.user,
 				avatar_url: avatarSignedUrl,
-				role: profile?.role || "admin_staff",
+				role: profile?.role || "case_manager", // default role if missing
 				loading: false,
 			});
 		} else {

@@ -35,11 +35,6 @@ export default function Sidebar(props) {
 
   // ================= ROLE-BASED NAVIGATION =================
   const roleNavs = {
-    admin_staff: [
-      { path: "/case", label: "Case Management", icon: IconHeartHandshake },
-      { path: "/program", label: "Program Management", icon: IconClipboardData },
-      { path: "/controls", label: "Security & Audit", icon: IconLogs },
-    ],
     case_manager: [
       { path: "/case", label: "Case Management", icon: IconHeartHandshake },
       { path: "/program", label: "Program Management", icon: IconListDetails },

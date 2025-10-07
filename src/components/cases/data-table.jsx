@@ -354,6 +354,7 @@ const caseColumns = [
 			);
 		},
 	},
+	//! REFACTOR SOON VISIBILITY TO EXCLUDE SPECIFIC CASE MANAGER
 	//* VISIBILITY
 	{
 		accessorKey: "visibility",
