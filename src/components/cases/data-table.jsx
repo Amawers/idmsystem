@@ -3,6 +3,29 @@
 //! TO BE MODIFIED, SAMPLE DATA ONLY FOR RENDER
 //! ===========================================
 
+// =============================================
+// DataTable Component
+// ---------------------------------------------
+// Purpose: Renders a tabbed data table for cases, CICL/CAR, FAR, IVAC, and FAC with drag-and-drop, selection, and intake sheet modals.
+//
+// Key Responsibilities:
+// - Display data in tables with customizable columns
+// - Handle row selection and drag-and-drop reordering
+// - Provide intake sheet buttons for each tab
+// - Manage state for active tab and modal visibility
+//
+// Dependencies:
+// - React hooks (useState)
+// - UI components from shadcn/ui
+// - Custom hooks (useDataTable)
+// - Icons from Tabler
+// - Utilities (toast, formatDistanceToNow)
+//
+// Notes:
+// - Sample data is used; integrate with real data sources later.
+// - Drag-and-drop implemented via dnd-kit.
+// =============================================
+
 import * as React from "react";
 // Icons
 import {
@@ -50,7 +73,7 @@ import {
 	PopoverContent,
 	PopoverTrigger,
 } from "@/components/ui/popover";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, Lock, Globe } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
@@ -61,9 +84,10 @@ import IntakeSheetFAC from "@/pages/case manager/IntakeSheetFAC";
 import DragHandle from "@/components/cases/tables/DragHandle";
 import useDataTable from "@/hooks/useDataTable";
 import TableRenderer from "@/components/cases/tables/TableRenderer";
-// ====================
-// Data validation schema (Zod)
-// ====================
+
+// =============================================
+// DATA VALIDATION SCHEMA
+// =============================================
 // eslint-disable-next-line react-refresh/only-export-components
 export const schema = z.object({
 	id: z.number(),
@@ -75,6 +99,18 @@ export const schema = z.object({
 	caseManager: z.string(),
 });
 
+/**
+ * formatDateTime
+ *
+ * @description Formats an ISO string into a readable date-time string for display.
+ *
+ * @param {string} isoString - The ISO date-time string to format.
+ *
+ * @returns {string} Formatted date-time string.
+ *
+ * @example
+ * const formatted = formatDateTime("2023-10-01T12:00:00Z"); // "Oct 1, 2023, 12:00 PM"
+ */
 function formatDateTime(isoString) {
 	const date = new Date(isoString);
 	const options = {
@@ -96,7 +132,7 @@ const caseManagers = [
 ];
 
 // =================================
-//! CASE Table COLUMN DEFINITIONS
+//* CASE Table COLUMN DEFINITIONS
 // =================================
 const caseColumns = [
 	{
@@ -135,13 +171,16 @@ const caseColumns = [
 		enableHiding: false,
 	},
 
-	//! START OF DATA COLUMNS
+	//* =====================
+	//* START OF DATA COLUMNS
+	//* =====================
+
 	//* CASE ID
 	{
 		accessorKey: "case ID",
 		header: "Case ID",
 		cell: ({ row }) => {
-			// Render plain text instead of a clickable viewer
+			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
 			const caseId = row.original["case ID"] ?? row.original.id;
 			return <div className="font-medium">{caseId}</div>;
 		},
@@ -368,7 +407,14 @@ const caseColumns = [
 					>
 						Visibility
 					</Label>
-					<Select>
+					<Select
+						defaultValue={
+							// treat any non "only-me" value as "everyone" for backward compatibility
+							row.original.visibility === "only-me"
+								? "only-me"
+								: "everyone"
+						}
+					>
 						<SelectTrigger
 							className="w-38 bg-white text-black [&_[data-slot=select-value]]:text-black"
 							size="sm"
@@ -376,16 +422,23 @@ const caseColumns = [
 						>
 							<SelectValue
 								className="text-black"
-								placeholder={row.original.visibility}
+								placeholder={
+									row.original.visibility === "only-me"
+										? "Only Me"
+										: "Everyone"
+								}
 							/>
 						</SelectTrigger>
 						<SelectContent align="end">
-							<SelectItem value="head">Head</SelectItem>
-							<SelectItem value="case_manager">
-								Case Manager
+							<SelectItem value="only-me">
+								<div className="flex items-center gap-2">
+									<Lock className="h-4 w-4" /> Only Me
+								</div>
 							</SelectItem>
-							<SelectItem value="admin_staff">
-								Admin Staff
+							<SelectItem value="everyone">
+								<div className="flex items-center gap-2">
+									<Globe className="h-4 w-4" /> Everyone
+								</div>
 							</SelectItem>
 						</SelectContent>
 					</Select>
@@ -431,7 +484,7 @@ const caseColumns = [
 ];
 
 // =================================
-//! CICLCAR Table COLUMN DEFINITIONS
+//* CICLCAR Table COLUMN DEFINITIONS
 // =================================
 const ciclcarColumns = [
 	{
@@ -470,12 +523,15 @@ const ciclcarColumns = [
 		enableHiding: false,
 	},
 
-	// Other data columns (header, type, status, etc.)
+	//* =====================
+	//* START OF DATA COLUMNS
+	//* =====================
+
 	{
 		accessorKey: "header",
 		header: "Header",
 		cell: ({ row }) => {
-			// Render header as plain text (no clickable viewer)
+			// Render header as plain text (no clickable viewer) to maintain consistency
 			const headerText = row.original.header ?? row.original.id;
 			return <div className="font-medium">{headerText}</div>;
 		},
@@ -530,7 +586,7 @@ const ciclcarColumns = [
 		accessorKey: "target",
 		header: () => <div className="w-full text-right">Target</div>,
 		cell: ({ row }) => (
-			// Input form for editing target
+			// Input form for editing target to allow inline updates
 			<form
 				onSubmit={(e) => {
 					e.preventDefault();
@@ -562,7 +618,7 @@ const ciclcarColumns = [
 		accessorKey: "limit",
 		header: () => <div className="w-full text-right">Limit</div>,
 		cell: ({ row }) => (
-			// Input form for editing limit
+			// Input form for editing limit to allow inline updates
 			<form
 				onSubmit={(e) => {
 					e.preventDefault();
@@ -598,7 +654,7 @@ const ciclcarColumns = [
 				return row.original.case_manager;
 			}
 
-			// If not assigned → show dropdown
+			// If not assigned → show dropdown to enable assignment
 			return (
 				<>
 					<Label
@@ -631,7 +687,7 @@ const ciclcarColumns = [
 	{
 		id: "actions",
 		cell: () => (
-			// Row actions dropdown
+			// Row actions dropdown for additional operations
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
@@ -658,7 +714,7 @@ const ciclcarColumns = [
 ];
 
 // =================================
-//! FAR Table COLUMN DEFINITIONS
+//* FAR Table COLUMN DEFINITIONS
 // =================================
 const farColumns = [
 	{
@@ -697,7 +753,9 @@ const farColumns = [
 		enableHiding: false,
 	},
 
-	// Other data columns (header, type, status, etc.)
+	//* =====================
+	//* START OF DATA COLUMNS
+	//* =====================
 	{
 		accessorKey: "date",
 		header: "Date",
@@ -765,8 +823,24 @@ const farColumns = [
 ];
 
 // ==========================
-//! Main DataTable wrapper
+//* Main DataTable wrapper
 // ==========================
+
+/**
+ * DataTable
+ *
+ * @description Main component for displaying tabbed data tables with intake functionality.
+ *
+ * @param {Object} props - Component props
+ * @param {Array} props.caseData - Data for CASE tab
+ * @param {Array} props.ciclcarData - Data for CICLCAR tab
+ * @param {Array} props.farData - Data for FAR tab
+ *
+ * @returns {JSX.Element} Rendered DataTable component
+ *
+ * @example
+ * <DataTable caseData={cases} ciclcarData={ciclcar} farData={far} />
+ */
 export function DataTable({ caseData, ciclcarData, farData }) {
 	// State to control Intake Sheet modal visibility (open/close)
 	const [openIntakeSheet, setOpenIntakeSheet] = useState(false);
@@ -793,7 +867,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 	});
 
 	// ============================
-	//! TAB TRIGGER SECTION WAPPER
+	//* TAB TRIGGER SECTION WAPPER
 	// ============================
 	return (
 		<Tabs
@@ -825,13 +899,15 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 							Family Assistance Record
 						</SelectItem>
 						<SelectItem value="IVAC">Incidence on VAC</SelectItem>
-						<SelectItem value="FAC">Family Assistance Card</SelectItem>
+						<SelectItem value="FAC">
+							Family Assistance Card
+						</SelectItem>
 					</SelectContent>
 				</Select>
 				{/*
-         //! =====================
-         //! DESKTOP SCREEN 
-         //! =====================
+         // ================
+         // * DESKTOP SCREEN
+         // ================
          */}
 				<div className="hidden items-center gap-2 @4xl/main:flex">
 					<TabsList>
@@ -847,12 +923,12 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 					</TabsList>
 				</div>
 				{/*
-         //! =====================
-         //! RIGHT BUTTONS
-         //! =====================
+         // ==============
+         // *RIGHT BUTTONS
+         // ==============
          */}
 				<div className="flex items-center gap-2">
-					{/*//! CASES SECTION */}
+					{/* CASES SECTION */}
 					{activeTab === "CASE" && (
 						<>
 							{/* Customize Columns Dropdown */}
@@ -910,7 +986,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 						</>
 					)}
 
-					{/*//! CICLCAR SECTION */}
+					{/* CICLCAR SECTION */}
 					{activeTab === "CICLCAR" && (
 						<>
 							{/* Customize Columns Dropdown */}
@@ -968,7 +1044,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 						</>
 					)}
 
-					{/*//! FAR SECTION */}
+					{/* FAR SECTION */}
 					{activeTab === "FAR" && (
 						<>
 							{/* Customize Columns Dropdown */}
@@ -1028,9 +1104,9 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 				</div>
 			</div>
 			{/*
-        //! =====================
-        //! CASES VIEW
-        //! =====================
+        // ============
+        // *CASES VIEW
+        // ============
         */}
 			<TabsContent
 				value="CASE"
@@ -1043,9 +1119,9 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 				/>
 			</TabsContent>
 			{/*
-        //! =====================
-        //! CICL/CAR VIEW
-        //! =====================
+        // ==============
+        // *CICL/CAR VIEW
+        // ==============
         */}
 			<TabsContent
 				value="CICLCAR"
@@ -1058,9 +1134,9 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 				/>
 			</TabsContent>
 			{/*
-        //! =====================
-        //! FAR VIEW
-        //! =====================
+        // ============
+        // *FAR VIEW
+        // ============
         */}
 			<TabsContent
 				value="FAR"
@@ -1074,9 +1150,9 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 			</TabsContent>
 
 			{/*
-        //! =====================
-        //! IVAC VIEW
-        //! =====================
+        // ==========
+        // *IVAC VIEW
+        // ==========
         */}
 			<TabsContent value="IVAC" className="flex flex-col px-4 lg:px-6">
 				<div className="aspect-video w-full flex-1 rounded-lg border border-dashed">
@@ -1084,13 +1160,15 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 				</div>
 			</TabsContent>
 			{/*
-      //! =====================
-      //! FAC VIEW
-      //! =====================
-      */}
+        // ============
+        // *FAC VIEW
+        // ============
+        */}
 			<TabsContent value="FAC" className="flex flex-col px-4 lg:px-6">
 				<div className="mb-4 flex items-center justify-between">
-					<h2 className="text-lg font-semibold">Family Assistance Card</h2>
+					<h2 className="text-lg font-semibold">
+						Family Assistance Card
+					</h2>
 					{/* INTAKE FAC BUTTON*/}
 					<Button
 						variant="outline"
@@ -1098,9 +1176,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 						onClick={() => setOpenIntakeSheet(true)}
 					>
 						<IconPlus />
-						<span className="hidden lg:inline">
-							INTAKE FAC
-						</span>
+						<span className="hidden lg:inline">INTAKE FAC</span>
 					</Button>
 
 					<IntakeSheetFAC
