@@ -7,6 +7,7 @@ import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Textarea } from "@/components/ui/textarea";
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
+import { submitCase } from "@/lib/caseSubmission";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -100,17 +101,28 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond }) {
   const [priority, setPriority] = useState(data.caseDetails?.priority || undefined);
   const current = priorities.find((p) => p.value === priority);
 
-  function handleFinalSubmit(finalData) {
-    console.log("Final Data:", JSON.stringify(finalData, null, 2));
-    toast("Form submitted!", {
-      description: (
-        <pre className="mt-2 w-[320px] rounded-md bg-neutral-950 p-4">
-          <code className="text-white">
-            {JSON.stringify(finalData, null, 2)}
-          </code>
-        </pre>
-      ),
-    });
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleFinalSubmit(finalData) {
+    setSubmitting(true);
+    try {
+      const { caseId, error } = await submitCase(finalData, { isSecond });
+      if (error) {
+        console.error("Case submission error", error);
+        toast.error("Failed to save case", {
+          description: error.message || "Unknown error",
+        });
+        return;
+      }
+      toast.success("Case saved", {
+        description: `Case ID: ${caseId}`,
+      });
+    } catch (err) {
+      console.error(err);
+      toast.error("Unexpected error", { description: err.message });
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function onSubmit(values) {
@@ -269,9 +281,13 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond }) {
             </Button>
             <div className="flex gap-2">
               {isSecond ? (
-                <Button type="submit">Submit All</Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? "Saving..." : "Submit All"}
+                </Button>
               ) : (
-                <Button type="submit">Next</Button>
+                <Button type="submit" disabled={submitting}>
+                  {submitting ? "Saving..." : "Next"}
+                </Button>
               )}
             </div>
           </div>
