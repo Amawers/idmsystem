@@ -84,6 +84,7 @@ import IntakeSheetFAC from "@/pages/case manager/IntakeSheetFAC";
 import DragHandle from "@/components/cases/tables/DragHandle";
 import useDataTable from "@/hooks/useDataTable";
 import TableRenderer from "@/components/cases/tables/TableRenderer";
+import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 
 // =============================================
 // DATA VALIDATION SCHEMA
@@ -134,14 +135,13 @@ const caseManagers = [
 // =================================
 //* CASE Table COLUMN DEFINITIONS
 // =================================
-const caseColumns = [
+// Replace previous `const caseColumns = [ ... ]` with the factory below.
+const createCaseColumns = (onOpenRow) => [
 	{
 		id: "drag",
 		header: () => null,
 		cell: ({ row }) => <DragHandle id={row.original.id} />,
 	},
-
-	// Checkbox column (select rows)
 	{
 		id: "select",
 		header: ({ table }) => (
@@ -151,8 +151,7 @@ const caseColumns = [
 						table.getIsAllPageRowsSelected() ||
 						(table.getIsSomePageRowsSelected() && "indeterminate")
 					}
-					onCheckedChange={(value) =>
-						table.toggleAllPageRowsSelected(!!value)
+					onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)
 					}
 					aria-label="Select all"
 				/>
@@ -459,24 +458,25 @@ const caseColumns = [
 	},
 	{
 		id: "actions",
-		cell: () => (
+		cell: ({ row }) => (
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
 						variant="ghost"
 						className="data-[state=open]:bg-muted text-muted-foreground flex size-8 ml-5"
 						size="icon"
+						onClick={() => onOpenRow(row.original)}
 					>
 						<IconDotsVertical />
 						<span className="sr-only">Open menu</span>
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-32">
-					<DropdownMenuItem>Edit</DropdownMenuItem>
-					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive">
-						Delete
+					<DropdownMenuItem onClick={() => onOpenRow(row.original)}>
+						Edit Record
 					</DropdownMenuItem>
+					<DropdownMenuSeparator />
+					<DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
 				</DropdownMenuContent>
 			</DropdownMenu>
 		),
@@ -848,10 +848,42 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 	// Tracks which tab is currently active (default: "CASE")
 	const [activeTab, setActiveTab] = useState("CASE");
 
-	// Table instance for CASE tab with its own data and column definitions
+	// Handler to open intake sheet prefilled from a CASE row
+	function handleOpenCaseIntake(record) {
+		// Use store static access (avoid hook usage outside component body)
+		const { resetAll, setSectionField } = useIntakeFormStore.getState();
+		resetAll();
+
+		// Map basic fields (adjust when real schema available)
+		const caseDetails = {
+			caseManager: record["case manager"] || record.case_manager || "",
+			status: record.status || "",
+			priority: record.priority || "",
+			visibility:
+				record.visibility === "only-me"
+					? "only-me"
+					: record.visibility || "everyone",
+		};
+		setSectionField("caseDetails", caseDetails);
+
+		// Seed identifying data if present
+		const identifying = {};
+		if (record.header) identifying.name = record.header;
+		if (record["date filed"]) identifying.intakeDate = record["date filed"]; // original key
+		if (record.date_filed) identifying.intakeDate = record.date_filed; // alt snake case
+		if (Object.keys(identifying).length) {
+			setSectionField("IdentifyingData", identifying);
+		}
+
+		// Open modal by updating component state via a custom event.
+		// We dispatch a custom event the component listens for (simplifies since this function is outside component scope here after patch placement)
+		window.dispatchEvent(new CustomEvent("open-intake-modal"));
+	}
+
+	// Initialize CASE table with dynamic columns (handler referenced above)
 	const caseTable = useDataTable({
 		initialData: caseData,
-		columns: caseColumns,
+		columns: createCaseColumns(handleOpenCaseIntake),
 	});
 
 	// Table instance for CICLCAR tab with its own data and column definitions
@@ -869,6 +901,15 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 	// ============================
 	//* TAB TRIGGER SECTION WAPPER
 	// ============================
+	// Listen for custom open event to flip state
+	React.useEffect(() => {
+		function onOpen() {
+			setOpenIntakeSheet(true);
+		}
+		window.addEventListener("open-intake-modal", onOpen);
+		return () => window.removeEventListener("open-intake-modal", onOpen);
+	}, []);
+
 	return (
 		<Tabs
 			value={activeTab}
@@ -1116,7 +1157,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 				<TableRenderer
 					table={caseTable.table}
 					setData={caseTable.setData}
-					columns={caseColumns}
+					columns={caseTable.table.getAllColumns()}
 				/>
 			</TabsContent>
 			{/*
