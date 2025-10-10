@@ -29,3 +29,5 @@ config/supabase.js
 
 # Co pilot configurations
 copilot-instructions.md
+
+formatter.json

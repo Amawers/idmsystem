@@ -2,7 +2,8 @@ import { DataTable } from "@/components/cases/data-table";
 import React, { useEffect, useState, useRef } from "react";
 
 //! TEMPLATE DATA
-import CASEDATA from "../../SAMPLE_CASE-TABLE.json";
+// Remove CASEDATA; keep other sample tabs for now
+// import CASEDATA from "../../SAMPLE_CASE-TABLE.json";
 import CICLCARDATA from "../../SAMPLE_CICL-CAR-TABLE.json";
 import FARDATA from "../../SAMPLE_FAR-TABLE.json";
 
@@ -10,6 +11,7 @@ import { SectionCards } from "@/components/section-cards";
 import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, ArrowDown } from "lucide-react";
+import { useCases } from "@/hooks/useCases";
 
 export default function Case() {
 	// Track whether the user is currently at (or past) the DataTable section
@@ -17,6 +19,9 @@ export default function Case() {
 
 	// Reference to the DataTable container for scrolling
 	const dataTableRef = useRef(null);
+
+	// Load dynamic CASE rows from Supabase
+	const { data: caseRows, loading: casesLoading, error: casesError, reload } = useCases();
 
 	// Effect: watch scroll position and update "atTable" state
 	useEffect(() => {
@@ -42,30 +47,26 @@ export default function Case() {
 
 	return (
 		<>
-			{/* ================= SECTION CARDS ================= */}
-			{/* <SectionCards /> */}
-
-			{/* ================= INTERACTIVE CHART ================= */}
-			{/* <div className="px-4 lg:px-6">
-				<ChartAreaInteractive />
-			</div> */}
-
 			{/* ================= DATA TABLE ================= */}
-			{/* Attach ref so we know where this section is on the page */}
 			<div ref={dataTableRef}>
+				{/* Optional: simple loading/error states */}
+				{casesError ? (
+					<div className="px-4 text-sm text-red-600">
+						Failed to load cases.{" "}
+						<button className="underline" onClick={reload}>
+							Retry
+						</button>
+					</div>
+				) : null}
+
 				<DataTable
-					caseData={CASEDATA}
+					caseData={casesLoading ? [] : caseRows}
 					ciclcarData={CICLCARDATA}
 					farData={FARDATA}
 				/>
 			</div>
 
 			{/* ================= FLOATING SCROLL BUTTON ================= */}
-			{/* 
-        - Stays fixed at bottom-right corner
-        - Shows ArrowDown when near the top (to go down to DataTable)
-        - Shows ArrowUp once user reached DataTable (to go back up to top)
-      */}
 			<div className="fixed bottom-6 right-6 z-10">
 				<Button
 					size="icon"

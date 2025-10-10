@@ -8,9 +8,13 @@ import {
 
 // Custom hook: builds a reusable table instance with state
 export default function useDataTable({ initialData, columns }) {
-
   // Table data state (rows)
   const [data, setData] = React.useState(() => initialData);
+
+  // Sync internal data state when initialData prop changes
+  React.useEffect(() => {
+    setData(initialData);
+  }, [initialData]);
 
   // Row selection state (checkboxes, highlights, etc.)
   const [rowSelection, setRowSelection] = React.useState({});
