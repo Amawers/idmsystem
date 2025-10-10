@@ -81,10 +81,11 @@ import IntakeSheet from "@/pages/case manager/IntakeSheet";
 import IntakeSheetCICLCAR from "@/pages/case manager/IntakeSheetCICLCAR";
 import IntakeSheetFAR from "@/pages/case manager/IntakeSheetFAR";
 import IntakeSheetFAC from "@/pages/case manager/IntakeSheetFAC";
+// ADD THIS IMPORT
+import IntakeSheetEdit from "@/pages/case manager/IntakeSheetEdit";
 import DragHandle from "@/components/cases/tables/DragHandle";
 import useDataTable from "@/hooks/useDataTable";
 import TableRenderer from "@/components/cases/tables/TableRenderer";
-import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 
 // =============================================
 // DATA VALIDATION SCHEMA
@@ -845,45 +846,24 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 	// State to control Intake Sheet modal visibility (open/close)
 	const [openIntakeSheet, setOpenIntakeSheet] = useState(false);
 
+	// ADD: edit modal state
+	const [openEditSheet, setOpenEditSheet] = useState(false);
+	const [editingRecord, setEditingRecord] = useState(null);
+
 	// Tracks which tab is currently active (default: "CASE")
 	const [activeTab, setActiveTab] = useState("CASE");
 
-	// Handler to open intake sheet prefilled from a CASE row
-	function handleOpenCaseIntake(record) {
-		// Use store static access (avoid hook usage outside component body)
-		const { resetAll, setSectionField } = useIntakeFormStore.getState();
-		resetAll();
-
-		// Map basic fields (adjust when real schema available)
-		const caseDetails = {
-			caseManager: record["case manager"] || record.case_manager || "",
-			status: record.status || "",
-			priority: record.priority || "",
-			visibility:
-				record.visibility === "only-me"
-					? "only-me"
-					: record.visibility || "everyone",
-		};
-		setSectionField("caseDetails", caseDetails);
-
-		// Seed identifying data if present
-		const identifying = {};
-		if (record.header) identifying.name = record.header;
-		if (record["date filed"]) identifying.intakeDate = record["date filed"]; // original key
-		if (record.date_filed) identifying.intakeDate = record.date_filed; // alt snake case
-		if (Object.keys(identifying).length) {
-			setSectionField("IdentifyingData", identifying);
-		}
-
-		// Open modal by updating component state via a custom event.
-		// We dispatch a custom event the component listens for (simplifies since this function is outside component scope here after patch placement)
-		window.dispatchEvent(new CustomEvent("open-intake-modal"));
+	 // ADD: when user clicks Edit, open IntakeSheetEdit modal instead of IntakeSheet
+	function handleEditRow(record) {
+		setEditingRecord(record);
+		setOpenEditSheet(true);
 	}
 
 	// Initialize CASE table with dynamic columns (handler referenced above)
 	const caseTable = useDataTable({
 		initialData: caseData,
-		columns: createCaseColumns(handleOpenCaseIntake),
+		// CHANGED: pass edit handler so actions column calls this for “Edit”
+		columns: createCaseColumns(handleEditRow),
 	});
 
 	// Table instance for CICLCAR tab with its own data and column definitions
@@ -901,7 +881,6 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 	// ============================
 	//* TAB TRIGGER SECTION WAPPER
 	// ============================
-	// Listen for custom open event to flip state
 	React.useEffect(() => {
 		function onOpen() {
 			setOpenIntakeSheet(true);
@@ -1024,6 +1003,13 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 							<IntakeSheet
 								open={openIntakeSheet}
 								setOpen={setOpenIntakeSheet}
+							/>
+
+							{/* ADD: INTAKE SHEET EDIT (Edit) */}
+							<IntakeSheetEdit
+								open={openEditSheet}
+								setOpen={setOpenEditSheet}
+								record={editingRecord}
 							/>
 						</>
 					)}
