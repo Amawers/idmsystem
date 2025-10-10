@@ -855,6 +855,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 
 	 // ADD: when user clicks Edit, open IntakeSheetEdit modal instead of IntakeSheet
 	function handleEditRow(record) {
+		console.log("Editing record:", record);
 		setEditingRecord(record);
 		setOpenEditSheet(true);
 	}

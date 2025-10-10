@@ -41,10 +41,16 @@ const tabOrder = [
 //! 
 
 
-export default function IntakeSheetEdit({ open, setOpen }) {
+export default function IntakeSheetEdit({ open, setOpen, record }) {
     // index-based tab state and completed set (match FAC behavior)
     const [currentTabIndex, setCurrentTabIndex] = useState(0);
     const [completedTabs, setCompletedTabs] = useState(new Set());
+
+    useEffect(() => {
+        if (record) {
+            console.log("Record in IntakeSheetEdit:", record);
+        }
+    }, [record]);
 
     // Go to next tab
     const goNext = () => {
