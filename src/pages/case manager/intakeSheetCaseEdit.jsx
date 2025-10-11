@@ -92,6 +92,8 @@ export default function IntakeSheetCaseEdit({ open, onOpenChange, row }) {
     // Prefill Zustand store from the selected row
     useEffect(() => {
         if (!open) {
+            // Clear any prefilled values when closing the edit modal
+            resetAll();
             setPrefilled(false);
             setCurrentTabIndex(0);
             setCompletedTabs(new Set());

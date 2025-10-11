@@ -16,6 +16,7 @@ import { BackgroundInfoForm } from "@/components/intake sheet/BackgroundInfoForm
 import { CommunityInfoForm } from "@/components/intake sheet/CommunityInforForm";
 import { AssessmentForm } from "@/components/intake sheet/AssessmentForm";
 import { RecommendationForm } from "@/components/intake sheet/RecommendationForm";
+import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 
 const tabOrder = [
 	"identifying-data",
@@ -45,6 +46,7 @@ export default function IntakeSheetCaseCreate({ open, setOpen }) {
 	// index-based tab state and completed set (match FAC behavior)
 	const [currentTabIndex, setCurrentTabIndex] = useState(0);
 	const [completedTabs, setCompletedTabs] = useState(new Set());
+	const { resetAll } = useIntakeFormStore();
 
 	// Go to next tab
 	const goNext = () => {
@@ -71,6 +73,13 @@ export default function IntakeSheetCaseCreate({ open, setOpen }) {
 			setCompletedTabs(new Set());
 		}
 	}, [open]);
+
+	// Ensure a fresh form when creating a new record
+	useEffect(() => {
+		if (open) {
+			resetAll();
+		}
+	}, [open, resetAll]);
 
 	// Auto-center active tab
 	useEffect(() => {
