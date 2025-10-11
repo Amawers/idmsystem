@@ -1,4 +1,4 @@
-/* eslint-disable react-hooks/rules-of-hooks */
+ 
 //! ===========================================
 //! TO BE MODIFIED, SAMPLE DATA ONLY FOR RENDER
 //! ===========================================
@@ -126,51 +126,12 @@ function formatDateTime(isoString) {
 	return date.toLocaleString("en-US", options);
 }
 
-//! SAMPLE DATA FOR RENDER ONLY, SOON IMPLEMENT THIS IN AUTH STORE
-//! UPON LOGGING IN AND INIT RETRIEVE CASE MANAGERS FROM PROFILES TABLE
-const caseManagers = [
-	{ id: "case-b83947bb", case_manager: "Elaiza Claire Q. Gamolo" },
-	{ id: "case-a92d4c1f", case_manager: "Aaron S. Namoc" },
-];
-
 // =================================
 //* CASE Table COLUMN DEFINITIONS
 // =================================
 // Replace previous `const caseColumns = [ ... ]` with the factory below.
-const createCaseColumns = (onOpenRow) => [
-	{
-		id: "drag",
-		header: () => null,
-		cell: ({ row }) => <DragHandle id={row.original.id} />,
-	},
-	{
-		id: "select",
-		header: ({ table }) => (
-			<div className="flex items-center justify-center">
-				<Checkbox
-					checked={
-						table.getIsAllPageRowsSelected() ||
-						(table.getIsSomePageRowsSelected() && "indeterminate")
-					}
-					onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)
-					}
-					aria-label="Select all"
-				/>
-			</div>
-		),
-		cell: ({ row }) => (
-			<div className="flex items-center justify-center">
-				<Checkbox
-					checked={row.getIsSelected()}
-					onCheckedChange={(value) => row.toggleSelected(!!value)}
-					aria-label="Select row"
-				/>
-			</div>
-		),
-		enableSorting: false,
-		enableHiding: false,
-	},
 
+const createCaseColumns = [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -192,39 +153,9 @@ const createCaseColumns = (onOpenRow) => [
 		accessorKey: "case manager",
 		header: "Case Manager",
 		cell: ({ row }) => {
-			return (
-				<>
-					<Label
-						htmlFor={`${row.original.id}-caseManager`}
-						className="sr-only"
-					>
-						Case Manager
-					</Label>
-					<Select>
-						<SelectTrigger
-							className="w-38 bg-white text-black [&_[data-slot=select-value]]:text-black"
-							size="sm"
-							id={`${row.original.id}-caseManager`}
-						>
-							<SelectValue
-								placeholder={
-									row.original.case_manager ?? "None"
-								}
-							/>
-						</SelectTrigger>
-						<SelectContent align="end">
-							{caseManagers.map((item) => (
-								<SelectItem
-									key={item.id}
-									value={item.case_manager}
-								>
-									{item.case_manager}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</>
-			);
+			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
+			const caseManager = row.original["case_manager"] ?? "None";
+			return <div>{caseManager}</div>;
 		},
 	},
 	//* STATUS
@@ -232,61 +163,9 @@ const createCaseColumns = (onOpenRow) => [
 		accessorKey: "status",
 		header: "Status",
 		cell: ({ row }) => {
-			const statuses = [
-				{
-					value: "Filed",
-					label: "Filed",
-					icon: (
-						<IconClipboardText
-							className="text-gray-500"
-							size={16}
-						/>
-					),
-				},
-				{
-					value: "Assessed",
-					label: "Assessed",
-					icon: <IconCheckbox className="text-blue-500" size={16} />,
-				},
-				{
-					value: "In Process",
-					label: "In Process",
-					icon: (
-						<IconLoader
-							className="text-orange-500 animate-spin"
-							size={16}
-						/>
-					),
-				},
-				{
-					value: "Resolved",
-					label: "Resolved",
-					icon: (
-						<IconCircleCheckFilled
-							className="text-green-500"
-							size={16}
-						/>
-					),
-				},
-			];
-
-			return (
-				<Select defaultValue={row.original.status}>
-					<SelectTrigger className="w-[150px]">
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{statuses.map((status) => (
-							<SelectItem key={status.value} value={status.value}>
-								<div className="flex items-center gap-2">
-									{status.icon}
-									{status.label}
-								</div>
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-			);
+			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
+			const status = row.original["status"] ?? "None";
+			return <div>{status}</div>;
 		},
 	},
 	//* PRIORITY
@@ -294,86 +173,20 @@ const createCaseColumns = (onOpenRow) => [
 		accessorKey: "priority",
 		header: "Priority",
 		cell: ({ row }) => {
-			const priorities = [
-				{
-					value: "Low",
-					label: "Low",
-					className: "bg-green-100 text-green-700",
-				},
-				{
-					value: "Medium",
-					label: "Medium",
-					className: "bg-yellow-100 text-yellow-700",
-				},
-				{
-					value: "High",
-					label: "High",
-					className: "bg-red-100 text-red-700",
-				},
-			];
-
-			const [value, setValue] = useState(row.original.priority);
-			const current = priorities.find((p) => p.value === value);
-
-			return (
-				<Select value={value} onValueChange={setValue}>
-					<SelectTrigger
-						className={`w-[130px] rounded-md font-medium ${
-							current?.className || ""
-						}`}
-					>
-						<SelectValue />
-					</SelectTrigger>
-					<SelectContent>
-						{priorities.map((p) => (
-							<SelectItem
-								key={p.value}
-								value={p.value}
-								className={`px-2 py-0.5 rounded-md text-sm font-medium cursor-pointer ${p.className}`}
-							>
-								{p.label}
-							</SelectItem>
-						))}
-					</SelectContent>
-				</Select>
-			);
+			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
+			const priority = row.original["priority"] ?? "None";
+			return <div>{priority}</div>;
 		},
 	},
 	//* DATE FILED
 	{
 		accessorKey: "date filed",
 		header: "Date Filed",
-		cell: ({ row }) => {
-			const [date, setDate] = useState(
-				row.original.date_filed
-					? new Date(row.original.date_filed)
-					: null
-			);
-
-			return (
-				<Popover>
-					<PopoverTrigger asChild>
-						<Button
-							variant="outline"
-							className="flex items-center justify-start text-left font-normal"
-						>
-							<CalendarIcon className="mr-2 h-4 w-4" />
-							{date
-								? formatDateTime(date, "yyyy-MM-dd HH:mm:ss")
-								: "Pick a date"}
-						</Button>
-					</PopoverTrigger>
-					<PopoverContent className="w-auto p-0" align="start">
-						<Calendar
-							mode="single"
-							selected={date}
-							onSelect={(newDate) => setDate(newDate)}
-							initialFocus
-						/>
-					</PopoverContent>
-				</Popover>
-			);
-		},
+		cell: ({ row }) => (
+			<div className="px-2">
+				{formatToMMDDYYYY(row.original.date_filed) || "-"}
+			</div>
+		),
 	},
 	//* TIME OPEN
 	{
@@ -399,51 +212,9 @@ const createCaseColumns = (onOpenRow) => [
 		accessorKey: "visibility",
 		header: "Visibility",
 		cell: ({ row }) => {
-			return (
-				<>
-					<Label
-						htmlFor={`${row.original.id}-visibility`}
-						className="sr-only"
-					>
-						Visibility
-					</Label>
-					<Select
-						defaultValue={
-							// treat any non "only-me" value as "everyone" for backward compatibility
-							row.original.visibility === "only-me"
-								? "only-me"
-								: "everyone"
-						}
-					>
-						<SelectTrigger
-							className="w-38 bg-white text-black [&_[data-slot=select-value]]:text-black"
-							size="sm"
-							id={`${row.original.id}-visibility`}
-						>
-							<SelectValue
-								className="text-black"
-								placeholder={
-									row.original.visibility === "only-me"
-										? "Only Me"
-										: "Everyone"
-								}
-							/>
-						</SelectTrigger>
-						<SelectContent align="end">
-							<SelectItem value="only-me">
-								<div className="flex items-center gap-2">
-									<Lock className="h-4 w-4" /> Only Me
-								</div>
-							</SelectItem>
-							<SelectItem value="everyone">
-								<div className="flex items-center gap-2">
-									<Globe className="h-4 w-4" /> Everyone
-								</div>
-							</SelectItem>
-						</SelectContent>
-					</Select>
-				</>
-			);
+			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
+			const visibility = row.original["visibility"] ?? "None";
+			return <div>{visibility}</div>;
 		},
 	},
 
@@ -455,31 +226,6 @@ const createCaseColumns = (onOpenRow) => [
 			<div className="w-32">
 				{formatDateTime(row.original.last_updated)}
 			</div>
-		),
-	},
-	{
-		id: "actions",
-		cell: ({ row }) => (
-			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<Button
-						variant="ghost"
-						className="data-[state=open]:bg-muted text-muted-foreground flex size-8 ml-5"
-						size="icon"
-						onClick={() => onOpenRow(row.original)}
-					>
-						<IconDotsVertical />
-						<span className="sr-only">Open menu</span>
-					</Button>
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" className="w-32">
-					<DropdownMenuItem onClick={() => onOpenRow(row.original)}>
-						Edit Record
-					</DropdownMenuItem>
-					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive">Delete</DropdownMenuItem>
-				</DropdownMenuContent>
-			</DropdownMenu>
 		),
 	},
 ];
@@ -823,6 +569,39 @@ const farColumns = [
 	},
 ];
 
+// --- Date normalization/format helpers (module scope)
+// Convert either MM-DD-YYYY or ISO (YYYY-MM-DD) or Date-like strings to ISO (YYYY-MM-DD)
+const toISODate = (str) => {
+	if (!str) return null;
+	const isoRegex = /^\d{4}-\d{2}-\d{2}$/;
+	const mmddyyyy = /^\d{2}-\d{2}-\d{4}$/;
+	if (isoRegex.test(str)) return str;
+	if (mmddyyyy.test(str)) {
+		const [mm, dd, yyyy] = str.split("-");
+		return `${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`;
+	}
+	// fallback: try Date parse
+	const d = new Date(str);
+	if (!isNaN(d)) {
+		const y = d.getFullYear();
+		const m = String(d.getMonth() + 1).padStart(2, "0");
+		const day = String(d.getDate()).padStart(2, "0");
+		return `${y}-${m}-${day}`;
+	}
+	return null;
+};
+
+// Format any recognized date-ish value to MM-DD-YYYY for display
+const formatToMMDDYYYY = (str) => {
+	if (!str) return "";
+	const mmddyyyy = /^\d{2}-\d{2}-\d{4}$/;
+	if (mmddyyyy.test(str)) return str;
+	const iso = toISODate(str);
+	if (!iso) return String(str);
+	const [yyyy, mm, dd] = iso.split("-");
+	return `${mm}-${dd}-${yyyy}`;
+};
+
 // ==========================
 //* Main DataTable wrapper
 // ==========================
@@ -848,23 +627,23 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 
 	// ADD: edit modal state
 	const [openEditSheet, setOpenEditSheet] = useState(false);
-	const [editingRecord, setEditingRecord] = useState(null);
+	// const [editingRecord, setEditingRecord] = useState(null);
 
 	// Tracks which tab is currently active (default: "CASE")
 	const [activeTab, setActiveTab] = useState("CASE");
 
-	 // ADD: when user clicks Edit, open IntakeSheetEdit modal instead of IntakeSheetCaseCreate
-	function handleEditRow(record) {
-		console.log("Editing record:", record);
-		setEditingRecord(record);
-		setOpenEditSheet(true);
-	}
+	//  // ADD: when user clicks Edit, open IntakeSheetEdit modal instead of IntakeSheetCaseCreate
+	// function handleEditRow(record) {
+	// 	console.log("Editing record:", record);
+	// 	setEditingRecord(record);
+	// 	setOpenEditSheet(true);
+	// }
 
 	// Initialize CASE table with dynamic columns (handler referenced above)
 	const caseTable = useDataTable({
 		initialData: caseData,
 		// CHANGED: pass edit handler so actions column calls this for “Edit”
-		columns: createCaseColumns(handleEditRow),
+		columns: createCaseColumns,
 	});
 
 	// Table instance for CICLCAR tab with its own data and column definitions
@@ -1010,7 +789,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 							<IntakeSheetEdit
 								open={openEditSheet}
 								setOpen={setOpenEditSheet}
-								record={editingRecord}
+								// record={editingRecord}
 							/>
 						</>
 					)}

@@ -41,7 +41,7 @@ const tabOrder = [
 //! 
 
 
-export default function IntakeSheetCaseEdit({ open, setOpen, record }) {
+export default function IntakeSheetCaseEdit({ open, onOpenChange, record }) {
     // index-based tab state and completed set (match FAC behavior)
     const [currentTabIndex, setCurrentTabIndex] = useState(0);
     const [completedTabs, setCompletedTabs] = useState(new Set());
@@ -59,7 +59,7 @@ export default function IntakeSheetCaseEdit({ open, setOpen, record }) {
             setCurrentTabIndex((prev) => prev + 1);
         } else {
             // last tab completed - close dialog
-            setOpen(false);
+            onOpenChange(false);
         }
     };
 
@@ -96,7 +96,7 @@ export default function IntakeSheetCaseEdit({ open, setOpen, record }) {
     const currentTab = tabOrder[currentTabIndex];
 
     return (
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="min-w-4/5 min-h-4/5 flex flex-col">
                 <DialogHeader>
                     <DialogTitle>Intake Sheet Edit</DialogTitle>
