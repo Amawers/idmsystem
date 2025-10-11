@@ -89,8 +89,8 @@ export function FamilyCompositionForm({ sectionKey, goNext, goBack }) {
     form.reset({
       name: m?.name ?? "",
       age: m?.age ?? "",
-      relation: m?.relation ?? "",
-      status: m?.status ?? "",
+      relation: (m?.relation ?? "").toString().toLowerCase(),
+      status: (m?.status ?? "").toString().toLowerCase(),
       education: m?.education ?? "",
       occupation: m?.occupation ?? "",
       income: m?.income ?? "",
@@ -231,7 +231,7 @@ export function FamilyCompositionForm({ sectionKey, goNext, goBack }) {
                       <FormLabel>Relationship</FormLabel>
                       <Select
                         onValueChange={(val) => field.onChange(val)}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -265,7 +265,7 @@ export function FamilyCompositionForm({ sectionKey, goNext, goBack }) {
                         <FormLabel>Status</FormLabel>
                         <Select
                           onValueChange={(val) => field.onChange(val)}
-                          defaultValue={field.value}
+                          value={field.value}
                         >
                           <FormControl>
                             <SelectTrigger>

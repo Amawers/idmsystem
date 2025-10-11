@@ -184,7 +184,7 @@ export function IdentifyingDataForm({ sectionKey, goNext, goBack }) {
 													val
 												);
 											}}
-											defaultValue={field.value}
+											value={field.value}
 										>
 											<FormControl>
 												<SelectTrigger>
@@ -282,7 +282,7 @@ export function IdentifyingDataForm({ sectionKey, goNext, goBack }) {
 												val
 											);
 										}}
-										defaultValue={field.value}
+										value={field.value}
 									>
 										<FormControl>
 											<SelectTrigger>
@@ -293,7 +293,7 @@ export function IdentifyingDataForm({ sectionKey, goNext, goBack }) {
 											<SelectItem value="male">
 												Male
 											</SelectItem>
-											<SelectItem value="Female">
+											<SelectItem value="female">
 												Female
 											</SelectItem>
 										</SelectContent>
