@@ -1,4 +1,3 @@
- 
 //! ===========================================
 //! TO BE MODIFIED, SAMPLE DATA ONLY FOR RENDER
 //! ===========================================
@@ -213,10 +212,16 @@ const createCaseColumns = [
 	//* LAST UPDATED
 	{
 		accessorKey: "last updated",
-		header: "Last Updated",
+		header: () => (
+			<div className="w-full flex justify-center">
+				<span className="w-32 text-center">Last Updated</span>
+			</div>
+		),
 		cell: ({ row }) => (
-			<div className="w-32">
-				{formatDateTime(row.original.last_updated)}
+			<div className="w-full flex justify-center">
+				<span className="w-32 text-center">
+					{formatDateTime(row.original.last_updated)}
+				</span>
 			</div>
 		),
 	},
