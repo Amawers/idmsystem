@@ -106,7 +106,7 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond }) {
   async function handleFinalSubmit(finalData) {
     setSubmitting(true);
     try {
-      const { caseId, error } = await submitCase(finalData, { isSecond });
+      const { caseId, error } = await submitCase(finalData);
       if (error) {
         console.error("Case submission error", error);
         toast.error("Failed to save case", {

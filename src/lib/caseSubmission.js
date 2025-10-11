@@ -97,30 +97,35 @@ function buildCasePayload(data, isSecond) {
  * @param {object} options { isSecond: boolean }
  * @returns {Promise<{caseId:string|null,error:any}>}
  */
-export async function submitCase(finalData, { isSecond = false } = {}) {
-  const payload = buildCasePayload(finalData, isSecond);
+export async function submitCase(finalData) {
+  // Build and merge both variants so Part 1 and Part 2 save together.
+  const p1 = buildCasePayload(finalData, false);
+  const p2 = buildCasePayload(finalData, true);
+  const payload = { ...p1, ...p2 };
 
-  // Insert into case table
-  const { data: caseInsert, error: caseError } = await supabase
+  // Insert main case row
+  const { data: inserted, error } = await supabase
     .from("case")
     .insert(payload)
-    .select("id")
+    .select()
     .single();
 
-  if (caseError) {
-    return { caseId: null, error: caseError };
-  }
+  if (error) return { caseId: null, error };
+  const caseId = inserted?.id;
 
-  const caseId = caseInsert.id;
+  // Insert family members for both groups
+  const members1 = Array.isArray(finalData?.FamilyData?.members)
+    ? finalData.FamilyData.members
+    : [];
+  const members2 = Array.isArray(finalData?.FamilyData2?.members)
+    ? finalData.FamilyData2.members
+    : [];
 
-  // Family members
-  // Family members come from FamilyData or FamilyData2
-  const famSection = isSecond ? (finalData.FamilyData2 || {}) : (finalData.FamilyData || {});
-  const members = Array.isArray(famSection.members) ? famSection.members : [];
+  const PART2_GROUP_BASE = 2000;
+  const fmRows = [];
 
-  if (members.length > 0) {
-    // group_no: simple incremental starting at 1.
-    const fmRows = members.map((m, idx) => ({
+  members1.forEach((m, idx) => {
+    fmRows.push({
       case_id: caseId,
       group_no: idx + 1,
       name: m.name || null,
@@ -130,16 +135,28 @@ export async function submitCase(finalData, { isSecond = false } = {}) {
       education: m.education || null,
       occupation: m.occupation || null,
       income: m.income || null,
-    }));
+    });
+  });
 
-    const { error: fmError } = await supabase
+  members2.forEach((m, idx) => {
+    fmRows.push({
+      case_id: caseId,
+      group_no: PART2_GROUP_BASE + idx + 1,
+      name: m.name || null,
+      age: m.age || null,
+      relation: m.relation || null,
+      status: m.status || null,
+      education: m.education || null,
+      occupation: m.occupation || null,
+      income: m.income || null,
+    });
+  });
+
+  if (fmRows.length) {
+    const { error: fmErr } = await supabase
       .from("case_family_member")
       .insert(fmRows);
-
-    if (fmError) {
-      // We cannot rollback easily without RPC / stored proc; return error to allow UI to warn.
-      return { caseId, error: fmError };
-    }
+    if (fmErr) return { caseId, error: fmErr };
   }
 
   return { caseId, error: null };
