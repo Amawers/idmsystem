@@ -77,12 +77,12 @@ import { CalendarIcon, Lock, Globe } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
-import IntakeSheet from "@/pages/case manager/IntakeSheet";
+import IntakeSheetCaseCreate from "@/pages/case manager/IntakeSheetCaseCreate";
 import IntakeSheetCICLCAR from "@/pages/case manager/IntakeSheetCICLCAR";
 import IntakeSheetFAR from "@/pages/case manager/IntakeSheetFAR";
 import IntakeSheetFAC from "@/pages/case manager/IntakeSheetFAC";
 // ADD THIS IMPORT
-import IntakeSheetEdit from "@/pages/case manager/IntakeSheetEdit";
+import IntakeSheetEdit from "@/pages/case manager/intakeSheetCaseEdit";
 import DragHandle from "@/components/cases/tables/DragHandle";
 import useDataTable from "@/hooks/useDataTable";
 import TableRenderer from "@/components/cases/tables/TableRenderer";
@@ -853,7 +853,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 	// Tracks which tab is currently active (default: "CASE")
 	const [activeTab, setActiveTab] = useState("CASE");
 
-	 // ADD: when user clicks Edit, open IntakeSheetEdit modal instead of IntakeSheet
+	 // ADD: when user clicks Edit, open IntakeSheetEdit modal instead of IntakeSheetCaseCreate
 	function handleEditRow(record) {
 		console.log("Editing record:", record);
 		setEditingRecord(record);
@@ -1001,7 +1001,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 								</span>
 							</Button>
 
-							<IntakeSheet
+							<IntakeSheetCaseCreate
 								open={openIntakeSheet}
 								setOpen={setOpenIntakeSheet}
 							/>

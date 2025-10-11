@@ -41,7 +41,7 @@ const tabOrder = [
 //! 
 
 
-export default function IntakeSheetEdit({ open, setOpen, record }) {
+export default function IntakeSheetCaseEdit({ open, setOpen, record }) {
     // index-based tab state and completed set (match FAC behavior)
     const [currentTabIndex, setCurrentTabIndex] = useState(0);
     const [completedTabs, setCompletedTabs] = useState(new Set());
