@@ -16,9 +16,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Select,
   SelectContent,
@@ -30,11 +30,22 @@ import {
 export function FamilyCompositionForm({ sectionKey, goNext, goBack }) {
   const { data, setSectionField } = useIntakeFormStore();
   const [open, setOpen] = useState(false);
+  const [editIndex, setEditIndex] = useState(null);
 
   // Load members from store, default to empty array
   const [members, setMembers] = useState(
     Array.isArray(data[sectionKey]?.members) ? data[sectionKey].members : []
   );
+
+  // Keep local members in sync with store (important for edit prefill flows)
+  useEffect(() => {
+    const nextMembers = Array.isArray(data[sectionKey]?.members)
+      ? data[sectionKey].members
+      : [];
+    if (JSON.stringify(nextMembers) !== JSON.stringify(members)) {
+      setMembers(nextMembers);
+    }
+  }, [data, sectionKey, members]);
 
   const form = useForm({
     defaultValues: {
@@ -49,11 +60,18 @@ export function FamilyCompositionForm({ sectionKey, goNext, goBack }) {
   });
 
   function onSubmit(values) {
-    const updated = [...members, values];
+    let updated;
+    if (editIndex !== null && editIndex >= 0) {
+      // Update existing member
+      updated = members.map((m, i) => (i === editIndex ? values : m));
+    } else {
+      // Add new member
+      updated = [...members, values];
+    }
     setMembers(updated);
-    // Save array under "members" field
     setSectionField(sectionKey, "members", updated);
     setOpen(false);
+    setEditIndex(null);
     form.reset();
   }
 
@@ -61,6 +79,22 @@ export function FamilyCompositionForm({ sectionKey, goNext, goBack }) {
     const updated = members.filter((_, i) => i !== index);
     setMembers(updated);
     setSectionField(sectionKey, "members", updated);
+  }
+
+  function editMember(index) {
+    const m = members[index];
+    setEditIndex(index);
+    setOpen(true);
+    // Prefill modal with selected member values
+    form.reset({
+      name: m?.name ?? "",
+      age: m?.age ?? "",
+      relation: m?.relation ?? "",
+      status: m?.status ?? "",
+      education: m?.education ?? "",
+      occupation: m?.occupation ?? "",
+      income: m?.income ?? "",
+    });
   }
 
   return (
@@ -95,9 +129,25 @@ export function FamilyCompositionForm({ sectionKey, goNext, goBack }) {
                 <div>{m.status}</div>
                 <div>{m.education}</div>
                 <div>{m.occupation}</div>
-<div>
-  {m.income?.toLowerCase() === "n/a" ? m.income : `₱${m.income}`}
-</div>                <div className="flex justify-center">
+                <div>
+                  {(() => {
+                    const incomeStr = (m.income ?? "").toString();
+                    return incomeStr.trim().toLowerCase() === "n/a"
+                      ? incomeStr
+                      : incomeStr
+                      ? `₱${incomeStr}`
+                      : "";
+                  })()}
+                </div>
+                <div className="flex justify-center gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => editMember(i)}
+                  >
+                    <Pencil className="h-4 w-4 text-blue-500" />
+                  </Button>
                   <Button
                     type="button"
                     size="icon"
@@ -115,14 +165,30 @@ export function FamilyCompositionForm({ sectionKey, goNext, goBack }) {
 
       {/* Add Member Button */}
       <div className="flex justify-end">
-        <Button onClick={() => setOpen(true)}>Add Family Member</Button>
+        <Button
+          onClick={() => {
+            setEditIndex(null);
+            form.reset({
+              name: "",
+              age: "",
+              relation: "",
+              status: "",
+              education: "",
+              occupation: "",
+              income: "",
+            });
+            setOpen(true);
+          }}
+        >
+          Add Family Member
+        </Button>
       </div>
 
       {/* Add Member Modal */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Family Member</DialogTitle>
+            <DialogTitle>{editIndex !== null ? "Edit Family Member" : "Add Family Member"}</DialogTitle>
           </DialogHeader>
 
           <Form {...form}>
@@ -257,8 +323,19 @@ export function FamilyCompositionForm({ sectionKey, goNext, goBack }) {
                 )}
               />
 
-              <div className="flex justify-end pt-2">
-                <Button type="submit">Save</Button>
+              <div className="flex justify-end pt-2 gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setOpen(false);
+                    setEditIndex(null);
+                    form.reset();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit">{editIndex !== null ? "Update" : "Save"}</Button>
               </div>
             </form>
           </Form>
