@@ -525,6 +525,7 @@ export default function IntakeSheetCaseEdit({ open, onOpenChange, row }) {
                                 sectionKey="Recommendation2"
                                 goNext={goNext}
                                 goBack={goBack}
+                                submitLabel="Update"
                             />
                         </TabsContent>
                     </div>

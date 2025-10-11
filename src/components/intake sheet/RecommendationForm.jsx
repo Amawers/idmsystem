@@ -41,7 +41,7 @@ const schema = z.object({
     ),
 });
 
-export function RecommendationForm({ sectionKey, goNext, goBack, isSecond }) {
+export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submitLabel }) {
   const { data, setSectionField } = useIntakeFormStore();
 
   const form = useForm({
@@ -149,7 +149,6 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond }) {
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 w-full">
           <div className="flex gap-4">
             {/* LEFT COLUMN - Case Details */}
-            {isSecond && (
               <div className="w-3/12 flex flex-col items-center justify-center border rounded-lg p-4">
                 <span className="font-bold mb-2">Case Details</span>
 
@@ -251,7 +250,6 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond }) {
                   </Select>
                 </div>
               </div>
-            )}
 
             {/* RIGHT COLUMN - Recommendation */}
             <div className={`${isSecond ? "w-9/12" : "w-full"}`}>
@@ -280,15 +278,9 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond }) {
               Back
             </Button>
             <div className="flex gap-2">
-              {isSecond ? (
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? "Saving..." : "Submit All"}
-                </Button>
-              ) : (
-                <Button type="submit" disabled={submitting}>
-                  {submitting ? "Saving..." : "Next"}
-                </Button>
-              )}
+              <Button type="submit" disabled={submitting}>
+                {submitting ? "Saving..." : (submitLabel || (isSecond ? "Submit All" : "Next"))}
+              </Button>
             </div>
           </div>
         </form>
