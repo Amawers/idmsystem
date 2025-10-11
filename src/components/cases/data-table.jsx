@@ -67,14 +67,6 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 
-import { Calendar } from "@/components/ui/calendar";
-import {
-	Popover,
-	PopoverContent,
-	PopoverTrigger,
-} from "@/components/ui/popover";
-import { CalendarIcon, Lock, Globe } from "lucide-react";
-
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import IntakeSheetCaseCreate from "@/pages/case manager/IntakeSheetCaseCreate";

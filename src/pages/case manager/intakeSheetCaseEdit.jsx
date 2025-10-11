@@ -36,21 +36,17 @@ const tabOrder = [
     "recommendation2",
 ];
 
-//! capitalize value
-//! verifiy input fields from pciture 
-//! 
-
-
-export default function IntakeSheetCaseEdit({ open, onOpenChange, record }) {
+export default function IntakeSheetCaseEdit({ open, onOpenChange, row }) {
     // index-based tab state and completed set (match FAC behavior)
     const [currentTabIndex, setCurrentTabIndex] = useState(0);
     const [completedTabs, setCompletedTabs] = useState(new Set());
 
     useEffect(() => {
-        if (record) {
-            console.log("Record in IntakeSheetEdit:", record);
+        console.log("Record in IntakeSheetEdit:", row);
+        if (row) {
+            console.log("Record in IntakeSheetEdit:", row);
         }
-    }, [record]);
+    }, [row]);
 
     // Go to next tab
     const goNext = () => {
@@ -99,7 +95,7 @@ export default function IntakeSheetCaseEdit({ open, onOpenChange, record }) {
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="min-w-4/5 min-h-4/5 flex flex-col">
                 <DialogHeader>
-                    <DialogTitle>Intake Sheet Edit</DialogTitle>
+                    <DialogTitle>Intake Sheet Edits</DialogTitle>
                 </DialogHeader>
 
                 <Tabs

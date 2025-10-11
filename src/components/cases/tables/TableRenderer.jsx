@@ -156,7 +156,6 @@ export default function TableRenderer({ table, setData, columns }) {
    * @param {Object} row - The clicked table row object from TanStack Table
    */
   const handleRowClick = (row) => {
-    // Allow super_admin full access; hr_assistant, logistics_manager, and viewer can view (modal opens) but cannot edit
     setSelectedRow(row.original);
     setOpen(true);
   };
