@@ -28,7 +28,20 @@ function mapCaseRow(row) {
     identifying_intake_date: row.identifying_intake_date ?? null,
     created_at: row.created_at ?? null,
     updated_at: row.updated_at ?? null,
-  };
+      // Include family members if the related rows were selected
+      family_members: (row.case_family_member || []).map((fm) => ({
+        id: fm.id,
+        case_id: fm.case_id,
+        group_no: fm.group_no,
+        name: fm.name,
+        age: fm.age,
+        relation: fm.relation,
+        status: fm.status,
+        education: fm.education,
+        occupation: fm.occupation,
+        income: fm.income,
+      })),
+    };
 }
 
 export function useCases() {
@@ -40,9 +53,11 @@ export function useCases() {
     setLoading(true);
     setError(null);
     try {
+      // Select all case fields plus related family members from case_family_member
+      // Supabase allows selecting related rows using foreign table syntax: case_family_member(*)
       const { data: rows, error: err } = await supabase
         .from("case")
-        .select("*")
+        .select(`*, case_family_member(*)`)
         .order("updated_at", { ascending: false });
 
       if (err) throw err;

@@ -42,7 +42,6 @@ export default function IntakeSheetCaseEdit({ open, onOpenChange, row }) {
     const [completedTabs, setCompletedTabs] = useState(new Set());
 
     useEffect(() => {
-        console.log("Record in IntakeSheetEdit:", row);
         if (row) {
             console.log("Record in IntakeSheetEdit:", row);
         }
