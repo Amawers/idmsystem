@@ -355,7 +355,7 @@ export default function IntakeSheetCaseEdit({ open, onOpenChange, row }) {
             <DialogContent className="min-w-4/5 min-h-4/5 flex flex-col">
                 <DialogHeader>
                     <DialogTitle>
-                        Intake Sheet Edits{saving ? " — Saving..." : ""}
+                        Edit Case Record{saving ? " — Saving..." : ""}
                     </DialogTitle>
                 </DialogHeader>
 

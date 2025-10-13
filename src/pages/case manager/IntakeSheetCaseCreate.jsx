@@ -102,7 +102,7 @@ export default function IntakeSheetCaseCreate({ open, setOpen }) {
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent className="min-w-4/5 min-h-4/5 flex flex-col">
 				<DialogHeader>
-					<DialogTitle>Intake Sheet</DialogTitle>
+					<DialogTitle>Create Case Record</DialogTitle>
 				</DialogHeader>
 
 				<Tabs

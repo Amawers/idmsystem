@@ -39,7 +39,7 @@ import {
 } from "@tabler/icons-react";
 
 // Other utilities
-import { toast } from "sonner";
+// import { toast } from "sonner";
 import { z } from "zod";
 import { formatDistanceToNow } from "date-fns";
 
@@ -231,228 +231,106 @@ const createCaseColumns = [
 //* CICLCAR Table COLUMN DEFINITIONS
 // =================================
 const ciclcarColumns = [
-	{
-		id: "drag",
-		header: () => null,
-		cell: ({ row }) => <DragHandle id={row.original.id} />,
-	},
-
-	// Checkbox column (select rows)
-	{
-		id: "select",
-		header: ({ table }) => (
-			<div className="flex items-center justify-center">
-				<Checkbox
-					checked={
-						table.getIsAllPageRowsSelected() ||
-						(table.getIsSomePageRowsSelected() && "indeterminate")
-					}
-					onCheckedChange={(value) =>
-						table.toggleAllPageRowsSelected(!!value)
-					}
-					aria-label="Select all"
-				/>
-			</div>
-		),
-		cell: ({ row }) => (
-			<div className="flex items-center justify-center">
-				<Checkbox
-					checked={row.getIsSelected()}
-					onCheckedChange={(value) => row.toggleSelected(!!value)}
-					aria-label="Select row"
-				/>
-			</div>
-		),
-		enableSorting: false,
-		enableHiding: false,
-	},
-
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
 
+	//* CASE ID
 	{
-		accessorKey: "header",
-		header: "Header",
+		accessorKey: "case ID",
+		header: "Case ID",
 		cell: ({ row }) => {
-			// Render header as plain text (no clickable viewer) to maintain consistency
-			const headerText = row.original.header ?? row.original.id;
-			return <div className="font-medium">{headerText}</div>;
+			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
+			const caseId = row.original["case ID"] ?? row.original.id;
+			return <div className="font-medium">{caseId}</div>;
 		},
 		enableHiding: false,
 	},
+
+	//* CASE MANAGER
 	{
-		accessorKey: "type",
-		header: "Section Type",
-		cell: ({ row }) => (
-			<div className="w-32">
-				<Badge
-					variant="outline"
-					className="text-muted-foreground px-1.5"
-				>
-					{row.original.type}
-				</Badge>
-			</div>
-		),
+		accessorKey: "case manager",
+		header: "Case Manager",
+		cell: ({ row }) => {
+			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
+			const caseManager = row.original["case_manager"] ?? "None";
+			return <div>{caseManager}</div>;
+		},
 	},
+	//* STATUS
 	{
 		accessorKey: "status",
 		header: "Status",
-		cell: ({ row }) => (
-			<Badge
-				variant="outline"
-				className="text-muted-foreground px-1.5 flex items-center gap-1"
-			>
-				{row.original.status === "Filed" && (
-					<IconClipboardText className="text-gray-500" size={16} />
-				)}
-				{row.original.status === "Assessed" && (
-					<IconCheckbox className="text-blue-500" size={16} />
-				)}
-				{row.original.status === "In Process" && (
-					<IconLoader
-						className="text-orange-500 animate-spin"
-						size={16}
-					/>
-				)}
-				{row.original.status === "Resolved" ? (
-					<IconCircleCheckFilled
-						className="text-green-500"
-						size={16}
-					/>
-				) : null}
-
-				{row.original.status}
-			</Badge>
-		),
-	},
-	{
-		accessorKey: "target",
-		header: () => <div className="w-full text-right">Target</div>,
-		cell: ({ row }) => (
-			// Input form for editing target to allow inline updates
-			<form
-				onSubmit={(e) => {
-					e.preventDefault();
-					toast.promise(
-						new Promise((resolve) => setTimeout(resolve, 1000)),
-						{
-							loading: `Saving ${row.original.header}`,
-							success: "Done",
-							error: "Error",
-						}
-					);
-				}}
-			>
-				<Label
-					htmlFor={`${row.original.id}-target`}
-					className="sr-only"
-				>
-					Target
-				</Label>
-				<Input
-					className="hover:bg-input/30 focus-visible:bg-background dark:hover:bg-input/30 dark:focus-visible:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
-					defaultValue={row.original.target}
-					id={`${row.original.id}-target`}
-				/>
-			</form>
-		),
-	},
-	{
-		accessorKey: "limit",
-		header: () => <div className="w-full text-right">Limit</div>,
-		cell: ({ row }) => (
-			// Input form for editing limit to allow inline updates
-			<form
-				onSubmit={(e) => {
-					e.preventDefault();
-					toast.promise(
-						new Promise((resolve) => setTimeout(resolve, 1000)),
-						{
-							loading: `Saving ${row.original.header}`,
-							success: "Done",
-							error: "Error",
-						}
-					);
-				}}
-			>
-				<Label htmlFor={`${row.original.id}-limit`} className="sr-only">
-					Limit
-				</Label>
-				<Input
-					className="hover:bg-input/30 focus-visible:bg-background dark:hover:bg-input/30 dark:focus-visible:bg-input/30 h-8 w-16 border-transparent bg-transparent text-right shadow-none focus-visible:border dark:bg-transparent"
-					defaultValue={row.original.limit}
-					id={`${row.original.id}-limit`}
-				/>
-			</form>
-		),
-	},
-	{
-		accessorKey: "caseManager",
-		header: "Case Manager",
 		cell: ({ row }) => {
-			// If already assigned → show name
-			const isAssigned = row.original.case_manager !== null;
+			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
+			const status = row.original["status"] ?? "None";
+			return <div>{status}</div>;
+		},
+	},
+	//* PRIORITY
+	{
+		accessorKey: "priority",
+		header: "Priority",
+		cell: ({ row }) => {
+			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
+			const priority = row.original["priority"] ?? "None";
+			return <div>{priority}</div>;
+		},
+	},
+	//* DATE FILED
+	{
+		accessorKey: "date filed",
+		header: "Date Filed",
+		cell: ({ row }) => (
+			<div className="px-2">
+				{formatToMMDDYYYY(row.original.date_filed) || "-"}
+			</div>
+		),
+	},
+	//* TIME OPEN
+	{
+		accessorKey: "time open",
+		header: "Time Open",
+		cell: ({ row }) => {
+			const filedDate = row.original.date_filed
+				? new Date(row.original.date_filed)
+				: null;
 
-			if (isAssigned) {
-				return row.original.case_manager;
-			}
-
-			// If not assigned → show dropdown to enable assignment
 			return (
-				<>
-					<Label
-						htmlFor={`${row.original.id}-caseManager`}
-						className="sr-only"
-					>
-						Case Manager
-					</Label>
-					<Select>
-						<SelectTrigger
-							className="w-38 **:data-[slot=select-value]:block **:data-[slot=select-value]:truncate"
-							size="sm"
-							id={`${row.original.id}-caseManager`}
-						>
-							<SelectValue placeholder="Case Manager" />
-						</SelectTrigger>
-						<SelectContent align="end">
-							<SelectItem value="Eddie Lake">
-								Eddie Lake
-							</SelectItem>
-							<SelectItem value="Jamik Tashpulatov">
-								Jamik Tashpulatov
-							</SelectItem>
-						</SelectContent>
-					</Select>
-				</>
+				<div>
+					{filedDate
+						? formatDistanceToNow(filedDate, { addSuffix: false })
+						: "N/A"}
+				</div>
 			);
 		},
 	},
+	//! REFACTOR SOON VISIBILITY TO EXCLUDE SPECIFIC CASE MANAGER
+	//* VISIBILITY
 	{
-		id: "actions",
-		cell: () => (
-			// Row actions dropdown for additional operations
-			<DropdownMenu>
-				<DropdownMenuTrigger asChild>
-					<Button
-						variant="ghost"
-						className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-						size="icon"
-					>
-						<IconDotsVertical />
-						<span className="sr-only">Open menu</span>
-					</Button>
-				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" className="w-32">
-					<DropdownMenuItem>Edit</DropdownMenuItem>
-					<DropdownMenuItem>Make a copy</DropdownMenuItem>
-					<DropdownMenuItem>Favorite</DropdownMenuItem>
-					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive">
-						Delete
-					</DropdownMenuItem>
-				</DropdownMenuContent>
-			</DropdownMenu>
+		accessorKey: "visibility",
+		header: "Visibility",
+		cell: ({ row }) => {
+			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
+			const visibility = row.original["visibility"] ?? "None";
+			return <div>{visibility}</div>;
+		},
+	},
+
+	//* LAST UPDATED
+	{
+		accessorKey: "last updated",
+		header: () => (
+			<div className="w-full flex justify-center">
+				<span className="w-32 text-center">Last Updated</span>
+			</div>
+		),
+		cell: ({ row }) => (
+			<div className="w-full flex justify-center">
+				<span className="w-32 text-center">
+					{formatDateTime(row.original.last_updated)}
+				</span>
+			</div>
 		),
 	},
 ];
