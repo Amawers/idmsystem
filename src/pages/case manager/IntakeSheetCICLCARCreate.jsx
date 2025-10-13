@@ -36,7 +36,7 @@ const tabOrder = [
 	"Referral",
 ];
 
-export default function IntakeSheetCICLCAR({ open, setOpen }) {
+export default function IntakeSheetCICLCARCreate({ open, setOpen }) {
 	const [activeTab, setActiveTab] = useState(tabOrder[0]);
 
 	const goNext = () => {
@@ -68,7 +68,7 @@ export default function IntakeSheetCICLCAR({ open, setOpen }) {
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent className="min-w-4/5 min-h-4/5 flex flex-col">
 				<DialogHeader>
-					<DialogTitle>Intake Sheet for CICL/CAR</DialogTitle>
+					<DialogTitle>Create CICL/CAR record</DialogTitle>
 				</DialogHeader>
 
 				<Tabs

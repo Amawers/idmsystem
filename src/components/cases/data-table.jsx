@@ -69,7 +69,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import IntakeSheetCaseCreate from "@/pages/case manager/IntakeSheetCaseCreate";
-import IntakeSheetCICLCAR from "@/pages/case manager/IntakeSheetCICLCAR";
+import IntakeSheetCICLCARCreate from "@/pages/case manager/IntakeSheetCICLCARCreate";
 import IntakeSheetFAR from "@/pages/case manager/IntakeSheetFAR";
 import IntakeSheetFAC from "@/pages/case manager/IntakeSheetFAC";
 // ADD THIS IMPORT
@@ -720,7 +720,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 								</span>
 							</Button>
 
-							<IntakeSheetCICLCAR
+							<IntakeSheetCICLCARCreate
 								open={openIntakeSheet}
 								setOpen={setOpenIntakeSheet}
 							/>
