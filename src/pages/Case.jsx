@@ -2,8 +2,7 @@ import { DataTable } from "@/components/cases/data-table";
 import React, { useEffect, useState, useRef } from "react";
 
 //! TEMPLATE DATA
-// Remove CASEDATA; keep other sample tabs for now
-// import CASEDATA from "../../SAMPLE_CASE-TABLE.json";
+
 import CICLCARDATA from "../../SAMPLE_CICL-CAR-TABLE.json";
 import FARDATA from "../../SAMPLE_FAR-TABLE.json";
 
@@ -12,6 +11,7 @@ import { ChartAreaInteractive } from "@/components/chart-area-interactive";
 import { Button } from "@/components/ui/button";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { useCases } from "@/hooks/useCases";
+import { useCiclcarCases } from "@/hooks/useCiclcarCases";
 
 export default function Case() {
 	// Track whether the user is currently at (or past) the DataTable section
@@ -22,6 +22,12 @@ export default function Case() {
 
 	// Load dynamic CASE rows from Supabase
 	const { data: caseRows, loading: casesLoading, error: casesError, reload } = useCases();
+	const {
+		data: ciclcarRows,
+		loading: ciclcarLoading,
+		error: ciclcarError,
+		reload: reloadCiclcar,
+	} = useCiclcarCases();
 
 	// Effect: watch scroll position and update "atTable" state
 	useEffect(() => {
@@ -58,10 +64,18 @@ export default function Case() {
 						</button>
 					</div>
 				) : null}
+				{ciclcarError ? (
+					<div className="px-4 text-sm text-red-600">
+						Failed to load CICL-CAR cases.{" "}
+						<button className="underline" onClick={reloadCiclcar}>
+							Retry
+						</button>
+					</div>
+				) : null}
 
 				<DataTable
 					caseData={casesLoading ? [] : caseRows}
-					ciclcarData={CICLCARDATA}
+					ciclcarData={ciclcarLoading ? [] : ciclcarRows}
 					farData={FARDATA}
 				/>
 			</div>

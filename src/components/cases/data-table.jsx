@@ -283,7 +283,7 @@ const ciclcarColumns = [
 		header: "Date Filed",
 		cell: ({ row }) => (
 			<div className="px-2">
-				{formatToMMDDYYYY(row.original.date_filed) || "-"}
+				{formatToMMDDYYYY(row.original.created_at) || "-"}
 			</div>
 		),
 	},
@@ -292,8 +292,8 @@ const ciclcarColumns = [
 		accessorKey: "time open",
 		header: "Time Open",
 		cell: ({ row }) => {
-			const filedDate = row.original.date_filed
-				? new Date(row.original.date_filed)
+			const filedDate = row.original.created_at
+				? new Date(row.original.created_at)
 				: null;
 
 			return (
@@ -328,7 +328,7 @@ const ciclcarColumns = [
 		cell: ({ row }) => (
 			<div className="w-full flex justify-center">
 				<span className="w-32 text-center">
-					{formatDateTime(row.original.last_updated)}
+					{formatDateTime(row.original.updated_at)}
 				</span>
 			</div>
 		),
