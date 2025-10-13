@@ -102,13 +102,14 @@ export function ReferralForm({ sectionKey, goNext, goBack }) {
     const { data, setSectionField } = useIntakeFormStore();
 
     const [priority, setPriority] = useState(
-        data.caseDetails?.priority || undefined
+        data[sectionKey]?.caseDetails?.priority || undefined
     );
 
     useEffect(() => {
         // keep local priority in sync if store changes externally
-        setPriority(data.caseDetails?.priority || undefined);
-    }, [data.caseDetails?.priority]);
+        const currentPriority = data[sectionKey]?.caseDetails?.priority;
+        setPriority(currentPriority || undefined);
+    }, [data, sectionKey]);
 
     const form = useForm({
         resolver: zodResolver(schema),
@@ -129,7 +130,7 @@ export function ReferralForm({ sectionKey, goNext, goBack }) {
     // helpers to update nested caseDetails in the intake section
     function updateCaseDetailField(key, value) {
         setSectionField(sectionKey, {
-            caseDetails: { ...(data.caseDetails || {}), [key]: value },
+            caseDetails: { ...(data[sectionKey]?.caseDetails || {}), [key]: value },
         });
     }
 
@@ -307,7 +308,7 @@ export function ReferralForm({ sectionKey, goNext, goBack }) {
                                     Case Manager
                                 </Label>
                                 <Select
-                                    defaultValue={data.caseDetails?.caseManager}
+                                    defaultValue={data[sectionKey]?.caseDetails?.caseManager}
                                     onValueChange={(val) =>
                                         updateCaseDetailField("caseManager", val)
                                     }
@@ -335,7 +336,7 @@ export function ReferralForm({ sectionKey, goNext, goBack }) {
                             <div className="flex-1 space-y-1 mb-1">
                                 <Label htmlFor="status">Status</Label>
                                 <Select
-                                    defaultValue={data.caseDetails?.status}
+                                    defaultValue={data[sectionKey]?.caseDetails?.status}
                                     onValueChange={(val) =>
                                         updateCaseDetailField("status", val)
                                     }
@@ -369,7 +370,7 @@ export function ReferralForm({ sectionKey, goNext, goBack }) {
                             <div className="space-y-1 mb-1">
                                 <Label htmlFor="priority">Priority</Label>
                                 <Select
-                                    defaultValue={data.caseDetails?.priority}
+                                    defaultValue={data[sectionKey]?.caseDetails?.priority}
                                     onValueChange={(val) => {
                                         setPriority(val);
                                         updateCaseDetailField("priority", val);
@@ -402,7 +403,7 @@ export function ReferralForm({ sectionKey, goNext, goBack }) {
                             <div className="space-y-1">
                                 <Label htmlFor="visibility">Visibility</Label>
                                 <Select
-                                    defaultValue={data.caseDetails?.visibility}
+                                    defaultValue={data[sectionKey]?.caseDetails?.visibility}
                                     onValueChange={(val) =>
                                         updateCaseDetailField("visibility", val)
                                     }

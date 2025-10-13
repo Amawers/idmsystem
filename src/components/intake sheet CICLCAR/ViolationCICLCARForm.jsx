@@ -30,7 +30,7 @@ const schema = z.object({
 	specificViolation: z.string().min(2, "Required"),
 	admissionDate: z.string({ required_error: "Admission date required" }),
 	repeatOffender: z.string().min(2, "Required"),
-	previouseOffense: z.string().min(2, "Required"),
+	previousOffense: z.string().min(2, "Required"),
 	placeCommitted: z.string().min(2, "Required"),
 });
 
@@ -274,7 +274,7 @@ export function ViolationCICLCARForm({ sectionKey, goNext, goBack }) {
 						{/* Textarea Field */}
 						<FormField
 							control={form.control}
-							name="previouseOffense"
+							name="previousOffense"
 							render={({ field }) => (
 								<FormItem>
 									<FormControl>

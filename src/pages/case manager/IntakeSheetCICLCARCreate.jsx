@@ -17,7 +17,6 @@ import { RemarksForm } from "@/components/intake sheet CICLCAR/RemarksForm";
 import { ReferralForm } from "@/components/intake sheet CICLCAR/ReferralForm";
 import { ServicesForm } from "@/components/intake sheet CICLCAR/ServicesForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
-import { useAuthStore } from "@/store/authStore";
 import supabase from "@/../config/supabase";
 
 // Helper utilities to make field mapping robust
@@ -72,7 +71,6 @@ const tabOrder = [
 export default function IntakeSheetCICLCARCreate({ open, setOpen }) {
 	const [activeTab, setActiveTab] = useState(tabOrder[0]);
 	const { getAllData, resetAll } = useIntakeFormStore();
-	const { user } = useAuthStore();
 	const [isSaving, setIsSaving] = useState(false);
 
 	// Create CICL/CAR case and related rows
@@ -81,12 +79,19 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen }) {
 			setIsSaving(true);
 			const all = getAllData() || {};
 
+			console.log("🔍 Full intake data:", all);
+
 			const profile = all.profileOfCICLCar || {};
 			const violation = all.violationOfCICLCar || {};
 			const complainant = all.complainant || {};
 			const remarks = all.remarks || {};
 			const referral = all.referral || all.referal || {}; // support old key
 			const recordDetails = all.recordDetails || {};
+
+			console.log("📝 Profile data:", profile);
+			console.log("⚖️ Violation data:", violation);
+			console.log("👥 Complainant data:", complainant);
+			console.log("📍 Referral data:", referral);
 
 			// Normalize family background rows
 			const familyRows = Array.isArray(all.familyBackground)
@@ -97,6 +102,7 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen }) {
 
 			// Normalize services rows (support multiple shapes/keys)
 			const rawServices =
+				Array.isArray(all.services?.services) ? all.services.services :
 				Array.isArray(all.services) ? all.services :
 				Array.isArray(all.services?.items) ? all.services.items :
 				Array.isArray(all.servicesProvided) ? all.servicesProvided :
@@ -104,21 +110,24 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen }) {
 				Array.isArray(all.services?.list) ? all.services.list :
 				[];
 
+			// Extract case details from the referral section (where they're actually stored)
+			const caseDetails = referral?.caseDetails || {};
+
 			// Base case payload
 			const casePayload = {
-				case_manager: user?.id ?? null,
-				status: pick(profile, "status", "caseStatus") ?? null,
-				priority: pick(profile, "priority", "casePriority", "case_priority") ?? null,
-				visibility: pick(profile, "visibility", "caseVisibility", "case_visibility") ?? null,
+				case_manager: pick(caseDetails, "caseManager", "case_manager") ?? null,
+				status: pick(caseDetails, "status", "caseStatus") ?? null,
+				priority: pick(caseDetails, "priority", "casePriority", "case_priority") ?? null,
+				visibility: pick(caseDetails, "visibility", "caseVisibility", "case_visibility") ?? null,
 
 				profile_name: pick(profile, "name", "fullName") ?? null,
 				profile_alias: pick(profile, "alias") ?? null,
 				profile_sex: pick(profile, "sex") ?? null,
 				profile_gender: pick(profile, "gender") ?? null,
-				profile_birth_date: normalizeDate(pick(profile, "birthDate", "birth_date", "dob", "dateOfBirth")),
+				profile_birth_date: normalizeDate(pick(profile, "birthday", "birthDate", "birth_date", "dob", "dateOfBirth")),
 				profile_age:
 					pick(profile, "age") ??
-					computeAge(normalizeDate(pick(profile, "birthDate", "birth_date", "dob", "dateOfBirth"))),
+					computeAge(normalizeDate(pick(profile, "birthday", "birthDate", "birth_date", "dob", "dateOfBirth"))),
 				profile_status: pick(profile, "civilStatus", "status", "civil_status") ?? null,
 				profile_religion: pick(profile, "religion") ?? null,
 				profile_address: pick(profile, "address") ?? null,
@@ -137,7 +146,7 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen }) {
 				violation_status: pick(violation, "status") ?? null,
 				violation_admission_date: normalizeDate(pick(violation, "admissionDate", "admission_date")),
 				repeat_offender: pick(violation, "repeatOffender", "repeat_offender") ?? null,
-				violation_previous_offense: pick(violation, "previousOffense", "prevOffense", "previous_offense") ?? null,
+				violation_previous_offense: pick(violation, "previousOffense", "previouseOffense", "prevOffense", "previous_offense") ?? null,
 
 				record_details:
 					recordDetails?.details ??
@@ -150,7 +159,7 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen }) {
 				complainant_relationship: pick(complainant, "relationship") ?? null,
 				complainant_contact_number: pick(complainant, "contactNumber", "contact_number") ?? null,
 				complainant_sex: pick(complainant, "sex") ?? null,
-				complainant_birth_date: normalizeDate(pick(complainant, "birthDate", "birth_date", "dob", "dateOfBirth")),
+				complainant_birth_date: normalizeDate(pick(complainant, "birthday", "birthDate", "birth_date", "dob", "dateOfBirth")),
 				complainant_address: pick(complainant, "address") ?? null,
 
 				remarks: pick(remarks, "remarks", "notes") ?? null,
@@ -161,8 +170,10 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen }) {
 				referral_barangay: pick(referral, "barangay") ?? null,
 				referral_referred_to: pick(referral, "referredTo", "referred_to") ?? null,
 				referral_date_referred: normalizeDate(pick(referral, "dateReferred", "date_referred")),
-				referral_reason: pick(referral, "reason", "referral_reason") ?? null,
+				referral_reason: pick(referral, "referralReason", "reason", "referral_reason") ?? null,
 			};
+
+			console.log("💾 Final case payload:", casePayload);
 
 			// 1) Insert base case
 			const { data: caseRow, error: caseErr } = await supabase
@@ -171,7 +182,10 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen }) {
 				.select()
 				.single();
 
-			if (caseErr) throw caseErr;
+			if (caseErr) {
+				console.error("❌ Case insertion error:", caseErr);
+				throw caseErr;
+			}
 
 			// 2) Insert family members (if any)
 			if (caseRow?.id && familyRows.length > 0) {
@@ -202,7 +216,7 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen }) {
 				const servicesPayload = rawServices
 					.map((s) => ({
 						ciclcar_case_id: caseRow.id,
-						service_type: pick(s, "serviceType", "type", "service_type"),
+						service_type: pick(s, "type", "serviceType", "service_type"),
 						service: pick(s, "service", "description", "name"),
 						service_date_provided: normalizeDate(pick(s, "dateProvided", "date_provided", "providedOn", "startDate")),
 						service_date_completed: normalizeDate(pick(s, "dateCompleted", "date_completed", "completedOn", "endDate")),
