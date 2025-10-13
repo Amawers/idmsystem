@@ -296,7 +296,7 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen }) {
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent className="min-w-4/5 min-h-4/5 flex flex-col">
 				<DialogHeader>
-					<DialogTitle>Create CICL/CAR record</DialogTitle>
+					<DialogTitle>Create CICL/CAR Record</DialogTitle>
 				</DialogHeader>
 
 				<Tabs
