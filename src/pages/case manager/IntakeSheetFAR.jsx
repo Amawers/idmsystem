@@ -20,7 +20,7 @@ import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { submitFARCase } from "@/lib/farSubmission";
 import { toast } from "sonner";
 
-export default function IntakeSheetFAR({ open, setOpen }) {
+export default function IntakeSheetFAR({ open, setOpen, onSuccess }) {
   const { getAllData, resetAll } = useIntakeFormStore();
   const [isSaving, setIsSaving] = useState(false);
 
@@ -54,6 +54,11 @@ export default function IntakeSheetFAR({ open, setOpen }) {
       // Reset form and close dialog
       resetAll();
       setOpen(false);
+      
+      // Trigger reload of FAR data if callback provided
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (err) {
       console.error("❌ Unexpected error creating FAR case:", err);
       toast.error("Failed to create Family Assistance Record", {

@@ -1,10 +1,8 @@
 import { DataTable } from "@/components/cases/data-table";
 import React, { useEffect, useState, useRef } from "react";
 
-//! TEMPLATE DATA
-
-import CICLCARDATA from "../../SAMPLE_CICL-CAR-TABLE.json";
-import FARDATA from "../../SAMPLE_FAR-TABLE.json";
+//! TEMPLATE DATA - Remove after all tables have dynamic data
+// import FARDATA from "../../SAMPLE_FAR-TABLE.json";
 
 import { SectionCards } from "@/components/section-cards";
 import { ChartAreaInteractive } from "@/components/chart-area-interactive";
@@ -12,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { useCases } from "@/hooks/useCases";
 import { useCiclcarCases } from "@/hooks/useCiclcarCases";
+import { useFarCases } from "@/hooks/useFarCases";
 
 export default function Case() {
 	// Track whether the user is currently at (or past) the DataTable section
@@ -28,6 +27,12 @@ export default function Case() {
 		error: ciclcarError,
 		reload: reloadCiclcar,
 	} = useCiclcarCases();
+	const {
+		data: farRows,
+		loading: farLoading,
+		error: farError,
+		reload: reloadFar,
+	} = useFarCases();
 
 	// Effect: watch scroll position and update "atTable" state
 	useEffect(() => {
@@ -72,11 +77,22 @@ export default function Case() {
 						</button>
 					</div>
 				) : null}
+				{farError ? (
+					<div className="px-4 text-sm text-red-600">
+						Failed to load FAR cases.{" "}
+						<button className="underline" onClick={reloadFar}>
+							Retry
+						</button>
+					</div>
+				) : null}
 
 				<DataTable
 					caseData={casesLoading ? [] : caseRows}
 					ciclcarData={ciclcarLoading ? [] : ciclcarRows}
-					farData={FARDATA}
+					farData={farLoading ? [] : farRows}
+					reloadCases={reload}
+					reloadCiclcar={reloadCiclcar}
+					reloadFar={reloadFar}
 				/>
 			</div>
 

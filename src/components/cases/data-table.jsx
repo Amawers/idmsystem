@@ -74,7 +74,6 @@ import IntakeSheetFAR from "@/pages/case manager/IntakeSheetFAR";
 import IntakeSheetFAC from "@/pages/case manager/IntakeSheetFAC";
 // ADD THIS IMPORT
 import IntakeSheetEdit from "@/pages/case manager/intakeSheetCaseEdit";
-import DragHandle from "@/components/cases/tables/DragHandle";
 import useDataTable from "@/hooks/useDataTable";
 import TableRenderer from "@/components/cases/tables/TableRenderer";
 
@@ -339,85 +338,143 @@ const ciclcarColumns = [
 //* FAR Table COLUMN DEFINITIONS
 // =================================
 const farColumns = [
-	{
-		id: "drag",
-		header: () => null,
-		cell: ({ row }) => <DragHandle id={row.original.id} />,
-	},
-
-	// Checkbox column (select rows)
-	{
-		id: "select",
-		header: ({ table }) => (
-			<div className="flex items-center justify-center">
-				<Checkbox
-					checked={
-						table.getIsAllPageRowsSelected() ||
-						(table.getIsSomePageRowsSelected() && "indeterminate")
-					}
-					onCheckedChange={(value) =>
-						table.toggleAllPageRowsSelected(!!value)
-					}
-					aria-label="Select all"
-				/>
-			</div>
-		),
-		cell: ({ row }) => (
-			<div className="flex items-center justify-center">
-				<Checkbox
-					checked={row.getIsSelected()}
-					onCheckedChange={(value) => row.toggleSelected(!!value)}
-					aria-label="Select row"
-				/>
-			</div>
-		),
-		enableSorting: false,
-		enableHiding: false,
-	},
-
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
+	
+	//* CASE ID
+	{
+		accessorKey: "id",
+		header: "Case ID",
+		cell: ({ row }) => {
+			const caseId = row.original.id || "N/A";
+			return <div className="font-medium">{caseId}</div>;
+		},
+		enableHiding: false,
+	},
+
+	//* DATE
 	{
 		accessorKey: "date",
 		header: "Date",
-		cell: () => <div>Date</div>,
+		cell: ({ row }) => (
+			<div className="px-2">
+				{formatToMMDDYYYY(row.original.date) || "-"}
+			</div>
+		),
 	},
+
+	//* RECEIVING MEMBER
 	{
-		accessorKey: "member",
+		accessorKey: "receiving_member",
 		header: "Receiving Member",
-		cell: () => <div>Receiving member</div>,
+		cell: ({ row }) => {
+			const member = row.original.receiving_member || "N/A";
+			return <div>{member}</div>;
+		},
 	},
+
+	//* EMERGENCY
 	{
 		accessorKey: "emergency",
 		header: "Emergency",
-		cell: () => <div>Emergency</div>,
+		cell: ({ row }) => {
+			const emergency = row.original.emergency || "N/A";
+			return <div>{emergency}</div>;
+		},
 	},
+
+	//* ASSISTANCE
 	{
 		accessorKey: "assistance",
 		header: "Assistance",
-		cell: () => <div>Assistance</div>,
+		cell: ({ row }) => {
+			const assistance = row.original.assistance || "N/A";
+			return <div>{assistance}</div>;
+		},
 	},
+
+	//* UNIT
 	{
 		accessorKey: "unit",
 		header: "Unit",
-		cell: () => <div>Unit</div>,
+		cell: ({ row }) => {
+			const unit = row.original.unit || "N/A";
+			return <div>{unit}</div>;
+		},
 	},
+
+	//* QUANTITY
 	{
-		accessorKey: "quantiy",
+		accessorKey: "quantity",
 		header: "Quantity",
-		cell: () => <div>Quantity</div>,
+		cell: ({ row }) => {
+			const quantity = row.original.quantity || "0";
+			return <div>{quantity}</div>;
+		},
 	},
+
+	//* COST
 	{
 		accessorKey: "cost",
-		header: "Cost",
-		cell: () => <div>Cost</div>,
+		header: "Cost (₱)",
+		cell: ({ row }) => {
+			const cost = row.original.cost || "0.00";
+			return <div>₱{parseFloat(cost).toFixed(2)}</div>;
+		},
 	},
+
+	//* PROVIDER
 	{
 		accessorKey: "provider",
 		header: "Provider",
-		cell: () => <div>Provider</div>,
+		cell: ({ row }) => {
+			const provider = row.original.provider || "N/A";
+			return <div>{provider}</div>;
+		},
 	},
+
+	//* CASE MANAGER
+	{
+		accessorKey: "case_manager",
+		header: "Case Manager",
+		cell: ({ row }) => {
+			const caseManager = row.original.case_manager || "-";
+			return <div>{caseManager}</div>;
+		},
+	},
+
+	//* STATUS
+	{
+		accessorKey: "status",
+		header: "Status",
+		cell: ({ row }) => {
+			const status = row.original.status || "-";
+			return <div>{status}</div>;
+		},
+	},
+
+	//* PRIORITY
+	{
+		accessorKey: "priority",
+		header: "Priority",
+		cell: ({ row }) => {
+			const priority = row.original.priority || "-";
+			return <div>{priority}</div>;
+		},
+	},
+
+	//* VISIBILITY
+	{
+		accessorKey: "visibility",
+		header: "Visibility",
+		cell: ({ row }) => {
+			const visibility = row.original.visibility || "-";
+			return <div>{visibility}</div>;
+		},
+	},
+
+	//* ACTIONS
 	{
 		id: "actions",
 		cell: () => (
@@ -490,13 +547,28 @@ const formatToMMDDYYYY = (str) => {
  * @param {Array} props.caseData - Data for CASE tab
  * @param {Array} props.ciclcarData - Data for CICLCAR tab
  * @param {Array} props.farData - Data for FAR tab
+ * @param {Function} props.reloadCases - Function to reload case data
+ * @param {Function} props.reloadCiclcar - Function to reload CICLCAR data
+ * @param {Function} props.reloadFar - Function to reload FAR data
  *
  * @returns {JSX.Element} Rendered DataTable component
  *
  * @example
- * <DataTable caseData={cases} ciclcarData={ciclcar} farData={far} />
+ * <DataTable 
+ *   caseData={cases} 
+ *   ciclcarData={ciclcar} 
+ *   farData={far}
+ *   reloadCases={reloadCases}
+ *   reloadCiclcar={reloadCiclcar}
+ *   reloadFar={reloadFar}
+ * />
  */
-export function DataTable({ caseData, ciclcarData, farData }) {
+export function DataTable({ 
+	caseData, 
+	ciclcarData, 
+	farData, 
+	reloadFar 
+}) {
 	// State to control Intake Sheet modal visibility (open/close)
 	const [openIntakeSheet, setOpenIntakeSheet] = useState(false);
 
@@ -781,6 +853,7 @@ export function DataTable({ caseData, ciclcarData, farData }) {
 							<IntakeSheetFAR
 								open={openIntakeSheet}
 								setOpen={setOpenIntakeSheet}
+								onSuccess={reloadFar}
 							/>
 						</>
 					)}
