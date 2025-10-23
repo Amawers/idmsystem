@@ -576,6 +576,10 @@ export function DataTable({
 	const [openEditSheet, setOpenEditSheet] = useState(false);
 	// const [editingRecord, setEditingRecord] = useState(null);
 
+	// FAR edit state
+	const [openFarEditSheet, setOpenFarEditSheet] = useState(false);
+	const [editingFarRecord, setEditingFarRecord] = useState(null);
+
 	// Tracks which tab is currently active (default: "CASE")
 	const [activeTab, setActiveTab] = useState("CASE");
 
@@ -583,6 +587,15 @@ export function DataTable({
 	// function handleEditRow(record) {
 	// 	console.log("Editing record:", record);
 	// 	setEditingRecord(record);
+	// 	setOpenEditSheet(true);
+	// }
+
+	// Handle FAR row click for editing
+	function handleEditFarRow(record) {
+		console.log("Editing FAR record:", record);
+		setEditingFarRecord(record);
+		setOpenFarEditSheet(true);
+	}
 	// 	setOpenEditSheet(true);
 	// }
 
@@ -603,6 +616,7 @@ export function DataTable({
 	const farTable = useDataTable({
 		initialData: farData,
 		columns: farColumns,
+		onRowClick: handleEditFarRow, // Add click handler for FAR rows
 	});
 
 	// ============================
@@ -855,6 +869,14 @@ export function DataTable({
 								setOpen={setOpenIntakeSheet}
 								onSuccess={reloadFar}
 							/>
+
+							{/* FAR Edit Modal */}
+							<IntakeSheetFAR
+								open={openFarEditSheet}
+								setOpen={setOpenFarEditSheet}
+								onSuccess={reloadFar}
+								editingRecord={editingFarRecord}
+							/>
 						</>
 					)}
 				</div>
@@ -902,6 +924,7 @@ export function DataTable({
 					table={farTable.table}
 					setData={farTable.setData}
 					columns={farColumns}
+					onRowClick={handleEditFarRow}
 				/>
 			</TabsContent>
 

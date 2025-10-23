@@ -1,7 +1,7 @@
 /**
  * @file IntakeSheetFAR.jsx
  * @description Family Assistance Record (FAR) intake form dialog
- * Manages FAR case creation with form validation and Supabase submission
+ * Manages FAR case creation and editing with form validation and Supabase submission
  * 
  * @author IDM System
  * @date 2025-10-23
@@ -17,39 +17,95 @@ import {
 } from "@/components/ui/dialog";
 import { FamilyAssistanceForm } from "@/components/intake sheet FAR/FamilyAssistanceForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
-import { submitFARCase } from "@/lib/farSubmission";
+import { submitFARCase, updateFARCase } from "@/lib/farSubmission";
 import { toast } from "sonner";
 
-export default function IntakeSheetFAR({ open, setOpen, onSuccess }) {
-  const { getAllData, resetAll } = useIntakeFormStore();
+export default function IntakeSheetFAR({ open, setOpen, onSuccess, editingRecord }) {
+  const { getAllData, resetAll, setSectionField } = useIntakeFormStore();
   const [isSaving, setIsSaving] = useState(false);
+  const isEditMode = !!editingRecord;
 
   /**
-   * Handle FAR case creation
+   * Pre-fill form with editing record data
+   */
+  useEffect(() => {
+    if (open && editingRecord) {
+      console.log("🔄 Pre-filling FAR form with:", editingRecord);
+      
+      // Map database fields to form fields
+      const formData = {
+        date: editingRecord.date || "",
+        receivingMember: editingRecord.receiving_member || "",
+        emergency: editingRecord.emergency || "",
+        emergencyOther: editingRecord.emergency_other || "",
+        assistance: editingRecord.assistance || "",
+        assistanceOther: editingRecord.assistance_other || "",
+        unit: editingRecord.unit || "",
+        quantity: editingRecord.quantity?.toString() || "",
+        cost: editingRecord.cost?.toString() || "",
+        provider: editingRecord.provider || "",
+        caseManager: editingRecord.case_manager || "",
+        status: editingRecord.status || "",
+        priority: editingRecord.priority || "",
+        visibility: editingRecord.visibility || "",
+        // Store caseDetails separately
+        caseDetails: {
+          caseManager: editingRecord.case_manager || "",
+          status: editingRecord.status || "",
+          priority: editingRecord.priority || "",
+          visibility: editingRecord.visibility || "",
+        },
+      };
+
+      // Pre-fill the form store
+      setSectionField("familyAssistanceRecord", formData);
+    }
+  }, [open, editingRecord, setSectionField]);
+
+  /**
+   * Handle FAR case creation or update
    * Validates form data, submits to Supabase, and handles success/error states
    */
-  const handleCreate = async () => {
+  const handleSubmit = async () => {
     try {
       setIsSaving(true);
       const allData = getAllData() || {};
 
       console.log("🔍 Full FAR intake data:", allData);
 
-      // Submit to Supabase
-      const { caseId, error } = await submitFARCase(allData);
+      if (isEditMode) {
+        // Update existing record
+        const { error } = await updateFARCase(editingRecord.id, allData);
 
-      if (error) {
-        console.error("❌ Failed to create FAR case:", error);
-        toast.error("Failed to create Family Assistance Record", {
-          description: error.message || "An unexpected error occurred. Please try again.",
+        if (error) {
+          console.error("❌ Failed to update FAR case:", error);
+          toast.error("Failed to update Family Assistance Record", {
+            description: error.message || "An unexpected error occurred. Please try again.",
+          });
+          return;
+        }
+
+        console.log("✅ FAR case updated successfully:", editingRecord.id);
+        toast.success("Family Assistance Record updated successfully!", {
+          description: `Case ID: ${editingRecord.id}`,
         });
-        return;
-      }
+      } else {
+        // Create new record
+        const { caseId, error } = await submitFARCase(allData);
 
-      console.log("✅ FAR case created successfully:", caseId);
-      toast.success("Family Assistance Record created successfully!", {
-        description: `Case ID: ${caseId}`,
-      });
+        if (error) {
+          console.error("❌ Failed to create FAR case:", error);
+          toast.error("Failed to create Family Assistance Record", {
+            description: error.message || "An unexpected error occurred. Please try again.",
+          });
+          return;
+        }
+
+        console.log("✅ FAR case created successfully:", caseId);
+        toast.success("Family Assistance Record created successfully!", {
+          description: `Case ID: ${caseId}`,
+        });
+      }
 
       // Reset form and close dialog
       resetAll();
@@ -60,8 +116,8 @@ export default function IntakeSheetFAR({ open, setOpen, onSuccess }) {
         onSuccess();
       }
     } catch (err) {
-      console.error("❌ Unexpected error creating FAR case:", err);
-      toast.error("Failed to create Family Assistance Record", {
+      console.error("❌ Unexpected error:", err);
+      toast.error(`Failed to ${isEditMode ? 'update' : 'create'} Family Assistance Record`, {
         description: "An unexpected error occurred. Please try again.",
       });
     } finally {
@@ -72,27 +128,28 @@ export default function IntakeSheetFAR({ open, setOpen, onSuccess }) {
   // Navigation functions
   const goNext = async () => {
     // Form completed - submit to database
-    await handleCreate();
+    await handleSubmit();
   };
 
   const goBack = () => {
     // Close dialog when going back (since there's only one form)
+    resetAll();
     setOpen(false);
   };
 
-  // Reset form when dialog opens
+  // Reset form when dialog opens (only for create mode)
   useEffect(() => {
-    if (open) {
+    if (open && !editingRecord) {
       resetAll();
     }
-  }, [open, resetAll]);
+  }, [open, editingRecord, resetAll]);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-h-[90vh] max-w-4xl overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>
-            Family Assistance Record
+            {isEditMode ? "Edit Family Assistance Record" : "Family Assistance Record"}
           </DialogTitle>
         </DialogHeader>
         {/* main content: make this fill remaining vertical space and scroll when needed */}
@@ -102,6 +159,7 @@ export default function IntakeSheetFAR({ open, setOpen, onSuccess }) {
             goNext={goNext}
             goBack={goBack}
             isSaving={isSaving}
+            isEditMode={isEditMode}
           />
         </div>
       </DialogContent>

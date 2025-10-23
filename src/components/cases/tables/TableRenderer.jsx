@@ -69,6 +69,7 @@ import { useAuthStore } from "@/store/authStore";
  * @param {Object} props.table - TanStack Table instance with row data and methods
  * @param {Function} props.setData - Function to update the table data array
  * @param {Array} props.columns - Column definitions for the table
+ * @param {Function} [props.onRowClick] - Optional custom row click handler (for FAR, etc.)
  *
  * @returns {JSX.Element} Rendered table with drag-and-drop functionality
  *
@@ -77,6 +78,7 @@ import { useAuthStore } from "@/store/authStore";
  *   table={tableInstance}
  *   setData={setTableData}
  *   columns={columnDefinitions}
+ *   onRowClick={customHandler} // Optional
  * />
  *
  * @remarks
@@ -84,8 +86,9 @@ import { useAuthStore } from "@/store/authStore";
  * - Restricts dragging to vertical axis to prevent horizontal movement
  * - Role-based access: super_admin can edit, others can view modal but not edit
  * - ScrollArea enables scrolling for tables with more than 10 rows
+ * - If onRowClick is provided, it will be used instead of the default modal behavior
  */
-export default function TableRenderer({ table, setData, columns }) {
+export default function TableRenderer({ table, setData, columns, onRowClick }) {
   //* ================================================
   //* DRAG-AND-DROP SETUP
   //* ================================================
@@ -151,11 +154,19 @@ export default function TableRenderer({ table, setData, columns }) {
    * handleRowClick
    *
    * @description Handles row click events to open the edit modal for the selected row.
+   * If a custom onRowClick is provided, use that instead of the default behavior.
    * Access is restricted based on user role: super_admin can edit, others can view.
    *
    * @param {Object} row - The clicked table row object from TanStack Table
    */
   const handleRowClick = (row) => {
+    // If custom onRowClick handler is provided, use it instead
+    if (onRowClick) {
+      onRowClick(row.original);
+      return;
+    }
+    
+    // Default behavior: open IntakeSheetCaseEdit modal
     setSelectedRow(row.original);
     setOpen(true);
   };

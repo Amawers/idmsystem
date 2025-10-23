@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -54,7 +55,7 @@ const schema = z
         }
     );
 
-export function FamilyAssistanceForm({ sectionKey, goNext, goBack, isSaving }) {
+export function FamilyAssistanceForm({ sectionKey, goNext, goBack, isSaving, isEditMode }) {
   const { data, setSectionField } = useIntakeFormStore();
 
   const form = useForm({
@@ -70,6 +71,22 @@ export function FamilyAssistanceForm({ sectionKey, goNext, goBack, isSaving }) {
             visibility: data[sectionKey]?.visibility || "",
     },
   });
+
+  // Update form values when data changes (for edit mode)
+  React.useEffect(() => {
+    if (data[sectionKey]) {
+      form.reset({
+        ...data[sectionKey],
+        date: data[sectionKey]?.date || "",
+        emergencyOther: data[sectionKey]?.emergencyOther || "",
+        assistanceOther: data[sectionKey]?.assistanceOther || "",
+        caseManager: data[sectionKey]?.caseManager || "",
+        status: data[sectionKey]?.status || "",
+        priority: data[sectionKey]?.priority || "",
+        visibility: data[sectionKey]?.visibility || "",
+      });
+    }
+  }, [data, sectionKey, form]);
 
   function onSubmit(values) {
         // If user selected "other", prefer the custom field value
@@ -479,7 +496,7 @@ return (
                     Cancel
                 </Button>
                 <Button type="submit" disabled={isSaving}>
-                    {isSaving ? "Submitting..." : "Submit"}
+                    {isSaving ? (isEditMode ? "Updating..." : "Submitting...") : (isEditMode ? "Update" : "Submit")}
                 </Button>
             </div>
         </form>
