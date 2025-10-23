@@ -37,6 +37,20 @@ const normalizeDate = (v) => {
     return d.toISOString().slice(0, 10);
 };
 
+// Convert various inputs to value accepted by <input type="datetime-local">
+const normalizeDateTimeLocal = (v) => {
+    if (!v) return "";
+    const d = v instanceof Date ? v : new Date(v);
+    if (Number.isNaN(d.getTime())) return "";
+    const pad = (n) => String(n).padStart(2, "0");
+    const yyyy = d.getFullYear();
+    const mm = pad(d.getMonth() + 1);
+    const dd = pad(d.getDate());
+    const hh = pad(d.getHours());
+    const mi = pad(d.getMinutes());
+    return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+};
+
 const computeAge = (dateStr) => {
     if (!dateStr) return null;
     const d = new Date(dateStr);
@@ -88,7 +102,9 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row }) {
                 gender: row.profile_gender || "",
                 birthday: row.profile_birth_date || "",
                 age: row.profile_age || "",
+                // keep both keys for backward compatibility; UI uses `status`
                 civilStatus: row.profile_status || "",
+                status: (row.profile_status || "").toLowerCase(),
                 religion: row.profile_religion || "",
                 address: row.profile_address || "",
                 clientCategory: row.profile_client_category || "",
@@ -103,11 +119,14 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row }) {
             // Prefill Violation section
             setSectionField("violationOfCICLCar", {
                 violation: row.violation || "",
-                dateTimeCommitted: row.violation_date_time_committed || "",
+                // ensure datetime-local compatible string
+                dateTimeCommitted: normalizeDateTimeLocal(
+                    row.violation_date_time_committed
+                ),
                 specificViolation: row.specific_violation || "",
                 placeCommitted: row.violation_place_committed || "",
                 status: row.violation_status || "",
-                admissionDate: row.violation_admission_date || "",
+                admissionDate: normalizeDate(row.violation_admission_date) || "",
                 repeatOffender: row.repeat_offender || "",
                 previousOffense: row.violation_previous_offense || "",
             });
@@ -126,7 +145,8 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row }) {
 
             // Prefill Record Details section
             setSectionField("recordDetails", {
-                details: row.record_details || "",
+                // component expects `recordDetails` key
+                recordDetails: row.record_details || "",
             });
 
             // Prefill Remarks section
