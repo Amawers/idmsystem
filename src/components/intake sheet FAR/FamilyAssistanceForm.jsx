@@ -33,6 +33,11 @@ const schema = z
         quantity: z.string().min(1, "Quantity required"),
         cost: z.string().min(1, "Cost required"),
         provider: z.string().min(2, "Provider name required"),
+        // Case management fields
+        caseManager: z.string().optional(),
+        status: z.string().optional(),
+        priority: z.string().optional(),
+        visibility: z.string().optional(),
     })
     .refine(
         (data) => data.emergency !== "other" || (data.emergencyOther && data.emergencyOther.length >= 2),
@@ -49,7 +54,7 @@ const schema = z
         }
     );
 
-export function FamilyAssistanceForm({ sectionKey, goNext, goBack }) {
+export function FamilyAssistanceForm({ sectionKey, goNext, goBack, isSaving }) {
   const { data, setSectionField } = useIntakeFormStore();
 
   const form = useForm({
@@ -59,6 +64,10 @@ export function FamilyAssistanceForm({ sectionKey, goNext, goBack }) {
             date: data[sectionKey]?.date || "",
             emergencyOther: data[sectionKey]?.emergencyOther || "",
             assistanceOther: data[sectionKey]?.assistanceOther || "",
+            caseManager: data[sectionKey]?.caseManager || "",
+            status: data[sectionKey]?.status || "",
+            priority: data[sectionKey]?.priority || "",
+            visibility: data[sectionKey]?.visibility || "",
     },
   });
 
@@ -71,6 +80,15 @@ export function FamilyAssistanceForm({ sectionKey, goNext, goBack }) {
         if (values.assistance === "other") {
             final.assistance = values.assistanceOther || "other";
         }
+
+        // Store case details in a nested object for submission utility
+        const caseDetails = {
+            caseManager: values.caseManager,
+            status: values.status,
+            priority: values.priority,
+            visibility: values.visibility,
+        };
+        final.caseDetails = caseDetails;
 
         console.log("✅ Submitted FAR values:", final);
         Object.keys(final).forEach((key) => {
@@ -339,14 +357,130 @@ return (
                         />
                     </div>
                 </div>
+
+                {/* Case Management Section */}
+                <div className="mt-6 pt-6 border-t">
+                    <h3 className="text-lg font-semibold mb-4">Case Management Details</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                            control={form.control}
+                            name="caseManager"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Case Manager</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            {...field}
+                                            placeholder="Assigned case manager"
+                                            onChange={(e) => {
+                                                field.onChange(e);
+                                                setSectionField(sectionKey, "caseManager", e.target.value);
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="status"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Status</FormLabel>
+                                    <Select
+                                        onValueChange={(val) => {
+                                            field.onChange(val);
+                                            setSectionField(sectionKey, "status", val);
+                                        }}
+                                        defaultValue={field.value}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select status" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Filed">Filed</SelectItem>
+                                            <SelectItem value="Assessed">Assessed</SelectItem>
+                                            <SelectItem value="In Process">In Process</SelectItem>
+                                            <SelectItem value="Resolved">Resolved</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="priority"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Priority</FormLabel>
+                                    <Select
+                                        onValueChange={(val) => {
+                                            field.onChange(val);
+                                            setSectionField(sectionKey, "priority", val);
+                                        }}
+                                        defaultValue={field.value}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select priority" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Low">Low</SelectItem>
+                                            <SelectItem value="Medium">Medium</SelectItem>
+                                            <SelectItem value="High">High</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+
+                        <FormField
+                            control={form.control}
+                            name="visibility"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Visibility</FormLabel>
+                                    <Select
+                                        onValueChange={(val) => {
+                                            field.onChange(val);
+                                            setSectionField(sectionKey, "visibility", val);
+                                        }}
+                                        defaultValue={field.value}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select visibility" />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            <SelectItem value="Only Me">Only Me</SelectItem>
+                                            <SelectItem value="Everyone">Everyone</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </div>
+                </div>
             </div>
 
             {/* Footer (always visible, sits right below inputs when content is short) */}
             <div className="mt-2 py-2 bg-background flex justify-between items-center">
-                <Button type="button" variant="outline" onClick={goBack}>
-                    Back
+                <Button type="button" variant="outline" onClick={goBack} disabled={isSaving}>
+                    Cancel
                 </Button>
-                <Button type="submit">Submit</Button>
+                <Button type="submit" disabled={isSaving}>
+                    {isSaving ? "Submitting..." : "Submit"}
+                </Button>
             </div>
         </form>
     </Form>
