@@ -68,18 +68,154 @@ const tabOrder = [
     "Referral",
 ];
 
-export default function IntakeSheetCICLCAREdit({ open, setOpen }) {
+export default function IntakeSheetCICLCAREdit({ open, setOpen, row }) {
     const [activeTab, setActiveTab] = useState(tabOrder[0]);
-    const { getAllData, resetAll } = useIntakeFormStore();
+    const { getAllData, resetAll, setSectionField } = useIntakeFormStore();
     const [isSaving, setIsSaving] = useState(false);
+    const [prefillLoading, setPrefillLoading] = useState(false);
 
-    // Create CICL/CAR case and related rows
+    // Prefill form data when editing an existing record
+    useEffect(() => {
+        if (open && row) {
+            setPrefillLoading(true);
+            console.log("📝 Prefilling CICL/CAR edit form with data:", row);
+
+            // Prefill Profile section
+            setSectionField("profileOfCICLCar", {
+                name: row.profile_name || "",
+                alias: row.profile_alias || "",
+                sex: row.profile_sex || "",
+                gender: row.profile_gender || "",
+                birthday: row.profile_birth_date || "",
+                age: row.profile_age || "",
+                civilStatus: row.profile_status || "",
+                religion: row.profile_religion || "",
+                address: row.profile_address || "",
+                clientCategory: row.profile_client_category || "",
+                ipGroup: row.profile_ip_group || "",
+                nationality: row.profile_nationality || "",
+                disability: row.profile_disability || "",
+                contactNumber: row.profile_contact_number || "",
+                educationalAttainment: row.profile_educational_attainment || "",
+                educationalStatus: row.profile_educational_status || "",
+            });
+
+            // Prefill Violation section
+            setSectionField("violationOfCICLCar", {
+                violation: row.violation || "",
+                dateTimeCommitted: row.violation_date_time_committed || "",
+                specificViolation: row.specific_violation || "",
+                placeCommitted: row.violation_place_committed || "",
+                status: row.violation_status || "",
+                admissionDate: row.violation_admission_date || "",
+                repeatOffender: row.repeat_offender || "",
+                previousOffense: row.violation_previous_offense || "",
+            });
+
+            // Prefill Complainant section
+            setSectionField("complainant", {
+                name: row.complainant_name || "",
+                alias: row.complainant_alias || "",
+                victim: row.complainant_victim || "",
+                relationship: row.complainant_relationship || "",
+                contactNumber: row.complainant_contact_number || "",
+                sex: row.complainant_sex || "",
+                birthday: row.complainant_birth_date || "",
+                address: row.complainant_address || "",
+            });
+
+            // Prefill Record Details section
+            setSectionField("recordDetails", {
+                details: row.record_details || "",
+            });
+
+            // Prefill Remarks section
+            setSectionField("remarks", {
+                remarks: row.remarks || "",
+            });
+
+            // Prefill Referral section (including caseDetails)
+            setSectionField("referral", {
+                region: row.referral_region || "",
+                province: row.referral_province || "",
+                city: row.referral_city || "",
+                barangay: row.referral_barangay || "",
+                referredTo: row.referral_referred_to || "",
+                dateReferred: row.referral_date_referred || "",
+                referralReason: row.referral_reason || "",
+                caseDetails: {
+                    caseManager: row.case_manager || "",
+                    status: row.status || "",
+                    priority: row.priority || "",
+                    visibility: row.visibility || "",
+                },
+            });
+
+            // Fetch and prefill family background and services from related tables
+            const fetchRelatedData = async () => {
+                try {
+                    // Fetch family background
+                    const { data: familyData, error: familyError } = await supabase
+                        .from("ciclcar_family_background")
+                        .select("*")
+                        .eq("ciclcar_case_id", row.id);
+
+                    if (familyError) {
+                        console.error("Error fetching family background:", familyError);
+                    } else {
+                        const familyMembers = (familyData || []).map((member) => ({
+                            name: member.name || "",
+                            relationship: member.relationship || "",
+                            age: member.age || "",
+                            sex: member.sex || "",
+                            status: member.status || "",
+                            contactNumber: member.contact_number || "",
+                            educationalAttainment: member.educational_attainment || "",
+                            employment: member.employment || "",
+                        }));
+                        // Store under nested key to match form expectations
+                        setSectionField("familyBackground", "members", familyMembers);
+                        console.log("✅ Loaded family background:", familyMembers);
+                    }
+
+                    // Fetch services
+                    const { data: servicesData, error: servicesError } = await supabase
+                        .from("ciclcar_service")
+                        .select("*")
+                        .eq("ciclcar_case_id", row.id);
+
+                    if (servicesError) {
+                        console.error("Error fetching services:", servicesError);
+                    } else {
+                        const services = (servicesData || []).map((service) => ({
+                            type: service.service_type || "",
+                            service: service.service || "",
+                            dateProvided: service.service_date_provided || "",
+                            dateCompleted: service.service_date_completed || "",
+                        }));
+                        // Store under nested key to match form expectations
+                        setSectionField("services", "services", services);
+                        console.log("✅ Loaded services:", services);
+                    }
+                } catch (error) {
+                    console.error("Error fetching related data:", error);
+                } finally {
+                    setPrefillLoading(false);
+                }
+            };
+
+            fetchRelatedData();
+        }
+    }, [open, row, setSectionField]);
+
+    // Update CICL/CAR case and related rows
     const handleCreate = async () => {
         try {
             setIsSaving(true);
             const all = getAllData() || {};
+            const isEditing = row && row.id;
 
-            console.log("🔍 Full intake data:", all);
+            console.log(isEditing ? "✏️ Updating CICL/CAR record" : "🔍 Creating new CICL/CAR record", all);
 
             const profile = all.profileOfCICLCar || {};
             const violation = all.violationOfCICLCar || {};
@@ -175,16 +311,41 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen }) {
 
             console.log("💾 Final case payload:", casePayload);
 
-            // 1) Insert base case
-            const { data: caseRow, error: caseErr } = await supabase
-                .from("ciclcar_case")
-                .insert([casePayload])
-                .select()
-                .single();
+            let caseRow;
+            
+            if (isEditing) {
+                // 1) Update existing base case
+                const { data, error: caseErr } = await supabase
+                    .from("ciclcar_case")
+                    .update(casePayload)
+                    .eq("id", row.id)
+                    .select()
+                    .single();
 
-            if (caseErr) {
-                console.error("❌ Case insertion error:", caseErr);
-                throw caseErr;
+                if (caseErr) {
+                    console.error("❌ Case update error:", caseErr);
+                    throw caseErr;
+                }
+                caseRow = data;
+                console.log("✅ Updated case record:", caseRow);
+
+                // 2) Delete existing family members and services, then re-insert
+                await supabase.from("ciclcar_family_background").delete().eq("ciclcar_case_id", row.id);
+                await supabase.from("ciclcar_service").delete().eq("ciclcar_case_id", row.id);
+            } else {
+                // 1) Insert new base case
+                const { data, error: caseErr } = await supabase
+                    .from("ciclcar_case")
+                    .insert([casePayload])
+                    .select()
+                    .single();
+
+                if (caseErr) {
+                    console.error("❌ Case insertion error:", caseErr);
+                    throw caseErr;
+                }
+                caseRow = data;
+                console.log("✅ Created new case record:", caseRow);
             }
 
             // 2) Insert family members (if any)
@@ -242,7 +403,7 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen }) {
             resetAll();
             setOpen(false);
         } catch (err) {
-            console.error("Failed to create CICL/CAR record:", err);
+            console.error("Failed to create/update CICL/CAR record:", err);
             // Optional: surface error to UI/toast
         } finally {
             setIsSaving(false);
@@ -286,8 +447,9 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen }) {
         }
     }, [open]);
 
+    // Only reset the form store when dialog closes to avoid wiping prefilled values on open
     useEffect(() => {
-        if (open) {
+        if (!open) {
             resetAll();
         }
     }, [open, resetAll]);
@@ -299,6 +461,7 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen }) {
                     <DialogTitle>Edit CICL/CAR Record</DialogTitle>
                 </DialogHeader>
 
+                {/* Delay mounting tab content until prefill is done so defaultValues take effect */}
                 <Tabs
                     value={activeTab}
                     onValueChange={setActiveTab}
@@ -323,69 +486,75 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen }) {
                         </TabsList>
                     </div>
                     {/*//* MAIN TAB CONTENT */}
-                    <TabsContent value="Profile-of-CICL/CAR">
-                        <ProfileCICLCARForm
-                            sectionKey="profileOfCICLCar"
-                            goNext={goNext}
-                            goBack={goBack}
-                        />
-                    </TabsContent>
+                    {prefillLoading ? (
+                        <div className="p-6 text-sm text-muted-foreground">Loading case data…</div>
+                    ) : (
+                        <>
+                            <TabsContent value="Profile-of-CICL/CAR">
+                                <ProfileCICLCARForm
+                                    sectionKey="profileOfCICLCar"
+                                    goNext={goNext}
+                                    goBack={goBack}
+                                />
+                            </TabsContent>
 
-                    <TabsContent value="Family-Background">
-                        <FamilyBackgroundForm
-                            sectionKey="familyBackground"
-                            goNext={goNext}
-                            goBack={goBack}
-                        />
-                    </TabsContent>
+                            <TabsContent value="Family-Background">
+                                <FamilyBackgroundForm
+                                    sectionKey="familyBackground"
+                                    goNext={goNext}
+                                    goBack={goBack}
+                                />
+                            </TabsContent>
 
-                    <TabsContent value="Violation-Offense-of-CICL/CAR">
-                        <ViolationCICLCARForm
-                            sectionKey="violationOfCICLCar"
-                            goNext={goNext}
-                            goBack={goBack}
-                        />
-                    </TabsContent>
+                            <TabsContent value="Violation-Offense-of-CICL/CAR">
+                                <ViolationCICLCARForm
+                                    sectionKey="violationOfCICLCar"
+                                    goNext={goNext}
+                                    goBack={goBack}
+                                />
+                            </TabsContent>
 
-                    <TabsContent value="Record-Details">
-                        <RecordDetailsForm
-                            sectionKey="recordDetails"
-                            goNext={goNext}
-                            goBack={goBack}
-                        />
-                    </TabsContent>
-                    <TabsContent value="Complainant">
-                        <ComplainantForm
-                            sectionKey="complainant"
-                            goNext={goNext}
-                            goBack={goBack}
-                        />
-                    </TabsContent>
+                            <TabsContent value="Record-Details">
+                                <RecordDetailsForm
+                                    sectionKey="recordDetails"
+                                    goNext={goNext}
+                                    goBack={goBack}
+                                />
+                            </TabsContent>
+                            <TabsContent value="Complainant">
+                                <ComplainantForm
+                                    sectionKey="complainant"
+                                    goNext={goNext}
+                                    goBack={goBack}
+                                />
+                            </TabsContent>
 
-                    <TabsContent value="Remarks">
-                        <RemarksForm
-                            sectionKey="remarks"
-                            goNext={goNext}
-                            goBack={goBack}
-                        />
-                    </TabsContent>
-                    <TabsContent value="Services" >
-                        <ServicesForm
-                            // filepath: fixed to store services in its own section
-                            sectionKey="services"
-                            goNext={goNext}
-                            goBack={goBack}
-                        />
-                    </TabsContent>
-                    <TabsContent value="Referral">
-                        <ReferralForm
-                            // filepath: support correct section key; legacy 'referal' still read in handleCreate
-                            sectionKey="referral"
-                            goNext={goNext}
-                            goBack={goBack}
-                            isSaving={isSaving}
-                        />
-                    </TabsContent>
+                            <TabsContent value="Remarks">
+                                <RemarksForm
+                                    sectionKey="remarks"
+                                    goNext={goNext}
+                                    goBack={goBack}
+                                />
+                            </TabsContent>
+                            <TabsContent value="Services" >
+                                <ServicesForm
+                                    // filepath: fixed to store services in its own section
+                                    sectionKey="services"
+                                    goNext={goNext}
+                                    goBack={goBack}
+                                />
+                            </TabsContent>
+                            <TabsContent value="Referral">
+                                <ReferralForm
+                                    // filepath: support correct section key; legacy 'referal' still read in handleCreate
+                                    sectionKey="referral"
+                                    goNext={goNext}
+                                    goBack={goBack}
+                                    isSaving={isSaving}
+                                />
+                            </TabsContent>
+                        </>
+                    )}
                 </Tabs>
             </DialogContent>
         </Dialog>

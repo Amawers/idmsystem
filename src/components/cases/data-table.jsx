@@ -70,6 +70,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import IntakeSheetCaseCreate from "@/pages/case manager/IntakeSheetCaseCreate";
 import IntakeSheetCICLCARCreate from "@/pages/case manager/IntakeSheetCICLCARCreate";
+import IntakeSheetCICLCAREdit from "@/pages/case manager/IntakeSheetCICLCAREdit";
 import IntakeSheetFAR from "@/pages/case manager/IntakeSheetFAR";
 import IntakeSheetFAC from "@/pages/case manager/IntakeSheetFAC";
 // ADD THIS IMPORT
@@ -576,6 +577,10 @@ export function DataTable({
 	const [openEditSheet, setOpenEditSheet] = useState(false);
 	// const [editingRecord, setEditingRecord] = useState(null);
 
+	// CICL/CAR edit state
+	const [openCiclcarEditSheet, setOpenCiclcarEditSheet] = useState(false);
+	const [editingCiclcarRecord, setEditingCiclcarRecord] = useState(null);
+
 	// FAR edit state
 	const [openFarEditSheet, setOpenFarEditSheet] = useState(false);
 	const [editingFarRecord, setEditingFarRecord] = useState(null);
@@ -590,14 +595,19 @@ export function DataTable({
 	// 	setOpenEditSheet(true);
 	// }
 
+	// Handle CICL/CAR row click for editing
+	function handleEditCiclcarRow(record) {
+		console.log("Editing CICL/CAR record:", record);
+		setEditingCiclcarRecord(record);
+		setOpenCiclcarEditSheet(true);
+	}
+
 	// Handle FAR row click for editing
 	function handleEditFarRow(record) {
 		console.log("Editing FAR record:", record);
 		setEditingFarRecord(record);
 		setOpenFarEditSheet(true);
 	}
-	// 	setOpenEditSheet(true);
-	// }
 
 	// Initialize CASE table with dynamic columns (handler referenced above)
 	const caseTable = useDataTable({
@@ -610,6 +620,7 @@ export function DataTable({
 	const ciclcarTable = useDataTable({
 		initialData: ciclcarData,
 		columns: ciclcarColumns,
+		onRowClick: handleEditCiclcarRow, // Add click handler for CICL/CAR rows
 	});
 
 	// Table instance for FAR tab with its own data and column definitions
@@ -810,6 +821,13 @@ export function DataTable({
 								open={openIntakeSheet}
 								setOpen={setOpenIntakeSheet}
 							/>
+
+							{/* CICL/CAR Edit Modal */}
+							<IntakeSheetCICLCAREdit
+								open={openCiclcarEditSheet}
+								setOpen={setOpenCiclcarEditSheet}
+								row={editingCiclcarRecord}
+							/>
 						</>
 					)}
 
@@ -909,6 +927,7 @@ export function DataTable({
 					table={ciclcarTable.table}
 					setData={ciclcarTable.setData}
 					columns={ciclcarColumns}
+					onRowClick={handleEditCiclcarRow}
 				/>
 			</TabsContent>
 			{/*
