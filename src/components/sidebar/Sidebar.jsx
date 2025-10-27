@@ -22,7 +22,7 @@ import {
 	IconUsersGroup,
 	IconLogs
 } from "@tabler/icons-react"
-import logo from "@/assets/logo.jpg"
+import logo from "@/assets/temp_logo.png"
 import {
   Avatar,
   AvatarFallback,
