@@ -45,13 +45,13 @@ export default function CaseDashboard() {
 
   return (
     <div className="flex flex-col gap-1">
-      {/* ================= FILTERS (Collapsible) ================= */}
-      {isFiltersOpen && (
-        <DashboardFilters 
-          onFilterChange={handleFilterChange} 
-          initialFilters={filters} 
-        />
-      )}
+      {/* ================= FILTERS (Modal Dialog) ================= */}
+      <DashboardFilters 
+        isOpen={isFiltersOpen}
+        onOpenChange={setIsFiltersOpen}
+        onFilterChange={handleFilterChange} 
+        initialFilters={filters} 
+      />
 
       {/* ================= DYNAMIC DASHBOARD ================= */}
       <DynamicDashboard 
