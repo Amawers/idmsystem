@@ -379,7 +379,6 @@ export default function IntakeSheetCaseEdit({ open, onOpenChange, row }) {
                                     value={tab}
                                     className="flex items-center whitespace-nowrap data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                                     onClick={() => setCurrentTabIndex(index)}
-                                    disabled={index > currentTabIndex && !completedTabs.has(index)}
                                 >
                                     {completedTabs.has(index) ? (
                                         <Badge
