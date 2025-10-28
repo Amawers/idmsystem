@@ -68,7 +68,7 @@ function CaseDashboard({ filters, onFilterToggle, filterCount }) {
 
   return (
     <div className="flex flex-col gap-2">
-      {/* Header with filters and refresh button */}
+      {/* Header with title and action buttons */}
       <div className="flex items-center justify-between px-4 lg:px-6">
         <div>
           <h2 className="text-base font-bold tracking-tight">Case Management Dashboard</h2>
@@ -229,7 +229,7 @@ function UserDashboard({ filters, onFilterToggle, filterCount }) {
 
   return (
     <div className="flex flex-col gap-3">
-      {/* Header */}
+      {/* Header with title and action buttons */}
       <div className="flex items-center justify-between px-4 lg:px-6">
         <div>
           <h2 className="text-lg font-bold tracking-tight">User Management Dashboard</h2>

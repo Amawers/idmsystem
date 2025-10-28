@@ -65,6 +65,14 @@ export default function CaseManagement() {
 
 	return (
 		<>
+			{/* ================= HEADER ================= */}
+			<div className="flex items-center justify-between px-4 lg:px-6 pb-4">
+				<div>
+					<h2 className="text-base font-bold tracking-tight">Case Management</h2>
+					<p className="text-muted-foreground text-[11px]">View and manage all case records and intake forms</p>
+				</div>
+			</div>
+
 			{/* ================= DATA TABLE ================= */}
 			<div ref={dataTableRef}>
 				{/* Optional: simple loading/error states */}
