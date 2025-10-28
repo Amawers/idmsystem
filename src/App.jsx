@@ -11,6 +11,8 @@ import {SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "./components/site-header";
 import Case from "./pages/Case";
 import TestFileGenerator from "./pages/TestFileGenerator";
+import CaseDashboard from "./pages/case manager/CaseDashboard";
+import CaseManagement from "./pages/case manager/CaseManagement";
 
 // Layout wrapper for all authenticated pages
 // Includes Sidebar + Logout button + main content area
@@ -74,6 +76,30 @@ export default function App() {
             <ProtectedRoute allowedRoles={["case_manager", "head"]}>
               <Layout>
                 <Case />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected route: Case Dashboard (case manager + head) */}
+        <Route
+          path="/case/dashboard"
+          element={
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+              <Layout>
+                <CaseDashboard />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected route: Case Management Table (case manager + head) */}
+        <Route
+          path="/case/management"
+          element={
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+              <Layout>
+                <CaseManagement />
               </Layout>
             </ProtectedRoute>
           }

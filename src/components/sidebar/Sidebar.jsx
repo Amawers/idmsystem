@@ -20,7 +20,9 @@ import {
 	IconListDetails, 
 	IconChartBar,
 	IconUsersGroup,
-	IconLogs
+	IconLogs,
+	IconDashboard,
+	IconFolders
 } from "@tabler/icons-react"
 import logo from "@/assets/temp_logo.png"
 import {
@@ -36,13 +38,29 @@ export default function Sidebar(props) {
   // ================= ROLE-BASED NAVIGATION =================
   const roleNavs = {
     case_manager: [
-      { path: "/case", label: "Case Management", icon: IconHeartHandshake },
+      { 
+        path: "/case", 
+        label: "Case Management", 
+        icon: IconHeartHandshake,
+        items: [
+          { path: "/case/dashboard", label: "Dashboard", icon: IconDashboard },
+          { path: "/case/management", label: "Management", icon: IconFolders },
+        ]
+      },
       { path: "/program", label: "Program Management", icon: IconListDetails },
       { path: "/resource", label: "Resource Allocation", icon: IconChartBar },
       { path: "/controls", label: "Security & Audit", icon: IconLogs },
     ],
     head: [
-      { path: "/case", label: "Case Management", icon: IconHeartHandshake },
+      { 
+        path: "/case", 
+        label: "Case Management", 
+        icon: IconHeartHandshake,
+        items: [
+          { path: "/case/dashboard", label: "Dashboard", icon: IconDashboard },
+          { path: "/case/management", label: "Management", icon: IconFolders },
+        ]
+      },
       { path: "/program", label: "Program Management", icon: IconListDetails },
       { path: "/resource", label: "Resource Allocation", icon: IconChartBar },
       { path: "/account", label: "Account Management", icon: IconUsersGroup },
