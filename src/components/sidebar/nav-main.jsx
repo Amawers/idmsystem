@@ -57,7 +57,10 @@ export function NavMain({ items }) {
                             asChild
                             isActive={isSubActive}
                           >
-                            <Link to={subItem.path}>
+                            <Link 
+                              to={subItem.path}
+                              className={isSubActive ? "underline underline-offset-4 decoration-primary decoration-2" : ""}
+                            >
                               {subItem.icon && <subItem.icon className="size-4" />}
                               <span>{subItem.label}</span>
                             </Link>
