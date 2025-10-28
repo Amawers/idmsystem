@@ -196,7 +196,7 @@ export default function IntakeSheetFAC({ open, setOpen, editingRecord = null, on
                   value={tab}
                   className="flex items-center whitespace-nowrap data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                   onClick={() => setCurrentTabIndex(index)}
-                  disabled={index > currentTabIndex && !completedTabs.has(index)}
+                  disabled={!isEditMode && index > currentTabIndex && !completedTabs.has(index)}
                 >
                   {/* Show completion badge */}
                   {completedTabs.has(index) ? (
