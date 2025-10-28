@@ -26,10 +26,12 @@ import {
 import { Trash2 } from "lucide-react";
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
 import { useState, useEffect } from "react";
+import { Pencil } from "lucide-react";
 
 export function FamilyInformationForm({ sectionKey, goNext, goBack }) {
   const { data, setSectionField } = useIntakeFormStore();
   const [open, setOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState(null);
 
   // Load members from store, default to empty array
   const [members, setMembers] = useState(
@@ -55,12 +57,42 @@ export function FamilyInformationForm({ sectionKey, goNext, goBack }) {
     },
   });
 
+  // Open modal for editing
+  function handleEdit(member, index) {
+    setEditingIndex(index);
+    form.reset(member);
+    setOpen(true);
+  }
+
+  // Open modal for adding new
+  function handleAdd() {
+    setEditingIndex(null);
+    form.reset({
+      familyMember: "",
+      relationToHead: "",
+      birthdate: "",
+      age: "",
+      sex: "",
+      educationalAttainment: "",
+      occupation: "",
+      remarks: "",
+    });
+    setOpen(true);
+  }
+
   function onSubmit(values) {
-    const updated = [...members, values];
+    let updated;
+    if (editingIndex !== null) {
+      // Update existing member
+      updated = members.map((m, i) => (i === editingIndex ? values : m));
+    } else {
+      // Add new member
+      updated = [...members, values];
+    }
     setMembers(updated);
-    // Save array under "members" field
     setSectionField(sectionKey, "members", updated);
     setOpen(false);
+    setEditingIndex(null);
     form.reset();
   }
 
@@ -103,7 +135,15 @@ export function FamilyInformationForm({ sectionKey, goNext, goBack }) {
                 <div>{m.sex}</div>
                 <div>{m.educationalAttainment}</div>
                 <div>{m.occupation}</div>
-                <div className="flex justify-center">
+                <div className="flex justify-center gap-1">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => handleEdit(m, i)}
+                  >
+                    <Pencil className="h-4 w-4 text-blue-500" />
+                  </Button>
                   <Button
                     type="button"
                     size="icon"
@@ -121,14 +161,14 @@ export function FamilyInformationForm({ sectionKey, goNext, goBack }) {
 
       {/* Add Member Button */}
       <div className="flex justify-end">
-        <Button onClick={() => setOpen(true)}>Add Family Member</Button>
+        <Button onClick={handleAdd}>Add Family Member</Button>
       </div>
 
-      {/* Add Member Modal */}
+      {/* Add/Edit Member Modal */}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Family Member</DialogTitle>
+            <DialogTitle>{editingIndex !== null ? "Edit" : "Add"} Family Member</DialogTitle>
           </DialogHeader>
 
           <Form {...form}>
