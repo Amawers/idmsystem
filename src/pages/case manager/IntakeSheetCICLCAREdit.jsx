@@ -497,7 +497,7 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row }) {
                                 <TabsTrigger
                                     key={tab}
                                     value={tab}
-                                    className="flex items-center whitespace-nowrap"
+                                    className="flex items-center whitespace-nowrap data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
                                 >
                                     <Badge variant="secondary">{i + 1}</Badge>
                                     {tab.replace(/-/g, " ").replace("2", "")}
