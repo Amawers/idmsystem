@@ -13,6 +13,9 @@ import { HeadOfFamilyForm } from "@/components/intake sheet FAC/HeadOfFamilyForm
 import { FamilyInformationForm } from "@/components/intake sheet FAC/FamilyInformationForm";
 import { VulnerableMembersForm } from "@/components/intake sheet FAC/VulnerableMembersForm";
 import { FinalDetailsForm } from "@/components/intake sheet FAC/FinalDetailsForm";
+import { useIntakeFormStore } from "@/store/useIntakeFormStore";
+import { submitFacCase, updateFacCase, fetchFacCase, mapDbToFormData } from "@/lib/facSubmission";
+import { toast } from "sonner";
 
 const tabOrder = [
   "location-of-affected-family",
@@ -22,18 +25,116 @@ const tabOrder = [
   "final-details",
 ];
 
-export default function IntakeSheetFAC({ open, setOpen }) {
+export default function IntakeSheetFAC({ open, setOpen, editingRecord = null, onSuccess }) {
   const [currentTabIndex, setCurrentTabIndex] = useState(0);
   const [completedTabs, setCompletedTabs] = useState(new Set());
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const { getAllData, resetAll } = useIntakeFormStore();
 
-  // Go to next tab
+  const isEditMode = !!editingRecord;
+
+  // Load existing data when editing
+  useEffect(() => {
+    async function loadEditData() {
+      if (!open) return;
+
+      // If opening for create mode, clear the form
+      if (!editingRecord) {
+        console.log("🆕 Opening in CREATE mode - clearing form");
+        resetAll();
+        setIsLoading(false);
+        return;
+      }
+
+      // If opening for edit mode, load the data
+      console.log("✏️ Opening in EDIT mode - loading data for:", editingRecord.id);
+      setIsLoading(true);
+      try {
+        const { data, error } = await fetchFacCase(editingRecord.id);
+        
+        if (error) {
+          console.error("❌ Error loading FAC case:", error);
+          toast.error("Failed to load case data", {
+            description: error.message || "Please try again.",
+          });
+          setIsLoading(false);
+          return;
+        }
+
+        if (data && data.case) {
+          const formData = mapDbToFormData(data.case, data.members);
+          console.log("📥 Pre-filling form with:", formData);
+          useIntakeFormStore.setState({ data: formData });
+        }
+        setIsLoading(false);
+      } catch (err) {
+        console.error("❌ Unexpected error:", err);
+        toast.error("Error loading case", {
+          description: "An unexpected error occurred.",
+        });
+        setIsLoading(false);
+      }
+    }
+
+    loadEditData();
+  }, [editingRecord, open, resetAll]);
+
+  // Handle final submission (create or update)
+  const handleSubmit = async () => {
+    setIsSubmitting(true);
+    const formData = getAllData();
+
+    try {
+      if (isEditMode) {
+        // Update existing record
+        const { success, error } = await updateFacCase(editingRecord.id, formData);
+        
+        if (error || !success) {
+          toast.error("Failed to update FAC", {
+            description: error?.message || "Please try again.",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        toast.success("FAC updated successfully!");
+      } else {
+        // Create new record
+        const { facCaseId, error } = await submitFacCase(formData);
+        
+        if (error) {
+          toast.error("Failed to create FAC", {
+            description: error.message || "Please try again.",
+          });
+          setIsSubmitting(false);
+          return;
+        }
+
+        toast.success("FAC created successfully!", {
+          description: `Case ID: ${facCaseId}`,
+        });
+      }
+
+      // Success - close modal and refresh data
+      resetAll();
+      setOpen(false);
+      if (onSuccess) onSuccess();
+    } catch (err) {
+      console.error("❌ Unexpected error:", err);
+      toast.error("An unexpected error occurred");
+      setIsSubmitting(false);
+    }
+  };
+
+  // Go to next tab or submit on final step
   const goNext = () => {
     setCompletedTabs((prev) => new Set([...prev, currentTabIndex]));
     if (currentTabIndex < tabOrder.length - 1) {
       setCurrentTabIndex((prev) => prev + 1);
     } else {
-      // Last tab completed - close dialog
-      setOpen(false);
+      // Last tab - trigger submission
+      handleSubmit();
     }
   };
 
@@ -47,8 +148,10 @@ export default function IntakeSheetFAC({ open, setOpen }) {
   // Reset when dialog opens/closes
   useEffect(() => {
     if (!open) {
+      // Reset UI state when modal closes
       setCurrentTabIndex(0);
       setCompletedTabs(new Set());
+      setIsSubmitting(false);
     }
   }, [open]);
 
@@ -153,6 +256,8 @@ export default function IntakeSheetFAC({ open, setOpen }) {
                 sectionKey="finalDetails"
                 goNext={goNext}
                 goBack={goBack}
+                isSubmitting={isSubmitting}
+                isEdit={isEditMode}
               />
             </TabsContent>
           </div>

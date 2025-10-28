@@ -502,6 +502,146 @@ const farColumns = [
 	},
 ];
 
+// =================================
+//* FAC Table COLUMN DEFINITIONS
+// =================================
+const facColumns = [
+	//* =====================
+	//* START OF DATA COLUMNS
+	//* =====================
+	
+	//* CASE ID
+	{
+		accessorKey: "id",
+		header: "Case ID",
+		cell: ({ row }) => {
+			const caseId = row.original.id || "N/A";
+			return <div className="font-medium">{caseId}</div>;
+		},
+		enableHiding: false,
+	},
+
+	//* HEAD OF FAMILY NAME
+	{
+		accessorKey: "head_first_name",
+		header: "Head of Family",
+		cell: ({ row }) => {
+			const firstName = row.original.head_first_name || "";
+			const lastName = row.original.head_last_name || "";
+			const fullName = `${firstName} ${lastName}`.trim() || "N/A";
+			return <div>{fullName}</div>;
+		},
+	},
+
+	//* BARANGAY
+	{
+		accessorKey: "location_barangay",
+		header: "Barangay",
+		cell: ({ row }) => {
+			const barangay = row.original.location_barangay || "N/A";
+			return <div>{barangay}</div>;
+		},
+	},
+
+	//* CITY/MUNICIPALITY
+	{
+		accessorKey: "location_city_municipality",
+		header: "City/Municipality",
+		cell: ({ row }) => {
+			const city = row.original.location_city_municipality || "N/A";
+			return <div>{city}</div>;
+		},
+	},
+
+	//* EVACUATION CENTER
+	{
+		accessorKey: "location_evacuation_center",
+		header: "Evacuation Center",
+		cell: ({ row }) => {
+			const center = row.original.location_evacuation_center || "N/A";
+			return <div>{center}</div>;
+		},
+	},
+
+	//* FAMILY MEMBERS COUNT
+	{
+		accessorKey: "family_member_count",
+		header: "Family Members",
+		cell: ({ row }) => {
+			const count = row.original.family_member_count || 0;
+			return <div className="text-center">{count}</div>;
+		},
+	},
+
+	//* DATE REGISTERED
+	{
+		accessorKey: "date_registered",
+		header: "Date Registered",
+		cell: ({ row }) => (
+			<div className="px-2">
+				{formatToMMDDYYYY(row.original.date_registered) || "-"}
+			</div>
+		),
+	},
+
+	//* HOUSE OWNERSHIP
+	{
+		accessorKey: "house_ownership",
+		header: "House Ownership",
+		cell: ({ row }) => {
+			const ownership = row.original.house_ownership || "-";
+			return <div className="capitalize">{ownership}</div>;
+		},
+	},
+
+	//* SHELTER DAMAGE
+	{
+		accessorKey: "shelter_damage",
+		header: "Shelter Damage",
+		cell: ({ row }) => {
+			const damage = row.original.shelter_damage || "-";
+			const displayText = damage.replace(/-/g, " ");
+			return <div className="capitalize">{displayText}</div>;
+		},
+	},
+
+	//* STATUS
+	{
+		accessorKey: "status",
+		header: "Status",
+		cell: ({ row }) => {
+			const status = row.original.status || "-";
+			return <div className="capitalize">{status}</div>;
+		},
+	},
+
+	//* ACTIONS
+	{
+		id: "actions",
+		cell: () => (
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						variant="ghost"
+						className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
+						size="icon"
+					>
+						<IconDotsVertical />
+						<span className="sr-only">Open menu</span>
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="w-32">
+					<DropdownMenuItem>Edit</DropdownMenuItem>
+					<DropdownMenuSeparator />
+					<DropdownMenuItem variant="destructive">
+						Delete
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		),
+	},
+];
+
 // --- Date normalization/format helpers (module scope)
 // Convert either MM-DD-YYYY or ISO (YYYY-MM-DD) or Date-like strings to ISO (YYYY-MM-DD)
 const toISODate = (str) => {
@@ -567,8 +707,10 @@ const formatToMMDDYYYY = (str) => {
 export function DataTable({ 
 	caseData, 
 	ciclcarData, 
-	farData, 
-	reloadFar 
+	farData,
+	facData,
+	reloadFar,
+	reloadFac
 }) {
 	// State to control Intake Sheet modal visibility (open/close)
 	const [openIntakeSheet, setOpenIntakeSheet] = useState(false);
@@ -584,6 +726,10 @@ export function DataTable({
 	// FAR edit state
 	const [openFarEditSheet, setOpenFarEditSheet] = useState(false);
 	const [editingFarRecord, setEditingFarRecord] = useState(null);
+
+	// FAC edit state
+	const [openFacEditSheet, setOpenFacEditSheet] = useState(false);
+	const [editingFacRecord, setEditingFacRecord] = useState(null);
 
 	// Tracks which tab is currently active (default: "CASE")
 	const [activeTab, setActiveTab] = useState("CASE");
@@ -609,6 +755,13 @@ export function DataTable({
 		setOpenFarEditSheet(true);
 	}
 
+	// Handle FAC row click for editing
+	function handleEditFacRow(record) {
+		console.log("Editing FAC record:", record);
+		setEditingFacRecord(record);
+		setOpenFacEditSheet(true);
+	}
+
 	// Initialize CASE table with dynamic columns (handler referenced above)
 	const caseTable = useDataTable({
 		initialData: caseData,
@@ -628,6 +781,13 @@ export function DataTable({
 		initialData: farData,
 		columns: farColumns,
 		onRowClick: handleEditFarRow, // Add click handler for FAR rows
+	});
+
+	// Table instance for FAC tab with its own data and column definitions
+	const facTable = useDataTable({
+		initialData: facData,
+		columns: facColumns,
+		onRowClick: handleEditFacRow, // Add click handler for FAC rows
 	});
 
 	// ============================
@@ -897,6 +1057,74 @@ export function DataTable({
 							/>
 						</>
 					)}
+
+					{/* FAC SECTION */}
+					{activeTab === "FAC" && (
+						<>
+							{/* Customize Columns Dropdown */}
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" size="sm">
+										<IconLayoutColumns />
+										<span>COLUMNS</span>
+										<IconChevronDown />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent
+									align="end"
+									className="w-56"
+								>
+									{facTable.table
+										.getAllColumns()
+										.filter(
+											(c) =>
+												typeof c.accessorFn !==
+													"undefined" &&
+												c.getCanHide()
+										)
+										.map((c) => (
+											<DropdownMenuCheckboxItem
+												key={c.id}
+												checked={c.getIsVisible()}
+												onCheckedChange={(v) =>
+													c.toggleVisibility(!!v)
+												}
+												className="capitalize"
+											>
+												{c.id}
+											</DropdownMenuCheckboxItem>
+										))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+
+							{/* INTAKE FAC BUTTON */}
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => setOpenIntakeSheet(true)}
+							>
+								<IconPlus />
+								<span className="hidden lg:inline">
+									INTAKE FAC
+								</span>
+							</Button>
+
+							{/* FAC Create Modal */}
+							<IntakeSheetFAC
+								open={openIntakeSheet}
+								setOpen={setOpenIntakeSheet}
+								onSuccess={reloadFac}
+							/>
+
+							{/* FAC Edit Modal */}
+							<IntakeSheetFAC
+								open={openFacEditSheet}
+								setOpen={setOpenFacEditSheet}
+								editingRecord={editingFacRecord}
+								onSuccess={reloadFac}
+							/>
+						</>
+					)}
 				</div>
 			</div>
 			{/*
@@ -962,29 +1190,16 @@ export function DataTable({
         // *FAC VIEW
         // ============
         */}
-			<TabsContent value="FAC" className="flex flex-col px-4 lg:px-6">
-				<div className="mb-4 flex items-center justify-between">
-					<h2 className="text-lg font-semibold">
-						Family Assistance Card
-					</h2>
-					{/* INTAKE FAC BUTTON*/}
-					<Button
-						variant="outline"
-						size="sm"
-						onClick={() => setOpenIntakeSheet(true)}
-					>
-						<IconPlus />
-						<span className="hidden lg:inline">INTAKE FAC</span>
-					</Button>
-
-					<IntakeSheetFAC
-						open={openIntakeSheet}
-						setOpen={setOpenIntakeSheet}
-					/>
-				</div>
-				<div className="aspect-video w-full flex-1 rounded-lg border border-dashed">
-					Family Assistance Card entries will be displayed here
-				</div>
+			<TabsContent
+				value="FAC"
+				className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+			>
+				<TableRenderer
+					table={facTable.table}
+					setData={facTable.setData}
+					columns={facColumns}
+					onRowClick={handleEditFacRow}
+				/>
 			</TabsContent>
 		</Tabs>
 	);

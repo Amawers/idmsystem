@@ -2,6 +2,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -59,6 +60,18 @@ export function HeadOfFamilyForm({ sectionKey, goNext, goBack }) {
       alternateContactNumber: data[sectionKey]?.alternateContactNumber || "",
     },
   });
+
+  // Reset form when store data changes (for edit mode)
+  useEffect(() => {
+    const formData = {
+      ...data[sectionKey],
+      birthdate: data[sectionKey]?.birthdate || "",
+      fourPsBeneficiary: data[sectionKey]?.fourPsBeneficiary || false,
+      ipEthnicity: data[sectionKey]?.ipEthnicity || false,
+      alternateContactNumber: data[sectionKey]?.alternateContactNumber || "",
+    };
+    form.reset(formData);
+  }, [data, sectionKey, form]);
 
   function onSubmit(values) {
     console.log("✅ Submitted values:", values);

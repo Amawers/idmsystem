@@ -2,6 +2,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,11 @@ export function LocationForm({ sectionKey, goNext, goBack }) {
       ...data[sectionKey],
     },
   });
+
+  // Reset form when store data changes (for edit mode)
+  useEffect(() => {
+    form.reset(data[sectionKey] || {});
+  }, [data, sectionKey, form]);
 
   function onSubmit(values) {
     console.log("✅ Submitted values:", values);
@@ -172,7 +178,7 @@ export function LocationForm({ sectionKey, goNext, goBack }) {
         </div>
 
         <div className="flex justify-between">
-          <Button type="button" variant="outline" onClick={goBack} disabled>
+          <Button type="button" variant="outline" onClick={goBack}>
             Back
           </Button>
           <Button type="submit">Next</Button>

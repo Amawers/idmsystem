@@ -11,6 +11,7 @@ import { ArrowUp, ArrowDown } from "lucide-react";
 import { useCases } from "@/hooks/useCases";
 import { useCiclcarCases } from "@/hooks/useCiclcarCases";
 import { useFarCases } from "@/hooks/useFarCases";
+import { useFacCases } from "@/hooks/useFacCases";
 
 export default function Case() {
 	// Track whether the user is currently at (or past) the DataTable section
@@ -33,6 +34,12 @@ export default function Case() {
 		error: farError,
 		reload: reloadFar,
 	} = useFarCases();
+	const {
+		data: facRows,
+		loading: facLoading,
+		error: facError,
+		reload: reloadFac,
+	} = useFacCases();
 
 	// Effect: watch scroll position and update "atTable" state
 	useEffect(() => {
@@ -85,14 +92,24 @@ export default function Case() {
 						</button>
 					</div>
 				) : null}
+				{facError ? (
+					<div className="px-4 text-sm text-red-600">
+						Failed to load FAC cases.{" "}
+						<button className="underline" onClick={reloadFac}>
+							Retry
+						</button>
+					</div>
+				) : null}
 
 				<DataTable
 					caseData={casesLoading ? [] : caseRows}
 					ciclcarData={ciclcarLoading ? [] : ciclcarRows}
 					farData={farLoading ? [] : farRows}
+					facData={facLoading ? [] : facRows}
 					reloadCases={reload}
 					reloadCiclcar={reloadCiclcar}
 					reloadFar={reloadFar}
+					reloadFac={reloadFac}
 				/>
 			</div>
 

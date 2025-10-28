@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/dialog";
 import { Trash2 } from "lucide-react";
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export function FamilyInformationForm({ sectionKey, goNext, goBack }) {
   const { data, setSectionField } = useIntakeFormStore();
@@ -35,6 +35,12 @@ export function FamilyInformationForm({ sectionKey, goNext, goBack }) {
   const [members, setMembers] = useState(
     Array.isArray(data[sectionKey]?.members) ? data[sectionKey].members : []
   );
+
+  // Update members when store data changes (for edit mode)
+  useEffect(() => {
+    const storeMembers = Array.isArray(data[sectionKey]?.members) ? data[sectionKey].members : [];
+    setMembers(storeMembers);
+  }, [data, sectionKey]);
 
   const form = useForm({
     defaultValues: {

@@ -2,6 +2,7 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,7 +21,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
-import { toast } from "sonner";
 import { Checkbox } from "@/components/ui/checkbox";
 
 const schema = z.object({
@@ -31,7 +31,7 @@ const schema = z.object({
   lswdoName: z.string().min(2, "Required"),
 });
 
-export function FinalDetailsForm({ sectionKey, goNext, goBack }) {
+export function FinalDetailsForm({ sectionKey, goNext, goBack, isSubmitting = false, isEdit = false }) {
   const { data, setSectionField } = useIntakeFormStore();
 
   const form = useForm({
@@ -44,18 +44,16 @@ export function FinalDetailsForm({ sectionKey, goNext, goBack }) {
     },
   });
 
-  function handleFinalSubmit(finalData) {
-    console.log("Final FAC Data:", JSON.stringify(finalData, null, 2));
-    toast("Family Assistance Card submitted!", {
-      description: (
-        <pre className="mt-2 w-[320px] rounded-md bg-neutral-950 p-4">
-          <code className="text-white">
-            {JSON.stringify(finalData, null, 2)}
-          </code>
-        </pre>
-      ),
-    });
-  }
+  // Reset form when store data changes (for edit mode)
+  useEffect(() => {
+    const formData = {
+      ...data[sectionKey],
+      dateRegistered: data[sectionKey]?.dateRegistered || "",
+      houseOwnership: data[sectionKey]?.houseOwnership || "",
+      shelterDamage: data[sectionKey]?.shelterDamage || "",
+    };
+    form.reset(formData);
+  }, [data, sectionKey, form]);
 
   function onSubmit(values) {
     console.log("✅ Submitted values:", values);
@@ -63,13 +61,9 @@ export function FinalDetailsForm({ sectionKey, goNext, goBack }) {
       setSectionField(sectionKey, key, values[key]);
     });
 
-    // Collect all form data for final submission
-    const finalData = {
-      ...data,
-      [sectionKey]: { ...(data[sectionKey] || {}), ...values },
-    };
-    handleFinalSubmit(finalData);
-    goNext(); // This will close the dialog
+    // Call goNext which will trigger the submission in the parent component
+    // (IntakeSheetFACCreate or IntakeSheetFACEdit)
+    goNext();
   }
 
   return (
@@ -235,10 +229,19 @@ export function FinalDetailsForm({ sectionKey, goNext, goBack }) {
         </div>
 
         <div className="flex justify-between">
-          <Button type="button" variant="outline" onClick={goBack}>
+          <Button type="button" variant="outline" onClick={goBack} disabled={isSubmitting}>
             Back
           </Button>
-          <Button type="submit">Submit Family Assistance Card</Button>
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <span className="mr-2">⏳</span>
+                {isEdit ? "Updating..." : "Submitting..."}
+              </>
+            ) : (
+              <>{isEdit ? "Update" : "Submit"} Family Assistance Card</>
+            )}
+          </Button>
         </div>
       </form>
     </Form>
