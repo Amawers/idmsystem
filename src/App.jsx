@@ -13,6 +13,7 @@ import Case from "./pages/Case";
 import TestFileGenerator from "./pages/TestFileGenerator";
 import CaseDashboard from "./pages/case manager/CaseDashboard";
 import CaseManagement from "./pages/case manager/CaseManagement";
+import UserManagement from "./pages/head/UserManagement";
 
 // Layout wrapper for all authenticated pages
 // Includes Sidebar + Logout button + main content area
@@ -136,7 +137,7 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["head"]}>
               <Layout>
-                <div>Account Management Page</div>
+                <UserManagement />
               </Layout>
             </ProtectedRoute>
           }

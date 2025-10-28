@@ -27,16 +27,34 @@ export const useAuthStore = create((set) => ({
 		if (error) throw error; // if credentials are wrong → throw error
 
 		if (data.user) {
-			// 2. Fetch role + avatar from profiles table (linked by user_id)
+			// 2. Fetch role + avatar + status from profiles table (linked by user_id)
 			const { data: profile, error: profileError } = await supabase
 				.from("profile")
-				.select("role, avatar_url")
+				.select("role, avatar_url, status")
 				.eq("id", data.user.id)
 				.maybeSingle(); // return 1 row or null
 
 			if (profileError) throw profileError;
 
-			// 3. Get fresh signed URL for avatar
+			// 3. Check if user is banned
+			if (profile?.status === "banned") {
+				// Log out immediately
+				await supabase.auth.signOut();
+				throw new Error(
+					"Your account has been suspended. Please contact an administrator."
+				);
+			}
+
+			// 4. Check if user is inactive
+			if (profile?.status === "inactive") {
+				// Log out immediately
+				await supabase.auth.signOut();
+				throw new Error(
+					"Your account is inactive. Please contact an administrator."
+				);
+			}
+
+			// 5. Get fresh signed URL for avatar
 			let avatarSignedUrl = null;
 			if (profile?.avatar_url) {
 				const { data: signedData } = await supabase.storage
@@ -45,7 +63,7 @@ export const useAuthStore = create((set) => ({
 				avatarSignedUrl = signedData?.signedUrl;
 			}
 
-			// 4. Save user + signed avatar URL + role
+			// 6. Save user + signed avatar URL + role
 			set({
 				user: data.user,
 				avatar_url: avatarSignedUrl,
@@ -74,16 +92,23 @@ export const useAuthStore = create((set) => ({
 		const { data } = await supabase.auth.getUser();
 
 		if (data.user) {
-			// 2. Fetch role + avatar from profiles
+			// 2. Fetch role + avatar + status from profiles
 			const { data: profile, error: profileError } = await supabase
 				.from("profile")
-				.select("role, avatar_url")
+				.select("role, avatar_url, status")
 				.eq("id", data.user.id)
 				.maybeSingle();
 
 			if (profileError) throw profileError;
 
-			// 3. Get fresh signed URL for avatar
+			// 3. Check if user is banned or inactive - log them out if so
+			if (profile?.status === "banned" || profile?.status === "inactive") {
+				await supabase.auth.signOut();
+				set({ user: null, avatar_url: null, role: null, loading: false });
+				return;
+			}
+
+			// 4. Get fresh signed URL for avatar
 			let avatarSignedUrl = null;
 			if (profile?.avatar_url) {
 				const { data: signedData, error: urlError } =
@@ -94,7 +119,7 @@ export const useAuthStore = create((set) => ({
 				if (!urlError) avatarSignedUrl = signedData?.signedUrl;
 			}
 
-			// 4. Save user + signed avatar URL + role
+			// 5. Save user + signed avatar URL + role
 			set({
 				user: data.user,
 				avatar_url: avatarSignedUrl,
@@ -102,7 +127,7 @@ export const useAuthStore = create((set) => ({
 				loading: false,
 			});
 		} else {
-			// 5. No active session → clear auth state
+			// 6. No active session → clear auth state
 			set({ user: null, avatar_url: null, role: null, loading: false });
 		}
 	},
