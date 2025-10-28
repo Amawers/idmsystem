@@ -79,8 +79,23 @@ export const useUserManagementStore = create((set, get) => ({
 	fetchUsers: async () => {
 		set({ loading: true, error: null });
 		try {
-			// Fetch users with profile data
-			const { data, error } = await supabase
+			// Try to fetch from user_management_view first (has emails)
+			const { data: viewData, error: viewError } = await supabase
+				.from("user_management_view")
+				.select("*")
+				.order("created_at", { ascending: false });
+
+			// If view exists and works, use it
+			if (!viewError && viewData) {
+				set({ users: viewData, loading: false });
+				return;
+			}
+
+			// Fallback: If view doesn't exist or fails, fetch from profile directly
+			// Note: This won't include email addresses without the view
+			console.warn("user_management_view not available, using profile table directly");
+			
+			const { data: profileData, error: profileError } = await supabase
 				.from("profile")
 				.select(
 					`
@@ -97,22 +112,26 @@ export const useUserManagementStore = create((set, get) => ({
 				)
 				.order("created_at", { ascending: false });
 
-			if (error) throw error;
+			if (profileError) throw profileError;
 
-			// Fetch email addresses from auth.users via user_management_view
-			const { data: viewData, error: viewError } = await supabase
-				.from("user_management_view")
-				.select("*");
+			// Add a note that emails are missing
+			const usersWithNote = (profileData || []).map(user => ({
+				...user,
+				email: `user-${user.id.slice(0, 8)}@unknown.com`, // Placeholder email
+			}));
 
-			if (viewError) throw viewError;
-
-			// Merge data - use view data as it has emails
-			const mergedUsers = viewData || [];
-
-			set({ users: mergedUsers, loading: false });
+			set({ 
+				users: usersWithNote, 
+				loading: false,
+				error: "Migration not run: Email addresses unavailable. Please run database migration."
+			});
 		} catch (error) {
 			console.error("Error fetching users:", error);
-			set({ error: error.message, loading: false });
+			set({ 
+				error: `Failed to load users: ${error.message}. Please ensure you've run the database migration.`,
+				loading: false,
+				users: []
+			});
 		}
 	},
 
