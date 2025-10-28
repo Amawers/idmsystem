@@ -49,7 +49,7 @@ export default function Sidebar(props) {
       },
       { path: "/program", label: "Program Management", icon: IconListDetails },
       { path: "/resource", label: "Resource Allocation", icon: IconChartBar },
-      { path: "/controls", label: "Security & Audit", icon: IconLogs },
+      // Security & Audit is hidden for case managers (heads only)
     ],
     head: [
       { 
