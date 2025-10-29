@@ -12,6 +12,7 @@ import { useCases } from "@/hooks/useCases";
 import { useCiclcarCases } from "@/hooks/useCiclcarCases";
 import { useFarCases } from "@/hooks/useFarCases";
 import { useFacCases } from "@/hooks/useFacCases";
+import { useIvacCases } from "@/hooks/useIvacCases";
 
 export default function CaseManagement() {
 	// Track whether the user is currently at (or past) the DataTable section
@@ -40,6 +41,12 @@ export default function CaseManagement() {
 		error: facError,
 		reload: reloadFac,
 	} = useFacCases();
+	const {
+		data: ivacRows,
+		loading: ivacLoading,
+		error: ivacError,
+		reload: reloadIvac,
+	} = useIvacCases();
 
 	// Effect: watch scroll position and update "atTable" state
 	useEffect(() => {
@@ -108,16 +115,26 @@ export default function CaseManagement() {
 						</button>
 					</div>
 				) : null}
+				{ivacError ? (
+					<div className="px-4 text-sm text-red-600">
+						Failed to load IVAC cases.{" "}
+						<button className="underline" onClick={reloadIvac}>
+							Retry
+						</button>
+					</div>
+				) : null}
 
 				<DataTable
 					caseData={casesLoading ? [] : caseRows}
 					ciclcarData={ciclcarLoading ? [] : ciclcarRows}
 					farData={farLoading ? [] : farRows}
 					facData={facLoading ? [] : facRows}
+					ivacData={ivacLoading ? [] : ivacRows}
 					reloadCases={reload}
 					reloadCiclcar={reloadCiclcar}
 					reloadFar={reloadFar}
 					reloadFac={reloadFac}
+					reloadIvac={reloadIvac}
 				/>
 			</div>
 

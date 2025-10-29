@@ -73,6 +73,7 @@ import IntakeSheetCICLCARCreate from "@/pages/case manager/IntakeSheetCICLCARCre
 import IntakeSheetCICLCAREdit from "@/pages/case manager/IntakeSheetCICLCAREdit";
 import IntakeSheetFAR from "@/pages/case manager/IntakeSheetFAR";
 import IntakeSheetFAC from "@/pages/case manager/IntakeSheetFAC";
+import IntakeSheetIVAC from "@/pages/case manager/IntakeSheetIVAC";
 // ADD THIS IMPORT
 import IntakeSheetEdit from "@/pages/case manager/intakeSheetCaseEdit";
 import useDataTable from "@/hooks/useDataTable";
@@ -642,6 +643,119 @@ const facColumns = [
 	},
 ];
 
+// =================================
+//* IVAC Table COLUMN DEFINITIONS
+// =================================
+const ivacColumns = [
+	//* =====================
+	//* START OF DATA COLUMNS
+	//* =====================
+	
+	//* CASE ID
+	{
+		accessorKey: "id",
+		header: "Case ID",
+		cell: ({ row }) => {
+			const caseId = row.original.id || "N/A";
+			return <div className="font-medium">{caseId}</div>;
+		},
+		enableHiding: false,
+	},
+
+	//* PROVINCE
+	{
+		accessorKey: "province",
+		header: "Province",
+		cell: ({ row }) => {
+			const province = row.original.province || "N/A";
+			return <div>{province}</div>;
+		},
+	},
+
+	//* MUNICIPALITY
+	{
+		accessorKey: "municipality",
+		header: "Municipality",
+		cell: ({ row }) => {
+			const municipality = row.original.municipality || "N/A";
+			return <div>{municipality}</div>;
+		},
+	},
+
+	//* TOTAL VAC VICTIMS (calculated from records)
+	{
+		accessorKey: "total_vac_victims",
+		header: "Total VAC Victims",
+		cell: ({ row }) => {
+			const records = row.original.records || [];
+			const total = records.reduce((sum, record) => 
+				sum + parseInt(record.vacVictims || 0, 10), 0
+			);
+			return <div className="text-center font-semibold">{total}</div>;
+		},
+	},
+
+	//* CASE MANAGER
+	{
+		accessorKey: "case_manager",
+		header: "Case Manager",
+		cell: ({ row }) => {
+			const caseManagers = row.original.case_managers;
+			if (!caseManagers || caseManagers.length === 0) {
+				return <div>N/A</div>;
+			}
+			if (caseManagers.length === 1) {
+				return <div>{caseManagers[0]}</div>;
+			}
+			return (
+				<div className="flex flex-wrap gap-1">
+					{caseManagers.map((manager, index) => (
+						<Badge key={index} variant="secondary" className="text-xs">
+							{manager}
+						</Badge>
+					))}
+				</div>
+			);
+		},
+	},
+
+	//* STATUS
+	{
+		accessorKey: "status",
+		header: "Status",
+		cell: ({ row }) => {
+			const status = row.original.status || "N/A";
+			return (
+				<Badge variant="outline" className="capitalize">
+					{status}
+				</Badge>
+			);
+		},
+	},
+
+	//* CREATED AT
+	{
+		accessorKey: "created_at",
+		header: "Created",
+		cell: ({ row }) => (
+			<div className="px-2">
+				{formatToMMDDYYYY(row.original.created_at) || "-"}
+			</div>
+		),
+	},
+
+	//* UPDATED AT
+	{
+		accessorKey: "updated_at",
+		header: "Last Updated",
+		cell: ({ row }) => (
+			<div className="px-2">
+				{formatToMMDDYYYY(row.original.updated_at) || "-"}
+			</div>
+		),
+	},
+];
+
 // --- Date normalization/format helpers (module scope)
 // Convert either MM-DD-YYYY or ISO (YYYY-MM-DD) or Date-like strings to ISO (YYYY-MM-DD)
 const toISODate = (str) => {
@@ -709,8 +823,10 @@ export function DataTable({
 	ciclcarData, 
 	farData,
 	facData,
+	ivacData,
 	reloadFar,
-	reloadFac
+	reloadFac,
+	reloadIvac
 }) {
 	// State to control Intake Sheet modal visibility (open/close)
 	const [openIntakeSheet, setOpenIntakeSheet] = useState(false);
@@ -730,6 +846,10 @@ export function DataTable({
 	// FAC edit state
 	const [openFacEditSheet, setOpenFacEditSheet] = useState(false);
 	const [editingFacRecord, setEditingFacRecord] = useState(null);
+
+	// IVAC edit state
+	const [openIvacEditSheet, setOpenIvacEditSheet] = useState(false);
+	const [editingIvacRecord, setEditingIvacRecord] = useState(null);
 
 	// Tracks which tab is currently active (default: "CASE")
 	const [activeTab, setActiveTab] = useState("CASE");
@@ -762,6 +882,13 @@ export function DataTable({
 		setOpenFacEditSheet(true);
 	}
 
+	// Handle IVAC row click for editing
+	function handleEditIvacRow(record) {
+		console.log("Editing IVAC record:", record);
+		setEditingIvacRecord(record);
+		setOpenIvacEditSheet(true);
+	}
+
 	// Initialize CASE table with dynamic columns (handler referenced above)
 	const caseTable = useDataTable({
 		initialData: caseData,
@@ -788,6 +915,13 @@ export function DataTable({
 		initialData: facData,
 		columns: facColumns,
 		onRowClick: handleEditFacRow, // Add click handler for FAC rows
+	});
+
+	// Table instance for IVAC tab with its own data and column definitions
+	const ivacTable = useDataTable({
+		initialData: ivacData,
+		columns: ivacColumns,
+		onRowClick: handleEditIvacRow, // Add click handler for IVAC rows
 	});
 
 	// ============================
@@ -1125,6 +1259,74 @@ export function DataTable({
 							/>
 						</>
 					)}
+
+					{/* IVAC SECTION */}
+					{activeTab === "IVAC" && (
+						<>
+							{/* Customize Columns Dropdown */}
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" size="sm">
+										<IconLayoutColumns />
+										<span>COLUMNS</span>
+										<IconChevronDown />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent
+									align="end"
+									className="w-56"
+								>
+									{ivacTable.table
+										.getAllColumns()
+										.filter(
+											(c) =>
+												typeof c.accessorFn !==
+													"undefined" &&
+												c.getCanHide()
+										)
+										.map((c) => (
+											<DropdownMenuCheckboxItem
+												key={c.id}
+												checked={c.getIsVisible()}
+												onCheckedChange={(v) =>
+													c.toggleVisibility(!!v)
+												}
+												className="capitalize"
+											>
+												{c.id}
+											</DropdownMenuCheckboxItem>
+										))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+
+							{/* INTAKE IVAC BUTTON */}
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => setOpenIntakeSheet(true)}
+							>
+								<IconPlus />
+								<span className="hidden lg:inline">
+									INTAKE IVAC
+								</span>
+							</Button>
+
+							{/* IVAC Create Modal */}
+							<IntakeSheetIVAC
+								open={openIntakeSheet}
+								setOpen={setOpenIntakeSheet}
+								onSuccess={reloadIvac}
+							/>
+
+							{/* IVAC Edit Modal */}
+							<IntakeSheetIVAC
+								open={openIvacEditSheet}
+								setOpen={setOpenIvacEditSheet}
+								editingRecord={editingIvacRecord}
+								onSuccess={reloadIvac}
+							/>
+						</>
+					)}
 				</div>
 			</div>
 			{/*
@@ -1180,10 +1382,16 @@ export function DataTable({
         // *IVAC VIEW
         // ==========
         */}
-			<TabsContent value="IVAC" className="flex flex-col px-4 lg:px-6">
-				<div className="aspect-video w-full flex-1 rounded-lg border border-dashed">
-					IVAC PAGE
-				</div>
+			<TabsContent
+				value="IVAC"
+				className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+			>
+				<TableRenderer
+					table={ivacTable.table}
+					setData={ivacTable.setData}
+					columns={ivacColumns}
+					onRowClick={handleEditIvacRow}
+				/>
 			</TabsContent>
 			{/*
         // ============
