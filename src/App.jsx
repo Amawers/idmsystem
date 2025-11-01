@@ -13,6 +13,11 @@ import Case from "./pages/Case";
 import TestFileGenerator from "./pages/TestFileGenerator";
 import CaseDashboard from "./pages/case manager/CaseDashboard";
 import CaseManagement from "./pages/case manager/CaseManagement";
+import ProgramDashboardPage from "./pages/case manager/ProgramDashboardPage";
+import ProgramCatalogPage from "./pages/case manager/ProgramCatalogPage";
+import ProgramEnrollmentsPage from "./pages/case manager/ProgramEnrollmentsPage";
+import ServiceDeliveryPage from "./pages/case manager/ServiceDeliveryPage";
+import PartnersPage from "./pages/case manager/PartnersPage";
 import UserManagement from "./pages/head/UserManagement";
 import SecurityAudit from "./pages/security/SecurityAudit";
 import AuditTrail from "./pages/security/AuditTrail";
@@ -109,16 +114,70 @@ export default function App() {
           }
         />
         
-        {/* Protected route: Program Management (case manager + head) */}
+        {/* Protected route: Program Management Dashboard (case manager + head) */}
         <Route
-          path="/program"
+          path="/program/dashboard"
           element={
             <ProtectedRoute allowedRoles={["case_manager", "head"]}>
               <Layout>
-                <TestFileGenerator />
+                <ProgramDashboardPage />
               </Layout>
             </ProtectedRoute>
           }
+        />
+
+        {/* Protected route: Program Catalog (case manager + head) */}
+        <Route
+          path="/program/catalog"
+          element={
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+              <Layout>
+                <ProgramCatalogPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected route: Program Enrollments (case manager + head) */}
+        <Route
+          path="/program/enrollments"
+          element={
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+              <Layout>
+                <ProgramEnrollmentsPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected route: Service Delivery (case manager + head) */}
+        <Route
+          path="/program/service-delivery"
+          element={
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+              <Layout>
+                <ServiceDeliveryPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected route: Partners (case manager + head) */}
+        <Route
+          path="/program/partners"
+          element={
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+              <Layout>
+                <PartnersPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Redirect /program to /program/dashboard */}
+        <Route
+          path="/program"
+          element={<Navigate to="/program/dashboard" replace />}
         />
 
 

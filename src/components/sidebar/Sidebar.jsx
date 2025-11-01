@@ -49,7 +49,18 @@ export default function Sidebar(props) {
           { path: "/case/management", label: "Management", icon: IconFolders },
         ]
       },
-      { path: "/program", label: "Program Management", icon: IconListDetails },
+      { 
+        path: "/program", 
+        label: "Program Management", 
+        icon: IconListDetails,
+        items: [
+          { path: "/program/dashboard", label: "Dashboard", icon: IconDashboard },
+          { path: "/program/catalog", label: "Programs", icon: IconFolders },
+          { path: "/program/enrollments", label: "Enrollments", icon: IconUsersGroup },
+          { path: "/program/service-delivery", label: "Service Delivery", icon: IconClipboardData },
+          { path: "/program/partners", label: "Partners", icon: IconHeartHandshake },
+        ]
+      },
       { path: "/resource", label: "Resource Allocation", icon: IconChartBar },
       // Security & Audit is hidden for case managers (heads only)
     ],
@@ -63,7 +74,18 @@ export default function Sidebar(props) {
           { path: "/case/management", label: "Management", icon: IconFolders },
         ]
       },
-      { path: "/program", label: "Program Management", icon: IconListDetails },
+      { 
+        path: "/program", 
+        label: "Program Management", 
+        icon: IconListDetails,
+        items: [
+          { path: "/program/dashboard", label: "Dashboard", icon: IconDashboard },
+          { path: "/program/catalog", label: "Programs", icon: IconFolders },
+          { path: "/program/enrollments", label: "Enrollments", icon: IconUsersGroup },
+          { path: "/program/service-delivery", label: "Service Delivery", icon: IconClipboardData },
+          { path: "/program/partners", label: "Partners", icon: IconHeartHandshake },
+        ]
+      },
       { path: "/resource", label: "Resource Allocation", icon: IconChartBar },
       { path: "/account", label: "Account Management", icon: IconUsersGroup },
       { 
