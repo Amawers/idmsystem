@@ -14,6 +14,9 @@ import TestFileGenerator from "./pages/TestFileGenerator";
 import CaseDashboard from "./pages/case manager/CaseDashboard";
 import CaseManagement from "./pages/case manager/CaseManagement";
 import UserManagement from "./pages/head/UserManagement";
+import SecurityAudit from "./pages/security/SecurityAudit";
+import AuditTrail from "./pages/security/AuditTrail";
+import RolePermissions from "./pages/security/RolePermissions";
 
 // Layout wrapper for all authenticated pages
 // Includes Sidebar + Logout button + main content area
@@ -143,13 +146,37 @@ export default function App() {
           }
         />
 
-         {/* Protected route: Security & Audit (case manager + head) */}
+        {/* Protected route: Security & Audit (head only) */}
         <Route
           path="/controls"
           element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["head"]}>
               <Layout>
-                <div>Security & Audit Page</div>
+                <SecurityAudit />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected route: Audit Trail (head only) */}
+        <Route
+          path="/controls/audit"
+          element={
+            <ProtectedRoute allowedRoles={["head"]}>
+              <Layout>
+                <AuditTrail />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected route: Role Permissions (head only) */}
+        <Route
+          path="/controls/permissions"
+          element={
+            <ProtectedRoute allowedRoles={["head"]}>
+              <Layout>
+                <RolePermissions />
               </Layout>
             </ProtectedRoute>
           }

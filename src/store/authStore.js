@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import supabase from "@/../config/supabase";
+import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 
 export const useAuthStore = create((set) => ({
 	// ===============================
@@ -70,6 +71,14 @@ export const useAuthStore = create((set) => ({
 				role: profile.role,
 				loading: false,
 			});
+
+			// 7. Log successful login
+			await createAuditLog({
+				actionType: AUDIT_ACTIONS.LOGIN,
+				actionCategory: AUDIT_CATEGORIES.AUTH,
+				description: `User logged in successfully`,
+				severity: "info",
+			});
 		}
 	},
 
@@ -77,6 +86,14 @@ export const useAuthStore = create((set) => ({
 	// LOGOUT FUNCTION
 	// ===============================
 	logout: async () => {
+		// Log logout before clearing session
+		await createAuditLog({
+			actionType: AUDIT_ACTIONS.LOGOUT,
+			actionCategory: AUDIT_CATEGORIES.AUTH,
+			description: `User logged out`,
+			severity: "info",
+		});
+
 		// Ends session in Supabase
 		await supabase.auth.signOut();
 
@@ -195,6 +212,14 @@ export const useAuthStore = create((set) => ({
 			console.error("Password update error:", updateError);
 			return false;
 		}
+
+		// Log password change
+		await createAuditLog({
+			actionType: AUDIT_ACTIONS.PASSWORD_CHANGE,
+			actionCategory: AUDIT_CATEGORIES.AUTH,
+			description: `User changed their password`,
+			severity: "warning",
+		});
 
 		return true; // password updated successfully
 	},

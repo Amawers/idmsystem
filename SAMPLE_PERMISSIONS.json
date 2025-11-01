@@ -1,0 +1,149 @@
+[
+  {
+    "id": "perm-001",
+    "name": "view_cases",
+    "display_name": "View Cases",
+    "description": "View case records and details",
+    "category": "case"
+  },
+  {
+    "id": "perm-002",
+    "name": "create_case",
+    "display_name": "Create Cases",
+    "description": "Create new case records",
+    "category": "case"
+  },
+  {
+    "id": "perm-003",
+    "name": "edit_case",
+    "display_name": "Edit Cases",
+    "description": "Modify existing case records",
+    "category": "case"
+  },
+  {
+    "id": "perm-004",
+    "name": "delete_case",
+    "display_name": "Delete Cases",
+    "description": "Delete case records",
+    "category": "case"
+  },
+  {
+    "id": "perm-005",
+    "name": "export_cases",
+    "display_name": "Export Cases",
+    "description": "Export case data to files",
+    "category": "case"
+  },
+  {
+    "id": "perm-006",
+    "name": "view_users",
+    "display_name": "View Users",
+    "description": "View user accounts",
+    "category": "user"
+  },
+  {
+    "id": "perm-007",
+    "name": "create_user",
+    "display_name": "Create Users",
+    "description": "Create new user accounts",
+    "category": "user"
+  },
+  {
+    "id": "perm-008",
+    "name": "edit_user",
+    "display_name": "Edit Users",
+    "description": "Modify user accounts",
+    "category": "user"
+  },
+  {
+    "id": "perm-009",
+    "name": "delete_user",
+    "display_name": "Delete Users",
+    "description": "Delete user accounts",
+    "category": "user"
+  },
+  {
+    "id": "perm-010",
+    "name": "manage_roles",
+    "display_name": "Manage Roles",
+    "description": "Assign and modify user roles",
+    "category": "user"
+  },
+  {
+    "id": "perm-011",
+    "name": "view_audit_logs",
+    "display_name": "View Audit Logs",
+    "description": "Access audit trail and activity logs",
+    "category": "system"
+  },
+  {
+    "id": "perm-012",
+    "name": "manage_permissions",
+    "display_name": "Manage Permissions",
+    "description": "Configure role permissions",
+    "category": "system"
+  },
+  {
+    "id": "perm-013",
+    "name": "view_dashboard",
+    "display_name": "View Dashboard",
+    "description": "Access system dashboard",
+    "category": "system"
+  },
+  {
+    "id": "perm-014",
+    "name": "system_settings",
+    "display_name": "System Settings",
+    "description": "Modify system-wide settings",
+    "category": "system"
+  },
+  {
+    "id": "perm-015",
+    "name": "view_reports",
+    "display_name": "View Reports",
+    "description": "Access reports and analytics",
+    "category": "report"
+  },
+  {
+    "id": "perm-016",
+    "name": "create_reports",
+    "display_name": "Create Reports",
+    "description": "Generate custom reports",
+    "category": "report"
+  },
+  {
+    "id": "perm-017",
+    "name": "export_reports",
+    "display_name": "Export Reports",
+    "description": "Export reports to files",
+    "category": "report"
+  },
+  {
+    "id": "perm-018",
+    "name": "view_resources",
+    "display_name": "View Resources",
+    "description": "View resource allocation",
+    "category": "resource"
+  },
+  {
+    "id": "perm-019",
+    "name": "allocate_resources",
+    "display_name": "Allocate Resources",
+    "description": "Manage resource allocation",
+    "category": "resource"
+  },
+  {
+    "id": "perm-020",
+    "name": "view_programs",
+    "display_name": "View Programs",
+    "description": "View program information",
+    "category": "program"
+  },
+  {
+    "id": "perm-021",
+    "name": "manage_programs",
+    "display_name": "Manage Programs",
+    "description": "Create and modify programs",
+    "category": "program"
+  }
+]

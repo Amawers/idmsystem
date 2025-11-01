@@ -1,0 +1,464 @@
+[
+  {
+    "id": "up-001",
+    "user_id": "550e8400-e29b-41d4-a716-446655440001",
+    "permission_id": "perm-001",
+    "granted_at": "2025-10-01T08:30:00Z",
+    "granted_by": "550e8400-e29b-41d4-a716-446655440004",
+    "permissions": {
+      "id": "perm-001",
+      "name": "view_cases",
+      "display_name": "View Cases",
+      "description": "View case records and details",
+      "category": "case"
+    }
+  },
+  {
+    "id": "up-002",
+    "user_id": "550e8400-e29b-41d4-a716-446655440001",
+    "permission_id": "perm-002",
+    "granted_at": "2025-10-01T08:30:00Z",
+    "granted_by": "550e8400-e29b-41d4-a716-446655440004",
+    "permissions": {
+      "id": "perm-002",
+      "name": "create_case",
+      "display_name": "Create Cases",
+      "description": "Create new case records",
+      "category": "case"
+    }
+  },
+  {
+    "id": "up-003",
+    "user_id": "550e8400-e29b-41d4-a716-446655440001",
+    "permission_id": "perm-003",
+    "granted_at": "2025-10-01T08:30:00Z",
+    "granted_by": "550e8400-e29b-41d4-a716-446655440004",
+    "permissions": {
+      "id": "perm-003",
+      "name": "edit_case",
+      "display_name": "Edit Cases",
+      "description": "Modify existing case records",
+      "category": "case"
+    }
+  },
+  {
+    "id": "up-004",
+    "user_id": "550e8400-e29b-41d4-a716-446655440001",
+    "permission_id": "perm-006",
+    "granted_at": "2025-10-01T08:30:00Z",
+    "granted_by": "550e8400-e29b-41d4-a716-446655440004",
+    "permissions": {
+      "id": "perm-006",
+      "name": "view_users",
+      "display_name": "View Users",
+      "description": "View user accounts",
+      "category": "user"
+    }
+  },
+  {
+    "id": "up-005",
+    "user_id": "550e8400-e29b-41d4-a716-446655440001",
+    "permission_id": "perm-013",
+    "granted_at": "2025-10-01T08:30:00Z",
+    "granted_by": "550e8400-e29b-41d4-a716-446655440004",
+    "permissions": {
+      "id": "perm-013",
+      "name": "view_dashboard",
+      "display_name": "View Dashboard",
+      "description": "Access system dashboard",
+      "category": "system"
+    }
+  },
+  {
+    "id": "up-006",
+    "user_id": "550e8400-e29b-41d4-a716-446655440002",
+    "permission_id": "perm-001",
+    "granted_at": "2025-10-05T10:15:00Z",
+    "granted_by": "550e8400-e29b-41d4-a716-446655440004",
+    "permissions": {
+      "id": "perm-001",
+      "name": "view_cases",
+      "display_name": "View Cases",
+      "description": "View case records and details",
+      "category": "case"
+    }
+  },
+  {
+    "id": "up-007",
+    "user_id": "550e8400-e29b-41d4-a716-446655440002",
+    "permission_id": "perm-002",
+    "granted_at": "2025-10-05T10:15:00Z",
+    "granted_by": "550e8400-e29b-41d4-a716-446655440004",
+    "permissions": {
+      "id": "perm-002",
+      "name": "create_case",
+      "display_name": "Create Cases",
+      "description": "Create new case records",
+      "category": "case"
+    }
+  },
+  {
+    "id": "up-008",
+    "user_id": "550e8400-e29b-41d4-a716-446655440002",
+    "permission_id": "perm-003",
+    "granted_at": "2025-10-05T10:15:00Z",
+    "granted_by": "550e8400-e29b-41d4-a716-446655440004",
+    "permissions": {
+      "id": "perm-003",
+      "name": "edit_case",
+      "display_name": "Edit Cases",
+      "description": "Modify existing case records",
+      "category": "case"
+    }
+  },
+  {
+    "id": "up-009",
+    "user_id": "550e8400-e29b-41d4-a716-446655440002",
+    "permission_id": "perm-015",
+    "granted_at": "2025-10-05T10:15:00Z",
+    "granted_by": "550e8400-e29b-41d4-a716-446655440004",
+    "permissions": {
+      "id": "perm-015",
+      "name": "view_reports",
+      "display_name": "View Reports",
+      "description": "Access reports and analytics",
+      "category": "report"
+    }
+  },
+  {
+    "id": "up-010",
+    "user_id": "550e8400-e29b-41d4-a716-446655440003",
+    "permission_id": "perm-001",
+    "granted_at": "2025-10-10T14:20:00Z",
+    "granted_by": "550e8400-e29b-41d4-a716-446655440001",
+    "permissions": {
+      "id": "perm-001",
+      "name": "view_cases",
+      "display_name": "View Cases",
+      "description": "View case records and details",
+      "category": "case"
+    }
+  },
+  {
+    "id": "up-011",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-001",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-001",
+      "name": "view_cases",
+      "display_name": "View Cases",
+      "description": "View case records and details",
+      "category": "case"
+    }
+  },
+  {
+    "id": "up-012",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-002",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-002",
+      "name": "create_case",
+      "display_name": "Create Cases",
+      "description": "Create new case records",
+      "category": "case"
+    }
+  },
+  {
+    "id": "up-013",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-003",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-003",
+      "name": "edit_case",
+      "display_name": "Edit Cases",
+      "description": "Modify existing case records",
+      "category": "case"
+    }
+  },
+  {
+    "id": "up-014",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-004",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-004",
+      "name": "delete_case",
+      "display_name": "Delete Cases",
+      "description": "Delete case records",
+      "category": "case"
+    }
+  },
+  {
+    "id": "up-015",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-005",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-005",
+      "name": "export_cases",
+      "display_name": "Export Cases",
+      "description": "Export case data to files",
+      "category": "case"
+    }
+  },
+  {
+    "id": "up-016",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-006",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-006",
+      "name": "view_users",
+      "display_name": "View Users",
+      "description": "View user accounts",
+      "category": "user"
+    }
+  },
+  {
+    "id": "up-017",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-007",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-007",
+      "name": "create_user",
+      "display_name": "Create Users",
+      "description": "Create new user accounts",
+      "category": "user"
+    }
+  },
+  {
+    "id": "up-018",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-008",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-008",
+      "name": "edit_user",
+      "display_name": "Edit Users",
+      "description": "Modify user accounts",
+      "category": "user"
+    }
+  },
+  {
+    "id": "up-019",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-009",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-009",
+      "name": "delete_user",
+      "display_name": "Delete Users",
+      "description": "Delete user accounts",
+      "category": "user"
+    }
+  },
+  {
+    "id": "up-020",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-010",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-010",
+      "name": "manage_roles",
+      "display_name": "Manage Roles",
+      "description": "Assign and modify user roles",
+      "category": "user"
+    }
+  },
+  {
+    "id": "up-021",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-011",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-011",
+      "name": "view_audit_logs",
+      "display_name": "View Audit Logs",
+      "description": "Access audit trail and activity logs",
+      "category": "system"
+    }
+  },
+  {
+    "id": "up-022",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-012",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-012",
+      "name": "manage_permissions",
+      "display_name": "Manage Permissions",
+      "description": "Configure role permissions",
+      "category": "system"
+    }
+  },
+  {
+    "id": "up-023",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-013",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-013",
+      "name": "view_dashboard",
+      "display_name": "View Dashboard",
+      "description": "Access system dashboard",
+      "category": "system"
+    }
+  },
+  {
+    "id": "up-024",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-014",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-014",
+      "name": "system_settings",
+      "display_name": "System Settings",
+      "description": "Modify system-wide settings",
+      "category": "system"
+    }
+  },
+  {
+    "id": "up-025",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-015",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-015",
+      "name": "view_reports",
+      "display_name": "View Reports",
+      "description": "Access reports and analytics",
+      "category": "report"
+    }
+  },
+  {
+    "id": "up-026",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-016",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-016",
+      "name": "create_reports",
+      "display_name": "Create Reports",
+      "description": "Generate custom reports",
+      "category": "report"
+    }
+  },
+  {
+    "id": "up-027",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-017",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-017",
+      "name": "export_reports",
+      "display_name": "Export Reports",
+      "description": "Export reports to files",
+      "category": "report"
+    }
+  },
+  {
+    "id": "up-028",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-018",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-018",
+      "name": "view_resources",
+      "display_name": "View Resources",
+      "description": "View resource allocation",
+      "category": "resource"
+    }
+  },
+  {
+    "id": "up-029",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-019",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-019",
+      "name": "allocate_resources",
+      "display_name": "Allocate Resources",
+      "description": "Manage resource allocation",
+      "category": "resource"
+    }
+  },
+  {
+    "id": "up-030",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-020",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-020",
+      "name": "view_programs",
+      "display_name": "View Programs",
+      "description": "View program information",
+      "category": "program"
+    }
+  },
+  {
+    "id": "up-031",
+    "user_id": "550e8400-e29b-41d4-a716-446655440004",
+    "permission_id": "perm-021",
+    "granted_at": "2025-09-15T09:00:00Z",
+    "granted_by": null,
+    "permissions": {
+      "id": "perm-021",
+      "name": "manage_programs",
+      "display_name": "Manage Programs",
+      "description": "Create and modify programs",
+      "category": "program"
+    }
+  },
+  {
+    "id": "up-032",
+    "user_id": "550e8400-e29b-41d4-a716-446655440005",
+    "permission_id": "perm-001",
+    "granted_at": "2025-10-15T11:30:00Z",
+    "granted_by": "550e8400-e29b-41d4-a716-446655440004",
+    "permissions": {
+      "id": "perm-001",
+      "name": "view_cases",
+      "display_name": "View Cases",
+      "description": "View case records and details",
+      "category": "case"
+    }
+  },
+  {
+    "id": "up-033",
+    "user_id": "550e8400-e29b-41d4-a716-446655440005",
+    "permission_id": "perm-002",
+    "granted_at": "2025-10-15T11:30:00Z",
+    "granted_by": "550e8400-e29b-41d4-a716-446655440004",
+    "permissions": {
+      "id": "perm-002",
+      "name": "create_case",
+      "display_name": "Create Cases",
+      "description": "Create new case records",
+      "category": "case"
+    }
+  }
+]

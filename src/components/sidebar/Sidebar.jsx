@@ -22,7 +22,9 @@ import {
 	IconUsersGroup,
 	IconLogs,
 	IconDashboard,
-	IconFolders
+	IconFolders,
+	IconShieldLock,
+	IconKey
 } from "@tabler/icons-react"
 import logo from "@/assets/temp_logo.png"
 import {
@@ -64,7 +66,15 @@ export default function Sidebar(props) {
       { path: "/program", label: "Program Management", icon: IconListDetails },
       { path: "/resource", label: "Resource Allocation", icon: IconChartBar },
       { path: "/account", label: "Account Management", icon: IconUsersGroup },
-      { path: "/controls", label: "Security & Audit", icon: IconLogs },
+      { 
+        path: "/controls", 
+        label: "Security & Audit", 
+        icon: IconLogs,
+        items: [
+          { path: "/controls/audit", label: "Audit Trail", icon: IconShieldLock },
+          { path: "/controls/permissions", label: "Role Permissions", icon: IconKey },
+        ]
+      },
     ],
   }
 
