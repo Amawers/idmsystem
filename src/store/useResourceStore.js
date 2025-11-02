@@ -24,11 +24,11 @@ import { create } from "zustand";
 //* ================================================
 //* IMPORT SAMPLE DATA
 //* ================================================
-import SAMPLE_REQUESTS from "@/../../SAMPLE_RESOURCE_REQUESTS.json";
-import SAMPLE_INVENTORY from "@/../../SAMPLE_INVENTORY_ITEMS.json";
-import SAMPLE_TRANSACTIONS from "@/../../SAMPLE_INVENTORY_TRANSACTIONS.json";
-import SAMPLE_DISBURSEMENTS from "@/../../SAMPLE_RESOURCE_DISBURSEMENTS.json";
-import SAMPLE_ALERTS from "@/../../SAMPLE_INVENTORY_ALERTS.json";
+import SAMPLE_REQUESTS from "../../SAMPLE_RESOURCE_REQUESTS.json";
+import SAMPLE_INVENTORY from "../../SAMPLE_INVENTORY_ITEMS.json";
+import SAMPLE_TRANSACTIONS from "../../SAMPLE_INVENTORY_TRANSACTIONS.json";
+import SAMPLE_DISBURSEMENTS from "../../SAMPLE_RESOURCE_DISBURSEMENTS.json";
+import SAMPLE_ALERTS from "../../SAMPLE_INVENTORY_ALERTS.json";
 
 /**
  * Resource Store - Zustand State Store

@@ -22,6 +22,8 @@ import UserManagement from "./pages/head/UserManagement";
 import SecurityAudit from "./pages/security/SecurityAudit";
 import AuditTrail from "./pages/security/AuditTrail";
 import RolePermissions from "./pages/security/RolePermissions";
+import ResourceAllocationPage from "./pages/case manager/ResourceAllocationPage";
+import ResourceInventoryPage from "./pages/case manager/ResourceInventoryPage";
 
 // Layout wrapper for all authenticated pages
 // Includes Sidebar + Logout button + main content area
@@ -187,7 +189,19 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["case_manager", "head"]}>
               <Layout>
-                <div>Resource Allocation Page</div>
+                <ResourceAllocationPage />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected route: Resource Inventory (case manager + head) */}
+        <Route
+          path="/resource/inventory"
+          element={
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+              <Layout>
+                <ResourceInventoryPage />
               </Layout>
             </ProtectedRoute>
           }
