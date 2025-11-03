@@ -29,7 +29,6 @@ import {
   IconCheckbox,
   IconLoader,
 } from "@tabler/icons-react";
-import { Lock, Globe } from "lucide-react";
 
 const schema = z.object({
   recommendation: z
@@ -221,31 +220,6 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
                           {p.label}
                         </SelectItem>
                       ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Visibility */}
-                <div className="space-y-1">
-                  <Label htmlFor="visibility">Visibility</Label>
-                  <Select
-                    defaultValue={data.caseDetails?.visibility}
-                    onValueChange={(val) => handleCaseDetailChange("visibility", val)}
-                  >
-                    <SelectTrigger className="w-[225px]" id="visibility">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="only-me">
-                        <div className="flex items-center gap-2">
-                          <Lock className="h-4 w-4" /> Only Me
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="everyone">
-                        <div className="flex items-center gap-2">
-                          <Globe className="h-4 w-4" /> Everyone
-                        </div>
-                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

@@ -47,13 +47,11 @@ export default function IntakeSheetFAR({ open, setOpen, onSuccess, editingRecord
         caseManager: editingRecord.case_manager || "",
         status: editingRecord.status || "",
         priority: editingRecord.priority || "",
-        visibility: editingRecord.visibility || "",
         // Store caseDetails separately
         caseDetails: {
           caseManager: editingRecord.case_manager || "",
           status: editingRecord.status || "",
           priority: editingRecord.priority || "",
-          visibility: editingRecord.visibility || "",
         },
       };
 

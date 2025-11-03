@@ -118,7 +118,6 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen }) {
 				case_manager: pick(caseDetails, "caseManager", "case_manager") ?? null,
 				status: pick(caseDetails, "status", "caseStatus") ?? null,
 				priority: pick(caseDetails, "priority", "casePriority", "case_priority") ?? null,
-				visibility: pick(caseDetails, "visibility", "caseVisibility", "case_visibility") ?? null,
 
 				profile_name: pick(profile, "name", "fullName") ?? null,
 				profile_alias: pick(profile, "alias") ?? null,

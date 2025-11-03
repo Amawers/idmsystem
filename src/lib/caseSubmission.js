@@ -48,7 +48,6 @@ function buildCasePayload(data, isSecond) {
     case_manager: caseDetails.caseManager || null,
     status: caseDetails.status || null,
     priority: caseDetails.priority || null,
-    visibility: caseDetails.visibility || null,
 
     // Identifying data mapping using dynamic property names
     [`${idPrefix}_intake_date`]: identifying.intakeDate || null,

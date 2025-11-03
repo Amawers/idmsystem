@@ -109,7 +109,6 @@ export default function IntakeSheetCaseEdit({ open, onOpenChange, row }) {
                 caseManager: row.case_manager || undefined,
                 status: row.status || undefined,
                 priority: row.priority || undefined,
-                visibility: row.visibility || undefined,
             });
 
             // Part 1: Identifying

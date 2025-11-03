@@ -364,7 +364,7 @@ export function ReferralForm({ sectionKey, goNext, goBack }) {
                             </div>
                         </div>
 
-                        {/*//* PRIORITY & VISIBILITY */}
+                        {/*//* PRIORITY */}
                         <div className="flex gap-2">
                             {/* Priority */}
                             <div className="space-y-1 mb-1">
@@ -395,38 +395,6 @@ export function ReferralForm({ sectionKey, goNext, goBack }) {
                                                 {p.label}
                                             </SelectItem>
                                         ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            {/* Visibility */}
-                            <div className="space-y-1">
-                                <Label htmlFor="visibility">Visibility</Label>
-                                <Select
-                                    defaultValue={data[sectionKey]?.caseDetails?.visibility}
-                                    onValueChange={(val) =>
-                                        updateCaseDetailField("visibility", val)
-                                    }
-                                >
-                                    <SelectTrigger
-                                        className="w-[225px]"
-                                        id="visibility"
-                                    >
-                                        <SelectValue placeholder="Select" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="only-me">
-                                            <div className="flex items-center gap-2">
-                                                <IconLock className="h-4 w-4" />{" "}
-                                                Only Me
-                                            </div>
-                                        </SelectItem>
-                                        <SelectItem value="everyone">
-                                            <div className="flex items-center gap-2">
-                                                <IconGlobe className="h-4 w-4" />{" "}
-                                                Everyone
-                                            </div>
-                                        </SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>

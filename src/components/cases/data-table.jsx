@@ -198,17 +198,6 @@ const createCaseColumns = [
 			);
 		},
 	},
-	//! REFACTOR SOON VISIBILITY TO EXCLUDE SPECIFIC CASE MANAGER
-	//* VISIBILITY
-	{
-		accessorKey: "visibility",
-		header: "Visibility",
-		cell: ({ row }) => {
-			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
-			const visibility = row.original["visibility"] ?? "None";
-			return <div>{visibility}</div>;
-		},
-	},
 
 	//* LAST UPDATED
 	{
@@ -304,17 +293,6 @@ const ciclcarColumns = [
 						: "N/A"}
 				</div>
 			);
-		},
-	},
-	//! REFACTOR SOON VISIBILITY TO EXCLUDE SPECIFIC CASE MANAGER
-	//* VISIBILITY
-	{
-		accessorKey: "visibility",
-		header: "Visibility",
-		cell: ({ row }) => {
-			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
-			const visibility = row.original["visibility"] ?? "None";
-			return <div>{visibility}</div>;
 		},
 	},
 
@@ -463,16 +441,6 @@ const farColumns = [
 		cell: ({ row }) => {
 			const priority = row.original.priority || "-";
 			return <div>{priority}</div>;
-		},
-	},
-
-	//* VISIBILITY
-	{
-		accessorKey: "visibility",
-		header: "Visibility",
-		cell: ({ row }) => {
-			const visibility = row.original.visibility || "-";
-			return <div>{visibility}</div>;
 		},
 	},
 

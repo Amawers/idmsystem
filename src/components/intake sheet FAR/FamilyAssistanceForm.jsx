@@ -38,7 +38,6 @@ const schema = z
         caseManager: z.string().optional(),
         status: z.string().optional(),
         priority: z.string().optional(),
-        visibility: z.string().optional(),
     })
     .refine(
         (data) => data.emergency !== "other" || (data.emergencyOther && data.emergencyOther.length >= 2),
@@ -68,7 +67,6 @@ export function FamilyAssistanceForm({ sectionKey, goNext, goBack, isSaving, isE
             caseManager: data[sectionKey]?.caseManager || "",
             status: data[sectionKey]?.status || "",
             priority: data[sectionKey]?.priority || "",
-            visibility: data[sectionKey]?.visibility || "",
     },
   });
 
@@ -83,7 +81,6 @@ export function FamilyAssistanceForm({ sectionKey, goNext, goBack, isSaving, isE
         caseManager: data[sectionKey]?.caseManager || "",
         status: data[sectionKey]?.status || "",
         priority: data[sectionKey]?.priority || "",
-        visibility: data[sectionKey]?.visibility || "",
       });
     }
   }, [data, sectionKey, form]);
@@ -103,7 +100,6 @@ export function FamilyAssistanceForm({ sectionKey, goNext, goBack, isSaving, isE
             caseManager: values.caseManager,
             status: values.status,
             priority: values.priority,
-            visibility: values.visibility,
         };
         final.caseDetails = caseDetails;
 
@@ -452,34 +448,6 @@ return (
                                             <SelectItem value="Low">Low</SelectItem>
                                             <SelectItem value="Medium">Medium</SelectItem>
                                             <SelectItem value="High">High</SelectItem>
-                                        </SelectContent>
-                                    </Select>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-
-                        <FormField
-                            control={form.control}
-                            name="visibility"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormLabel>Visibility</FormLabel>
-                                    <Select
-                                        onValueChange={(val) => {
-                                            field.onChange(val);
-                                            setSectionField(sectionKey, "visibility", val);
-                                        }}
-                                        defaultValue={field.value}
-                                    >
-                                        <FormControl>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select visibility" />
-                                            </SelectTrigger>
-                                        </FormControl>
-                                        <SelectContent>
-                                            <SelectItem value="Only Me">Only Me</SelectItem>
-                                            <SelectItem value="Everyone">Everyone</SelectItem>
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />

@@ -15,7 +15,6 @@ function mapCaseRow(row) {
     case_manager: row.case_manager ?? null,
     status: row.status ?? null,
     priority: row.priority ?? null,
-    visibility: row.visibility ?? null,
 
     // The CASE table expects "date_filed" for Time Open/Date selector.
     // Map from identifying_intake_date if available, otherwise fall back to created_at.
