@@ -13,6 +13,7 @@
 
 import { useState } from "react";
 import { usePrograms } from "@/hooks/usePrograms";
+import { useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -39,8 +40,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MoreHorizontal, Search, Filter, RefreshCw } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { MoreHorizontal, Search, Filter, RefreshCw, Eye, Edit, Trash2, Users } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { toast } from "sonner";
+import ProgramDetailsDialog from "./ProgramDetailsDialog";
+import CreateProgramDialog from "./CreateProgramDialog";
 
 const statusColors = {
   active: "bg-green-500",
@@ -68,18 +82,64 @@ export default function ProgramCatalog() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
+  const [selectedProgram, setSelectedProgram] = useState(null);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [programToDelete, setProgramToDelete] = useState(null);
+  
+  const navigate = useNavigate();
 
   const filterOptions = {
     status: statusFilter !== "all" ? statusFilter : undefined,
     programType: typeFilter !== "all" ? typeFilter : undefined,
   };
 
-  const { programs, loading, fetchPrograms } = usePrograms(filterOptions);
+  const { programs, loading, fetchPrograms, deleteProgram } = usePrograms(filterOptions);
 
   // Filter programs by search term
   const filteredPrograms = (programs || []).filter((program) =>
     program.program_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Action handlers
+  const handleViewDetails = (program) => {
+    setSelectedProgram(program);
+    setDetailsDialogOpen(true);
+  };
+
+  const handleEdit = (program) => {
+    setSelectedProgram(program);
+    setEditDialogOpen(true);
+  };
+
+  const handleDeleteClick = (program) => {
+    setProgramToDelete(program);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!programToDelete) return;
+
+    try {
+      await deleteProgram(programToDelete.id);
+      toast.success("Program Deleted", {
+        description: `${programToDelete.program_name} has been deleted successfully`,
+      });
+      setDeleteDialogOpen(false);
+      setProgramToDelete(null);
+    } catch (error) {
+      console.error("Error deleting program:", error);
+      toast.error("Error", {
+        description: "Failed to delete program. Please try again.",
+      });
+    }
+  };
+
+  const handleViewEnrollments = (program) => {
+    // Navigate to enrollments page with program filter
+    navigate(`/enrollments?program=${program.id}`);
+  };
 
   if (loading) {
     return (
@@ -225,16 +285,30 @@ export default function ProgramCatalog() {
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                          <DropdownMenuItem>View Details</DropdownMenuItem>
-                          <DropdownMenuItem>Edit Program</DropdownMenuItem>
-                          <DropdownMenuItem>View Enrollments</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewDetails(program)}>
+                            <Eye className="mr-2 h-4 w-4" />
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEdit(program)}>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit Program
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewEnrollments(program)}>
+                            <Users className="mr-2 h-4 w-4" />
+                            View Enrollments
+                          </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-red-600">
+                          <DropdownMenuItem 
+                            className="text-red-600"
+                            onClick={() => handleDeleteClick(program)}
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" />
                             Delete Program
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -254,6 +328,46 @@ export default function ProgramCatalog() {
           </div>
         </div>
       </CardContent>
+
+      {/* Program Details Dialog */}
+      <ProgramDetailsDialog
+        program={selectedProgram}
+        open={detailsDialogOpen}
+        onOpenChange={setDetailsDialogOpen}
+        onEdit={handleEdit}
+        onDelete={handleDeleteClick}
+      />
+
+      {/* Edit Program Dialog */}
+      <CreateProgramDialog
+        program={selectedProgram}
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the program{" "}
+              <span className="font-semibold">{programToDelete?.program_name}</span>.
+              This action cannot be undone and will also remove all associated enrollments
+              and service delivery records.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete Program
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 }
