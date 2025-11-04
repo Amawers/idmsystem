@@ -184,6 +184,9 @@ export const AUDIT_ACTIONS = {
 	CREATE_PROGRAM: "create_program",
 	UPDATE_PROGRAM: "update_program",
 	DELETE_PROGRAM: "delete_program",
+	CREATE_ENROLLMENT: "create_enrollment",
+	UPDATE_ENROLLMENT: "update_enrollment",
+	DELETE_ENROLLMENT: "delete_enrollment",
 
 	// System
 	SYSTEM_ERROR: "system_error",

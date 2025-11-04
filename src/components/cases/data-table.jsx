@@ -78,6 +78,7 @@ import IntakeSheetIVAC from "@/pages/case manager/IntakeSheetIVAC";
 import IntakeSheetEdit from "@/pages/case manager/intakeSheetCaseEdit";
 import useDataTable from "@/hooks/useDataTable";
 import TableRenderer from "@/components/cases/tables/TableRenderer";
+import EnrollCaseDialog from "@/components/cases/EnrollCaseDialog";
 
 // =============================================
 // DATA VALIDATION SCHEMA
@@ -123,7 +124,7 @@ function formatDateTime(isoString) {
 // =================================
 // Replace previous `const caseColumns = [ ... ]` with the factory below.
 
-const createCaseColumns = [
+const createCaseColumns = (handleEnrollClick, handleEditClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -215,12 +216,50 @@ const createCaseColumns = [
 			</div>
 		),
 	},
+
+	//* ACTIONS
+	{
+		id: "actions",
+		header: "Actions",
+		cell: ({ row }) => (
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						variant="ghost"
+						className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
+						size="icon"
+					>
+						<IconDotsVertical />
+						<span className="sr-only">Open menu</span>
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="w-40">
+					<DropdownMenuItem onClick={(e) => {
+						e.stopPropagation();
+						handleEnrollClick(row.original, "CASE");
+					}}>
+						<IconCircleCheckFilled className="mr-2 h-4 w-4" />
+						Enroll in Program
+					</DropdownMenuItem>
+					<DropdownMenuSeparator />
+					<DropdownMenuItem onClick={(e) => {
+						e.stopPropagation();
+						handleEditClick(row.original, "CASE");
+					}}>Edit</DropdownMenuItem>
+					<DropdownMenuSeparator />
+					<DropdownMenuItem variant="destructive" onClick={(e) => e.stopPropagation()}>
+						Delete
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		),
+	},
 ];
 
 // =================================
 //* CICLCAR Table COLUMN DEFINITIONS
 // =================================
-const ciclcarColumns = [
+const ciclcarColumns = (handleEnrollClick, handleEditClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -310,6 +349,44 @@ const ciclcarColumns = [
 					{formatDateTime(row.original.updated_at)}
 				</span>
 			</div>
+		),
+	},
+
+	//* ACTIONS
+	{
+		id: "actions",
+		header: "Actions",
+		cell: ({ row }) => (
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						variant="ghost"
+						className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
+						size="icon"
+					>
+						<IconDotsVertical />
+						<span className="sr-only">Open menu</span>
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="w-40">
+					<DropdownMenuItem onClick={(e) => {
+						e.stopPropagation();
+						handleEnrollClick(row.original, "CICLCAR");
+					}}>
+						<IconCircleCheckFilled className="mr-2 h-4 w-4" />
+						Enroll in Program
+					</DropdownMenuItem>
+					<DropdownMenuSeparator />
+					<DropdownMenuItem onClick={(e) => {
+						e.stopPropagation();
+						handleEditClick(row.original, "CICLCAR");
+					}}>Edit</DropdownMenuItem>
+					<DropdownMenuSeparator />
+					<DropdownMenuItem variant="destructive" onClick={(e) => e.stopPropagation()}>
+						Delete
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
 		),
 	},
 ];
@@ -807,6 +884,11 @@ export function DataTable({
 	const [openCiclcarEditSheet, setOpenCiclcarEditSheet] = useState(false);
 	const [editingCiclcarRecord, setEditingCiclcarRecord] = useState(null);
 
+	// Enrollment dialog state
+	const [openEnrollDialog, setOpenEnrollDialog] = useState(false);
+	const [enrollingCase, setEnrollingCase] = useState(null);
+	const [enrollingCaseType, setEnrollingCaseType] = useState("");
+
 	// FAR edit state
 	const [openFarEditSheet, setOpenFarEditSheet] = useState(false);
 	const [editingFarRecord, setEditingFarRecord] = useState(null);
@@ -857,17 +939,25 @@ export function DataTable({
 		setOpenIvacEditSheet(true);
 	}
 
+	// Handle enrollment click
+	function handleEnrollClick(caseData, caseType) {
+		console.log("Enrolling case:", caseData, "Type:", caseType);
+		setEnrollingCase(caseData);
+		setEnrollingCaseType(caseType);
+		setOpenEnrollDialog(true);
+	}
+
 	// Initialize CASE table with dynamic columns (handler referenced above)
 	const caseTable = useDataTable({
 		initialData: caseData,
 		// CHANGED: pass edit handler so actions column calls this for “Edit”
-		columns: createCaseColumns,
+		columns: createCaseColumns(handleEnrollClick, (record) => setOpenEditSheet(true)),
 	});
 
 	// Table instance for CICLCAR tab with its own data and column definitions
 	const ciclcarTable = useDataTable({
 		initialData: ciclcarData,
-		columns: ciclcarColumns,
+		columns: ciclcarColumns(handleEnrollClick, handleEditCiclcarRow),
 		onRowClick: handleEditCiclcarRow, // Add click handler for CICL/CAR rows
 	});
 
@@ -1324,7 +1414,7 @@ export function DataTable({
 				<TableRenderer
 					table={ciclcarTable.table}
 					setData={ciclcarTable.setData}
-					columns={ciclcarColumns}
+					columns={ciclcarColumns(handleEnrollClick, handleEditCiclcarRow)}
 					onRowClick={handleEditCiclcarRow}
 				/>
 			</TabsContent>
@@ -1377,6 +1467,18 @@ export function DataTable({
 					onRowClick={handleEditFacRow}
 				/>
 			</TabsContent>
+
+			{/* Enrollment Dialog */}
+			<EnrollCaseDialog
+				open={openEnrollDialog}
+				onOpenChange={setOpenEnrollDialog}
+				caseData={enrollingCase}
+				caseType={enrollingCaseType}
+				onSuccess={() => {
+					// Optionally reload data here
+					console.log("Enrollment successful");
+				}}
+			/>
 		</Tabs>
 	);
 }
