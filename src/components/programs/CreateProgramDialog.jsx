@@ -10,7 +10,7 @@
  * - Multi-select for target beneficiaries
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -79,6 +79,9 @@ const BENEFICIARY_TYPES = [
  */
 export default function CreateProgramDialog({ open, onOpenChange, program = null }) {
   const [submitting, setSubmitting] = useState(false);
+  const [programType, setProgramType] = useState("");
+  const [targetBeneficiary, setTargetBeneficiary] = useState("");
+  const [status, setStatus] = useState("active");
   
   const { createProgram, updateProgram } = usePrograms();
 
@@ -90,10 +93,50 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
     setValue,
   } = useForm({
     resolver: zodResolver(programSchema),
-    defaultValues: program || {
+    defaultValues: {
       status: "active",
     },
   });
+
+  // Reset form when program changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      if (program) {
+        // Edit mode - populate form with program data
+        const targetBenef = Array.isArray(program.target_beneficiary) 
+          ? program.target_beneficiary[0] 
+          : program.target_beneficiary || "";
+        
+        setProgramType(program.program_type || "");
+        setTargetBeneficiary(targetBenef);
+        setStatus(program.status || "active");
+        
+        reset({
+          program_name: program.program_name || "",
+          program_type: program.program_type || "",
+          target_beneficiary: targetBenef,
+          description: program.description || "",
+          duration_weeks: program.duration_weeks || "",
+          budget_allocated: program.budget_allocated || "",
+          capacity: program.capacity || "",
+          coordinator: program.coordinator || "",
+          location: program.location || "",
+          schedule: program.schedule || "",
+          start_date: program.start_date || "",
+          status: program.status || "active",
+        });
+      } else {
+        // Create mode - reset to defaults
+        setProgramType("");
+        setTargetBeneficiary("");
+        setStatus("active");
+        
+        reset({
+          status: "active",
+        });
+      }
+    }
+  }, [open, program, reset]);
 
   const onSubmit = async (data) => {
     setSubmitting(true);
@@ -187,8 +230,11 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
               <div className="space-y-2">
                 <Label htmlFor="program_type">Program Type *</Label>
                 <Select
-                  onValueChange={(value) => setValue("program_type", value)}
-                  defaultValue={program?.program_type}
+                  value={programType}
+                  onValueChange={(value) => {
+                    setProgramType(value);
+                    setValue("program_type", value);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select program type" />
@@ -210,8 +256,11 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
               <div className="space-y-2">
                 <Label htmlFor="target_beneficiary">Target Beneficiaries *</Label>
                 <Select
-                  onValueChange={(value) => setValue("target_beneficiary", value)}
-                  defaultValue={program?.target_beneficiary}
+                  value={targetBeneficiary}
+                  onValueChange={(value) => {
+                    setTargetBeneficiary(value);
+                    setValue("target_beneficiary", value);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select target beneficiary" />
@@ -344,8 +393,11 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
               <div className="space-y-2">
                 <Label htmlFor="status">Status *</Label>
                 <Select
-                  onValueChange={(value) => setValue("status", value)}
-                  defaultValue={program?.status || "active"}
+                  value={status}
+                  onValueChange={(value) => {
+                    setStatus(value);
+                    setValue("status", value);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select status" />
