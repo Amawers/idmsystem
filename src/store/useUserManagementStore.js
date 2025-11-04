@@ -161,6 +161,9 @@ export const useUserManagementStore = create((set, get) => ({
 			} = await supabase.auth.getUser();
 			if (!currentUser) throw new Error("Not authenticated");
 
+			// Store current session before creating new user
+			const { data: { session: currentSession } } = await supabase.auth.getSession();
+
 			// Check if email already exists
 			const { data: existingUser } = await supabase
 				.from("user_management_view")
@@ -193,6 +196,23 @@ export const useUserManagementStore = create((set, get) => ({
 
 			if (signUpError) throw signUpError;
 
+			// IMPORTANT: signUp automatically logs in the new user, replacing the admin's session
+			// We need to restore the admin's session immediately
+			const newUserId = newUser.user.id;
+			
+			// Restore the admin's session
+			if (currentSession) {
+				const { error: sessionError } = await supabase.auth.setSession({
+					access_token: currentSession.access_token,
+					refresh_token: currentSession.refresh_token,
+				});
+				
+				if (sessionError) {
+					console.error("Failed to restore admin session:", sessionError);
+					throw new Error("Account created but session restoration failed. Please refresh the page.");
+				}
+			}
+
 			// Update profile with additional fields (status, created_by)
 			const { error: profileError } = await supabase
 				.from("profile")
@@ -201,7 +221,7 @@ export const useUserManagementStore = create((set, get) => ({
 					status: status,
 					created_by: currentUser.id,
 				})
-				.eq("id", newUser.user.id);
+				.eq("id", newUserId);
 
 			if (profileError) throw profileError;
 
