@@ -252,14 +252,6 @@ const createCaseColumns = (handleEnrollClick, handleEditClick) => [
 				<DropdownMenuContent align="end" className="w-40">
 					<DropdownMenuItem onClick={(e) => {
 						e.stopPropagation();
-						handleEnrollClick(row.original, "CASE");
-					}}>
-						<IconCircleCheckFilled className="mr-2 h-4 w-4" />
-						Enroll in Program
-					</DropdownMenuItem>
-					<DropdownMenuSeparator />
-					<DropdownMenuItem onClick={(e) => {
-						e.stopPropagation();
 						handleEditClick(row.original, "CASE");
 					}}>Edit</DropdownMenuItem>
 					<DropdownMenuSeparator />
@@ -400,14 +392,6 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick) => [
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
-					<DropdownMenuItem onClick={(e) => {
-						e.stopPropagation();
-						handleEnrollClick(row.original, "CICLCAR");
-					}}>
-						<IconCircleCheckFilled className="mr-2 h-4 w-4" />
-						Enroll in Program
-					</DropdownMenuItem>
-					<DropdownMenuSeparator />
 					<DropdownMenuItem onClick={(e) => {
 						e.stopPropagation();
 						handleEditClick(row.original, "CICLCAR");
