@@ -274,20 +274,21 @@ export default function EnrollmentTable() {
 
           {/* Table */}
           <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Beneficiary</TableHead>
-                  <TableHead>Case Type</TableHead>
-                  <TableHead>Program</TableHead>
-                  <TableHead>Enrollment Date</TableHead>
-                  <TableHead>Progress</TableHead>
-                  <TableHead>Attendance</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <div className={`${filteredEnrollments.length > 3 ? 'max-h-[400px] overflow-y-auto' : ''}`}>
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
+                    <TableHead>Beneficiary</TableHead>
+                    <TableHead>Case Type</TableHead>
+                    <TableHead>Program</TableHead>
+                    <TableHead>Enrollment Date</TableHead>
+                    <TableHead>Progress</TableHead>
+                    <TableHead>Attendance</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
                 {filteredEnrollments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center text-muted-foreground">
@@ -378,6 +379,7 @@ export default function EnrollmentTable() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
 
           <div className="flex items-center justify-between mt-4">
