@@ -91,5 +91,24 @@ export function useFacCases() {
         fetchFacCases();
     }, [fetchFacCases]);
 
-    return { data, loading, error, reload };
+    // Delete FAC case
+    const deleteFacCase = useCallback(async (caseId) => {
+        try {
+            const { error: err } = await supabase
+                .from("fac_case")
+                .delete()
+                .eq("id", caseId);
+
+            if (err) throw err;
+            
+            // Reload the data after successful deletion
+            await fetchFacCases();
+            return { success: true };
+        } catch (e) {
+            console.error("❌ Error deleting FAC case:", e);
+            return { success: false, error: e };
+        }
+    }, [fetchFacCases]);
+
+    return { data, loading, error, reload, deleteFacCase };
 }

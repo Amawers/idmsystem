@@ -67,7 +67,18 @@ import {
 } from "@/components/ui/select";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useState } from "react";
+import { toast } from "sonner";
 import IntakeSheetCaseCreate from "@/pages/case manager/IntakeSheetCaseCreate";
 import IntakeSheetCICLCARCreate from "@/pages/case manager/IntakeSheetCICLCARCreate";
 import IntakeSheetCICLCAREdit from "@/pages/case manager/IntakeSheetCICLCAREdit";
@@ -125,7 +136,7 @@ function formatDateTime(isoString) {
 // =================================
 // Replace previous `const caseColumns = [ ... ]` with the factory below.
 
-const createCaseColumns = (handleEnrollClick, handleEditClick) => [
+const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -255,7 +266,10 @@ const createCaseColumns = (handleEnrollClick, handleEditClick) => [
 						handleEditClick(row.original, "CASE");
 					}}>Edit</DropdownMenuItem>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive" onClick={(e) => e.stopPropagation()}>
+					<DropdownMenuItem variant="destructive" onClick={(e) => {
+						e.stopPropagation();
+						handleDeleteClick(row.original, "CASE");
+					}}>
 						Delete
 					</DropdownMenuItem>
 				</DropdownMenuContent>
@@ -267,7 +281,7 @@ const createCaseColumns = (handleEnrollClick, handleEditClick) => [
 // =================================
 //* CICLCAR Table COLUMN DEFINITIONS
 // =================================
-const ciclcarColumns = (handleEnrollClick, handleEditClick) => [
+const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -397,7 +411,10 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick) => [
 						handleEditClick(row.original, "CICLCAR");
 					}}>Edit</DropdownMenuItem>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive" onClick={(e) => e.stopPropagation()}>
+					<DropdownMenuItem variant="destructive" onClick={(e) => {
+						e.stopPropagation();
+						handleDeleteClick(row.original, "CICLCAR");
+					}}>
 						Delete
 					</DropdownMenuItem>
 				</DropdownMenuContent>
@@ -409,7 +426,7 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick) => [
 // =================================
 //* FAR Table COLUMN DEFINITIONS
 // =================================
-const farColumns = [
+const farColumns = (handleDeleteClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -554,7 +571,10 @@ const farColumns = [
 				<DropdownMenuContent align="end" className="w-32">
 					<DropdownMenuItem>Edit</DropdownMenuItem>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive">
+					<DropdownMenuItem variant="destructive" onClick={(e) => {
+						e.stopPropagation();
+						handleDeleteClick(row.original, "FAR");
+					}}>
 						Delete
 					</DropdownMenuItem>
 				</DropdownMenuContent>
@@ -566,7 +586,7 @@ const farColumns = [
 // =================================
 //* FAC Table COLUMN DEFINITIONS
 // =================================
-const facColumns = [
+const facColumns = (handleDeleteClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -694,7 +714,10 @@ const facColumns = [
 				<DropdownMenuContent align="end" className="w-32">
 					<DropdownMenuItem>Edit</DropdownMenuItem>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive">
+					<DropdownMenuItem variant="destructive" onClick={(e) => {
+						e.stopPropagation();
+						handleDeleteClick(row.original, "FAC");
+					}}>
 						Delete
 					</DropdownMenuItem>
 				</DropdownMenuContent>
@@ -706,7 +729,7 @@ const facColumns = [
 // =================================
 //* IVAC Table COLUMN DEFINITIONS
 // =================================
-const ivacColumns = [
+const ivacColumns = (handleDeleteClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -814,6 +837,36 @@ const ivacColumns = [
 			</div>
 		),
 	},
+
+	//* ACTIONS
+	{
+		id: "actions",
+		header: "Actions",
+		cell: ({ row }) => (
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						variant="ghost"
+						className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
+						size="icon"
+					>
+						<IconDotsVertical />
+						<span className="sr-only">Open menu</span>
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="w-32">
+					<DropdownMenuItem>Edit</DropdownMenuItem>
+					<DropdownMenuSeparator />
+					<DropdownMenuItem variant="destructive" onClick={(e) => {
+						e.stopPropagation();
+						handleDeleteClick(row.original, "IVAC");
+					}}>
+						Delete
+					</DropdownMenuItem>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		),
+	},
 ];
 
 // --- Date normalization/format helpers (module scope)
@@ -884,12 +937,24 @@ export function DataTable({
 	farData,
 	facData,
 	ivacData,
+	reloadCases,
+	reloadCiclcar,
 	reloadFar,
 	reloadFac,
-	reloadIvac
+	reloadIvac,
+	deleteCase,
+	deleteCiclcarCase,
+	deleteFarCase,
+	deleteFacCase,
+	deleteIvacCase,
 }) {
 	// State to control Intake Sheet modal visibility (open/close)
 	const [openIntakeSheet, setOpenIntakeSheet] = useState(false);
+
+	// Delete confirmation dialog state
+	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [caseToDelete, setCaseToDelete] = useState(null);
+	const [caseTypeToDelete, setCaseTypeToDelete] = useState(null);
 
 	// ADD: edit modal state
 	const [openEditSheet, setOpenEditSheet] = useState(false);
@@ -954,6 +1019,65 @@ export function DataTable({
 		setOpenIvacEditSheet(true);
 	}
 
+	// Handle delete click - opens confirmation dialog
+	function handleDeleteClick(caseData, caseType) {
+		console.log("Delete requested for:", caseData, "Type:", caseType);
+		setCaseToDelete(caseData);
+		setCaseTypeToDelete(caseType);
+		setDeleteDialogOpen(true);
+	}
+
+	// Handle confirmed deletion
+	async function handleConfirmDelete() {
+		if (!caseToDelete || !caseTypeToDelete) return;
+
+		let result;
+		const caseId = caseToDelete.id;
+
+		try {
+			// Call the appropriate delete function based on case type
+			switch (caseTypeToDelete) {
+				case "CASE":
+					result = await deleteCase(caseId);
+					break;
+				case "CICLCAR":
+					result = await deleteCiclcarCase(caseId);
+					break;
+				case "FAR":
+					result = await deleteFarCase(caseId);
+					break;
+				case "FAC":
+					result = await deleteFacCase(caseId);
+					break;
+				case "IVAC":
+					result = await deleteIvacCase(caseId);
+					break;
+				default:
+					toast.error("Unknown case type");
+					return;
+			}
+
+			if (result.success) {
+				toast.success("Case Deleted", {
+					description: `Successfully deleted ${caseTypeToDelete} case.`,
+				});
+			} else {
+				toast.error("Delete Failed", {
+					description: result.error?.message || "Failed to delete case. Please try again.",
+				});
+			}
+		} catch (error) {
+			console.error("Error deleting case:", error);
+			toast.error("Delete Failed", {
+				description: "An unexpected error occurred.",
+			});
+		} finally {
+			setDeleteDialogOpen(false);
+			setCaseToDelete(null);
+			setCaseTypeToDelete(null);
+		}
+	}
+
 	// Handle enrollment click
 	function handleEnrollClick(caseData, caseType) {
 		console.log("Enrolling case:", caseData, "Type:", caseType);
@@ -972,28 +1096,28 @@ export function DataTable({
 	// Table instance for CICLCAR tab with its own data and column definitions
 	const ciclcarTable = useDataTable({
 		initialData: ciclcarData,
-		columns: ciclcarColumns(handleEnrollClick, handleEditCiclcarRow),
+		columns: ciclcarColumns(handleEnrollClick, handleEditCiclcarRow, handleDeleteClick),
 		onRowClick: handleEditCiclcarRow, // Add click handler for CICL/CAR rows
 	});
 
 	// Table instance for FAR tab with its own data and column definitions
 	const farTable = useDataTable({
 		initialData: farData,
-		columns: farColumns,
+		columns: farColumns(handleDeleteClick),
 		onRowClick: handleEditFarRow, // Add click handler for FAR rows
 	});
 
 	// Table instance for FAC tab with its own data and column definitions
 	const facTable = useDataTable({
 		initialData: facData,
-		columns: facColumns,
+		columns: facColumns(handleDeleteClick),
 		onRowClick: handleEditFacRow, // Add click handler for FAC rows
 	});
 
 	// Table instance for IVAC tab with its own data and column definitions
 	const ivacTable = useDataTable({
 		initialData: ivacData,
-		columns: ivacColumns,
+		columns: ivacColumns(handleDeleteClick),
 		onRowClick: handleEditIvacRow, // Add click handler for IVAC rows
 	});
 
@@ -1494,6 +1618,28 @@ export function DataTable({
 					console.log("Enrollment successful");
 				}}
 			/>
+
+			{/* Delete Confirmation Dialog */}
+			<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+				<AlertDialogContent>
+					<AlertDialogHeader>
+						<AlertDialogTitle>Are you sure?</AlertDialogTitle>
+						<AlertDialogDescription>
+							This action cannot be undone. This will permanently delete this{" "}
+							{caseTypeToDelete} case from the database.
+						</AlertDialogDescription>
+					</AlertDialogHeader>
+					<AlertDialogFooter>
+						<AlertDialogCancel>Cancel</AlertDialogCancel>
+						<AlertDialogAction
+							onClick={handleConfirmDelete}
+							className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+						>
+							Delete
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</Tabs>
 	);
 }

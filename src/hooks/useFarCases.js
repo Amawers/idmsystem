@@ -64,5 +64,24 @@ export function useFarCases() {
         fetchFarCases();
     }, [fetchFarCases]);
 
-    return { data, loading, error, reload };
+    // Delete FAR case
+    const deleteFarCase = useCallback(async (caseId) => {
+        try {
+            const { error: err } = await supabase
+                .from("far_case")
+                .delete()
+                .eq("id", caseId);
+
+            if (err) throw err;
+            
+            // Reload the data after successful deletion
+            await fetchFarCases();
+            return { success: true };
+        } catch (e) {
+            console.error("❌ Error deleting FAR case:", e);
+            return { success: false, error: e };
+        }
+    }, [fetchFarCases]);
+
+    return { data, loading, error, reload, deleteFarCase };
 }

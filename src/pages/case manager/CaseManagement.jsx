@@ -22,30 +22,34 @@ export default function CaseManagement() {
 	const dataTableRef = useRef(null);
 
 	// Load dynamic CASE rows from Supabase
-	const { data: caseRows, loading: casesLoading, error: casesError, reload } = useCases();
+	const { data: caseRows, loading: casesLoading, error: casesError, reload, deleteCase } = useCases();
 	const {
 		data: ciclcarRows,
 		loading: ciclcarLoading,
 		error: ciclcarError,
 		reload: reloadCiclcar,
+		deleteCiclcarCase,
 	} = useCiclcarCases();
 	const {
 		data: farRows,
 		loading: farLoading,
 		error: farError,
 		reload: reloadFar,
+		deleteFarCase,
 	} = useFarCases();
 	const {
 		data: facRows,
 		loading: facLoading,
 		error: facError,
 		reload: reloadFac,
+		deleteFacCase,
 	} = useFacCases();
 	const {
 		data: ivacRows,
 		loading: ivacLoading,
 		error: ivacError,
 		reload: reloadIvac,
+		deleteIvacCase,
 	} = useIvacCases();
 
 	// Effect: watch scroll position and update "atTable" state
@@ -135,6 +139,11 @@ export default function CaseManagement() {
 					reloadFar={reloadFar}
 					reloadFac={reloadFac}
 					reloadIvac={reloadIvac}
+					deleteCase={deleteCase}
+					deleteCiclcarCase={deleteCiclcarCase}
+					deleteFarCase={deleteFarCase}
+					deleteFacCase={deleteFacCase}
+					deleteIvacCase={deleteIvacCase}
 				/>
 			</div>
 

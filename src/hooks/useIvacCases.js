@@ -64,5 +64,24 @@ export function useIvacCases() {
         fetchIvacCases();
     }, [fetchIvacCases]);
 
-    return { data, loading, error, reload };
+    // Delete IVAC case
+    const deleteIvacCase = useCallback(async (caseId) => {
+        try {
+            const { error: err } = await supabase
+                .from("ivac_case")
+                .delete()
+                .eq("id", caseId);
+
+            if (err) throw err;
+            
+            // Reload the data after successful deletion
+            await fetchIvacCases();
+            return { success: true };
+        } catch (e) {
+            console.error("❌ Error deleting IVAC case:", e);
+            return { success: false, error: e };
+        }
+    }, [fetchIvacCases]);
+
+    return { data, loading, error, reload, deleteIvacCase };
 }

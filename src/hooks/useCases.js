@@ -139,8 +139,26 @@ export function useCases() {
     load();
   }, [load]);
 
+  const deleteCase = useCallback(async (caseId) => {
+    try {
+      const { error: err } = await supabase
+        .from("case")
+        .delete()
+        .eq("id", caseId);
+
+      if (err) throw err;
+      
+      // Reload the data after successful deletion
+      await load();
+      return { success: true };
+    } catch (e) {
+      console.error("Error deleting case:", e);
+      return { success: false, error: e };
+    }
+  }, [load]);
+
   return useMemo(
-    () => ({ data, loading, error, reload: load }),
-    [data, loading, error, load]
+    () => ({ data, loading, error, reload: load, deleteCase }),
+    [data, loading, error, load, deleteCase]
   );
 }

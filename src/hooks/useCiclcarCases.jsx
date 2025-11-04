@@ -39,13 +39,32 @@ export function useCiclcarCases() {
         load();
     }, [load]);
 
+    const deleteCiclcarCase = useCallback(async (caseId) => {
+        try {
+            const { error: err } = await supabase
+                .from("ciclcar_case")
+                .delete()
+                .eq("id", caseId);
+
+            if (err) throw err;
+            
+            // Reload the data after successful deletion
+            await load();
+            return { success: true };
+        } catch (e) {
+            console.error("Error deleting CICL/CAR case:", e);
+            return { success: false, error: e };
+        }
+    }, [load]);
+
     return useMemo(
         () => ({
             data,
             loading,
             error,
             reload: load,
+            deleteCiclcarCase,
         }),
-        [data, loading, error, load],
+        [data, loading, error, load, deleteCiclcarCase],
     );
 }
