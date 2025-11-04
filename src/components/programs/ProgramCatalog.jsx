@@ -87,6 +87,7 @@ export default function ProgramCatalog() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [programToDelete, setProgramToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const navigate = useNavigate();
 
@@ -121,6 +122,7 @@ export default function ProgramCatalog() {
   const handleDeleteConfirm = async () => {
     if (!programToDelete) return;
 
+    setIsDeleting(true);
     try {
       await deleteProgram(programToDelete.id);
       toast.success("Program Deleted", {
@@ -133,6 +135,8 @@ export default function ProgramCatalog() {
       toast.error("Error", {
         description: "Failed to delete program. Please try again.",
       });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -358,12 +362,20 @@ export default function ProgramCatalog() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
+              disabled={isDeleting}
               className="bg-red-600 hover:bg-red-700"
             >
-              Delete Program
+              {isDeleting ? (
+                <>
+                  <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Program"
+              )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
