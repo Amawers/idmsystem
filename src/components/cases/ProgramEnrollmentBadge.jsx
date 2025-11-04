@@ -83,9 +83,10 @@ export default function ProgramEnrollmentBadge({ caseId, caseType, onEnrollClick
     return (
       <Badge 
         variant="outline" 
-        className="text-muted-foreground border-dashed"
+        className="text-muted-foreground border-dashed cursor-pointer hover:bg-muted hover:text-foreground transition-colors"
         onClick={(e) => {
           e.stopPropagation(); // Prevent row click handler
+          if (onEnrollClick) onEnrollClick();
         }}
       >
         Not Enrolled
