@@ -30,6 +30,14 @@ import CreateProgramDialog from "@/components/programs/CreateProgramDialog";
 export default function ProgramManagement() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [catalogKey, setCatalogKey] = useState(0);
+  const [dashboardKey, setDashboardKey] = useState(0);
+
+  const handleProgramCreated = () => {
+    // Force components to remount and fetch fresh data
+    setCatalogKey(prev => prev + 1);
+    setDashboardKey(prev => prev + 1);
+  };
 
   return (
     <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
@@ -62,11 +70,11 @@ export default function ProgramManagement() {
         </TabsList>
 
         <TabsContent value="dashboard" className="space-y-4">
-          <ProgramDashboard />
+          <ProgramDashboard key={dashboardKey} />
         </TabsContent>
 
         <TabsContent value="programs" className="space-y-4">
-          <ProgramCatalog />
+          <ProgramCatalog key={catalogKey} />
         </TabsContent>
 
         <TabsContent value="enrollments" className="space-y-4">
@@ -86,6 +94,7 @@ export default function ProgramManagement() {
       <CreateProgramDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+        onSuccess={handleProgramCreated}
       />
     </div>
   );

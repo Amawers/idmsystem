@@ -22,6 +22,12 @@ import CreateProgramDialog from "@/components/programs/CreateProgramDialog";
  */
 export default function ProgramCatalogPage() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [catalogKey, setCatalogKey] = useState(0);
+
+  const handleProgramCreated = () => {
+    // Force ProgramCatalog to remount and fetch fresh data
+    setCatalogKey(prev => prev + 1);
+  };
 
   return (
     <div className="flex-1 space-y-4 p-4 pt-6 md:p-8">
@@ -40,12 +46,13 @@ export default function ProgramCatalogPage() {
       </div>
 
       {/* Catalog Component */}
-      <ProgramCatalog />
+      <ProgramCatalog key={catalogKey} />
 
       {/* Create Program Dialog */}
       <CreateProgramDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
+        onSuccess={handleProgramCreated}
       />
     </div>
   );

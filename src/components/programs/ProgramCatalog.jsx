@@ -130,6 +130,8 @@ export default function ProgramCatalog() {
       });
       setDeleteDialogOpen(false);
       setProgramToDelete(null);
+      // Refresh the programs list
+      await fetchPrograms();
     } catch (error) {
       console.error("Error deleting program:", error);
       toast.error("Error", {
@@ -138,6 +140,11 @@ export default function ProgramCatalog() {
     } finally {
       setIsDeleting(false);
     }
+  };
+
+  const handleProgramSuccess = async () => {
+    // Refresh programs list after create/update
+    await fetchPrograms();
   };
 
   const handleViewEnrollments = (program) => {
@@ -347,6 +354,7 @@ export default function ProgramCatalog() {
         program={selectedProgram}
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
+        onSuccess={handleProgramSuccess}
       />
 
       {/* Delete Confirmation Dialog */}

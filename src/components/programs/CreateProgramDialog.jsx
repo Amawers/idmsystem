@@ -75,9 +75,10 @@ const BENEFICIARY_TYPES = [
  * @param {boolean} props.open - Dialog open state
  * @param {Function} props.onOpenChange - Function to toggle dialog
  * @param {Object} props.program - Program to edit (optional)
+ * @param {Function} props.onSuccess - Callback after successful create/update (optional)
  * @returns {JSX.Element} Create program dialog
  */
-export default function CreateProgramDialog({ open, onOpenChange, program = null }) {
+export default function CreateProgramDialog({ open, onOpenChange, program = null, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
   const [programType, setProgramType] = useState("");
   const [targetBeneficiary, setTargetBeneficiary] = useState("");
@@ -165,6 +166,11 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
 
       reset();
       onOpenChange(false);
+      
+      // Call onSuccess callback to refresh parent data
+      if (onSuccess) {
+        onSuccess();
+      }
     } catch (error) {
       console.error("Error saving program:", error);
       
