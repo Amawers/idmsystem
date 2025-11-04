@@ -574,7 +574,7 @@ create table public.program_enrollments (
     (
       case_type = any (
         array[
-          'CICL'::text,
+          'CICL/CAR'::text,
           'VAC'::text,
           'FAC'::text,
           'FAR'::text,
