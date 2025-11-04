@@ -24,18 +24,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { CalendarIcon, AlertCircle, CheckCircle2, Info } from "lucide-react";
@@ -68,8 +59,6 @@ export default function EnrollCaseDialog({
   
   const [selectedProgramId, setSelectedProgramId] = useState("");
   const [enrollmentDate, setEnrollmentDate] = useState(new Date());
-  const [caseWorker, setCaseWorker] = useState("");
-  const [notes, setNotes] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [existingEnrollments, setExistingEnrollments] = useState([]);
 
@@ -173,8 +162,6 @@ export default function EnrollCaseDialog({
     if (!open) {
       setSelectedProgramId("");
       setEnrollmentDate(new Date());
-      setCaseWorker("");
-      setNotes("");
       setExistingEnrollments([]);
     }
   }, [open]);
@@ -214,8 +201,8 @@ export default function EnrollCaseDialog({
         attendance_rate: 0,
         assigned_by: user?.id,
         assigned_by_name: user?.email,
-        case_worker: caseWorker || null,
-        notes: notes || null,
+        case_worker: null,
+        notes: null,
       };
 
       // Insert enrollment into Supabase
@@ -242,7 +229,6 @@ export default function EnrollCaseDialog({
           programName: selectedProgram.program_name,
           enrollmentDate: enrollmentData.enrollment_date,
           assignedBy: user?.email,
-          caseWorker: caseWorker,
         },
         severity: "info",
       });
@@ -326,7 +312,7 @@ export default function EnrollCaseDialog({
 
           {/* Program Selection */}
           <div className="space-y-2">
-            <Label htmlFor="program">
+            <Label>
               Select Program <span className="text-red-500">*</span>
             </Label>
             {programsLoading ? (
@@ -341,79 +327,77 @@ export default function EnrollCaseDialog({
                 </div>
               </div>
             ) : (
-              <Select value={selectedProgramId} onValueChange={setSelectedProgramId}>
-                <SelectTrigger id="program">
-                  <SelectValue placeholder="Choose a program..." />
-                </SelectTrigger>
-                <SelectContent>
-                  {compatiblePrograms.map(program => {
-                    const capacityPercent = (program.current_enrollment / program.capacity * 100).toFixed(0);
-                    const isEnrolled = existingEnrollments.some(e => e.program_id === program.id);
-                    const spotsLeft = program.capacity - program.current_enrollment;
-                    
-                    return (
-                      <SelectItem 
-                        key={program.id} 
-                        value={program.id}
-                        disabled={isEnrolled}
-                        className="py-3"
-                      >
-                        <div className="flex flex-col gap-1 w-full">
-                          <div className="flex items-center justify-between gap-4 w-full">
-                            <div className="flex-1">
-                              <div className="font-medium">{program.program_name}</div>
-                              <div className="flex items-center gap-2 mt-0.5">
-                                <Badge variant="secondary" className="text-xs">
-                                  {program.program_type}
-                                </Badge>
-                                {isEnrolled && (
-                                  <Badge variant="default" className="text-xs bg-green-600">
-                                    Already Enrolled
-                                  </Badge>
-                                )}
-                              </div>
-                            </div>
-                            <div className="text-right text-xs">
-                              <div className="text-muted-foreground">
-                                {program.current_enrollment}/{program.capacity}
-                              </div>
-                              <div className={cn(
-                                "font-medium",
-                                spotsLeft > 10 ? "text-green-600" : 
-                                spotsLeft > 5 ? "text-orange-600" : 
-                                "text-red-600"
-                              )}>
-                                {spotsLeft} spots left
-                              </div>
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1">
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium">Duration:</span> {program.duration_weeks} weeks
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <span className="font-medium">Success:</span> {program.success_rate}%
-                            </div>
-                            <div className="col-span-2 flex items-center gap-1">
-                              <span className="font-medium">Coordinator:</span> {program.coordinator}
-                            </div>
-                            {program.schedule && (
-                              <div className="col-span-2 flex items-center gap-1">
-                                <span className="font-medium">Schedule:</span> {program.schedule}
-                              </div>
-                            )}
-                            {program.location && (
-                              <div className="col-span-2 flex items-center gap-1">
-                                <span className="font-medium">Location:</span> {program.location}
-                              </div>
+              <div className="space-y-2 max-h-60 overflow-y-auto rounded-lg border p-3 bg-muted/30">
+                <p className="text-xs text-muted-foreground font-medium mb-2">Available Programs:</p>
+                {compatiblePrograms.map(program => {
+                  const isEnrolled = existingEnrollments.some(e => e.program_id === program.id);
+                  const spotsLeft = program.capacity - program.current_enrollment;
+                  const isSelected = selectedProgramId === program.id;
+                  
+                  return (
+                    <div
+                      key={program.id}
+                      onClick={() => !isEnrolled && setSelectedProgramId(program.id)}
+                      className={cn(
+                        "rounded-lg border p-3 cursor-pointer transition-all",
+                        isSelected && "border-primary bg-primary/5 shadow-sm",
+                        !isSelected && "hover:border-primary/50 hover:bg-muted/50",
+                        isEnrolled && "opacity-50 cursor-not-allowed"
+                      )}
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="font-medium text-sm">{program.program_name}</div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <Badge variant="secondary" className="text-xs">
+                              {program.program_type}
+                            </Badge>
+                            {isEnrolled && (
+                              <Badge variant="default" className="text-xs bg-green-600">
+                                Already Enrolled
+                              </Badge>
                             )}
                           </div>
                         </div>
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+                        <div className="text-right text-xs">
+                          <div className="text-muted-foreground">
+                            {program.current_enrollment}/{program.capacity}
+                          </div>
+                          <div className={cn(
+                            "font-medium",
+                            spotsLeft > 10 ? "text-green-600" : 
+                            spotsLeft > 5 ? "text-orange-600" : 
+                            "text-red-600"
+                          )}>
+                            {spotsLeft} spots
+                          </div>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground mt-2 pt-2 border-t">
+                        <div>
+                          <span className="font-medium">Duration:</span> {program.duration_weeks} weeks
+                        </div>
+                        <div>
+                          <span className="font-medium">Success:</span> {program.success_rate}%
+                        </div>
+                        <div className="col-span-2">
+                          <span className="font-medium">Coordinator:</span> {program.coordinator}
+                        </div>
+                        {program.schedule && (
+                          <div className="col-span-2">
+                            <span className="font-medium">Schedule:</span> {program.schedule}
+                          </div>
+                        )}
+                        {program.location && (
+                          <div className="col-span-2">
+                            <span className="font-medium">Location:</span> {program.location}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             )}
             
             {isAlreadyEnrolled && (
@@ -549,29 +533,6 @@ export default function EnrollCaseDialog({
                 />
               </PopoverContent>
             </Popover>
-          </div>
-
-          {/* Case Worker */}
-          <div className="space-y-2">
-            <Label htmlFor="case-worker">Case Worker</Label>
-            <Input
-              id="case-worker"
-              placeholder="Enter case worker name (optional)"
-              value={caseWorker}
-              onChange={(e) => setCaseWorker(e.target.value)}
-            />
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              placeholder="Add any additional notes about this enrollment..."
-              rows={3}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-            />
           </div>
 
           <DialogFooter>
