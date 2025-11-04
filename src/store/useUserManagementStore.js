@@ -21,7 +21,7 @@
 //
 // Public Methods:
 // - fetchUsers(): Load all users from database
-// - createUser({ email, full_name, role, status }): Create new user account
+// - createUser({ fullName, email, password, role, status }): Create new user account
 // - updateUser(userId, updates): Update user details
 // - banUser(userId): Ban/suspend a user account
 // - unbanUser(userId): Reactivate a banned account
@@ -44,8 +44,8 @@
 //
 // // Create new user
 // await createUser({ 
+//   fullName: 'Juan Dela Cruz',
 //   email: 'newuser@example.com', 
-//   full_name: 'John Doe',
 //   role: 'case_manager',
 //   status: 'active'
 // });
@@ -143,6 +143,7 @@ export const useUserManagementStore = create((set, get) => ({
 	 * Requires head role. Password can be auto-generated or provided.
 	 * 
 	 * @param {Object} userData - User data object
+	 * @param {string} userData.fullName - User's full name
 	 * @param {string} userData.email - User's email address (unique)
 	 * @param {string} userData.password - User's password (optional, auto-generated if not provided)
 	 * @param {string} userData.role - User role (case_manager or head)
@@ -152,7 +153,7 @@ export const useUserManagementStore = create((set, get) => ({
 	createUser: async (userData) => {
 		set({ loading: true, error: null });
 		try {
-			const { email, password, role = "case_manager", status = "active" } = userData;
+			const { fullName, email, password, role = "case_manager", status = "active" } = userData;
 
 			// Get current user (the head creating this account)
 			const {
@@ -184,6 +185,7 @@ export const useUserManagementStore = create((set, get) => ({
 					password: userPassword,
 					options: {
 						data: {
+							full_name: fullName,
 							role: role,
 						},
 					},

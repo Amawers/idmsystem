@@ -6,6 +6,7 @@
 // password auto-generation.
 //
 // Features:
+// - Full name input field
 // - Email validation and duplicate checking
 // - Auto-generate or manual password entry
 // - Role selection (case_manager/head)
@@ -72,6 +73,7 @@ import { Loader2, Eye, EyeOff, RefreshCw } from "lucide-react";
 
 // Validation schema
 const createUserSchema = z.object({
+	fullName: z.string().min(1, "Full name is required"),
 	email: z.string().email("Invalid email address"),
 	password: z
 		.string()
@@ -94,6 +96,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 	const form = useForm({
 		resolver: zodResolver(createUserSchema),
 		defaultValues: {
+			fullName: "",
 			email: "",
 			password: "",
 			role: "case_manager",
@@ -130,6 +133,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 	const onSubmit = async (data) => {
 		try {
 			const result = await createUser({
+				fullName: data.fullName,
 				email: data.email,
 				password: data.autoGeneratePassword ? generatedPassword : data.password,
 				role: data.role,
@@ -166,6 +170,25 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 
 				<Form {...form}>
 					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+						{/* Full Name Field */}
+						<FormField
+							control={form.control}
+							name="fullName"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Full Name</FormLabel>
+									<FormControl>
+										<Input
+											placeholder="Juan Dela Cruz"
+											type="text"
+											{...field}
+										/>
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+
 						{/* Email Field */}
 						<FormField
 							control={form.control}
