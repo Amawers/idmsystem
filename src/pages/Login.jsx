@@ -54,8 +54,9 @@ export default function Login() {
 			// If login fails, store error message
 			setError(err.message);
 
-			// Show red error toast with icon
-			toast.error("Invalid username or password", {
+			// Show red error toast with the actual error message
+			// This will display specific messages for suspended/inactive accounts
+			toast.error(err.message || "An unexpected error occured. Please try again later.", {
 				icon: <XCircle className="text-red-500" size={20} />,
 			});
 		}
