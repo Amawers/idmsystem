@@ -265,6 +265,10 @@ const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick
 						e.stopPropagation();
 						handleEditClick(row.original, "CASE");
 					}}>Edit</DropdownMenuItem>
+					<DropdownMenuItem onClick={(e) => {
+						e.stopPropagation();
+						handleEnrollClick(row.original, "CASE");
+					}}>Enroll Program</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem variant="destructive" onClick={(e) => {
 						e.stopPropagation();
@@ -410,6 +414,10 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) =
 						e.stopPropagation();
 						handleEditClick(row.original, "CICLCAR");
 					}}>Edit</DropdownMenuItem>
+					<DropdownMenuItem onClick={(e) => {
+						e.stopPropagation();
+						handleEnrollClick(row.original, "CICLCAR");
+					}}>Enroll Program</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem variant="destructive" onClick={(e) => {
 						e.stopPropagation();
@@ -556,7 +564,8 @@ const farColumns = (handleDeleteClick) => [
 	//* ACTIONS
 	{
 		id: "actions",
-		cell: () => (
+		header: "Actions",
+		cell: ({ row }) => (
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
@@ -568,8 +577,15 @@ const farColumns = (handleDeleteClick) => [
 						<span className="sr-only">Open menu</span>
 					</Button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" className="w-32">
-					<DropdownMenuItem>Edit</DropdownMenuItem>
+				<DropdownMenuContent align="end" className="w-40">
+					<DropdownMenuItem onClick={(e) => {
+						e.stopPropagation();
+						handleEditClick(row.original, "FAR");
+					}}>Edit</DropdownMenuItem>
+					<DropdownMenuItem onClick={(e) => {
+						e.stopPropagation();
+						handleEnrollClick(row.original, "FAR");
+					}}>Enroll Program</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem variant="destructive" onClick={(e) => {
 						e.stopPropagation();
@@ -699,7 +715,8 @@ const facColumns = (handleDeleteClick) => [
 	//* ACTIONS
 	{
 		id: "actions",
-		cell: () => (
+		header: "Actions",
+		cell: ({ row }) => (
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
@@ -711,8 +728,15 @@ const facColumns = (handleDeleteClick) => [
 						<span className="sr-only">Open menu</span>
 					</Button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" className="w-32">
-					<DropdownMenuItem>Edit</DropdownMenuItem>
+				<DropdownMenuContent align="end" className="w-40">
+					<DropdownMenuItem onClick={(e) => {
+						e.stopPropagation();
+						handleEditClick(row.original, "FAC");
+					}}>Edit</DropdownMenuItem>
+					<DropdownMenuItem onClick={(e) => {
+						e.stopPropagation();
+						handleEnrollClick(row.original, "FAC");
+					}}>Enroll Program</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem variant="destructive" onClick={(e) => {
 						e.stopPropagation();
@@ -854,8 +878,15 @@ const ivacColumns = (handleDeleteClick) => [
 						<span className="sr-only">Open menu</span>
 					</Button>
 				</DropdownMenuTrigger>
-				<DropdownMenuContent align="end" className="w-32">
-					<DropdownMenuItem>Edit</DropdownMenuItem>
+				<DropdownMenuContent align="end" className="w-40">
+					<DropdownMenuItem onClick={(e) => {
+						e.stopPropagation();
+						handleEditClick(row.original, "IVAC");
+					}}>Edit</DropdownMenuItem>
+					<DropdownMenuItem onClick={(e) => {
+						e.stopPropagation();
+						handleEnrollClick(row.original, "IVAC");
+					}}>Enroll Program</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem variant="destructive" onClick={(e) => {
 						e.stopPropagation();
