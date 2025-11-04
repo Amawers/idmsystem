@@ -12,7 +12,7 @@
  * - Integrated with Supabase backend
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useEnrollments } from "@/hooks/useEnrollments";
 import CreateEnrollmentDialog from "./CreateEnrollmentDialog";
 import UpdateEnrollmentDialog from "./UpdateEnrollmentDialog";
@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MoreHorizontal, Plus, Trash2, Edit, AlertCircle } from "lucide-react";
+import { Search, MoreHorizontal, Plus, Trash2, Edit, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -84,6 +84,8 @@ export default function EnrollmentTable() {
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const filterOptions = {
     status: statusFilter !== "all" ? statusFilter : undefined,
@@ -106,6 +108,20 @@ export default function EnrollmentTable() {
       );
     }
   );
+
+  // Pagination calculations
+  const totalFiltered = filteredEnrollments.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / rowsPerPage));
+  useEffect(() => {
+    // Reset to first page if filters or rows-per-page change and current page is out of range
+    if (page > totalPages) setPage(1);
+  }, [page, totalPages]);
+
+  const sliceStart = (page - 1) * rowsPerPage;
+  const sliceEnd = sliceStart + rowsPerPage;
+  const pageEnrollments = filteredEnrollments.slice(sliceStart, sliceEnd);
+  const displayStart = totalFiltered === 0 ? 0 : sliceStart + 1;
+  const displayEnd = Math.min(totalFiltered, sliceEnd);
 
   /**
    * Handle enrollment update
@@ -290,14 +306,14 @@ export default function EnrollmentTable() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                {filteredEnrollments.length === 0 ? (
+                {pageEnrollments.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center text-muted-foreground">
                       No enrollments found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredEnrollments.map((enrollment) => {
+                  pageEnrollments.map((enrollment) => {
                     const progressPercentage = parseFloat(enrollment.progress_percentage) || 0;
 
                     return (
@@ -384,8 +400,46 @@ export default function EnrollmentTable() {
           </div>
 
           <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Rows per page:</span>
+              <Select value={String(rowsPerPage)} onValueChange={(v) => { setRowsPerPage(parseInt(v, 10)); setPage(1); }}>
+                <SelectTrigger className="w-[80px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="text-sm text-muted-foreground">
-              Showing {filteredEnrollments.length} of {enrollments.length} enrollments
+              {totalFiltered > 0
+                ? `Showing ${displayStart}–${displayEnd} of ${totalFiltered} (total ${enrollments.length})`
+                : `Showing 0 of 0 (total ${enrollments.length})`}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
             </div>
           </div>
         </CardContent>
