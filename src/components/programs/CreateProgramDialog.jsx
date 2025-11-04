@@ -157,7 +157,7 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{program ? "Edit Program" : "Create New Program"}</DialogTitle>
           <DialogDescription>
@@ -167,197 +167,209 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Program Name */}
-          <div className="space-y-2">
-            <Label htmlFor="program_name">Program Name *</Label>
-            <Input
-              id="program_name"
-              {...register("program_name")}
-              placeholder="e.g., Youth Counseling & Rehabilitation"
-            />
-            {errors.program_name && (
-              <p className="text-sm text-red-600">{errors.program_name.message}</p>
-            )}
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* Four Column Layout */}
+          <div className="grid grid-cols-4 gap-6">
+            
+            {/* FIRST COLUMN: Program Name, Program Type, Description */}
+            <div className="space-y-4">
+              {/* Program Name */}
+              <div className="space-y-2">
+                <Label htmlFor="program_name">Program Name *</Label>
+                <Input
+                  id="program_name"
+                  {...register("program_name")}
+                  placeholder="e.g., Youth Counseling & Rehabilitation"
+                />
+                {errors.program_name && (
+                  <p className="text-sm text-red-600">{errors.program_name.message}</p>
+                )}
+              </div>
 
-          {/* Program Type */}
-          <div className="space-y-2">
-            <Label htmlFor="program_type">Program Type *</Label>
-            <Select
-              onValueChange={(value) => setValue("program_type", value)}
-              defaultValue={program?.program_type}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select program type" />
-              </SelectTrigger>
-              <SelectContent>
-                {PROGRAM_TYPES.map((type) => (
-                  <SelectItem key={type.value} value={type.value}>
-                    {type.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.program_type && (
-              <p className="text-sm text-red-600">{errors.program_type.message}</p>
-            )}
-          </div>
+              {/* Program Type */}
+              <div className="space-y-2">
+                <Label htmlFor="program_type">Program Type *</Label>
+                <Select
+                  onValueChange={(value) => setValue("program_type", value)}
+                  defaultValue={program?.program_type}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select program type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PROGRAM_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.program_type && (
+                  <p className="text-sm text-red-600">{errors.program_type.message}</p>
+                )}
+              </div>
 
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
-            <Textarea
-              id="description"
-              {...register("description")}
-              placeholder="Describe the program goals and activities..."
-              rows={3}
-            />
-            {errors.description && (
-              <p className="text-sm text-red-600">{errors.description.message}</p>
-            )}
-          </div>
+              {/* Description */}
+              <div className="space-y-2">
+                <Label htmlFor="description">Description *</Label>
+                <Textarea
+                  id="description"
+                  {...register("description")}
+                  placeholder="Describe the program goals and activities..."
+                  rows={10}
+                />
+                {errors.description && (
+                  <p className="text-sm text-red-600">{errors.description.message}</p>
+                )}
+              </div>
+            </div>
 
-          {/* Target Beneficiaries */}
-          <div className="space-y-2">
-            <Label>Target Beneficiaries *</Label>
-            <div className="space-y-2 border rounded-md p-3">
-              {BENEFICIARY_TYPES.map((beneficiary) => (
-                <div key={beneficiary.id} className="flex items-center space-x-2">
-                  <Checkbox
-                    id={beneficiary.id}
-                    checked={selectedBeneficiaries.includes(beneficiary.id)}
-                    onCheckedChange={() => handleBeneficiaryToggle(beneficiary.id)}
-                  />
-                  <Label
-                    htmlFor={beneficiary.id}
-                    className="text-sm font-normal cursor-pointer"
-                  >
-                    {beneficiary.label}
-                  </Label>
+            {/* SECOND COLUMN: Duration, Capacity, Location, Start Date */}
+            <div className="space-y-4">
+              {/* Duration */}
+              <div className="space-y-2">
+                <Label htmlFor="duration_weeks">Duration (weeks) *</Label>
+                <Input
+                  id="duration_weeks"
+                  type="number"
+                  {...register("duration_weeks")}
+                  placeholder="12"
+                />
+                {errors.duration_weeks && (
+                  <p className="text-sm text-red-600">{errors.duration_weeks.message}</p>
+                )}
+              </div>
+
+              {/* Capacity */}
+              <div className="space-y-2">
+                <Label htmlFor="capacity">Capacity *</Label>
+                <Input
+                  id="capacity"
+                  type="number"
+                  {...register("capacity")}
+                  placeholder="30"
+                />
+                {errors.capacity && (
+                  <p className="text-sm text-red-600">{errors.capacity.message}</p>
+                )}
+              </div>
+
+              {/* Location */}
+              <div className="space-y-2">
+                <Label htmlFor="location">Location *</Label>
+                <Input
+                  id="location"
+                  {...register("location")}
+                  placeholder="Main Office - Room 201"
+                />
+                {errors.location && (
+                  <p className="text-sm text-red-600">{errors.location.message}</p>
+                )}
+              </div>
+
+              {/* Start Date */}
+              <div className="space-y-2">
+                <Label htmlFor="start_date">Start Date *</Label>
+                <Input id="start_date" type="date" {...register("start_date")} />
+                {errors.start_date && (
+                  <p className="text-sm text-red-600">{errors.start_date.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* THIRD COLUMN: Budget Allocated, Coordinator, Schedule, Status */}
+            <div className="space-y-4">
+              {/* Budget Allocated */}
+              <div className="space-y-2">
+                <Label htmlFor="budget_allocated">Budget Allocated *</Label>
+                <Input
+                  id="budget_allocated"
+                  type="number"
+                  step="0.01"
+                  {...register("budget_allocated")}
+                  placeholder="150000.00"
+                />
+                {errors.budget_allocated && (
+                  <p className="text-sm text-red-600">{errors.budget_allocated.message}</p>
+                )}
+              </div>
+
+              {/* Coordinator */}
+              <div className="space-y-2">
+                <Label htmlFor="coordinator">Coordinator *</Label>
+                <Input
+                  id="coordinator"
+                  {...register("coordinator")}
+                  placeholder="Maria Santos"
+                />
+                {errors.coordinator && (
+                  <p className="text-sm text-red-600">{errors.coordinator.message}</p>
+                )}
+              </div>
+
+              {/* Schedule */}
+              <div className="space-y-2">
+                <Label htmlFor="schedule">Schedule *</Label>
+                <Input
+                  id="schedule"
+                  {...register("schedule")}
+                  placeholder="Mon, Wed, Fri 2:00 PM - 4:00 PM"
+                />
+                {errors.schedule && (
+                  <p className="text-sm text-red-600">{errors.schedule.message}</p>
+                )}
+              </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <Label htmlFor="status">Status *</Label>
+                <Select
+                  onValueChange={(value) => setValue("status", value)}
+                  defaultValue={program?.status || "active"}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.status && (
+                  <p className="text-sm text-red-600">{errors.status.message}</p>
+                )}
+              </div>
+            </div>
+
+            {/* FOURTH COLUMN: Target Beneficiaries */}
+            <div className="space-y-4">
+              {/* Target Beneficiaries */}
+              <div className="space-y-2">
+                <Label>Target Beneficiaries *</Label>
+                <div className="space-y-2 border rounded-md p-3 max-h-[400px] overflow-y-auto">
+                  {BENEFICIARY_TYPES.map((beneficiary) => (
+                    <div key={beneficiary.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={beneficiary.id}
+                        checked={selectedBeneficiaries.includes(beneficiary.id)}
+                        onCheckedChange={() => handleBeneficiaryToggle(beneficiary.id)}
+                      />
+                      <Label
+                        htmlFor={beneficiary.id}
+                        className="text-sm font-normal cursor-pointer"
+                      >
+                        {beneficiary.label}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            {selectedBeneficiaries.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                Select at least one target beneficiary
-              </p>
-            )}
-          </div>
-
-          {/* Duration and Budget */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="duration_weeks">Duration (weeks) *</Label>
-              <Input
-                id="duration_weeks"
-                type="number"
-                {...register("duration_weeks")}
-                placeholder="12"
-              />
-              {errors.duration_weeks && (
-                <p className="text-sm text-red-600">{errors.duration_weeks.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="budget_allocated">Budget Allocated *</Label>
-              <Input
-                id="budget_allocated"
-                type="number"
-                step="0.01"
-                {...register("budget_allocated")}
-                placeholder="150000.00"
-              />
-              {errors.budget_allocated && (
-                <p className="text-sm text-red-600">{errors.budget_allocated.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Capacity and Coordinator */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="capacity">Capacity *</Label>
-              <Input
-                id="capacity"
-                type="number"
-                {...register("capacity")}
-                placeholder="30"
-              />
-              {errors.capacity && (
-                <p className="text-sm text-red-600">{errors.capacity.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="coordinator">Coordinator *</Label>
-              <Input
-                id="coordinator"
-                {...register("coordinator")}
-                placeholder="Maria Santos"
-              />
-              {errors.coordinator && (
-                <p className="text-sm text-red-600">{errors.coordinator.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Location and Schedule */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="location">Location *</Label>
-              <Input
-                id="location"
-                {...register("location")}
-                placeholder="Main Office - Room 201"
-              />
-              {errors.location && (
-                <p className="text-sm text-red-600">{errors.location.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="schedule">Schedule *</Label>
-              <Input
-                id="schedule"
-                {...register("schedule")}
-                placeholder="Mon, Wed, Fri 2:00 PM - 4:00 PM"
-              />
-              {errors.schedule && (
-                <p className="text-sm text-red-600">{errors.schedule.message}</p>
-              )}
-            </div>
-          </div>
-
-          {/* Start Date and Status */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="start_date">Start Date *</Label>
-              <Input id="start_date" type="date" {...register("start_date")} />
-              {errors.start_date && (
-                <p className="text-sm text-red-600">{errors.start_date.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="status">Status *</Label>
-              <Select
-                onValueChange={(value) => setValue("status", value)}
-                defaultValue={program?.status || "active"}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="inactive">Inactive</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.status && (
-                <p className="text-sm text-red-600">{errors.status.message}</p>
-              )}
+                {selectedBeneficiaries.length === 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Select at least one target beneficiary
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
