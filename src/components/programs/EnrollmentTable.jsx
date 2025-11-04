@@ -219,11 +219,11 @@ export default function EnrollmentTable() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="py-2">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Program Enrollments</CardTitle>
-              <CardDescription>Track case enrollment and progress in programs</CardDescription>
+              <CardTitle className="text-base leading-tight">Program Enrollments</CardTitle>
+              <CardDescription className="text-xs leading-snug mt-0">Track case enrollment and progress in programs</CardDescription>
             </div>
             <Button onClick={() => setCreateDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
