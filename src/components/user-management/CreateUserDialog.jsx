@@ -174,7 +174,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 
 	return (
 		<Dialog open={open} onOpenChange={onOpenChange}>
-			<DialogContent className="sm:max-w-[500px]">
+			<DialogContent className="sm:max-w-[800px]">
 				<DialogHeader>
 					<DialogTitle>Create New User Account</DialogTitle>
 					<DialogDescription>
@@ -184,219 +184,227 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 				</DialogHeader>
 
 				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-						{/* Full Name Field */}
-						<FormField
-							control={form.control}
-							name="fullName"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Full Name</FormLabel>
-									<FormControl>
-										<Input
-											placeholder="Juan Dela Cruz"
-											type="text"
-											{...field}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
-						{/* Email Field */}
-						<FormField
-							control={form.control}
-							name="email"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Email Address</FormLabel>
-									<FormControl>
-										<Input
-											placeholder="user@example.com"
-											type="email"
-											{...field}
-										/>
-									</FormControl>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
-						{/* Role Selection */}
-						<FormField
-							control={form.control}
-							name="role"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Role</FormLabel>
-									<Select
-										onValueChange={field.onChange}
-										defaultValue={field.value}
-									>
-										<FormControl>
-											<SelectTrigger>
-												<SelectValue placeholder="Select a role" />
-											</SelectTrigger>
-										</FormControl>
-										<SelectContent>
-											<SelectItem value="case_manager">
-												Case Manager
-											</SelectItem>
-											<SelectItem value="head">Head</SelectItem>
-										</SelectContent>
-									</Select>
-									<FormDescription>
-										Case Managers handle cases; Heads manage users
-									</FormDescription>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
-						{/* Status Selection */}
-						<FormField
-							control={form.control}
-							name="status"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Account Status</FormLabel>
-									<Select
-										onValueChange={field.onChange}
-										defaultValue={field.value}
-									>
-										<FormControl>
-											<SelectTrigger>
-												<SelectValue placeholder="Select status" />
-											</SelectTrigger>
-										</FormControl>
-										<SelectContent>
-											<SelectItem value="active">Active</SelectItem>
-											<SelectItem value="inactive">Inactive</SelectItem>
-										</SelectContent>
-									</Select>
-									<FormDescription>
-										Inactive users cannot log in
-									</FormDescription>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
-
-						{/* Auto-generate Password Toggle */}
-						<FormField
-							control={form.control}
-							name="autoGeneratePassword"
-							render={({ field }) => (
-								<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-									<div className="space-y-0.5">
-										<FormLabel>Auto-generate Password</FormLabel>
-										<FormDescription className="text-xs">
-											Automatically create a secure password
-										</FormDescription>
-									</div>
-									<FormControl>
-										<Button
-											type="button"
-											variant={field.value ? "default" : "outline"}
-											size="sm"
-											onClick={() =>
-												handleAutoGenerateToggle(!field.value)
-											}
-										>
-											{field.value ? "ON" : "OFF"}
-										</Button>
-									</FormControl>
-								</FormItem>
-							)}
-						/>
-
-						{/* Password Field (conditional) */}
-						{autoGenerate ? (
-							<div className="space-y-2">
-								<FormLabel>Generated Password</FormLabel>
-								<div className="flex gap-2">
-									<Input
-										value={generatedPassword}
-										type={showPassword ? "text" : "password"}
-										readOnly
-										placeholder="Click generate to create password"
-										className="font-mono"
-									/>
-									<Button
-										type="button"
-										variant="outline"
-										size="icon"
-										onClick={handleCopyPassword}
-										disabled={!generatedPassword}
-										title="Copy password"
-									>
-										{copied ? (
-											<Check className="h-4 w-4 text-green-600" />
-										) : (
-											<Copy className="h-4 w-4" />
-										)}
-									</Button>
-									<Button
-										type="button"
-										variant="outline"
-										size="icon"
-										onClick={() => setShowPassword(!showPassword)}
-										title="Toggle password visibility"
-									>
-										{showPassword ? (
-											<EyeOff className="h-4 w-4" />
-										) : (
-											<Eye className="h-4 w-4" />
-										)}
-									</Button>
-									<Button
-										type="button"
-										variant="outline"
-										size="icon"
-										onClick={generatePassword}
-										title="Generate new password"
-									>
-										<RefreshCw className="h-4 w-4" />
-									</Button>
-								</div>
-								<p className="text-xs text-muted-foreground">
-									Click the copy icon to copy the password - it will be shown only once after creation
-								</p>
-							</div>
-						) : (
-							<FormField
-								control={form.control}
-								name="password"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Password</FormLabel>
-										<FormControl>
-											<div className="flex gap-2">
+					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+							{/* LEFT SIDE - Full Name, Email, Role */}
+							<div className="space-y-4">
+								{/* Full Name Field */}
+								<FormField
+									control={form.control}
+									name="fullName"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Full Name</FormLabel>
+											<FormControl>
 												<Input
-													type={showPassword ? "text" : "password"}
-													placeholder="Enter password (min 6 characters)"
+													placeholder="Juan Dela Cruz"
+													type="text"
 													{...field}
 												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								{/* Email Field */}
+								<FormField
+									control={form.control}
+									name="email"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Email Address</FormLabel>
+											<FormControl>
+												<Input
+													placeholder="user@example.com"
+													type="email"
+													{...field}
+												/>
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								{/* Role Selection */}
+								<FormField
+									control={form.control}
+									name="role"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Role</FormLabel>
+											<Select
+												onValueChange={field.onChange}
+												defaultValue={field.value}
+											>
+												<FormControl>
+													<SelectTrigger>
+														<SelectValue placeholder="Select a role" />
+													</SelectTrigger>
+												</FormControl>
+												<SelectContent>
+													<SelectItem value="case_manager">
+														Case Manager
+													</SelectItem>
+													<SelectItem value="head">Head</SelectItem>
+												</SelectContent>
+											</Select>
+											<FormDescription>
+												Case Managers handle cases; Heads manage users
+											</FormDescription>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							</div>
+
+							{/* RIGHT SIDE - Status, Password Settings */}
+							<div className="space-y-4">
+								{/* Status Selection */}
+								<FormField
+									control={form.control}
+									name="status"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Account Status</FormLabel>
+											<Select
+												onValueChange={field.onChange}
+												defaultValue={field.value}
+											>
+												<FormControl>
+													<SelectTrigger>
+														<SelectValue placeholder="Select status" />
+													</SelectTrigger>
+												</FormControl>
+												<SelectContent>
+													<SelectItem value="active">Active</SelectItem>
+													<SelectItem value="inactive">Inactive</SelectItem>
+												</SelectContent>
+											</Select>
+											<FormDescription>
+												Inactive users cannot log in
+											</FormDescription>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								{/* Auto-generate Password Toggle */}
+								<FormField
+									control={form.control}
+									name="autoGeneratePassword"
+									render={({ field }) => (
+										<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+											<div className="space-y-0.5">
+												<FormLabel>Auto-generate Password</FormLabel>
+												<FormDescription className="text-xs">
+													Automatically create a secure password
+												</FormDescription>
+											</div>
+											<FormControl>
 												<Button
 													type="button"
-													variant="outline"
-													size="icon"
-													onClick={() => setShowPassword(!showPassword)}
+													variant={field.value ? "default" : "outline"}
+													size="sm"
+													onClick={() =>
+														handleAutoGenerateToggle(!field.value)
+													}
 												>
-													{showPassword ? (
-														<EyeOff className="h-4 w-4" />
-													) : (
-														<Eye className="h-4 w-4" />
-													)}
+													{field.value ? "ON" : "OFF"}
 												</Button>
-											</div>
-										</FormControl>
-										<FormMessage />
-									</FormItem>
+											</FormControl>
+										</FormItem>
+									)}
+								/>
+
+								{/* Password Field (conditional) */}
+								{autoGenerate ? (
+									<div className="space-y-2">
+										<FormLabel>Generated Password</FormLabel>
+										<div className="flex gap-2">
+											<Input
+												value={generatedPassword}
+												type={showPassword ? "text" : "password"}
+												readOnly
+												placeholder="Click generate to create password"
+												className="font-mono"
+											/>
+											<Button
+												type="button"
+												variant="outline"
+												size="icon"
+												onClick={handleCopyPassword}
+												disabled={!generatedPassword}
+												title="Copy password"
+											>
+												{copied ? (
+													<Check className="h-4 w-4 text-green-600" />
+												) : (
+													<Copy className="h-4 w-4" />
+												)}
+											</Button>
+											<Button
+												type="button"
+												variant="outline"
+												size="icon"
+												onClick={() => setShowPassword(!showPassword)}
+												title="Toggle password visibility"
+											>
+												{showPassword ? (
+													<EyeOff className="h-4 w-4" />
+												) : (
+													<Eye className="h-4 w-4" />
+												)}
+											</Button>
+											<Button
+												type="button"
+												variant="outline"
+												size="icon"
+												onClick={generatePassword}
+												title="Generate new password"
+											>
+												<RefreshCw className="h-4 w-4" />
+											</Button>
+										</div>
+										<p className="text-xs text-muted-foreground">
+											Click the copy icon to copy the password - it will be shown only once after creation
+										</p>
+									</div>
+								) : (
+									<FormField
+										control={form.control}
+										name="password"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Password</FormLabel>
+												<FormControl>
+													<div className="flex gap-2">
+														<Input
+															type={showPassword ? "text" : "password"}
+															placeholder="Enter password (min 6 characters)"
+															{...field}
+														/>
+														<Button
+															type="button"
+															variant="outline"
+															size="icon"
+															onClick={() => setShowPassword(!showPassword)}
+														>
+															{showPassword ? (
+																<EyeOff className="h-4 w-4" />
+															) : (
+																<Eye className="h-4 w-4" />
+															)}
+														</Button>
+													</div>
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
 								)}
-							/>
-						)}
+							</div>
+						</div>
 
 						<DialogFooter>
 							<Button
