@@ -82,9 +82,6 @@ const createUserSchema = z.object({
 	role: z.enum(["case_manager", "head"], {
 		required_error: "Please select a role",
 	}),
-	status: z.enum(["active", "inactive"], {
-		required_error: "Please select a status",
-	}),
 	autoGeneratePassword: z.boolean().default(false),
 });
 
@@ -101,7 +98,6 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 			email: "",
 			password: "",
 			role: "case_manager",
-			status: "active",
 			autoGeneratePassword: false,
 		},
 	});
@@ -152,7 +148,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 				email: data.email,
 				password: data.autoGeneratePassword ? generatedPassword : data.password,
 				role: data.role,
-				status: data.status,
+				status: "active", // Always set to active when creating new accounts
 			});
 
 			toast.success("User created successfully", {
@@ -258,37 +254,8 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 								/>
 							</div>
 
-							{/* RIGHT SIDE - Status, Password Settings */}
+							{/* RIGHT SIDE - Password Settings */}
 							<div className="space-y-4">
-								{/* Status Selection */}
-								<FormField
-									control={form.control}
-									name="status"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Account Status</FormLabel>
-											<Select
-												onValueChange={field.onChange}
-												defaultValue={field.value}
-											>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select status" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent>
-													<SelectItem value="active">Active</SelectItem>
-													<SelectItem value="inactive">Inactive</SelectItem>
-												</SelectContent>
-											</Select>
-											<FormDescription>
-												Inactive users cannot log in
-											</FormDescription>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
 								{/* Auto-generate Password Toggle */}
 								<FormField
 									control={form.control}
