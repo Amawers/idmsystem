@@ -85,7 +85,7 @@ const createUserSchema = z.object({
 	status: z.enum(["active", "inactive"], {
 		required_error: "Please select a status",
 	}),
-	autoGeneratePassword: z.boolean().default(true),
+	autoGeneratePassword: z.boolean().default(false),
 });
 
 export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
@@ -101,7 +101,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 			password: "",
 			role: "case_manager",
 			status: "active",
-			autoGeneratePassword: true,
+			autoGeneratePassword: false,
 		},
 	});
 
