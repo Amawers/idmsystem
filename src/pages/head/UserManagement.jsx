@@ -107,7 +107,7 @@ export default function UserManagement() {
 
 	// Pagination state
 	const [currentPage, setCurrentPage] = useState(1);
-	const itemsPerPage = 10;
+	const itemsPerPage = 3;
 
 	// Fetch users on mount
 	useEffect(() => {
@@ -181,12 +181,12 @@ export default function UserManagement() {
 	};
 
 	return (
-		<div className="container mx-auto p-6 space-y-6">
+		<div className="container mx-auto px-6 space-y-6">
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">User Management</h1>
-					<p className="text-muted-foreground mt-1">
+					<h1 className="text-2xl font-bold tracking-tight">User Management</h1>
+					<p className="text-sm text-muted-foreground mt-1">
 						Manage case manager and head accounts
 					</p>
 				</div>
@@ -199,41 +199,41 @@ export default function UserManagement() {
 			{/* Statistics Cards */}
 			<div className="grid gap-4 md:grid-cols-4">
 				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 py-3">
 						<CardTitle className="text-sm font-medium">Total Users</CardTitle>
 						<Users className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
-					<CardContent>
+					<CardContent className="pb-3">
 						<div className="text-2xl font-bold">{stats.total}</div>
 					</CardContent>
 				</Card>
 
 				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 py-3">
 						<CardTitle className="text-sm font-medium">Active</CardTitle>
 						<UserCheck className="h-4 w-4 text-green-600" />
 					</CardHeader>
-					<CardContent>
+					<CardContent className="pb-3">
 						<div className="text-2xl font-bold text-green-600">{stats.active}</div>
 					</CardContent>
 				</Card>
 
 				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 py-3">
 						<CardTitle className="text-sm font-medium">Inactive</CardTitle>
 						<UserX className="h-4 w-4 text-gray-600" />
 					</CardHeader>
-					<CardContent>
+					<CardContent className="pb-3">
 						<div className="text-2xl font-bold text-gray-600">{stats.inactive}</div>
 					</CardContent>
 				</Card>
 
 				<Card>
-					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 py-3">
 						<CardTitle className="text-sm font-medium">Banned</CardTitle>
 						<ShieldAlert className="h-4 w-4 text-red-600" />
 					</CardHeader>
-					<CardContent>
+					<CardContent className="pb-3">
 						<div className="text-2xl font-bold text-red-600">{stats.banned}</div>
 					</CardContent>
 				</Card>
@@ -295,105 +295,107 @@ export default function UserManagement() {
 					) : (
 						<>
 							<div className="rounded-md border">
-								<Table>
-									<TableHeader>
-										<TableRow>
-											<TableHead>Email</TableHead>
-											<TableHead>Role</TableHead>
-											<TableHead>Status</TableHead>
-											<TableHead>Created</TableHead>
-											<TableHead>Last Updated</TableHead>
-											<TableHead className="text-right">Actions</TableHead>
-										</TableRow>
-									</TableHeader>
-									<TableBody>
-										{paginatedUsers.length === 0 ? (
+								<div className={paginatedUsers.length > 3 ? "max-h-[400px] overflow-y-auto" : ""}>
+									<Table>
+										<TableHeader className="sticky top-0 bg-background z-10">
 											<TableRow>
-												<TableCell
-													colSpan={6}
-													className="text-center text-muted-foreground py-8"
-												>
-													No users found
-												</TableCell>
+												<TableHead className="bg-background">Email</TableHead>
+												<TableHead className="bg-background">Role</TableHead>
+												<TableHead className="bg-background">Status</TableHead>
+												<TableHead className="bg-background">Created</TableHead>
+												<TableHead className="bg-background">Last Updated</TableHead>
+												<TableHead className="text-right bg-background">Actions</TableHead>
 											</TableRow>
-										) : (
-											paginatedUsers.map((user) => (
-												<TableRow key={user.id}>
-													<TableCell className="font-medium">
-														{user.email}
-													</TableCell>
-													<TableCell>
-														<Badge variant="outline" className="capitalize">
-															{user.role?.replace("_", " ")}
-														</Badge>
-													</TableCell>
-													<TableCell>{getStatusBadge(user.status)}</TableCell>
-													<TableCell className="text-sm text-muted-foreground">
-														{formatDate(user.created_at)}
-													</TableCell>
-													<TableCell className="text-sm text-muted-foreground">
-														{formatDate(user.updated_at)}
-													</TableCell>
-													<TableCell className="text-right">
-														<DropdownMenu>
-															<DropdownMenuTrigger asChild>
-																<Button variant="ghost" size="icon">
-																	<MoreVertical className="h-4 w-4" />
-																</Button>
-															</DropdownMenuTrigger>
-															<DropdownMenuContent align="end">
-																<DropdownMenuLabel>Actions</DropdownMenuLabel>
-																<DropdownMenuSeparator />
-																<DropdownMenuItem
-																	onClick={() => setEditUser(user)}
-																>
-																	<Edit className="mr-2 h-4 w-4" />
-																	Edit User
-																</DropdownMenuItem>
-																{user.status === "banned" ? (
-																	<DropdownMenuItem
-																		onClick={() =>
-																			setBanAction({
-																				user,
-																				action: "unban",
-																			})
-																		}
-																	>
-																		<CheckCircle className="mr-2 h-4 w-4" />
-																		Unban User
-																	</DropdownMenuItem>
-																) : (
-																	<DropdownMenuItem
-																		onClick={() =>
-																			setBanAction({
-																				user,
-																				action: "ban",
-																			})
-																		}
-																		className="text-destructive"
-																	>
-																		<Ban className="mr-2 h-4 w-4" />
-																		Ban User
-																	</DropdownMenuItem>
-																)}
-															</DropdownMenuContent>
-														</DropdownMenu>
+										</TableHeader>
+										<TableBody>
+											{paginatedUsers.length === 0 ? (
+												<TableRow>
+													<TableCell
+														colSpan={6}
+														className="text-center text-muted-foreground py-8"
+													>
+														No users found
 													</TableCell>
 												</TableRow>
-											))
-										)}
-									</TableBody>
-								</Table>
+											) : (
+												paginatedUsers.map((user) => (
+													<TableRow key={user.id}>
+														<TableCell className="font-medium">
+															{user.email}
+														</TableCell>
+														<TableCell>
+															<Badge variant="outline" className="capitalize">
+																{user.role?.replace("_", " ")}
+															</Badge>
+														</TableCell>
+														<TableCell>{getStatusBadge(user.status)}</TableCell>
+														<TableCell className="text-sm text-muted-foreground">
+															{formatDate(user.created_at)}
+														</TableCell>
+														<TableCell className="text-sm text-muted-foreground">
+															{formatDate(user.updated_at)}
+														</TableCell>
+														<TableCell className="text-right">
+															<DropdownMenu>
+																<DropdownMenuTrigger asChild>
+																	<Button variant="ghost" size="icon">
+																		<MoreVertical className="h-4 w-4" />
+																	</Button>
+																</DropdownMenuTrigger>
+																<DropdownMenuContent align="end">
+																	<DropdownMenuLabel>Actions</DropdownMenuLabel>
+																	<DropdownMenuSeparator />
+																	<DropdownMenuItem
+																		onClick={() => setEditUser(user)}
+																	>
+																		<Edit className="mr-2 h-4 w-4" />
+																		Edit User
+																	</DropdownMenuItem>
+																	{user.status === "banned" ? (
+																		<DropdownMenuItem
+																			onClick={() =>
+																				setBanAction({
+																					user,
+																					action: "unban",
+																				})
+																			}
+																		>
+																			<CheckCircle className="mr-2 h-4 w-4" />
+																			Unban User
+																		</DropdownMenuItem>
+																	) : (
+																		<DropdownMenuItem
+																			onClick={() =>
+																				setBanAction({
+																					user,
+																					action: "ban",
+																				})
+																			}
+																			className="text-destructive"
+																		>
+																			<Ban className="mr-2 h-4 w-4" />
+																			Ban User
+																		</DropdownMenuItem>
+																	)}
+																</DropdownMenuContent>
+															</DropdownMenu>
+														</TableCell>
+													</TableRow>
+												))
+											)}
+										</TableBody>
+									</Table>
+								</div>
 							</div>
 
 							{/* Pagination */}
-							{totalPages > 1 && (
-								<div className="flex items-center justify-between mt-4">
-									<p className="text-sm text-muted-foreground">
-										Showing {startIndex + 1} to{" "}
-										{Math.min(endIndex, filteredUsers.length)} of{" "}
-										{filteredUsers.length} users
-									</p>
+							<div className="flex items-center justify-between mt-4 pt-4 border-t">
+								<p className="text-sm text-muted-foreground">
+									Showing {startIndex + 1} to{" "}
+									{Math.min(endIndex, filteredUsers.length)} of{" "}
+									{filteredUsers.length} users
+								</p>
+								{totalPages > 1 && (
 									<div className="flex gap-2">
 										<Button
 											variant="outline"
@@ -417,8 +419,8 @@ export default function UserManagement() {
 											Next
 										</Button>
 									</div>
-								</div>
-							)}
+								)}
+							</div>
 						</>
 					)}
 				</CardContent>
