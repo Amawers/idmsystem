@@ -349,30 +349,64 @@ export default function EnrollCaseDialog({
                   {compatiblePrograms.map(program => {
                     const capacityPercent = (program.current_enrollment / program.capacity * 100).toFixed(0);
                     const isEnrolled = existingEnrollments.some(e => e.program_id === program.id);
+                    const spotsLeft = program.capacity - program.current_enrollment;
                     
                     return (
                       <SelectItem 
                         key={program.id} 
                         value={program.id}
                         disabled={isEnrolled}
+                        className="py-3"
                       >
-                        <div className="flex items-center justify-between gap-4 w-full">
-                          <div>
-                            <div className="font-medium">{program.program_name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {program.program_type} • {program.coordinator}
+                        <div className="flex flex-col gap-1 w-full">
+                          <div className="flex items-center justify-between gap-4 w-full">
+                            <div className="flex-1">
+                              <div className="font-medium">{program.program_name}</div>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <Badge variant="secondary" className="text-xs">
+                                  {program.program_type}
+                                </Badge>
+                                {isEnrolled && (
+                                  <Badge variant="default" className="text-xs bg-green-600">
+                                    Already Enrolled
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right text-xs">
+                              <div className="text-muted-foreground">
+                                {program.current_enrollment}/{program.capacity}
+                              </div>
+                              <div className={cn(
+                                "font-medium",
+                                spotsLeft > 10 ? "text-green-600" : 
+                                spotsLeft > 5 ? "text-orange-600" : 
+                                "text-red-600"
+                              )}>
+                                {spotsLeft} spots left
+                              </div>
                             </div>
                           </div>
-                          <div className="text-right text-xs">
-                            <div className="text-muted-foreground">
-                              {program.current_enrollment}/{program.capacity}
+                          <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground mt-1">
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">Duration:</span> {program.duration_weeks} weeks
                             </div>
-                            <div className={cn(
-                              "font-medium",
-                              capacityPercent < 80 ? "text-green-600" : "text-orange-600"
-                            )}>
-                              {capacityPercent}% full
+                            <div className="flex items-center gap-1">
+                              <span className="font-medium">Success:</span> {program.success_rate}%
                             </div>
+                            <div className="col-span-2 flex items-center gap-1">
+                              <span className="font-medium">Coordinator:</span> {program.coordinator}
+                            </div>
+                            {program.schedule && (
+                              <div className="col-span-2 flex items-center gap-1">
+                                <span className="font-medium">Schedule:</span> {program.schedule}
+                              </div>
+                            )}
+                            {program.location && (
+                              <div className="col-span-2 flex items-center gap-1">
+                                <span className="font-medium">Location:</span> {program.location}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </SelectItem>
@@ -391,29 +425,99 @@ export default function EnrollCaseDialog({
 
           {/* Selected Program Details */}
           {selectedProgram && (
-            <div className="rounded-lg border p-4 bg-blue-50 border-blue-200">
-              <h4 className="font-semibold text-sm mb-3 text-blue-900">Program Details</h4>
+            <div className="rounded-lg border p-4 bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-900">
+              <h4 className="font-semibold text-sm mb-3 text-blue-900 dark:text-blue-100">
+                Program Details
+              </h4>
               <div className="grid grid-cols-2 gap-3 text-sm">
                 <div>
-                  <Label className="text-blue-700">Duration</Label>
-                  <div className="font-medium text-blue-900">{selectedProgram.duration_weeks} weeks</div>
+                  <Label className="text-blue-700 dark:text-blue-400">Program Type</Label>
+                  <div className="font-medium text-blue-900 dark:text-blue-100 capitalize">
+                    {selectedProgram.program_type}
+                  </div>
                 </div>
                 <div>
-                  <Label className="text-blue-700">Schedule</Label>
-                  <div className="font-medium text-blue-900">{selectedProgram.schedule || "N/A"}</div>
+                  <Label className="text-blue-700 dark:text-blue-400">Duration</Label>
+                  <div className="font-medium text-blue-900 dark:text-blue-100">
+                    {selectedProgram.duration_weeks} weeks
+                  </div>
                 </div>
                 <div>
-                  <Label className="text-blue-700">Location</Label>
-                  <div className="font-medium text-blue-900">{selectedProgram.location || "N/A"}</div>
+                  <Label className="text-blue-700 dark:text-blue-400">Coordinator</Label>
+                  <div className="font-medium text-blue-900 dark:text-blue-100">
+                    {selectedProgram.coordinator || "N/A"}
+                  </div>
                 </div>
                 <div>
-                  <Label className="text-blue-700">Success Rate</Label>
-                  <div className="font-medium text-blue-900">{selectedProgram.success_rate}%</div>
+                  <Label className="text-blue-700 dark:text-blue-400">Success Rate</Label>
+                  <div className="font-medium text-blue-900 dark:text-blue-100">
+                    {selectedProgram.success_rate}%
+                  </div>
                 </div>
-                <div className="col-span-2">
-                  <Label className="text-blue-700">Description</Label>
-                  <div className="font-medium text-blue-900">{selectedProgram.description || "No description available"}</div>
+                <div>
+                  <Label className="text-blue-700 dark:text-blue-400">Capacity</Label>
+                  <div className="font-medium text-blue-900 dark:text-blue-100">
+                    {selectedProgram.current_enrollment}/{selectedProgram.capacity} enrolled
+                    <span className="text-xs ml-1">
+                      ({selectedProgram.capacity - selectedProgram.current_enrollment} spots left)
+                    </span>
+                  </div>
                 </div>
+                <div>
+                  <Label className="text-blue-700 dark:text-blue-400">Budget Status</Label>
+                  <div className="font-medium text-blue-900 dark:text-blue-100">
+                    ₱{(selectedProgram.budget_spent || 0).toLocaleString()} / 
+                    ₱{(selectedProgram.budget_allocated || 0).toLocaleString()}
+                  </div>
+                </div>
+                {selectedProgram.schedule && (
+                  <div className="col-span-2">
+                    <Label className="text-blue-700 dark:text-blue-400">Schedule</Label>
+                    <div className="font-medium text-blue-900 dark:text-blue-100">
+                      {selectedProgram.schedule}
+                    </div>
+                  </div>
+                )}
+                {selectedProgram.location && (
+                  <div className="col-span-2">
+                    <Label className="text-blue-700 dark:text-blue-400">Location</Label>
+                    <div className="font-medium text-blue-900 dark:text-blue-100">
+                      {selectedProgram.location}
+                    </div>
+                  </div>
+                )}
+                {selectedProgram.start_date && (
+                  <div>
+                    <Label className="text-blue-700 dark:text-blue-400">Start Date</Label>
+                    <div className="font-medium text-blue-900 dark:text-blue-100">
+                      {new Date(selectedProgram.start_date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  </div>
+                )}
+                {selectedProgram.end_date && (
+                  <div>
+                    <Label className="text-blue-700 dark:text-blue-400">End Date</Label>
+                    <div className="font-medium text-blue-900 dark:text-blue-100">
+                      {new Date(selectedProgram.end_date).toLocaleDateString('en-US', {
+                        month: 'short',
+                        day: 'numeric',
+                        year: 'numeric'
+                      })}
+                    </div>
+                  </div>
+                )}
+                {selectedProgram.description && (
+                  <div className="col-span-2">
+                    <Label className="text-blue-700 dark:text-blue-400">Description</Label>
+                    <div className="font-medium text-blue-900 dark:text-blue-100 text-xs">
+                      {selectedProgram.description}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}

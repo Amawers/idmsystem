@@ -79,6 +79,7 @@ import IntakeSheetEdit from "@/pages/case manager/intakeSheetCaseEdit";
 import useDataTable from "@/hooks/useDataTable";
 import TableRenderer from "@/components/cases/tables/TableRenderer";
 import EnrollCaseDialog from "@/components/cases/EnrollCaseDialog";
+import ProgramEnrollmentBadge from "@/components/cases/ProgramEnrollmentBadge";
 
 // =============================================
 // DATA VALIDATION SCHEMA
@@ -169,6 +170,21 @@ const createCaseColumns = (handleEnrollClick, handleEditClick) => [
 			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
 			const priority = row.original["priority"] ?? "None";
 			return <div>{priority}</div>;
+		},
+	},
+	//* PROGRAMS (ENROLLMENT BADGE)
+	{
+		accessorKey: "programs",
+		header: "Programs",
+		cell: ({ row }) => {
+			const caseId = row.original["case ID"] ?? row.original.id;
+			return (
+				<ProgramEnrollmentBadge 
+					caseId={caseId} 
+					caseType="CASE"
+					onEnrollClick={() => handleEnrollClick(row.original, "CASE")}
+				/>
+			);
 		},
 	},
 	//* DATE FILED
@@ -304,6 +320,21 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick) => [
 			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
 			const priority = row.original["priority"] ?? "None";
 			return <div>{priority}</div>;
+		},
+	},
+	//* PROGRAMS (ENROLLMENT BADGE)
+	{
+		accessorKey: "programs",
+		header: "Programs",
+		cell: ({ row }) => {
+			const caseId = row.original["case ID"] ?? row.original.id;
+			return (
+				<ProgramEnrollmentBadge 
+					caseId={caseId} 
+					caseType="CICLCAR"
+					onEnrollClick={() => handleEnrollClick(row.original, "CICLCAR")}
+				/>
+			);
 		},
 	},
 	//* DATE FILED
