@@ -280,7 +280,7 @@ export default function CreateEnrollmentDialog({ open, onOpenChange, onSuccess }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="min-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Enroll Case in Program</DialogTitle>
           <DialogDescription>
@@ -296,155 +296,163 @@ export default function CreateEnrollmentDialog({ open, onOpenChange, onSuccess }
             </Alert>
           )}
 
-          {/* Case Type Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="case_type">Case Type *</Label>
-            <Select
-              value={formData.case_type}
-              onValueChange={(value) => handleChange('case_type', value)}
-              required
-            >
-              <SelectTrigger id="case_type">
-                <SelectValue placeholder="Select case type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="CICL/CAR">CICL/CAR</SelectItem>
-                <SelectItem value="VAC">VAC</SelectItem>
-                <SelectItem value="FAC">FAC</SelectItem>
-                <SelectItem value="FAR">FAR</SelectItem>
-                <SelectItem value="IVAC">IVAC</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Case Selection */}
-          {formData.case_type && (
-            <div className="space-y-2">
-              <Label htmlFor="case_id">Select Case *</Label>
-              {searchingCase ? (
-                <div className="flex items-center justify-center p-4">
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  <span className="ml-2">Loading cases...</span>
-                </div>
-              ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Left column */}
+            <div className="space-y-3">
+              {/* Case Type Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="case_type">Case Type *</Label>
                 <Select
-                  value={formData.case_id}
-                  onValueChange={handleCaseSelect}
+                  value={formData.case_type}
+                  onValueChange={(value) => handleChange('case_type', value)}
                   required
-                  disabled={cases.length === 0}
                 >
-                  <SelectTrigger id="case_id">
-                    <SelectValue placeholder={cases.length === 0 ? "No active cases found" : "Select a case"} />
+                  <SelectTrigger id="case_type">
+                    <SelectValue placeholder="Select case type" />
                   </SelectTrigger>
                   <SelectContent>
-                    {cases.map(caseItem => (
-                      <SelectItem key={caseItem.id} value={caseItem.id}>
-                        {caseItem.displayName} - {caseItem.case_manager}
+                    <SelectItem value="CICL/CAR">CICL/CAR</SelectItem>
+                    <SelectItem value="VAC">VAC</SelectItem>
+                    <SelectItem value="FAC">FAC</SelectItem>
+                    <SelectItem value="FAR">FAR</SelectItem>
+                    <SelectItem value="IVAC">IVAC</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Case Selection */}
+              {formData.case_type && (
+                <div className="space-y-2">
+                  <Label htmlFor="case_id">Select Case *</Label>
+                  {searchingCase ? (
+                    <div className="flex items-center justify-center p-4">
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      <span className="ml-2">Loading cases...</span>
+                    </div>
+                  ) : (
+                    <Select
+                      value={formData.case_id}
+                      onValueChange={handleCaseSelect}
+                      required
+                      disabled={cases.length === 0}
+                    >
+                      <SelectTrigger id="case_id">
+                        <SelectValue placeholder={cases.length === 0 ? "No active cases found" : "Select a case"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {cases.map(caseItem => (
+                          <SelectItem key={caseItem.id} value={caseItem.id}>
+                            {caseItem.displayName} - {caseItem.case_manager}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+              )}
+
+              {/* Beneficiary Name */}
+              <div className="space-y-2">
+                <Label htmlFor="beneficiary_name">Beneficiary Name *</Label>
+                <Input
+                  id="beneficiary_name"
+                  value={formData.beneficiary_name}
+                  onChange={(e) => handleChange('beneficiary_name', e.target.value)}
+                  placeholder="Enter beneficiary name"
+                  required
+                />
+              </div>
+
+              {/* Case Worker */}
+              <div className="space-y-2">
+                <Label htmlFor="case_worker">Case Worker</Label>
+                <Input
+                  id="case_worker"
+                  value={formData.case_worker}
+                  onChange={(e) => handleChange('case_worker', e.target.value)}
+                  placeholder="Enter case worker name"
+                />
+              </div>
+            </div>
+
+            {/* Right column */}
+            <div className="space-y-3">
+              {/* Program Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="program_id">Program *</Label>
+                <Select
+                  value={formData.program_id}
+                  onValueChange={(value) => handleChange('program_id', value)}
+                  required
+                  disabled={!formData.case_type}
+                >
+                  <SelectTrigger id="program_id">
+                    <SelectValue placeholder={
+                      !formData.case_type 
+                        ? "Select case type first" 
+                        : availablePrograms.length === 0 
+                        ? "No available programs" 
+                        : "Select a program"
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablePrograms.map(program => (
+                      <SelectItem key={program.id} value={program.id}>
+                        {program.program_name} ({program.current_enrollment}/{program.capacity} enrolled)
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              )}
+              </div>
+
+              {/* Date Fields */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="enrollment_date">Enrollment Date *</Label>
+                  <Input
+                    id="enrollment_date"
+                    type="date"
+                    value={formData.enrollment_date}
+                    onChange={(e) => handleChange('enrollment_date', e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="expected_completion_date">Expected Completion</Label>
+                  <Input
+                    id="expected_completion_date"
+                    type="date"
+                    value={formData.expected_completion_date}
+                    onChange={(e) => handleChange('expected_completion_date', e.target.value)}
+                  />
+                </div>
+              </div>
+
+              {/* Sessions Total */}
+              <div className="space-y-2">
+                <Label htmlFor="sessions_total">Total Sessions</Label>
+                <Input
+                  id="sessions_total"
+                  type="number"
+                  min="0"
+                  value={formData.sessions_total}
+                  onChange={(e) => handleChange('sessions_total', e.target.value)}
+                  placeholder="Enter total number of sessions"
+                />
+              </div>
             </div>
-          )}
 
-          {/* Beneficiary Name */}
-          <div className="space-y-2">
-            <Label htmlFor="beneficiary_name">Beneficiary Name *</Label>
-            <Input
-              id="beneficiary_name"
-              value={formData.beneficiary_name}
-              onChange={(e) => handleChange('beneficiary_name', e.target.value)}
-              placeholder="Enter beneficiary name"
-              required
-            />
-          </div>
-
-          {/* Program Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="program_id">Program *</Label>
-            <Select
-              value={formData.program_id}
-              onValueChange={(value) => handleChange('program_id', value)}
-              required
-              disabled={!formData.case_type}
-            >
-              <SelectTrigger id="program_id">
-                <SelectValue placeholder={
-                  !formData.case_type 
-                    ? "Select case type first" 
-                    : availablePrograms.length === 0 
-                    ? "No available programs" 
-                    : "Select a program"
-                } />
-              </SelectTrigger>
-              <SelectContent>
-                {availablePrograms.map(program => (
-                  <SelectItem key={program.id} value={program.id}>
-                    {program.program_name} ({program.current_enrollment}/{program.capacity} enrolled)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Date Fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="enrollment_date">Enrollment Date *</Label>
-              <Input
-                id="enrollment_date"
-                type="date"
-                value={formData.enrollment_date}
-                onChange={(e) => handleChange('enrollment_date', e.target.value)}
-                required
+            {/* Notes - full width */}
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                value={formData.notes}
+                onChange={(e) => handleChange('notes', e.target.value)}
+                placeholder="Additional notes or comments"
+                rows={3}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="expected_completion_date">Expected Completion</Label>
-              <Input
-                id="expected_completion_date"
-                type="date"
-                value={formData.expected_completion_date}
-                onChange={(e) => handleChange('expected_completion_date', e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Sessions Total */}
-          <div className="space-y-2">
-            <Label htmlFor="sessions_total">Total Sessions</Label>
-            <Input
-              id="sessions_total"
-              type="number"
-              min="0"
-              value={formData.sessions_total}
-              onChange={(e) => handleChange('sessions_total', e.target.value)}
-              placeholder="Enter total number of sessions"
-            />
-          </div>
-
-          {/* Case Worker */}
-          <div className="space-y-2">
-            <Label htmlFor="case_worker">Case Worker</Label>
-            <Input
-              id="case_worker"
-              value={formData.case_worker}
-              onChange={(e) => handleChange('case_worker', e.target.value)}
-              placeholder="Enter case worker name"
-            />
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder="Additional notes or comments"
-              rows={3}
-            />
           </div>
 
           <DialogFooter>
