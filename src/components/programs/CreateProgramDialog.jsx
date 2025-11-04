@@ -33,7 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import { usePrograms } from "@/hooks/usePrograms";
 import { toast } from "sonner";
 
@@ -41,6 +40,7 @@ import { toast } from "sonner";
 const programSchema = z.object({
   program_name: z.string().min(3, "Program name must be at least 3 characters"),
   program_type: z.string().min(1, "Program type is required"),
+  target_beneficiary: z.string().min(1, "Target beneficiary is required"),
   description: z.string().min(10, "Description must be at least 10 characters"),
   duration_weeks: z.coerce.number().min(1, "Duration must be at least 1 week"),
   budget_allocated: z.coerce.number().min(0, "Budget must be a positive number"),
@@ -65,11 +65,8 @@ const PROGRAM_TYPES = [
 ];
 
 const BENEFICIARY_TYPES = [
-  { id: "CICL", label: "CICL - Children in Conflict with Law" },
-  { id: "VAC", label: "VAC - Victims/Survivors of Abuse" },
-  { id: "FAC", label: "FAC - Families in Crisis" },
-  { id: "FAR", label: "FAR - Families at Risk" },
-  { id: "IVAC", label: "IVAC - Intra-familial Violence Against Children" },
+  { value: "CASE", label: "CASE" },
+  { value: "CICL/CAR", label: "CICL/CAR" },
 ];
 
 /**
@@ -81,9 +78,6 @@ const BENEFICIARY_TYPES = [
  * @returns {JSX.Element} Create program dialog
  */
 export default function CreateProgramDialog({ open, onOpenChange, program = null }) {
-  const [selectedBeneficiaries, setSelectedBeneficiaries] = useState(
-    program?.target_beneficiary || []
-  );
   const [submitting, setSubmitting] = useState(false);
   
   const { createProgram, updateProgram } = usePrograms();
@@ -101,28 +95,12 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
     },
   });
 
-  const handleBeneficiaryToggle = (beneficiaryId) => {
-    setSelectedBeneficiaries((prev) =>
-      prev.includes(beneficiaryId)
-        ? prev.filter((id) => id !== beneficiaryId)
-        : [...prev, beneficiaryId]
-    );
-  };
-
   const onSubmit = async (data) => {
-    if (selectedBeneficiaries.length === 0) {
-      toast.error("Validation Error", {
-        description: "Please select at least one target beneficiary",
-      });
-      return;
-    }
-
     setSubmitting(true);
 
     try {
       const programData = {
         ...data,
-        target_beneficiary: selectedBeneficiaries,
         budget_allocated: parseFloat(data.budget_allocated),
         duration_weeks: parseInt(data.duration_weeks),
         capacity: parseInt(data.capacity),
@@ -143,7 +121,6 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
       }
 
       reset();
-      setSelectedBeneficiaries([]);
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving program:", error);
@@ -157,7 +134,7 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="min-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{program ? "Edit Program" : "Create New Program"}</DialogTitle>
           <DialogDescription>
@@ -168,10 +145,10 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Four Column Layout */}
-          <div className="grid grid-cols-4 gap-6">
+          {/* Three Column Layout */}
+          <div className="grid grid-cols-3 gap-6">
             
-            {/* FIRST COLUMN: Program Name, Program Type, Description */}
+            {/* FIRST COLUMN: Program Name, Program Type, Target Beneficiaries, Description */}
             <div className="space-y-4">
               {/* Program Name */}
               <div className="space-y-2">
@@ -209,6 +186,29 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
                 )}
               </div>
 
+              {/* Target Beneficiaries */}
+              <div className="space-y-2">
+                <Label htmlFor="target_beneficiary">Target Beneficiaries *</Label>
+                <Select
+                  onValueChange={(value) => setValue("target_beneficiary", value)}
+                  defaultValue={program?.target_beneficiary}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select target beneficiary" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {BENEFICIARY_TYPES.map((beneficiary) => (
+                      <SelectItem key={beneficiary.value} value={beneficiary.value}>
+                        {beneficiary.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.target_beneficiary && (
+                  <p className="text-sm text-red-600">{errors.target_beneficiary.message}</p>
+                )}
+              </div>
+
               {/* Description */}
               <div className="space-y-2">
                 <Label htmlFor="description">Description *</Label>
@@ -216,7 +216,7 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
                   id="description"
                   {...register("description")}
                   placeholder="Describe the program goals and activities..."
-                  rows={10}
+                  rows={4}
                 />
                 {errors.description && (
                   <p className="text-sm text-red-600">{errors.description.message}</p>
@@ -338,36 +338,6 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
                 </Select>
                 {errors.status && (
                   <p className="text-sm text-red-600">{errors.status.message}</p>
-                )}
-              </div>
-            </div>
-
-            {/* FOURTH COLUMN: Target Beneficiaries */}
-            <div className="space-y-4">
-              {/* Target Beneficiaries */}
-              <div className="space-y-2">
-                <Label>Target Beneficiaries *</Label>
-                <div className="space-y-2 border rounded-md p-3 max-h-[400px] overflow-y-auto">
-                  {BENEFICIARY_TYPES.map((beneficiary) => (
-                    <div key={beneficiary.id} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={beneficiary.id}
-                        checked={selectedBeneficiaries.includes(beneficiary.id)}
-                        onCheckedChange={() => handleBeneficiaryToggle(beneficiary.id)}
-                      />
-                      <Label
-                        htmlFor={beneficiary.id}
-                        className="text-sm font-normal cursor-pointer"
-                      >
-                        {beneficiary.label}
-                      </Label>
-                    </div>
-                  ))}
-                </div>
-                {selectedBeneficiaries.length === 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    Select at least one target beneficiary
-                  </p>
                 )}
               </div>
             </div>
