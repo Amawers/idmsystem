@@ -28,6 +28,12 @@ import { Progress } from "@/components/ui/progress";
  * Metric Card Component
  */
 function MetricCard({ title, value, description, icon: Icon, trend }) {
+  // Determine trend direction for styling
+  const isPositive = trend && (trend.startsWith('+') || trend.includes('improvement'));
+  const isNegative = trend && (trend.startsWith('-') || trend.includes('decline'));
+  const trendColor = isPositive ? 'text-green-600' : isNegative ? 'text-red-600' : 'text-muted-foreground';
+  const TrendIcon = isPositive ? TrendingUp : isNegative ? TrendingUp : null;
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -41,8 +47,12 @@ function MetricCard({ title, value, description, icon: Icon, trend }) {
         )}
         {trend && (
           <div className="flex items-center gap-1 mt-1">
-            <TrendingUp className="h-3 w-3 text-green-600" />
-            <span className="text-xs text-green-600">{trend}</span>
+            {TrendIcon && (
+              <TrendIcon 
+                className={`h-3 w-3 ${trendColor} ${isNegative ? 'rotate-180' : ''}`} 
+              />
+            )}
+            <span className={`text-xs ${trendColor}`}>{trend}</span>
           </div>
         )}
       </CardContent>
@@ -56,7 +66,7 @@ function MetricCard({ title, value, description, icon: Icon, trend }) {
  */
 export default function ProgramDashboard() {
   const { programs, statistics: programStats, loading: programsLoading } = usePrograms();
-  const { statistics: enrollmentStats, loading: enrollmentsLoading } = useEnrollments();
+  const { enrollments, statistics: enrollmentStats, loading: enrollmentsLoading } = useEnrollments();
 
   const loading = programsLoading || enrollmentsLoading;
 
@@ -77,6 +87,91 @@ export default function ProgramDashboard() {
     .sort((a, b) => b.success_rate - a.success_rate)
     .slice(0, 5);
 
+  // Calculate month-over-month trends
+  const calculateTrends = () => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const lastMonth = currentMonth === 0 ? 11 : currentMonth - 1;
+    const lastMonthYear = currentMonth === 0 ? currentYear - 1 : currentYear;
+
+    // Programs created this month vs last month
+    const programsThisMonth = programs.filter(p => {
+      const created = new Date(p.created_at);
+      return created.getMonth() === currentMonth && created.getFullYear() === currentYear;
+    }).length;
+
+    const programsLastMonth = programs.filter(p => {
+      const created = new Date(p.created_at);
+      return created.getMonth() === lastMonth && created.getFullYear() === lastMonthYear;
+    }).length;
+
+    const programChange = programsThisMonth - programsLastMonth;
+    const programTrend = programChange > 0 ? `+${programChange} from last month` : 
+                        programChange < 0 ? `${programChange} from last month` : 
+                        'No change from last month';
+
+    // Enrollments this month vs last month
+    const enrollmentsThisMonth = enrollments.filter(e => {
+      const enrolled = new Date(e.enrollment_date);
+      return enrolled.getMonth() === currentMonth && enrolled.getFullYear() === currentYear;
+    }).length;
+
+    const enrollmentsLastMonth = enrollments.filter(e => {
+      const enrolled = new Date(e.enrollment_date);
+      return enrolled.getMonth() === lastMonth && enrolled.getFullYear() === lastMonthYear;
+    }).length;
+
+    const enrollmentChange = enrollmentsLastMonth > 0 
+      ? ((enrollmentsThisMonth - enrollmentsLastMonth) / enrollmentsLastMonth) * 100
+      : 0;
+    
+    const enrollmentTrend = enrollmentChange > 0 ? `+${enrollmentChange.toFixed(1)}% from last month` :
+                           enrollmentChange < 0 ? `${enrollmentChange.toFixed(1)}% from last month` :
+                           'No change from last month';
+
+    // Success rate trend (compare completed programs this month vs last month)
+    const completedThisMonth = enrollments.filter(e => {
+      const completed = e.completion_date ? new Date(e.completion_date) : null;
+      return completed && 
+             completed.getMonth() === currentMonth && 
+             completed.getFullYear() === currentYear &&
+             e.status === 'completed';
+    }).length;
+
+    const completedLastMonth = enrollments.filter(e => {
+      const completed = e.completion_date ? new Date(e.completion_date) : null;
+      return completed &&
+             completed.getMonth() === lastMonth && 
+             completed.getFullYear() === lastMonthYear &&
+             e.status === 'completed';
+    }).length;
+
+    const totalThisMonth = enrollments.filter(e => {
+      const enrolled = new Date(e.enrollment_date);
+      const enrolledBeforeOrDuringThisMonth = enrolled.getFullYear() < currentYear ||
+        (enrolled.getFullYear() === currentYear && enrolled.getMonth() <= currentMonth);
+      const completedAfterThisMonth = e.completion_date ? new Date(e.completion_date) > now : true;
+      return enrolledBeforeOrDuringThisMonth && completedAfterThisMonth;
+    }).length;
+
+    const successRateThisMonth = totalThisMonth > 0 ? (completedThisMonth / totalThisMonth) * 100 : 0;
+    const successRateLastMonth = enrollmentsLastMonth > 0 ? (completedLastMonth / enrollmentsLastMonth) * 100 : 0;
+    const successRateChange = successRateThisMonth - successRateLastMonth;
+
+    const successTrend = successRateChange > 0 ? `+${successRateChange.toFixed(1)}% improvement` :
+                        successRateChange < 0 ? `${successRateChange.toFixed(1)}% decline` :
+                        'No change from last month';
+
+    return {
+      programTrend,
+      enrollmentTrend,
+      successTrend,
+    };
+  };
+
+  const trends = calculateTrends();
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -94,14 +189,14 @@ export default function ProgramDashboard() {
           value={programStats.total}
           description={`${programStats.active} active programs`}
           icon={Activity}
-          trend="+2 from last month"
+          trend={trends.programTrend}
         />
         <MetricCard
           title="Total Enrollment"
           value={programStats.totalEnrollment}
           description={`${enrollmentStats.active} currently active`}
           icon={Users}
-          trend="+12% from last month"
+          trend={trends.enrollmentTrend}
         />
         <MetricCard
           title="Budget Allocated"
@@ -114,7 +209,7 @@ export default function ProgramDashboard() {
           value={`${programStats.averageSuccessRate.toFixed(1)}%`}
           description="Across all programs"
           icon={Award}
-          trend="+3.2% improvement"
+          trend={trends.successTrend}
         />
       </div>
 
