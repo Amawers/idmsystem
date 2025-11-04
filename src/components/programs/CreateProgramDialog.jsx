@@ -114,9 +114,9 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
         });
       } else {
         // Create new program
-        await createProgram(programData);
-        toast.success("Success", {
-          description: "Program created successfully",
+        const createdProgram = await createProgram(programData);
+        toast.success("Program Created", {
+          description: `${createdProgram.program_name} has been created successfully`,
         });
       }
 
@@ -124,8 +124,28 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
       onOpenChange(false);
     } catch (error) {
       console.error("Error saving program:", error);
+      
+      // Handle specific database errors
+      let errorMessage = "Failed to save program. Please try again.";
+      
+      if (error.message) {
+        if (error.message.includes("budget")) {
+          errorMessage = "Budget allocated must be a valid positive number.";
+        } else if (error.message.includes("capacity")) {
+          errorMessage = "Capacity must be a positive number.";
+        } else if (error.message.includes("duration")) {
+          errorMessage = "Duration must be at least 1 week.";
+        } else if (error.message.includes("duplicate")) {
+          errorMessage = "A program with this name already exists.";
+        } else if (error.message.includes("foreign key")) {
+          errorMessage = "Invalid coordinator selected.";
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       toast.error("Error", {
-        description: "Failed to save program. Please try again.",
+        description: errorMessage,
       });
     } finally {
       setSubmitting(false);

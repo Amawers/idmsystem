@@ -180,6 +180,11 @@ export const AUDIT_ACTIONS = {
 	REVOKE_PERMISSION: "revoke_permission",
 	UPDATE_PERMISSIONS: "update_permissions",
 
+	// Program Management
+	CREATE_PROGRAM: "create_program",
+	UPDATE_PROGRAM: "update_program",
+	DELETE_PROGRAM: "delete_program",
+
 	// System
 	SYSTEM_ERROR: "system_error",
 	EXPORT_DATA: "export_data",
@@ -194,6 +199,7 @@ export const AUDIT_CATEGORIES = {
 	CASE: "case",
 	USER: "user",
 	PERMISSION: "permission",
+	PROGRAM: "program",
 	SYSTEM: "system",
 	REPORT: "report",
 };

@@ -39,7 +39,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { MoreHorizontal, Search, Filter } from "lucide-react";
+import { MoreHorizontal, Search, Filter, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 const statusColors = {
@@ -74,7 +74,7 @@ export default function ProgramCatalog() {
     programType: typeFilter !== "all" ? typeFilter : undefined,
   };
 
-  const { programs, loading } = usePrograms(filterOptions);
+  const { programs, loading, fetchPrograms } = usePrograms(filterOptions);
 
   // Filter programs by search term
   const filteredPrograms = (programs || []).filter((program) =>
@@ -136,6 +136,16 @@ export default function ProgramCatalog() {
               ))}
             </SelectContent>
           </Select>
+
+          <Button
+            variant="outline"
+            onClick={() => fetchPrograms()}
+            disabled={loading}
+            title="Refresh programs"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
 
         {/* Table */}

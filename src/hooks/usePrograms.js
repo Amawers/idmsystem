@@ -14,7 +14,9 @@
  */
 
 import { useState, useEffect } from "react";
-// import { supabase } from "@/config/supabase";
+import supabase from "@/../config/supabase";
+import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
+import { useAuthStore } from "@/store/authStore";
 import SAMPLE_PROGRAMS from "../../SAMPLE_PROGRAMS.json";
 
 /**
@@ -49,15 +51,10 @@ export function usePrograms(options = {}) {
       setLoading(true);
       setError(null);
 
-      // SUPABASE QUERY (commented for now - using dummy data)
-      /*
+      // Build Supabase query
       let query = supabase
         .from('programs')
-        .select(`
-          *,
-          coordinator:profile!programs_coordinator_id_fkey(id, role, avatar_url),
-          enrollments:program_enrollments(count)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       // Apply filters
@@ -77,9 +74,12 @@ export function usePrograms(options = {}) {
 
       setPrograms(data || []);
       calculateStatistics(data || []);
-      */
-
-      // Using dummy data
+    } catch (err) {
+      console.error("Error fetching programs:", err);
+      setError(err.message);
+      
+      // Fallback to dummy data if Supabase fails
+      console.log("Falling back to dummy data");
       let filteredPrograms = [...SAMPLE_PROGRAMS];
 
       // Apply filters to dummy data
@@ -103,9 +103,6 @@ export function usePrograms(options = {}) {
 
       setPrograms(filteredPrograms);
       calculateStatistics(filteredPrograms);
-    } catch (err) {
-      console.error("Error fetching programs:", err);
-      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -141,29 +138,19 @@ export function usePrograms(options = {}) {
    */
   const createProgram = async (programData) => {
     try {
-      // SUPABASE MUTATION (commented for now)
-      /*
-      const { data, error } = await supabase
-        .from('programs')
-        .insert([{
-          ...programData,
-          created_at: new Date().toISOString(),
-        }])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Refresh programs list
-      await fetchPrograms();
-
-      return data;
-      */
-
-      // Dummy implementation
-      const newProgram = {
-        id: `prog-${Date.now()}`,
+      // Get current user for coordinator_id
+      const { user } = useAuthStore.getState();
+      
+      // Prepare program data with proper formatting
+      const formattedData = {
         ...programData,
+        // Ensure target_beneficiary is an array as per DB schema
+        target_beneficiary: Array.isArray(programData.target_beneficiary) 
+          ? programData.target_beneficiary 
+          : [programData.target_beneficiary],
+        // Set coordinator_id if user exists
+        coordinator_id: user?.id || null,
+        // Initialize default values
         current_enrollment: 0,
         budget_spent: 0,
         success_rate: 0,
@@ -171,8 +158,37 @@ export function usePrograms(options = {}) {
         updated_at: new Date().toISOString(),
       };
 
-      setPrograms((prev) => [newProgram, ...prev]);
-      return newProgram;
+      // Insert into Supabase
+      const { data, error } = await supabase
+        .from('programs')
+        .insert([formattedData])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Create audit log entry
+      await createAuditLog({
+        actionType: AUDIT_ACTIONS.CREATE_PROGRAM,
+        actionCategory: AUDIT_CATEGORIES.PROGRAM,
+        description: `Created new program: ${data.program_name}`,
+        resourceType: 'program',
+        resourceId: data.id,
+        metadata: {
+          programName: data.program_name,
+          programType: data.program_type,
+          targetBeneficiary: data.target_beneficiary,
+          budgetAllocated: data.budget_allocated,
+          capacity: data.capacity,
+          coordinator: data.coordinator,
+        },
+        severity: 'info',
+      });
+
+      // Refresh programs list
+      await fetchPrograms();
+
+      return data;
     } catch (err) {
       console.error("Error creating program:", err);
       throw err;
@@ -188,36 +204,52 @@ export function usePrograms(options = {}) {
    */
   const updateProgram = async (programId, updates) => {
     try {
-      // SUPABASE MUTATION (commented for now)
-      /*
+      // Get the old program data for audit log
+      const oldProgram = programs.find(p => p.id === programId);
+      
+      // Prepare updated data
+      const formattedUpdates = {
+        ...updates,
+        // Ensure target_beneficiary is an array
+        target_beneficiary: Array.isArray(updates.target_beneficiary) 
+          ? updates.target_beneficiary 
+          : [updates.target_beneficiary],
+        updated_at: new Date().toISOString(),
+      };
+
+      // Update in Supabase
       const { data, error } = await supabase
         .from('programs')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
+        .update(formattedUpdates)
         .eq('id', programId)
         .select()
         .single();
 
       if (error) throw error;
 
+      // Create audit log entry
+      await createAuditLog({
+        actionType: AUDIT_ACTIONS.UPDATE_PROGRAM,
+        actionCategory: AUDIT_CATEGORIES.PROGRAM,
+        description: `Updated program: ${data.program_name}`,
+        resourceType: 'program',
+        resourceId: programId,
+        metadata: {
+          programName: data.program_name,
+          changes: Object.keys(updates).reduce((acc, key) => {
+            if (oldProgram && oldProgram[key] !== updates[key]) {
+              acc[key] = { old: oldProgram[key], new: updates[key] };
+            }
+            return acc;
+          }, {}),
+        },
+        severity: 'info',
+      });
+
       // Refresh programs list
       await fetchPrograms();
 
       return data;
-      */
-
-      // Dummy implementation
-      setPrograms((prev) =>
-        prev.map((p) =>
-          p.id === programId
-            ? { ...p, ...updates, updated_at: new Date().toISOString() }
-            : p
-        )
-      );
-
-      return { id: programId, ...updates };
     } catch (err) {
       console.error("Error updating program:", err);
       throw err;
@@ -232,8 +264,10 @@ export function usePrograms(options = {}) {
    */
   const deleteProgram = async (programId) => {
     try {
-      // SUPABASE MUTATION (commented for now)
-      /*
+      // Get the program data for audit log
+      const programToDelete = programs.find(p => p.id === programId);
+      
+      // Delete from Supabase
       const { error } = await supabase
         .from('programs')
         .delete()
@@ -241,12 +275,24 @@ export function usePrograms(options = {}) {
 
       if (error) throw error;
 
+      // Create audit log entry
+      if (programToDelete) {
+        await createAuditLog({
+          actionType: AUDIT_ACTIONS.DELETE_PROGRAM,
+          actionCategory: AUDIT_CATEGORIES.PROGRAM,
+          description: `Deleted program: ${programToDelete.program_name}`,
+          resourceType: 'program',
+          resourceId: programId,
+          metadata: {
+            programName: programToDelete.program_name,
+            programType: programToDelete.program_type,
+          },
+          severity: 'warning',
+        });
+      }
+
       // Refresh programs list
       await fetchPrograms();
-      */
-
-      // Dummy implementation
-      setPrograms((prev) => prev.filter((p) => p.id !== programId));
     } catch (err) {
       console.error("Error deleting program:", err);
       throw err;
@@ -265,25 +311,6 @@ export function usePrograms(options = {}) {
   // Fetch programs on mount and when options change
   useEffect(() => {
     fetchPrograms();
-
-    // SUPABASE REALTIME SUBSCRIPTION (commented for now)
-    /*
-    const subscription = supabase
-      .channel('programs-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'programs' },
-        (payload) => {
-          console.log('Program change received:', payload);
-          fetchPrograms();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-    */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options.status, options.programType, options.targetBeneficiary]);
 
