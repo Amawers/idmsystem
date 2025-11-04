@@ -302,7 +302,7 @@ export default function EnrollCaseDialog({
                       Active Enrollments ({existingEnrollments.length})
                     </h4>
                   </div>
-                  <div className="space-y-1 text-xs text-yellow-800">
+                  <div className="space-y-1 text-xs text-yellow-800 max-h-[72px] overflow-y-auto">
                     {existingEnrollments.map(enrollment => (
                       <div key={enrollment.id} className="flex items-center gap-2">
                         <CheckCircle2 className="h-3 w-3 shrink-0" />
@@ -360,7 +360,7 @@ export default function EnrollCaseDialog({
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2 max-h-[400px] overflow-y-auto rounded-lg border p-2 bg-muted/30">
+                <div className="space-y-2 max-h-[240px] overflow-y-auto rounded-lg border p-2 bg-muted/30">
                   {compatiblePrograms.map(program => {
                     const isEnrolled = existingEnrollments.some(e => e.program_id === program.id);
                     const spotsLeft = program.capacity - program.current_enrollment;
