@@ -274,7 +274,8 @@ export default function EnrollmentTable() {
 
           {/* Table */}
           <div className="rounded-md border">
-            <div className={`${filteredEnrollments.length > 3 ? 'max-h-[400px] overflow-y-auto' : ''}`}>
+            {/* When more than 3 rows, constrain height so a vertical scrollbar appears */}
+            <div className={`${filteredEnrollments.length > 3 ? 'overflow-y-auto max-h-[232px]' : ''}`}>
               <Table>
                 <TableHeader className="sticky top-0 bg-background z-10">
                   <TableRow>
@@ -300,7 +301,7 @@ export default function EnrollmentTable() {
                     const progressPercentage = parseFloat(enrollment.progress_percentage) || 0;
 
                     return (
-                      <TableRow key={enrollment.id}>
+                      <TableRow key={enrollment.id} className="h-16">
                         <TableCell className="font-medium">
                           <div>
                             <div>{enrollment.beneficiary_name}</div>
