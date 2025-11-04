@@ -69,7 +69,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { useUserManagementStore } from "@/store/useUserManagementStore";
-import { Loader2, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { Loader2, Eye, EyeOff, RefreshCw, Copy, Check } from "lucide-react";
 
 // Validation schema
 const createUserSchema = z.object({
@@ -92,6 +92,7 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 	const { createUser, loading } = useUserManagementStore();
 	const [showPassword, setShowPassword] = useState(false);
 	const [generatedPassword, setGeneratedPassword] = useState("");
+	const [copied, setCopied] = useState(false);
 
 	const form = useForm({
 		resolver: zodResolver(createUserSchema),
@@ -126,6 +127,20 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 		} else {
 			setGeneratedPassword("");
 			form.setValue("password", "");
+		}
+	};
+
+	// Copy password to clipboard
+	const handleCopyPassword = async () => {
+		if (generatedPassword) {
+			try {
+				await navigator.clipboard.writeText(generatedPassword);
+				setCopied(true);
+				toast.success("Password copied to clipboard");
+				setTimeout(() => setCopied(false), 2000);
+			} catch (err) {
+				toast.error("Failed to copy password");
+			}
 		}
 	};
 
@@ -312,7 +327,22 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 										type="button"
 										variant="outline"
 										size="icon"
+										onClick={handleCopyPassword}
+										disabled={!generatedPassword}
+										title="Copy password"
+									>
+										{copied ? (
+											<Check className="h-4 w-4 text-green-600" />
+										) : (
+											<Copy className="h-4 w-4" />
+										)}
+									</Button>
+									<Button
+										type="button"
+										variant="outline"
+										size="icon"
 										onClick={() => setShowPassword(!showPassword)}
+										title="Toggle password visibility"
 									>
 										{showPassword ? (
 											<EyeOff className="h-4 w-4" />
@@ -325,13 +355,13 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 										variant="outline"
 										size="icon"
 										onClick={generatePassword}
+										title="Generate new password"
 									>
 										<RefreshCw className="h-4 w-4" />
 									</Button>
 								</div>
 								<p className="text-xs text-muted-foreground">
-									Save this password - it will be shown only once after
-									creation
+									Click the copy icon to copy the password - it will be shown only once after creation
 								</p>
 							</div>
 						) : (
