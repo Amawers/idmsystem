@@ -86,7 +86,6 @@ function StatusBadge({ status }) {
 function StockAdjustmentDialog({ item, open, onClose, onSuccess }) {
   const [type, setType] = useState("stock_in"); // stock_in, stock_out, adjustment
   const [quantity, setQuantity] = useState("");
-  const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const { updateStock } = useResourceStore();
   const { user } = useAuthStore();
@@ -99,14 +98,13 @@ function StockAdjustmentDialog({ item, open, onClose, onSuccess }) {
     try {
       const adjustedQuantity = type === "stock_out" ? -Math.abs(parseFloat(quantity)) : parseFloat(quantity);
       
-      await updateStock(item.id, adjustedQuantity, type, notes);
+      await updateStock(item.id, adjustedQuantity, type, "");
       
       onSuccess?.();
       onClose();
       
       // Reset form
       setQuantity("");
-      setNotes("");
       setType("stock_in");
     } catch (error) {
       console.error("Error updating stock:", error);
@@ -181,17 +179,6 @@ function StockAdjustmentDialog({ item, open, onClose, onSuccess }) {
             )}
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs">Notes (Optional)</Label>
-            <Textarea
-              placeholder="Reason for stock adjustment..."
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              rows={2}
-              className="text-xs resize-none"
-            />
-          </div>
-
           <DialogFooter className="gap-2">
             <Button
               type="button"
@@ -208,6 +195,97 @@ function StockAdjustmentDialog({ item, open, onClose, onSuccess }) {
             </Button>
           </DialogFooter>
         </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * View Item Details Dialog
+ */
+function ViewItemDetailsDialog({ item, open, onClose }) {
+  if (!item) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="text-lg">Item Details</DialogTitle>
+          <DialogDescription className="text-xs">
+            Inventory item information
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Item Name</Label>
+              <p className="text-sm font-medium">{item.item_name}</p>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Category</Label>
+              <p className="text-sm font-medium capitalize">{item.category.replace("_", " ")}</p>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Current Stock</Label>
+              <p className="text-sm font-medium">
+                {item.current_stock} {item.unit_of_measure}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Unit of Measure</Label>
+              <p className="text-sm font-medium">{item.unit_of_measure}</p>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Unit Cost</Label>
+              <p className="text-sm font-medium">₱{item.unit_cost.toLocaleString()}</p>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Minimum Stock (Alert Level)</Label>
+              <p className="text-sm font-medium">
+                {item.minimum_stock} {item.unit_of_measure}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Total Value</Label>
+              <p className="text-sm font-medium">₱{(item.current_stock * item.unit_cost).toLocaleString()}</p>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Status</Label>
+              <StatusBadge status={item.status} />
+            </div>
+
+            <div className="space-y-1 md:col-span-2">
+              <Label className="text-xs text-muted-foreground">Storage Location</Label>
+              <p className="text-sm font-medium">{item.location || "Not specified"}</p>
+            </div>
+
+            {item.description && (
+              <div className="space-y-1 md:col-span-2">
+                <Label className="text-xs text-muted-foreground">Description</Label>
+                <p className="text-sm">{item.description}</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button
+            variant="outline"
+            onClick={onClose}
+            size="sm"
+            className="h-7 text-xs"
+          >
+            Close
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
@@ -405,6 +483,7 @@ export default function StockManagement() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
@@ -426,6 +505,11 @@ export default function StockManagement() {
   const handleAdjustStock = (item) => {
     setSelectedItem(item);
     setShowAdjustDialog(true);
+  };
+
+  const handleViewDetails = (item) => {
+    setSelectedItem(item);
+    setShowDetailsDialog(true);
   };
 
   const handleSuccess = () => {
@@ -606,7 +690,11 @@ export default function StockManagement() {
                   </TableRow>
                 ) : (
                   pageItems.map((item) => (
-                    <TableRow key={item.id} className="text-xs">
+                    <TableRow 
+                      key={item.id} 
+                      className="text-xs cursor-pointer hover:bg-muted/50"
+                      onClick={() => handleViewDetails(item)}
+                    >
                       <TableCell className="font-medium text-xs">
                         <div>
                           <p>{item.item_name}</p>
@@ -636,7 +724,10 @@ export default function StockManagement() {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => handleAdjustStock(item)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleAdjustStock(item);
+                            }}
                             className="h-6 px-2 text-xs"
                           >
                             <Edit className="h-3 w-3" />
@@ -708,15 +799,26 @@ export default function StockManagement() {
 
       {/* Dialogs */}
       {selectedItem && (
-        <StockAdjustmentDialog
-          item={selectedItem}
-          open={showAdjustDialog}
-          onClose={() => {
-            setShowAdjustDialog(false);
-            setSelectedItem(null);
-          }}
-          onSuccess={handleSuccess}
-        />
+        <>
+          <StockAdjustmentDialog
+            item={selectedItem}
+            open={showAdjustDialog}
+            onClose={() => {
+              setShowAdjustDialog(false);
+              setSelectedItem(null);
+            }}
+            onSuccess={handleSuccess}
+          />
+          
+          <ViewItemDetailsDialog
+            item={selectedItem}
+            open={showDetailsDialog}
+            onClose={() => {
+              setShowDetailsDialog(false);
+              setSelectedItem(null);
+            }}
+          />
+        </>
       )}
 
       <AddItemDialog
