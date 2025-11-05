@@ -1,0 +1,425 @@
+/**
+ * @file ApprovalWorkflowManager.jsx
+ * @description Request & Approval Workflow management component
+ * @module components/resources/ApprovalWorkflowManager
+ * 
+ * Features:
+ * - Multi-level approval workflow
+ * - Request review and approval/rejection
+ * - Status tracking and history
+ * - Bulk approval actions
+ */
+
+import { useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  CheckCircle,
+  XCircle,
+  Clock,
+  Eye,
+  FileText,
+  AlertCircle,
+} from "lucide-react";
+import { useResourceStore } from "@/store/useResourceStore";
+import { useAuthStore } from "@/store/authStore";
+
+/**
+ * Status Badge Component
+ */
+function StatusBadge({ status }) {
+  const variants = {
+    submitted: { variant: "secondary", icon: Clock, label: "Pending" },
+    under_review: { variant: "default", icon: Eye, label: "Under Review" },
+    approved: { variant: "success", icon: CheckCircle, label: "Approved" },
+    rejected: { variant: "destructive", icon: XCircle, label: "Rejected" },
+    disbursed: { variant: "success", icon: CheckCircle, label: "Disbursed" },
+  };
+
+  const config = variants[status] || variants.submitted;
+  const Icon = config.icon;
+
+  return (
+    <Badge variant={config.variant} className="flex items-center gap-1 w-fit">
+      <Icon className="h-3 w-3" />
+      {config.label}
+    </Badge>
+  );
+}
+
+/**
+ * Request Details Dialog
+ */
+function RequestDetailsDialog({ request, open, onOpenChange, onApprove, onReject }) {
+  const [notes, setNotes] = useState("");
+  const [actionLoading, setActionLoading] = useState(false);
+  const { role } = useAuthStore();
+
+  if (!request) return null;
+
+  const canApprove = role === 'head' && request.status === 'submitted';
+
+  const handleApprove = async () => {
+    setActionLoading(true);
+    try {
+      await onApprove(request.id, notes);
+      setNotes("");
+      onOpenChange(false);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!notes.trim()) {
+      alert("Please provide a reason for rejection");
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await onReject(request.id, notes);
+      setNotes("");
+      onOpenChange(false);
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Request Details</DialogTitle>
+          <DialogDescription>
+            Review request information and take action
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {/* Request Header */}
+          <div className="flex items-start justify-between">
+            <div>
+              <h3 className="font-semibold text-lg">{request.request_number}</h3>
+              <p className="text-sm text-muted-foreground">
+                Submitted {new Date(request.created_at).toLocaleDateString()}
+              </p>
+            </div>
+            <StatusBadge status={request.status} />
+          </div>
+
+          {/* Request Info Grid */}
+          <div className="grid gap-4 md:grid-cols-2 p-4 bg-muted/50 rounded-lg">
+            <div>
+              <Label className="text-xs text-muted-foreground">Request Type</Label>
+              <p className="font-medium capitalize">{request.request_type.replace('_', ' ')}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Category</Label>
+              <p className="font-medium capitalize">{request.request_category.replace('_', ' ')}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Requester</Label>
+              <p className="font-medium">{request.requester_name}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Program</Label>
+              <p className="font-medium">{request.program_name || 'N/A'}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Beneficiary</Label>
+              <p className="font-medium">{request.beneficiary_name || 'N/A'}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Priority</Label>
+              <Badge variant={request.priority === 'urgent' ? 'destructive' : 'default'}>
+                {request.priority}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Item Details */}
+          <div className="space-y-2">
+            <Label>Item Description</Label>
+            <p className="text-sm">{request.item_description}</p>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <Label className="text-xs text-muted-foreground">Quantity</Label>
+              <p className="font-medium">{request.quantity} {request.unit}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Unit Cost</Label>
+              <p className="font-medium">₱{request.unit_cost?.toLocaleString()}</p>
+            </div>
+            <div>
+              <Label className="text-xs text-muted-foreground">Total Amount</Label>
+              <p className="font-bold text-lg">₱{request.total_amount?.toLocaleString()}</p>
+            </div>
+          </div>
+
+          {/* Purpose & Justification */}
+          <div className="space-y-2">
+            <Label>Purpose</Label>
+            <p className="text-sm p-3 bg-muted/50 rounded">{request.purpose}</p>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Justification</Label>
+            <p className="text-sm p-3 bg-muted/50 rounded">{request.justification}</p>
+          </div>
+
+          {/* Approval Actions */}
+          {canApprove && (
+            <div className="space-y-2 pt-4 border-t">
+              <Label htmlFor="notes">
+                {notes ? "Approval/Rejection Notes" : "Notes (required for rejection)"}
+              </Label>
+              <Textarea
+                id="notes"
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Add your review notes here..."
+                rows={3}
+              />
+            </div>
+          )}
+
+          {/* Rejection Reason (if rejected) */}
+          {request.status === 'rejected' && request.rejection_reason && (
+            <div className="space-y-2 p-4 bg-red-50 border border-red-200 rounded">
+              <div className="flex items-center gap-2 text-red-900">
+                <AlertCircle className="h-4 w-4" />
+                <Label>Rejection Reason</Label>
+              </div>
+              <p className="text-sm text-red-800">{request.rejection_reason}</p>
+            </div>
+          )}
+        </div>
+
+        <DialogFooter>
+          {canApprove ? (
+            <>
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleReject}
+                disabled={actionLoading}
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Reject
+              </Button>
+              <Button onClick={handleApprove} disabled={actionLoading}>
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Approve
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => onOpenChange(false)}>Close</Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * Main Approval Workflow Manager
+ */
+export default function ApprovalWorkflowManager() {
+  const [selectedRequest, setSelectedRequest] = useState(null);
+  const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [filter, setFilter] = useState("all");
+
+  const {
+    requests,
+    updateRequestStatus,
+    loading,
+  } = useResourceStore();
+
+  const { role } = useAuthStore();
+
+  // Filter requests based on user role and filter selection
+  const filteredRequests = requests.filter(req => {
+    if (filter === "pending" && req.status !== "submitted") return false;
+    if (filter === "approved" && !["approved", "disbursed"].includes(req.status)) return false;
+    if (filter === "rejected" && req.status !== "rejected") return false;
+    return true;
+  });
+
+  const pendingCount = requests.filter(r => r.status === "submitted").length;
+
+  const handleViewDetails = (request) => {
+    setSelectedRequest(request);
+    setShowDetailsDialog(true);
+  };
+
+  const handleApprove = async (requestId, notes) => {
+    await updateRequestStatus(requestId, "approved", notes);
+  };
+
+  const handleReject = async (requestId, notes) => {
+    await updateRequestStatus(requestId, "rejected", notes);
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Approval Workflow</CardTitle>
+              <CardDescription>
+                Review and approve resource requests
+              </CardDescription>
+            </div>
+            {pendingCount > 0 && (
+              <Badge variant="destructive" className="text-lg px-4 py-2">
+                {pendingCount} Pending
+              </Badge>
+            )}
+          </div>
+        </CardHeader>
+      </Card>
+
+      {/* Filters */}
+      <div className="flex gap-2">
+        <Button
+          variant={filter === "all" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilter("all")}
+        >
+          All ({requests.length})
+        </Button>
+        <Button
+          variant={filter === "pending" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilter("pending")}
+        >
+          Pending ({pendingCount})
+        </Button>
+        <Button
+          variant={filter === "approved" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilter("approved")}
+        >
+          Approved ({requests.filter(r => ["approved", "disbursed"].includes(r.status)).length})
+        </Button>
+        <Button
+          variant={filter === "rejected" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilter("rejected")}
+        >
+          Rejected ({requests.filter(r => r.status === "rejected").length})
+        </Button>
+      </div>
+
+      {/* Requests Table */}
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Request #</TableHead>
+                <TableHead>Item</TableHead>
+                <TableHead>Requester</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Priority</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Date</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8">
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : filteredRequests.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    No requests found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredRequests.map((request) => (
+                  <TableRow key={request.id}>
+                    <TableCell className="font-medium">{request.request_number}</TableCell>
+                    <TableCell>
+                      <div className="max-w-xs truncate">{request.item_description}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {request.quantity} {request.unit}
+                      </div>
+                    </TableCell>
+                    <TableCell>{request.requester_name}</TableCell>
+                    <TableCell className="font-medium">
+                      ₱{request.total_amount?.toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={request.priority === "urgent" ? "destructive" : "secondary"}
+                      >
+                        {request.priority}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <StatusBadge status={request.status} />
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(request.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewDetails(request)}
+                      >
+                        <Eye className="h-4 w-4 mr-1" />
+                        View
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+
+      {/* Request Details Dialog */}
+      <RequestDetailsDialog
+        request={selectedRequest}
+        open={showDetailsDialog}
+        onOpenChange={setShowDetailsDialog}
+        onApprove={handleApprove}
+        onReject={handleReject}
+      />
+    </div>
+  );
+}

@@ -4,25 +4,27 @@
 // Purpose: Centralized state management for resource allocation and inventory
 // 
 // Key Responsibilities:
-// - Manage resource requests state
+// - Manage resource requests state with Supabase integration
 // - Handle inventory items and transactions
 // - Track disbursements and allocations
-// - Manage alerts and notifications
+// - Manage alerts and notifications with real-time updates
 //
 // Dependencies:
 // - zustand (state management)
-// - Sample JSON data files for dummy data
+// - Supabase client for database operations
 //
 // Notes:
-// - Uses local JSON files instead of Supabase for demo purposes
+// - Integrates with Supabase for real-time data
 // - Implements full CRUD operations with optimistic updates
+// - Includes real-time subscriptions for alerts
 // - Includes audit trail integration points
 // =============================================
 
 import { create } from "zustand";
+import supabase from "@/../config/supabase";
 
 //* ================================================
-//* IMPORT SAMPLE DATA
+//* IMPORT SAMPLE DATA (Fallback for development)
 //* ================================================
 import SAMPLE_REQUESTS from "../../SAMPLE_RESOURCE_REQUESTS.json";
 import SAMPLE_INVENTORY from "../../SAMPLE_INVENTORY_ITEMS.json";
@@ -96,69 +98,83 @@ export const useResourceStore = create((set, get) => ({
 	//* ================================================
 
 	/**
-	 * Fetch all resource requests with optional filters
+	 * Fetch all resource requests with optional filters from Supabase
 	 * @param {Object} filters - Filter criteria (status, program, barangay, etc.)
 	 */
 	fetchRequests: async (filters = {}) => {
 		set({ loading: true, error: null });
 		
 		try {
-			// Simulate API delay
-			await new Promise(resolve => setTimeout(resolve, 500));
-			
-			let filteredData = [...SAMPLE_REQUESTS];
+			let query = supabase
+				.from('resource_requests')
+				.select('*')
+				.order('created_at', { ascending: false });
 			
 			// Apply filters
 			if (filters.status) {
-				filteredData = filteredData.filter(req => req.status === filters.status);
+				query = query.eq('status', filters.status);
 			}
 			
 			if (filters.program_id) {
-				filteredData = filteredData.filter(req => req.program_id === filters.program_id);
+				query = query.eq('program_id', filters.program_id);
 			}
 			
 			if (filters.barangay) {
-				filteredData = filteredData.filter(req => req.barangay === filters.barangay);
+				query = query.eq('barangay', filters.barangay);
 			}
 			
 			if (filters.request_type) {
-				filteredData = filteredData.filter(req => req.request_type === filters.request_type);
+				query = query.eq('request_type', filters.request_type);
 			}
 			
 			if (filters.beneficiary_type) {
-				filteredData = filteredData.filter(req => req.beneficiary_type === filters.beneficiary_type);
+				query = query.eq('beneficiary_type', filters.beneficiary_type);
 			}
 			
 			if (filters.priority) {
-				filteredData = filteredData.filter(req => req.priority === filters.priority);
+				query = query.eq('priority', filters.priority);
 			}
 			
 			// Date range filter
 			if (filters.dateRange) {
 				const { from, to } = filters.dateRange;
-				filteredData = filteredData.filter(req => {
-					const reqDate = new Date(req.created_at);
-					return reqDate >= new Date(from) && reqDate <= new Date(to);
+				query = query.gte('created_at', from).lte('created_at', to);
+			}
+			
+			const { data, error } = await query;
+			
+			if (error) {
+				console.error('Supabase error:', error);
+				// Fallback to sample data if Supabase fails
+				const stats = get().computeRequestStats(SAMPLE_REQUESTS);
+				set({ 
+					requests: SAMPLE_REQUESTS,
+					filteredRequests: SAMPLE_REQUESTS,
+					requestStats: stats,
+					loading: false,
+					error: 'Using sample data - Database connection issue'
 				});
+				return;
 			}
 			
 			// Compute statistics
-			const stats = get().computeRequestStats(filteredData);
+			const stats = get().computeRequestStats(data || []);
 			
 			set({ 
-				requests: SAMPLE_REQUESTS,
-				filteredRequests: filteredData,
+				requests: data || [],
+				filteredRequests: data || [],
 				requestStats: stats,
 				loading: false 
 			});
 			
 		} catch (err) {
+			console.error('Error fetching requests:', err);
 			set({ error: err.message, loading: false });
 		}
 	},
 
 	/**
-	 * Submit a new resource request
+	 * Submit a new resource request to Supabase
 	 * @param {Object} requestData - Request details
 	 * @returns {Object} Created request
 	 */
@@ -166,22 +182,28 @@ export const useResourceStore = create((set, get) => ({
 		set({ loading: true, error: null });
 		
 		try {
-			// Simulate API delay
-			await new Promise(resolve => setTimeout(resolve, 800));
+			// Get current user
+			const { data: { user } } = await supabase.auth.getUser();
 			
 			const newRequest = {
-				id: `req-${Date.now()}`,
-				request_number: `REQ-2025-${String(get().requests.length + 1).padStart(4, '0')}`,
 				...requestData,
+				requested_by: user?.id,
 				status: 'submitted',
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
+				submitted_at: new Date().toISOString(),
 			};
+			
+			const { data, error } = await supabase
+				.from('resource_requests')
+				.insert([newRequest])
+				.select()
+				.single();
+			
+			if (error) throw error;
 			
 			// Optimistic update
 			set(state => ({
-				requests: [...state.requests, newRequest],
-				filteredRequests: [...state.filteredRequests, newRequest],
+				requests: [data, ...state.requests],
+				filteredRequests: [data, ...state.filteredRequests],
 				loading: false,
 			}));
 			
@@ -189,16 +211,17 @@ export const useResourceStore = create((set, get) => ({
 			const stats = get().computeRequestStats(get().filteredRequests);
 			set({ requestStats: stats });
 			
-			return newRequest;
+			return data;
 			
 		} catch (err) {
+			console.error('Error submitting request:', err);
 			set({ error: err.message, loading: false });
 			throw err;
 		}
 	},
 
 	/**
-	 * Update request status (for Head approval/rejection)
+	 * Update request status (for Head approval/rejection) in Supabase
 	 * @param {string} requestId - Request ID
 	 * @param {string} newStatus - New status
 	 * @param {string} notes - Optional notes/reason
@@ -207,31 +230,43 @@ export const useResourceStore = create((set, get) => ({
 		set({ loading: true, error: null });
 		
 		try {
-			await new Promise(resolve => setTimeout(resolve, 600));
+			const { data: { user } } = await supabase.auth.getUser();
+			
+			const updateData = {
+				status: newStatus,
+				updated_at: new Date().toISOString(),
+			};
+			
+			if (newStatus === 'rejected') {
+				updateData.rejection_reason = notes;
+			}
+			
+			if (newStatus === 'approved') {
+				updateData.approved_by = user?.id;
+				updateData.approved_at = new Date().toISOString();
+			}
+			
+			const { data, error } = await supabase
+				.from('resource_requests')
+				.update(updateData)
+				.eq('id', requestId)
+				.select()
+				.single();
+			
+			if (error) throw error;
 			
 			set(state => ({
-				requests: state.requests.map(req => 
-					req.id === requestId 
-						? { 
-								...req, 
-								status: newStatus, 
-								updated_at: new Date().toISOString(),
-								...(newStatus === 'rejected' && { rejection_reason: notes })
-							}
-						: req
-				),
+				requests: state.requests.map(req => req.id === requestId ? data : req),
+				filteredRequests: state.filteredRequests.map(req => req.id === requestId ? data : req),
 				loading: false,
 			}));
 			
-			// Update filtered requests and stats
-			const filteredData = get().requests;
-			const stats = get().computeRequestStats(filteredData);
-			set({ 
-				filteredRequests: filteredData,
-				requestStats: stats 
-			});
+			// Update stats
+			const stats = get().computeRequestStats(get().filteredRequests);
+			set({ requestStats: stats });
 			
 		} catch (err) {
+			console.error('Error updating request status:', err);
 			set({ error: err.message, loading: false });
 		}
 	},
@@ -283,58 +318,72 @@ export const useResourceStore = create((set, get) => ({
 	//* ================================================
 
 	/**
-	 * Fetch inventory items with optional filters
+	 * Fetch inventory items with optional filters from Supabase
 	 * @param {Object} filters - Filter criteria
 	 */
 	fetchInventory: async (filters = {}) => {
 		set({ loading: true, error: null });
 		
 		try {
-			await new Promise(resolve => setTimeout(resolve, 500));
-			
-			let filteredData = [...SAMPLE_INVENTORY];
+			let query = supabase
+				.from('inventory_items')
+				.select('*')
+				.order('item_name', { ascending: true });
 			
 			// Apply filters
 			if (filters.category) {
-				filteredData = filteredData.filter(item => item.category === filters.category);
+				query = query.eq('category', filters.category);
 			}
 			
 			if (filters.status) {
-				filteredData = filteredData.filter(item => item.status === filters.status);
+				query = query.eq('status', filters.status);
 			}
 			
 			if (filters.location) {
-				filteredData = filteredData.filter(item => item.location === filters.location);
+				query = query.eq('location', filters.location);
 			}
 			
 			if (filters.low_stock) {
-				filteredData = filteredData.filter(item => item.current_stock <= item.minimum_stock);
+				query = query.lte('current_stock', supabase.raw('minimum_stock'));
 			}
 			
 			if (filters.critical_stock) {
-				filteredData = filteredData.filter(item => item.status === 'critical_stock');
+				query = query.eq('status', 'critical_stock');
 			}
 			
 			// Search by name or code
 			if (filters.search) {
-				const searchTerm = filters.search.toLowerCase();
-				filteredData = filteredData.filter(item => 
-					item.item_name.toLowerCase().includes(searchTerm) ||
-					item.item_code.toLowerCase().includes(searchTerm)
-				);
+				query = query.or(`item_name.ilike.%${filters.search}%,item_code.ilike.%${filters.search}%`);
+			}
+			
+			const { data, error } = await query;
+			
+			if (error) {
+				console.error('Supabase error:', error);
+				// Fallback to sample data
+				const stats = get().computeInventoryStats(SAMPLE_INVENTORY);
+				set({ 
+					inventoryItems: SAMPLE_INVENTORY,
+					filteredInventory: SAMPLE_INVENTORY,
+					inventoryStats: stats,
+					loading: false,
+					error: 'Using sample data - Database connection issue'
+				});
+				return;
 			}
 			
 			// Compute statistics
-			const stats = get().computeInventoryStats(filteredData);
+			const stats = get().computeInventoryStats(data || []);
 			
 			set({ 
-				inventoryItems: SAMPLE_INVENTORY,
-				filteredInventory: filteredData,
+				inventoryItems: data || [],
+				filteredInventory: data || [],
 				inventoryStats: stats,
 				loading: false 
 			});
 			
 		} catch (err) {
+			console.error('Error fetching inventory:', err);
 			set({ error: err.message, loading: false });
 		}
 	},
@@ -343,61 +392,154 @@ export const useResourceStore = create((set, get) => ({
 	 * Update stock level for an item
 	 * @param {string} itemId - Item ID
 	 * @param {number} quantity - Quantity change (positive or negative)
-	 * @param {string} transactionType - Type of transaction
+	 * @param {string} transactionType - Type of transaction (stock_in, stock_out, adjustment, allocation, transfer)
+	 * @param {string} notes - Transaction notes
 	 */
-	updateStock: async (itemId, quantity, transactionType = 'adjustment') => {
+	updateStock: async (itemId, quantity, transactionType = 'adjustment', notes = '') => {
 		set({ loading: true, error: null });
 		
 		try {
-			await new Promise(resolve => setTimeout(resolve, 600));
+			// Get current user
+			const { data: { user } } = await supabase.auth.getUser();
 			
-			set(state => ({
-				inventoryItems: state.inventoryItems.map(item => {
-					if (item.id === itemId) {
-						const newStock = item.current_stock + quantity;
-						let newStatus = 'available';
-						
-						if (newStock <= 0) {
-							newStatus = 'depleted';
-						} else if (newStock < item.minimum_stock * 0.5) {
-							newStatus = 'critical_stock';
-						} else if (newStock <= item.minimum_stock) {
-							newStatus = 'low_stock';
-						}
-						
-						return {
-							...item,
-							current_stock: newStock,
-							status: newStatus,
-							updated_at: new Date().toISOString(),
-						};
-					}
-					return item;
-				}),
-				loading: false,
-			}));
-			
+			if (!user) {
+				throw new Error('User not authenticated');
+			}
+
+			// Get current item
+			const { data: currentItem, error: fetchError } = await supabase
+				.from('inventory_items')
+				.select('*')
+				.eq('id', itemId)
+				.single();
+
+			if (fetchError) throw fetchError;
+
+			// Calculate new stock
+			const newStock = transactionType === 'adjustment' 
+				? quantity 
+				: currentItem.current_stock + quantity;
+
+			if (newStock < 0) {
+				throw new Error('Insufficient stock. Cannot reduce below zero.');
+			}
+
+			// Determine new status
+			let newStatus = 'available';
+			if (newStock <= 0) {
+				newStatus = 'depleted';
+			} else if (newStock < currentItem.minimum_stock * 0.5) {
+				newStatus = 'critical_stock';
+			} else if (newStock <= currentItem.minimum_stock) {
+				newStatus = 'low_stock';
+			}
+
+			// Update inventory item in Supabase
+			const { error: updateError } = await supabase
+				.from('inventory_items')
+				.update({
+					current_stock: newStock,
+					status: newStatus,
+					updated_at: new Date().toISOString(),
+				})
+				.eq('id', itemId);
+
+			if (updateError) throw updateError;
+
 			// Create transaction record
-			const item = get().inventoryItems.find(i => i.id === itemId);
-			const newTransaction = {
-				id: `txn-${Date.now()}`,
+			const transactionData = {
 				item_id: itemId,
-				item_name: item?.item_name,
 				transaction_type: transactionType,
-				quantity: quantity,
-				transaction_date: new Date().toISOString(),
-				performed_by: 'current-user', // Would come from auth store
-				performed_by_name: 'Current User',
-				notes: `${transactionType} transaction`,
-				created_at: new Date().toISOString(),
+				quantity: transactionType === 'adjustment' ? quantity - currentItem.current_stock : quantity,
+				unit_cost: currentItem.unit_cost,
+				performed_by: user.id,
+				notes: notes || `${transactionType} transaction`,
 			};
+
+			const { error: transactionError } = await supabase
+				.from('inventory_transactions')
+				.insert([transactionData]);
+
+			if (transactionError) console.error('Transaction log error:', transactionError);
+
+			// Refresh inventory to update local state
+			await get().fetchInventory();
 			
-			set(state => ({
-				transactions: [newTransaction, ...state.transactions],
-			}));
+			set({ loading: false });
 			
 		} catch (err) {
+			console.error('Error updating stock:', err);
 			set({ error: err.message, loading: false });
+			throw err;
+		}
+	},
+
+	/**
+	 * Add new inventory item
+	 * @param {Object} itemData - New item data
+	 */
+	addInventoryItem: async (itemData) => {
+		set({ loading: true, error: null });
+		
+		try {
+			// Get current user
+			const { data: { user } } = await supabase.auth.getUser();
+			
+			if (!user) {
+				throw new Error('User not authenticated');
+			}
+
+			// Determine initial status based on stock level
+			let status = 'available';
+			const currentStock = parseFloat(itemData.current_stock);
+			const minStock = parseFloat(itemData.minimum_stock);
+			
+			if (currentStock <= 0) {
+				status = 'depleted';
+			} else if (currentStock < minStock * 0.5) {
+				status = 'critical_stock';
+			} else if (currentStock <= minStock) {
+				status = 'low_stock';
+			}
+
+			// Prepare item data
+			const newItem = {
+				item_name: itemData.item_name,
+				category: itemData.category,
+				current_stock: currentStock,
+				minimum_stock: minStock,
+				unit_cost: parseFloat(itemData.unit_cost),
+				unit_of_measure: itemData.unit_of_measure,
+				location: itemData.location || null,
+				description: itemData.description || null,
+				status: status,
+				total_value: currentStock * parseFloat(itemData.unit_cost),
+			};
+
+			// Insert into Supabase
+			const { data, error } = await supabase
+				.from('inventory_items')
+				.insert([newItem])
+				.select()
+				.single();
+
+			if (error) throw error;
+
+			// Update local state
+			set(state => ({
+				inventoryItems: [...state.inventoryItems, data],
+				loading: false,
+			}));
+
+			// Refresh inventory to update stats
+			await get().fetchInventory();
+
+			return data;
+			
+		} catch (err) {
+			console.error('Error adding inventory item:', err);
+			set({ error: err.message, loading: false });
+			throw err;
 		}
 	},
 
@@ -505,48 +647,69 @@ export const useResourceStore = create((set, get) => ({
 	},
 
 	/**
-	 * Fetch inventory alerts
+	 * Fetch inventory alerts from Supabase
 	 */
 	fetchAlerts: async () => {
 		set({ loading: true, error: null });
 		
 		try {
-			await new Promise(resolve => setTimeout(resolve, 300));
+			const { data, error } = await supabase
+				.from('inventory_alerts')
+				.select('*')
+				.order('created_at', { ascending: false });
 			
-			const unresolvedAlerts = SAMPLE_ALERTS.filter(alert => !alert.is_resolved);
+			if (error) {
+				console.error('Supabase error:', error);
+				// Fallback to sample data
+				const unresolvedAlerts = SAMPLE_ALERTS.filter(alert => !alert.is_resolved);
+				set({ 
+					alerts: SAMPLE_ALERTS,
+					unresolvedAlerts,
+					loading: false,
+					error: 'Using sample data - Database connection issue'
+				});
+				return;
+			}
+			
+			const unresolvedAlerts = (data || []).filter(alert => !alert.is_resolved);
 			
 			set({ 
-				alerts: SAMPLE_ALERTS,
+				alerts: data || [],
 				unresolvedAlerts,
 				loading: false 
 			});
 			
 		} catch (err) {
+			console.error('Error fetching alerts:', err);
 			set({ error: err.message, loading: false });
 		}
 	},
 
 	/**
-	 * Resolve an alert
+	 * Resolve an alert in Supabase
 	 * @param {string} alertId - Alert ID
 	 */
 	resolveAlert: async (alertId) => {
 		set({ loading: true, error: null });
 		
 		try {
-			await new Promise(resolve => setTimeout(resolve, 400));
+			const { data: { user } } = await supabase.auth.getUser();
+			
+			const { data, error } = await supabase
+				.from('inventory_alerts')
+				.update({
+					is_resolved: true,
+					resolved_at: new Date().toISOString(),
+					resolved_by: user?.id
+				})
+				.eq('id', alertId)
+				.select()
+				.single();
+			
+			if (error) throw error;
 			
 			set(state => ({
-				alerts: state.alerts.map(alert => 
-					alert.id === alertId 
-						? { 
-								...alert, 
-								is_resolved: true, 
-								resolved_at: new Date().toISOString(),
-								resolved_by: 'current-user' 
-							}
-						: alert
-				),
+				alerts: state.alerts.map(alert => alert.id === alertId ? data : alert),
 				loading: false,
 			}));
 			
@@ -555,6 +718,7 @@ export const useResourceStore = create((set, get) => ({
 			set({ unresolvedAlerts });
 			
 		} catch (err) {
+			console.error('Error resolving alert:', err);
 			set({ error: err.message, loading: false });
 		}
 	},

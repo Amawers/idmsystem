@@ -24,7 +24,12 @@ import {
 	IconDashboard,
 	IconFolders,
 	IconShieldLock,
-	IconKey
+	IconKey,
+	IconPackage,
+	IconCircleCheck,
+	IconUserCheck,
+	IconTarget,
+	IconBell
 } from "@tabler/icons-react"
 import logo from "@/assets/temp_logo.png"
 import {
@@ -61,7 +66,21 @@ export default function Sidebar(props) {
           { path: "/program/partners", label: "Partners", icon: IconHeartHandshake },
         ]
       },
-      { path: "/resource", label: "Resource Allocation", icon: IconChartBar },
+      { 
+        path: "/resource", 
+        label: "Resource Allocation", 
+        icon: IconChartBar,
+        items: [
+          { path: "/resource/dashboard", label: "Dashboard", icon: IconDashboard },
+          { path: "/resource/stock", label: "Stock", icon: IconPackage },
+          { path: "/resource/approvals", label: "Approvals", icon: IconCircleCheck },
+          { path: "/resource/client-tracker", label: "Client Tracker", icon: IconUsersGroup },
+          { path: "/resource/eligibility", label: "Eligibility", icon: IconTarget },
+          { path: "/resource/staff", label: "Staff", icon: IconUserCheck },
+          { path: "/resource/programs", label: "Programs", icon: IconFolders },
+          { path: "/resource/alerts", label: "Alerts", icon: IconBell },
+        ]
+      },
       // Security & Audit is hidden for case managers (heads only)
     ],
     head: [
@@ -86,7 +105,21 @@ export default function Sidebar(props) {
           { path: "/program/partners", label: "Partners", icon: IconHeartHandshake },
         ]
       },
-      { path: "/resource", label: "Resource Allocation", icon: IconChartBar },
+      { 
+        path: "/resource", 
+        label: "Resource Allocation", 
+        icon: IconChartBar,
+        items: [
+          { path: "/resource/dashboard", label: "Dashboard", icon: IconDashboard },
+          { path: "/resource/stock", label: "Stock", icon: IconPackage },
+          { path: "/resource/approvals", label: "Approvals", icon: IconCircleCheck },
+          { path: "/resource/client-tracker", label: "Client Tracker", icon: IconUsersGroup },
+          { path: "/resource/eligibility", label: "Eligibility", icon: IconTarget },
+          { path: "/resource/staff", label: "Staff", icon: IconUserCheck },
+          { path: "/resource/programs", label: "Programs", icon: IconFolders },
+          { path: "/resource/alerts", label: "Alerts", icon: IconBell },
+        ]
+      },
       { path: "/account", label: "Account Management", icon: IconUsersGroup },
       { 
         path: "/controls", 

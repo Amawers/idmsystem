@@ -19,11 +19,17 @@ import ProgramEnrollmentsPage from "./pages/case manager/ProgramEnrollmentsPage"
 import ServiceDeliveryPage from "./pages/case manager/ServiceDeliveryPage";
 import PartnersPage from "./pages/case manager/PartnersPage";
 import UserManagement from "./pages/head/UserManagement";
+import ResourceDashboard from "./pages/head/ResourceDashboard";
+import ResourceStock from "./pages/head/ResourceStock";
+import ResourceApprovals from "./pages/head/ResourceApprovals";
+import ResourceClientTracker from "./pages/head/ResourceClientTracker";
+import ResourceEligibility from "./pages/head/ResourceEligibility";
+import ResourceStaff from "./pages/head/ResourceStaff";
+import ResourcePrograms from "./pages/head/ResourcePrograms";
+import ResourceAlerts from "./pages/head/ResourceAlerts";
 import SecurityAudit from "./pages/security/SecurityAudit";
 import AuditTrail from "./pages/security/AuditTrail";
 import RolePermissions from "./pages/security/RolePermissions";
-import ResourceAllocationPage from "./pages/case manager/ResourceAllocationPage";
-import ResourceInventoryPage from "./pages/case manager/ResourceInventoryPage";
 
 // Layout wrapper for all authenticated pages
 // Includes Sidebar + Logout button + main content area
@@ -182,29 +188,106 @@ export default function App() {
           element={<Navigate to="/program/dashboard" replace />}
         />
 
-
-        {/* Protected route: Resource Allocation (case manager + head) */}
+        {/* Protected route: Resource Dashboard (case manager + head) */}
         <Route
-          path="/resource"
+          path="/resource/dashboard"
           element={
             <ProtectedRoute allowedRoles={["case_manager", "head"]}>
               <Layout>
-                <ResourceAllocationPage />
+                <ResourceDashboard />
               </Layout>
             </ProtectedRoute>
           }
         />
 
-        {/* Protected route: Resource Inventory (case manager + head) */}
+        {/* Protected route: Resource Stock (case manager + head) */}
         <Route
-          path="/resource/inventory"
+          path="/resource/stock"
           element={
             <ProtectedRoute allowedRoles={["case_manager", "head"]}>
               <Layout>
-                <ResourceInventoryPage />
+                <ResourceStock />
               </Layout>
             </ProtectedRoute>
           }
+        />
+
+        {/* Protected route: Resource Approvals (case manager + head) */}
+        <Route
+          path="/resource/approvals"
+          element={
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+              <Layout>
+                <ResourceApprovals />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected route: Resource Client Tracker (case manager + head) */}
+        <Route
+          path="/resource/client-tracker"
+          element={
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+              <Layout>
+                <ResourceClientTracker />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected route: Resource Eligibility (case manager + head) */}
+        <Route
+          path="/resource/eligibility"
+          element={
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+              <Layout>
+                <ResourceEligibility />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected route: Resource Staff (case manager + head) */}
+        <Route
+          path="/resource/staff"
+          element={
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+              <Layout>
+                <ResourceStaff />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected route: Resource Programs (case manager + head) */}
+        <Route
+          path="/resource/programs"
+          element={
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+              <Layout>
+                <ResourcePrograms />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected route: Resource Alerts (case manager + head) */}
+        <Route
+          path="/resource/alerts"
+          element={
+            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+              <Layout>
+                <ResourceAlerts />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Redirect /resource to /resource/dashboard */}
+        <Route
+          path="/resource"
+          element={<Navigate to="/resource/dashboard" replace />}
         />
 
         {/* Protected route: Account Management (head) */}
