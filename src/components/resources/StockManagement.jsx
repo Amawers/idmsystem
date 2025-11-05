@@ -52,6 +52,8 @@ import {
   Search,
   RefreshCw,
   PlusCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useResourceStore } from "@/store/useResourceStore";
 import { useAuthStore } from "@/store/authStore";
@@ -403,6 +405,8 @@ export default function StockManagement() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(5);
 
   const {
     inventoryItems,
@@ -438,12 +442,26 @@ export default function StockManagement() {
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
+  // Pagination calculations
+  const totalFiltered = filteredItems.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / rowsPerPage));
+  useEffect(() => {
+    // Reset to first page if filters change and current page is out of range
+    if (page > totalPages) setPage(1);
+  }, [page, totalPages]);
+
+  const sliceStart = (page - 1) * rowsPerPage;
+  const sliceEnd = sliceStart + rowsPerPage;
+  const pageItems = filteredItems.slice(sliceStart, sliceEnd);
+  const displayStart = totalFiltered === 0 ? 0 : sliceStart + 1;
+  const displayEnd = Math.min(totalFiltered, sliceEnd);
+
   return (
     <div className="space-y-4">
       {/* Stats Overview */}
       <div className="grid gap-3 md:grid-cols-4">
         <Card>
-          <CardContent className="py-3">
+          <CardContent className="py-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">Total Items</p>
@@ -455,7 +473,7 @@ export default function StockManagement() {
         </Card>
 
         <Card>
-          <CardContent className="py-3">
+          <CardContent className="py-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">Total Value</p>
@@ -467,7 +485,7 @@ export default function StockManagement() {
         </Card>
 
         <Card>
-          <CardContent className="py-3">
+          <CardContent className="py-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">Low Stock</p>
@@ -479,7 +497,7 @@ export default function StockManagement() {
         </Card>
 
         <Card>
-          <CardContent className="py-3">
+          <CardContent className="py-1">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">Critical</p>
@@ -493,16 +511,27 @@ export default function StockManagement() {
 
       {/* Inventory Table */}
       <Card>
-        <CardHeader className="py-2">
+        <CardHeader className="py-1">
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base leading-tight">Stock Inventory</CardTitle>
               <CardDescription className="text-xs leading-snug mt-0">Manage and track inventory stock levels</CardDescription>
             </div>
-            <Button onClick={() => setShowAddDialog(true)} size="sm">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Add Item
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleRefresh}
+                disabled={loading}
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                Refresh
+              </Button>
+              <Button onClick={() => setShowAddDialog(true)} size="sm">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add Item
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -547,8 +576,9 @@ export default function StockManagement() {
 
           {/* Table */}
           <div className="rounded-md border">
-            <Table>
-              <TableHeader>
+            <div className={`${pageItems.length > 5 ? 'overflow-y-auto max-h-[296px]' : ''}`}>
+              <Table>
+                <TableHeader>
                 <TableRow className="text-xs">
                   <TableHead className="text-xs">Item Name</TableHead>
                   <TableHead className="text-xs">Category</TableHead>
@@ -559,22 +589,22 @@ export default function StockManagement() {
                   <TableHead className="text-xs">Status</TableHead>
                   <TableHead className="text-xs text-right">Actions</TableHead>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
+                </TableHeader>
+                <TableBody>
                 {loading ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-xs text-muted-foreground">
                       Loading inventory...
                     </TableCell>
                   </TableRow>
-                ) : filteredItems.length === 0 ? (
+                ) : pageItems.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-xs text-muted-foreground">
                       No items found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredItems.map((item) => (
+                  pageItems.map((item) => (
                     <TableRow key={item.id} className="text-xs">
                       <TableCell className="font-medium text-xs">
                         <div>
@@ -615,8 +645,60 @@ export default function StockManagement() {
                     </TableRow>
                   ))
                 )}
-              </TableBody>
-            </Table>
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between px-2 py-4">
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-muted-foreground">
+                Showing {displayStart} to {displayEnd} of {totalFiltered} item{totalFiltered !== 1 ? 's' : ''}
+              </p>
+              <Select
+                value={rowsPerPage.toString()}
+                onValueChange={(value) => {
+                  setRowsPerPage(Number(value));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="h-8 w-[100px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5 per page</SelectItem>
+                  <SelectItem value="10">10 per page</SelectItem>
+                  <SelectItem value="20">20 per page</SelectItem>
+                  <SelectItem value="50">50 per page</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(page - 1)}
+                disabled={page === 1}
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                <span className="text-sm">
+                  Page {page} of {totalPages}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(page + 1)}
+                disabled={page === totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
