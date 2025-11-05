@@ -318,7 +318,10 @@ export default function PartnersTable() {
                 Manage partner organizations and service providers
               </CardDescription>
             </div>
-            <Button size="sm" onClick={() => setIsAddDialogOpen(true)}>
+            <Button size="sm" onClick={() => {
+              resetForm();
+              setIsAddDialogOpen(true);
+            }}>
               <Plus className="mr-2 h-4 w-4" />
               Add Partner
             </Button>
