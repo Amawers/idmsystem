@@ -310,7 +310,7 @@ function RequestDetailsDialog({ request, open, onOpenChange, onApprove, onReject
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+      <DialogContent className="min-w-5xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Request Details</DialogTitle>
           <DialogDescription>
@@ -318,106 +318,121 @@ function RequestDetailsDialog({ request, open, onOpenChange, onApprove, onReject
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Request Header */}
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="font-semibold text-lg">{request.request_number}</h3>
-              <p className="text-sm text-muted-foreground">
-                Submitted {new Date(request.created_at).toLocaleDateString()}
-              </p>
-            </div>
-            <StatusBadge status={request.status} />
-          </div>
-
-          {/* Request Info Grid */}
-          <div className="grid gap-4 md:grid-cols-2 p-4 bg-muted/50 rounded-lg">
-            <div>
-              <Label className="text-xs text-muted-foreground">Request Type</Label>
-              <p className="font-medium capitalize">{request.request_type.replace('_', ' ')}</p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Category</Label>
-              <p className="font-medium capitalize">{request.request_category.replace('_', ' ')}</p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Requester</Label>
-              <p className="font-medium">{request.requester_name}</p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Program</Label>
-              <p className="font-medium">{request.program_name || 'N/A'}</p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Beneficiary</Label>
-              <p className="font-medium">{request.beneficiary_name || 'N/A'}</p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Priority</Label>
-              <Badge variant={request.priority === 'urgent' ? 'destructive' : 'default'}>
-                {request.priority}
-              </Badge>
-            </div>
-          </div>
-
-          {/* Item Details */}
-          <div className="space-y-2">
-            <Label>Item Description</Label>
-            <p className="text-sm">{request.item_description}</p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-3">
-            <div>
-              <Label className="text-xs text-muted-foreground">Quantity</Label>
-              <p className="font-medium">{request.quantity} {request.unit}</p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Unit Cost</Label>
-              <p className="font-medium">₱{request.unit_cost?.toLocaleString()}</p>
-            </div>
-            <div>
-              <Label className="text-xs text-muted-foreground">Total Amount</Label>
-              <p className="font-bold text-lg">₱{request.total_amount?.toLocaleString()}</p>
-            </div>
-          </div>
-
-          {/* Purpose & Justification */}
-          <div className="space-y-2">
-            <Label>Purpose</Label>
-            <p className="text-sm p-3 bg-muted/50 rounded">{request.purpose}</p>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Justification</Label>
-            <p className="text-sm p-3 bg-muted/50 rounded">{request.justification}</p>
-          </div>
-
-          {/* Approval Actions */}
-          {canApprove && (
-            <div className="space-y-2 pt-4 border-t">
-              <Label htmlFor="notes">
-                {notes ? "Approval/Rejection Notes" : "Notes (required for rejection)"}
-              </Label>
-              <Textarea
-                id="notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                placeholder="Add your review notes here..."
-                rows={3}
-              />
-            </div>
-          )}
-
-          {/* Rejection Reason (if rejected) */}
-          {request.status === 'rejected' && request.rejection_reason && (
-            <div className="space-y-2 p-4 bg-red-50 border border-red-200 rounded">
-              <div className="flex items-center gap-2 text-red-900">
-                <AlertCircle className="h-4 w-4" />
-                <Label>Rejection Reason</Label>
+        {/* Two-Column Layout */}
+        <div className="grid md:grid-cols-2 gap-4">
+          {/* LEFT COLUMN - Request Information */}
+          <div className="space-y-3">
+            {/* Request Header */}
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-semibold text-base">{request.request_number}</h3>
+                <p className="text-xs text-muted-foreground">
+                  Submitted {new Date(request.created_at).toLocaleDateString()}
+                </p>
               </div>
-              <p className="text-sm text-red-800">{request.rejection_reason}</p>
+              <StatusBadge status={request.status} />
             </div>
-          )}
+
+            {/* Request Info Grid */}
+            <div className="grid gap-2 p-3 bg-muted/50 rounded-lg">
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Request Type</Label>
+                <p className="text-xs font-medium capitalize">{request.request_type.replace('_', ' ')}</p>
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Category</Label>
+                <p className="text-xs font-medium capitalize">{request.request_category.replace('_', ' ')}</p>
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Requester</Label>
+                <p className="text-xs font-medium">{request.requester_name}</p>
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Program</Label>
+                <p className="text-xs font-medium">{request.program_name || 'N/A'}</p>
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Beneficiary</Label>
+                <p className="text-xs font-medium">{request.beneficiary_name || 'N/A'}</p>
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Priority</Label>
+                <Badge variant={request.priority === 'urgent' ? 'destructive' : 'default'} className="text-xs">
+                  {request.priority}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="grid gap-2 grid-cols-3 p-3 bg-muted/50 rounded-lg">
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Quantity</Label>
+                <p className="text-xs font-medium">{request.quantity} {request.unit}</p>
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Unit Cost</Label>
+                <p className="text-xs font-medium">₱{request.unit_cost?.toLocaleString()}</p>
+              </div>
+              <div>
+                <Label className="text-[10px] text-muted-foreground">Total Amount</Label>
+                <p className="text-sm font-bold">₱{request.total_amount?.toLocaleString()}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN - Item Description, Purpose, Justification, Notes */}
+          <div className="space-y-3">
+            {/* Item Description */}
+            <div className="space-y-1">
+              <Label className="text-xs">Item Description</Label>
+              <div className="text-xs p-2 bg-muted/50 rounded min-h-[50px]">
+                {request.item_description}
+              </div>
+            </div>
+
+            {/* Purpose */}
+            <div className="space-y-1">
+              <Label className="text-xs">Purpose</Label>
+              <div className="text-xs p-2 bg-muted/50 rounded min-h-[60px]">
+                {request.purpose}
+              </div>
+            </div>
+
+            {/* Justification */}
+            <div className="space-y-1">
+              <Label className="text-xs">Justification</Label>
+              <div className="text-xs p-2 bg-muted/50 rounded min-h-[60px]">
+                {request.justification}
+              </div>
+            </div>
+
+            {/* Approval Actions */}
+            {canApprove && (
+              <div className="space-y-1 pt-3 border-t">
+                <Label htmlFor="notes" className="text-xs">
+                  {notes ? "Approval/Rejection Notes" : "Notes (required for rejection)"}
+                </Label>
+                <Textarea
+                  id="notes"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  placeholder="Add your review notes here..."
+                  rows={3}
+                  className="text-xs"
+                />
+              </div>
+            )}
+
+            {/* Rejection Reason (if rejected) */}
+            {request.status === 'rejected' && request.rejection_reason && (
+              <div className="space-y-1 p-3 bg-red-50 border border-red-200 rounded">
+                <div className="flex items-center gap-2 text-red-900">
+                  <AlertCircle className="h-3 w-3" />
+                  <Label className="text-xs">Rejection Reason</Label>
+                </div>
+                <p className="text-xs text-red-800">{request.rejection_reason}</p>
+              </div>
+            )}
+          </div>
         </div>
 
         <DialogFooter>
