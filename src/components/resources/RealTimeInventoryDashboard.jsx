@@ -274,7 +274,7 @@ function SuppliesInventory({ inventoryItems, loading }) {
           </div>
         )}
 
-        <div className="grid gap-2">
+        <div className="grid gap-2 max-h-[120px] overflow-y-auto pr-1">
           {Object.entries(categories).map(([key, cat]) => (
             <div key={key} className="flex items-center justify-between p-2 border rounded-lg">
               <div className="flex items-center gap-2">
