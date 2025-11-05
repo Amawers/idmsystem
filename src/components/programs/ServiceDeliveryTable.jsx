@@ -11,8 +11,11 @@
  * - Export service logs
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useServiceDelivery } from "@/hooks/useServiceDelivery";
+import { usePrograms } from "@/hooks/usePrograms";
+import CreateServiceDeliveryDialog from "./CreateServiceDeliveryDialog";
+import UpdateServiceDeliveryDialog from "./UpdateServiceDeliveryDialog";
 import {
   Table,
   TableBody,
@@ -39,6 +42,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Search, 
@@ -48,7 +61,12 @@ import {
   XCircle,
   Download,
   Plus,
+  Clock,
+  MinusCircle,
+  RefreshCw,
 } from "lucide-react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 /**
  * Service Delivery Table Component
@@ -58,31 +76,106 @@ export default function ServiceDeliveryTable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [programFilter, setProgramFilter] = useState("all");
   const [attendanceFilter, setAttendanceFilter] = useState("all");
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [selectedService, setSelectedService] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [serviceToDelete, setServiceToDelete] = useState(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(3);
 
   const filterOptions = {
     programId: programFilter !== "all" ? programFilter : undefined,
   };
 
   const { 
-    serviceDeliveries = [], 
+    services = [], 
     loading, 
     statistics = {},
-    programs = [], // List of programs for filter
+    deleteServiceDelivery,
+    fetchServiceDelivery,
   } = useServiceDelivery(filterOptions);
 
+  const { programs = [] } = usePrograms({ status: "active" });
+
+  /**
+   * Handle refresh
+   */
+  const handleRefresh = async () => {
+    try {
+      setIsRefreshing(true);
+      await fetchServiceDelivery();
+      toast.success("Service delivery list refreshed");
+    } catch (error) {
+      console.error("Error refreshing:", error);
+      toast.error("Failed to refresh");
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  /**
+   * Handle edit service
+   * @param {Object} service - Service delivery record
+   */
+  const handleEdit = (service) => {
+    setSelectedService(service);
+    setUpdateDialogOpen(true);
+  };
+
+  /**
+   * Handle delete confirmation
+   * @param {Object} service - Service delivery record
+   */
+  const handleDeleteConfirm = (service) => {
+    setServiceToDelete(service);
+    setDeleteDialogOpen(true);
+  };
+
+  /**
+   * Handle delete service
+   */
+  const handleDelete = async () => {
+    if (!serviceToDelete) return;
+
+    try {
+      await deleteServiceDelivery(serviceToDelete.id);
+      toast.success("Service delivery deleted successfully");
+      setDeleteDialogOpen(false);
+      setServiceToDelete(null);
+    } catch (error) {
+      console.error("Error deleting service delivery:", error);
+      toast.error(error.message || "Failed to delete service delivery");
+    }
+  };
+
   // Filter by search term and attendance
-  const filteredDeliveries = serviceDeliveries.filter((delivery) => {
+  const filteredDeliveries = services.filter((delivery) => {
     const matchesSearch =
-      delivery.beneficiary_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      delivery.program_name.toLowerCase().includes(searchTerm.toLowerCase());
+      delivery.beneficiary_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      delivery.program_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      delivery.case_number?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesAttendance =
       attendanceFilter === "all" ||
-      (attendanceFilter === "present" && delivery.attendance) ||
-      (attendanceFilter === "absent" && !delivery.attendance);
+      (attendanceFilter === "present" && delivery.attendance_status === "present") ||
+      (attendanceFilter === "absent" && delivery.attendance_status === "absent") ||
+      (attendanceFilter === "excused" && delivery.attendance_status === "excused");
 
     return matchesSearch && matchesAttendance;
   });
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredDeliveries.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedDeliveries = filteredDeliveries.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters or items per page change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, programFilter, attendanceFilter, itemsPerPage]);
 
   if (loading) {
     return (
@@ -101,47 +194,51 @@ export default function ServiceDeliveryTable() {
             <CardTitle className="text-sm font-medium">Total Sessions</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{statistics.totalSessions || 0}</div>
+            <div className="text-2xl font-bold">{statistics.total || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              This month
+              Logged services
             </p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Attendance Rate</CardTitle>
+            <CardTitle className="text-sm font-medium">Present</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {(statistics.attendanceRate || 0).toFixed(1)}%
+              {statistics.present || 0}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {statistics.totalPresent || 0} of {statistics.totalSessions || 0} attended
+              {statistics.total > 0 
+                ? ((statistics.present / statistics.total) * 100).toFixed(1)
+                : 0}% attendance rate
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Unique Beneficiaries</CardTitle>
+            <CardTitle className="text-sm font-medium">Avg Duration</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {Math.round(statistics.averageDuration || 0)} min
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Per session
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Beneficiaries</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{statistics.uniqueBeneficiaries || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Served this month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Active Programs</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{statistics.activePrograms || 0}</div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Delivering services
+              Unique cases served
             </p>
           </CardContent>
         </Card>
@@ -158,11 +255,20 @@ export default function ServiceDeliveryTable() {
               </CardDescription>
             </div>
             <div className="flex gap-2">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRefresh}
+                disabled={isRefreshing || loading}
+              >
+                <RefreshCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
+                Refresh
+              </Button>
               <Button variant="outline" size="sm">
                 <Download className="mr-2 h-4 w-4" />
                 Export
               </Button>
-              <Button size="sm">
+              <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
                 <Plus className="mr-2 h-4 w-4" />
                 Log Session
               </Button>
@@ -204,34 +310,39 @@ export default function ServiceDeliveryTable() {
                 <SelectItem value="all">All</SelectItem>
                 <SelectItem value="present">Present</SelectItem>
                 <SelectItem value="absent">Absent</SelectItem>
+                <SelectItem value="excused">Excused</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           {/* Table */}
           <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Beneficiary</TableHead>
-                  <TableHead>Program</TableHead>
-                  <TableHead>Service Type</TableHead>
-                  <TableHead>Delivered By</TableHead>
-                  <TableHead>Attendance</TableHead>
-                  <TableHead>Progress Notes</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredDeliveries.length === 0 ? (
+            {/* When more than 3 rows, constrain height so a vertical scrollbar appears */}
+            <div className={`${filteredDeliveries.length > 3 ? 'overflow-y-auto max-h-[232px]' : ''}`}>
+              <Table>
+                <TableHeader className="sticky top-0 bg-background z-10">
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Beneficiary</TableHead>
+                    <TableHead>Program</TableHead>
+                    <TableHead>Service Type</TableHead>
+                    <TableHead>Delivered By</TableHead>
+                    <TableHead>Attendance</TableHead>
+                    <TableHead>Progress Notes</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                {paginatedDeliveries.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center text-muted-foreground">
-                      No service delivery records found
+                      {filteredDeliveries.length === 0 
+                        ? "No service delivery records found"
+                        : "No records on this page"}
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredDeliveries.map((delivery) => (
+                  paginatedDeliveries.map((delivery) => (
                     <TableRow key={delivery.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -262,10 +373,15 @@ export default function ServiceDeliveryTable() {
                         <div className="text-sm">{delivery.delivered_by_name}</div>
                       </TableCell>
                       <TableCell>
-                        {delivery.attendance ? (
+                        {delivery.attendance_status === "present" ? (
                           <div className="flex items-center gap-1 text-green-600">
                             <CheckCircle2 className="h-4 w-4" />
                             <span className="text-sm">Present</span>
+                          </div>
+                        ) : delivery.attendance_status === "excused" ? (
+                          <div className="flex items-center gap-1 text-yellow-600">
+                            <MinusCircle className="h-4 w-4" />
+                            <span className="text-sm">Excused</span>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1 text-red-600">
@@ -275,8 +391,16 @@ export default function ServiceDeliveryTable() {
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="max-w-[250px] truncate text-sm text-muted-foreground">
-                          {delivery.progress_notes || "No notes"}
+                        <div className="max-w-[250px]">
+                          <div className="truncate text-sm text-muted-foreground">
+                            {delivery.progress_notes || "No notes"}
+                          </div>
+                          {delivery.duration_minutes && (
+                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                              <Clock className="h-3 w-3" />
+                              {delivery.duration_minutes} min
+                            </div>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
@@ -288,11 +412,14 @@ export default function ServiceDeliveryTable() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem>View Details</DropdownMenuItem>
-                            <DropdownMenuItem>Edit Log</DropdownMenuItem>
-                            <DropdownMenuItem>View Case</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEdit(delivery)}>
+                              Edit Log
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDeleteConfirm(delivery)}
+                            >
                               Delete Log
                             </DropdownMenuItem>
                           </DropdownMenuContent>
@@ -303,16 +430,95 @@ export default function ServiceDeliveryTable() {
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
 
-          {/* Footer */}
-          <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-muted-foreground">
-              Showing {filteredDeliveries.length} of {serviceDeliveries.length} records
+          {/* Footer with Pagination */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mt-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Rows per page:</span>
+              <Select
+                value={itemsPerPage.toString()}
+                onValueChange={(value) => setItemsPerPage(Number(value))}
+              >
+                <SelectTrigger className="h-8 w-[70px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="3">3</SelectItem>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+              <span className="text-sm text-muted-foreground">
+                Showing {filteredDeliveries.length > 0 ? startIndex + 1 : 0}-{Math.min(endIndex, filteredDeliveries.length)} of {filteredDeliveries.length}
+                {filteredDeliveries.length !== services.length && ` (filtered from ${services.length} total)`}
+              </span>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                disabled={currentPage === 1 || filteredDeliveries.length === 0}
+              >
+                Previous
+              </Button>
+              <div className="text-sm text-muted-foreground min-w-[100px] text-center">
+                Page {filteredDeliveries.length > 0 ? currentPage : 0} of {totalPages}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages || filteredDeliveries.length === 0}
+              >
+                Next
+              </Button>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Create Service Delivery Dialog */}
+      <CreateServiceDeliveryDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={handleRefresh}
+      />
+
+      {/* Update Service Delivery Dialog */}
+      <UpdateServiceDeliveryDialog
+        open={updateDialogOpen}
+        onOpenChange={setUpdateDialogOpen}
+        serviceDelivery={selectedService}
+        onSuccess={handleRefresh}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Service Delivery Log</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this service delivery log? This action
+              cannot be undone and will affect enrollment statistics.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

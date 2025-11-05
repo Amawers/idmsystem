@@ -6,25 +6,31 @@
  * Features:
  * - Fetch service delivery records with enrollment details
  * - Filter by date range, enrollment, service type
- * - Real-time service delivery updates
+ * - Real-time service delivery updates via Supabase subscriptions
  * - CRUD operations for service delivery management
  * - Service delivery statistics and analytics
+ * - Robust error handling and fallback to dummy data
  * 
  * @returns {Object} Service delivery data, loading state, error state, and CRUD functions
  */
 
 import { useState, useEffect } from "react";
-// import { supabase } from "@/config/supabase";
+import supabase from "@/../config/supabase";
+import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
+import { useAuthStore } from "@/store/authStore";
 import SAMPLE_SERVICE_DELIVERY from "../../SAMPLE_SERVICE_DELIVERY.json";
 
 /**
  * Hook for managing service delivery logs
  * @param {Object} options - Configuration options
  * @param {string} options.enrollmentId - Filter by enrollment ID
+ * @param {string} options.programId - Filter by program ID
+ * @param {string} options.caseId - Filter by case ID
  * @param {string} options.serviceType - Filter by service type
  * @param {string} options.dateFrom - Filter from date (YYYY-MM-DD)
  * @param {string} options.dateTo - Filter to date (YYYY-MM-DD)
- * @param {string} options.attendanceStatus - Filter by attendance (present, absent, late)
+ * @param {boolean} options.attendance - Filter by attendance (true/false)
+ * @param {string} options.attendanceStatus - Filter by attendance status (present, absent, excused)
  * @returns {Object} Service delivery data and operations
  */
 export function useServiceDelivery(options = {}) {
@@ -35,13 +41,14 @@ export function useServiceDelivery(options = {}) {
     total: 0,
     present: 0,
     absent: 0,
-    late: 0,
+    excused: 0,
     totalDuration: 0,
     averageDuration: 0,
+    uniqueBeneficiaries: 0,
   });
 
   /**
-   * Fetch service delivery records from Supabase
+   * Fetch service delivery records from Supabase with full details
    * @async
    */
   const fetchServiceDelivery = async () => {
@@ -49,8 +56,7 @@ export function useServiceDelivery(options = {}) {
       setLoading(true);
       setError(null);
 
-      // SUPABASE QUERY (commented for now - using dummy data)
-      /*
+      // Build Supabase query with joins to enrollments and programs
       let query = supabase
         .from('service_delivery')
         .select(`
@@ -58,16 +64,39 @@ export function useServiceDelivery(options = {}) {
           enrollment:program_enrollments(
             id,
             case_id,
-            case:cases(id, case_name),
-            program:programs(id, program_name)
+            case_number,
+            case_type,
+            beneficiary_name,
+            status
           ),
-          service_provider:profile!service_delivery_service_provider_id_fkey(id, role)
+          program:programs(
+            id,
+            program_name,
+            program_type,
+            coordinator
+          ),
+          service_provider_profile:profile!service_delivery_service_provider_id_fkey(
+            id,
+            full_name,
+            role
+          ),
+          delivered_by_profile:profile!service_delivery_delivered_by_fkey(
+            id,
+            full_name,
+            role
+          )
         `)
         .order('service_date', { ascending: false });
 
       // Apply filters
       if (options.enrollmentId) {
         query = query.eq('enrollment_id', options.enrollmentId);
+      }
+      if (options.programId) {
+        query = query.eq('program_id', options.programId);
+      }
+      if (options.caseId) {
+        query = query.eq('case_id', options.caseId);
       }
       if (options.serviceType) {
         query = query.eq('service_type', options.serviceType);
@@ -77,6 +106,9 @@ export function useServiceDelivery(options = {}) {
       }
       if (options.dateTo) {
         query = query.lte('service_date', options.dateTo);
+      }
+      if (options.attendance !== undefined) {
+        query = query.eq('attendance', options.attendance);
       }
       if (options.attendanceStatus) {
         query = query.eq('attendance_status', options.attendanceStatus);
@@ -88,15 +120,28 @@ export function useServiceDelivery(options = {}) {
 
       setServices(data || []);
       calculateStatistics(data || []);
-      */
-
-      // Using dummy data
+    } catch (err) {
+      console.error("Error fetching service delivery from Supabase:", err);
+      setError(err.message);
+      
+      // Fallback to dummy data
+      console.log("Falling back to dummy data for service delivery");
       let filteredServices = [...SAMPLE_SERVICE_DELIVERY];
 
       // Apply filters to dummy data
       if (options.enrollmentId) {
         filteredServices = filteredServices.filter(
           (s) => s.enrollment_id === options.enrollmentId
+        );
+      }
+      if (options.programId) {
+        filteredServices = filteredServices.filter(
+          (s) => s.program_id === options.programId
+        );
+      }
+      if (options.caseId) {
+        filteredServices = filteredServices.filter(
+          (s) => s.case_id === options.caseId
         );
       }
       if (options.serviceType) {
@@ -122,9 +167,6 @@ export function useServiceDelivery(options = {}) {
 
       setServices(filteredServices);
       calculateStatistics(filteredServices);
-    } catch (err) {
-      console.error("Error fetching service delivery:", err);
-      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -139,12 +181,13 @@ export function useServiceDelivery(options = {}) {
       total: servicesData.length,
       present: servicesData.filter((s) => s.attendance_status === "present").length,
       absent: servicesData.filter((s) => s.attendance_status === "absent").length,
-      late: servicesData.filter((s) => s.attendance_status === "late").length,
+      excused: servicesData.filter((s) => s.attendance_status === "excused").length,
       totalDuration: servicesData.reduce(
-        (sum, s) => sum + (s.duration_minutes || 0),
+        (sum, s) => sum + (parseInt(s.duration_minutes) || 0),
         0
       ),
       averageDuration: 0,
+      uniqueBeneficiaries: new Set(servicesData.map(s => s.beneficiary_name)).size,
     };
 
     stats.averageDuration =
@@ -161,33 +204,90 @@ export function useServiceDelivery(options = {}) {
    */
   const createServiceDelivery = async (serviceData) => {
     try {
-      // SUPABASE MUTATION (commented for now)
-      /*
+      const { user } = useAuthStore.getState();
+      
+      // Prepare service delivery data with proper formatting
+      const formattedData = {
+        enrollment_id: serviceData.enrollment_id,
+        case_id: serviceData.case_id,
+        case_number: serviceData.case_number,
+        beneficiary_name: serviceData.beneficiary_name,
+        program_id: serviceData.program_id,
+        program_name: serviceData.program_name,
+        program_type: serviceData.program_type,
+        service_date: serviceData.service_date || new Date().toISOString().split('T')[0],
+        service_type: serviceData.service_type,
+        service_provider: serviceData.service_provider,
+        service_provider_id: serviceData.service_provider_id || null,
+        attendance: serviceData.attendance || false,
+        attendance_status: serviceData.attendance_status || 'absent',
+        duration_minutes: parseInt(serviceData.duration_minutes) || null,
+        progress_notes: serviceData.progress_notes || null,
+        milestones_achieved: serviceData.milestones_achieved || [],
+        next_steps: serviceData.next_steps || null,
+        delivered_by: user?.id || null,
+        delivered_by_name: user?.full_name || null,
+      };
+
+      // Insert into Supabase
       const { data, error } = await supabase
         .from('service_delivery')
-        .insert([{
-          ...serviceData,
-          created_at: new Date().toISOString(),
-        }])
-        .select()
+        .insert([formattedData])
+        .select(`
+          *,
+          enrollment:program_enrollments(
+            id,
+            case_id,
+            case_number,
+            case_type,
+            beneficiary_name,
+            status
+          ),
+          program:programs(
+            id,
+            program_name,
+            program_type,
+            coordinator
+          ),
+          service_provider_profile:profile!service_delivery_service_provider_id_fkey(
+            id,
+            full_name,
+            role
+          ),
+          delivered_by_profile:profile!service_delivery_delivered_by_fkey(
+            id,
+            full_name,
+            role
+          )
+        `)
         .single();
 
       if (error) throw error;
 
+      // Create audit log entry
+      await createAuditLog({
+        actionType: AUDIT_ACTIONS.CREATE_SERVICE_DELIVERY,
+        actionCategory: AUDIT_CATEGORIES.PROGRAM,
+        description: `Logged service delivery for ${data.beneficiary_name}`,
+        resourceType: 'service_delivery',
+        resourceId: data.id,
+        metadata: {
+          beneficiaryName: data.beneficiary_name,
+          caseId: data.case_id,
+          caseNumber: data.case_number,
+          programName: data.program_name,
+          serviceType: data.service_type,
+          serviceDate: data.service_date,
+          attendance: data.attendance,
+          attendanceStatus: data.attendance_status,
+        },
+        severity: 'info',
+      });
+
+      // Refresh service delivery list
       await fetchServiceDelivery();
 
       return data;
-      */
-
-      // Dummy implementation
-      const newService = {
-        id: `service-${Date.now()}`,
-        ...serviceData,
-        created_at: new Date().toISOString(),
-      };
-
-      setServices((prev) => [newService, ...prev]);
-      return newService;
     } catch (err) {
       console.error("Error creating service delivery:", err);
       throw err;
@@ -203,28 +303,89 @@ export function useServiceDelivery(options = {}) {
    */
   const updateServiceDelivery = async (serviceId, updates) => {
     try {
-      // SUPABASE MUTATION (commented for now)
-      /*
+      // Get old service data for audit log
+      const oldService = services.find(s => s.id === serviceId);
+      
+      // Prepare updated data
+      const formattedUpdates = {
+        ...updates,
+        updated_at: new Date().toISOString(),
+      };
+
+      // Remove undefined values
+      Object.keys(formattedUpdates).forEach(key => {
+        if (formattedUpdates[key] === undefined) {
+          delete formattedUpdates[key];
+        }
+      });
+
+      // Update in Supabase
       const { data, error } = await supabase
         .from('service_delivery')
-        .update(updates)
+        .update(formattedUpdates)
         .eq('id', serviceId)
-        .select()
+        .select(`
+          *,
+          enrollment:program_enrollments(
+            id,
+            case_id,
+            case_number,
+            case_type,
+            beneficiary_name,
+            status
+          ),
+          program:programs(
+            id,
+            program_name,
+            program_type,
+            coordinator
+          ),
+          service_provider_profile:profile!service_delivery_service_provider_id_fkey(
+            id,
+            full_name,
+            role
+          ),
+          delivered_by_profile:profile!service_delivery_delivered_by_fkey(
+            id,
+            full_name,
+            role
+          )
+        `)
         .single();
 
       if (error) throw error;
 
+      // Create audit log entry with change details
+      const changes = oldService
+        ? Object.keys(updates).reduce((acc, key) => {
+            if (oldService[key] !== updates[key]) {
+              acc[key] = { old: oldService[key], new: updates[key] };
+            }
+            return acc;
+          }, {})
+        : updates;
+
+      await createAuditLog({
+        actionType: AUDIT_ACTIONS.UPDATE_SERVICE_DELIVERY,
+        actionCategory: AUDIT_CATEGORIES.PROGRAM,
+        description: `Updated service delivery for ${data.beneficiary_name}`,
+        resourceType: 'service_delivery',
+        resourceId: serviceId,
+        metadata: {
+          beneficiaryName: data.beneficiary_name,
+          caseId: data.case_id,
+          programName: data.program_name,
+          serviceType: data.service_type,
+          serviceDate: data.service_date,
+          changes,
+        },
+        severity: 'info',
+      });
+
+      // Refresh service delivery list
       await fetchServiceDelivery();
 
       return data;
-      */
-
-      // Dummy implementation
-      setServices((prev) =>
-        prev.map((s) => (s.id === serviceId ? { ...s, ...updates } : s))
-      );
-
-      return { id: serviceId, ...updates };
     } catch (err) {
       console.error("Error updating service delivery:", err);
       throw err;
@@ -239,8 +400,10 @@ export function useServiceDelivery(options = {}) {
    */
   const deleteServiceDelivery = async (serviceId) => {
     try {
-      // SUPABASE MUTATION (commented for now)
-      /*
+      // Get service data for audit log
+      const serviceToDelete = services.find(s => s.id === serviceId);
+      
+      // Delete from Supabase
       const { error } = await supabase
         .from('service_delivery')
         .delete()
@@ -248,11 +411,28 @@ export function useServiceDelivery(options = {}) {
 
       if (error) throw error;
 
-      await fetchServiceDelivery();
-      */
+      // Create audit log entry
+      if (serviceToDelete) {
+        await createAuditLog({
+          actionType: AUDIT_ACTIONS.DELETE_SERVICE_DELIVERY,
+          actionCategory: AUDIT_CATEGORIES.PROGRAM,
+          description: `Deleted service delivery for ${serviceToDelete.beneficiary_name}`,
+          resourceType: 'service_delivery',
+          resourceId: serviceId,
+          metadata: {
+            beneficiaryName: serviceToDelete.beneficiary_name,
+            caseId: serviceToDelete.case_id,
+            caseNumber: serviceToDelete.case_number,
+            programName: serviceToDelete.program_name,
+            serviceType: serviceToDelete.service_type,
+            serviceDate: serviceToDelete.service_date,
+          },
+          severity: 'warning',
+        });
+      }
 
-      // Dummy implementation
-      setServices((prev) => prev.filter((s) => s.id !== serviceId));
+      // Refresh service delivery list
+      await fetchServiceDelivery();
     } catch (err) {
       console.error("Error deleting service delivery:", err);
       throw err;
@@ -281,8 +461,7 @@ export function useServiceDelivery(options = {}) {
   useEffect(() => {
     fetchServiceDelivery();
 
-    // SUPABASE REALTIME SUBSCRIPTION (commented for now)
-    /*
+    // Set up Supabase realtime subscription for service delivery changes
     const subscription = supabase
       .channel('service-delivery-changes')
       .on(
@@ -298,13 +477,15 @@ export function useServiceDelivery(options = {}) {
     return () => {
       subscription.unsubscribe();
     };
-    */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     options.enrollmentId,
+    options.programId,
+    options.caseId,
     options.serviceType,
     options.dateFrom,
     options.dateTo,
+    options.attendance,
     options.attendanceStatus,
   ]);
 
