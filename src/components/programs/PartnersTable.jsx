@@ -59,9 +59,14 @@ import { Search, MoreHorizontal, Plus, Building2, Phone, Mail, AlertCircle, Load
 export default function PartnersTable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formError, setFormError] = useState("");
   const [selectedServices, setSelectedServices] = useState([]);
+  const [selectedPartner, setSelectedPartner] = useState(null);
   const [formData, setFormData] = useState({
     organization_name: "",
     organization_type: "",
@@ -76,7 +81,7 @@ export default function PartnersTable() {
     notes: "",
   });
 
-  const { partners, loading, statistics = {}, createPartner, getMOUStatus } = usePartners();
+  const { partners, loading, statistics = {}, createPartner, updatePartner, deletePartner, getMOUStatus } = usePartners();
 
   const filteredPartners = (partners || []).filter((partner) =>
     partner.organization_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -118,7 +123,7 @@ export default function PartnersTable() {
     setFormError("");
   };
 
-  // Handle form submission
+  // Handle form submission (Create)
   const handleSubmit = async (e) => {
     e.preventDefault();
     setFormError("");
@@ -158,6 +163,99 @@ export default function PartnersTable() {
       );
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  // Handle edit submission
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setFormError("");
+    setIsSubmitting(true);
+
+    try {
+      // Validate services
+      if (selectedServices.length === 0) {
+        setFormError("Please select at least one service");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Prepare updates
+      const updates = {
+        ...formData,
+        services_offered: selectedServices,
+        budget_allocation: formData.budget_allocation
+          ? parseFloat(formData.budget_allocation)
+          : 0,
+        mou_signed_date: formData.mou_signed_date || null,
+        mou_expiry_date: formData.mou_expiry_date || null,
+      };
+
+      // Update partner
+      await updatePartner(selectedPartner.id, updates);
+
+      // Success - close dialog and reset
+      setIsEditDialogOpen(false);
+      resetForm();
+      setSelectedPartner(null);
+    } catch (error) {
+      console.error("Error updating partner:", error);
+      setFormError(
+        error.validationErrors?.join(", ") ||
+          error.message ||
+          "Failed to update partner. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle view details
+  const handleViewDetails = (partner) => {
+    setSelectedPartner(partner);
+    setIsDetailsDialogOpen(true);
+  };
+
+  // Handle edit partner
+  const handleEditPartner = (partner) => {
+    setSelectedPartner(partner);
+    setFormData({
+      organization_name: partner.organization_name || "",
+      organization_type: partner.organization_type || "",
+      contact_person: partner.contact_person || "",
+      contact_email: partner.contact_email || "",
+      contact_phone: partner.contact_phone || "",
+      address: partner.address || "",
+      partnership_status: partner.partnership_status || "pending",
+      mou_signed_date: partner.mou_signed_date || "",
+      mou_expiry_date: partner.mou_expiry_date || "",
+      budget_allocation: partner.budget_allocation || "",
+      notes: partner.notes || "",
+    });
+    setSelectedServices(partner.services_offered || []);
+    setIsEditDialogOpen(true);
+  };
+
+  // Open delete confirmation dialog
+  const handleDeletePartner = (partner) => {
+    setSelectedPartner(partner);
+    setIsDeleteDialogOpen(true);
+  };
+
+  // Confirm delete action
+  const confirmDelete = async () => {
+    if (!selectedPartner) return;
+
+    setIsDeleting(true);
+    try {
+      await deletePartner(selectedPartner.id);
+      setIsDeleteDialogOpen(false);
+      setSelectedPartner(null);
+    } catch (error) {
+      console.error("Error deleting partner:", error);
+      alert("Failed to delete partner. Please try again.");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -324,12 +422,19 @@ export default function PartnersTable() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem>View Details</DropdownMenuItem>
-                            <DropdownMenuItem>Edit Partner</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleViewDetails(partner)}>
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleEditPartner(partner)}>
+                              Edit Partner
+                            </DropdownMenuItem>
                             <DropdownMenuItem>View Referrals</DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-red-600">
-                              Deactivate
+                            <DropdownMenuItem
+                              className="text-red-600"
+                              onClick={() => handleDeletePartner(partner)}
+                            >
+                              Delete Partner
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -604,6 +709,506 @@ export default function PartnersTable() {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Partner Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Edit Partner Organization</DialogTitle>
+            <DialogDescription>
+              Update partner organization information and services.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleEditSubmit} className="space-y-4">
+            {/* Error Message */}
+            {formError && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-800 text-sm">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
+
+            {/* Organization Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Organization Information</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Label htmlFor="edit_organization_name">
+                    Organization Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="edit_organization_name"
+                    name="organization_name"
+                    value={formData.organization_name}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Hope Children's Foundation"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit_organization_type">
+                    Organization Type <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={formData.organization_type}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, organization_type: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ORGANIZATION_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="edit_partnership_status">Partnership Status</Label>
+                  <Select
+                    value={formData.partnership_status}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, partnership_status: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="expired">Expired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Contact Information</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Label htmlFor="edit_contact_person">
+                    Contact Person <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="edit_contact_person"
+                    name="contact_person"
+                    value={formData.contact_person}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Dr. Maria Santos"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit_contact_email">
+                    Email <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="edit_contact_email"
+                    name="contact_email"
+                    type="email"
+                    value={formData.contact_email}
+                    onChange={handleInputChange}
+                    placeholder="email@example.com"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit_contact_phone">
+                    Phone <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="edit_contact_phone"
+                    name="contact_phone"
+                    value={formData.contact_phone}
+                    onChange={handleInputChange}
+                    placeholder="+63-2-8123-4567"
+                    required
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <Label htmlFor="edit_address">
+                    Address <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="edit_address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    placeholder="Street, City, Province"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Services Offered */}
+            <div className="space-y-2">
+              <Label>
+                Services Offered <span className="text-red-500">*</span>
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                {SERVICE_TYPES.map((service) => (
+                  <div
+                    key={service}
+                    onClick={() => toggleService(service)}
+                    className={`
+                      px-3 py-2 rounded-md border cursor-pointer text-sm text-center
+                      transition-colors
+                      ${
+                        selectedServices.includes(service)
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background hover:bg-accent"
+                      }
+                    `}
+                  >
+                    {service}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* MOU Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">MOU Information</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="edit_mou_signed_date">MOU Signed Date</Label>
+                  <Input
+                    id="edit_mou_signed_date"
+                    name="mou_signed_date"
+                    type="date"
+                    value={formData.mou_signed_date}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="edit_mou_expiry_date">MOU Expiry Date</Label>
+                  <Input
+                    id="edit_mou_expiry_date"
+                    name="mou_expiry_date"
+                    type="date"
+                    value={formData.mou_expiry_date}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <Label htmlFor="edit_budget_allocation">Budget Allocation (₱)</Label>
+                  <Input
+                    id="edit_budget_allocation"
+                    name="budget_allocation"
+                    type="number"
+                    step="0.01"
+                    value={formData.budget_allocation}
+                    onChange={handleInputChange}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <Label htmlFor="edit_notes">Notes</Label>
+              <Textarea
+                id="edit_notes"
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
+                placeholder="Additional information about the partnership..."
+                rows={3}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  resetForm();
+                  setSelectedPartner(null);
+                }}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  "Save Changes"
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Details Dialog */}
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Partner Details</DialogTitle>
+            <DialogDescription>
+              Complete information about this partner organization
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedPartner && (
+            <div className="space-y-6">
+              {/* Organization Info */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm border-b pb-2">Organization Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Organization Name</Label>
+                    <p className="font-medium">{selectedPartner.organization_name}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Organization Type</Label>
+                    <p className="font-medium">{selectedPartner.organization_type}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Partnership Status</Label>
+                    <Badge className="mt-1">
+                      {selectedPartner.partnership_status || "pending"}
+                    </Badge>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">MOU Status</Label>
+                    {selectedPartner.mou_expiry_date ? (
+                      <Badge
+                        className={`mt-1 bg-${getMOUStatus(selectedPartner.mou_expiry_date).color}-500`}
+                      >
+                        {getMOUStatus(selectedPartner.mou_expiry_date).label}
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="mt-1">No MOU</Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Contact Info */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm border-b pb-2">Contact Information</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Contact Person</Label>
+                    <p className="font-medium">{selectedPartner.contact_person}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Email</Label>
+                    <p className="font-medium">{selectedPartner.contact_email}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Phone</Label>
+                    <p className="font-medium">{selectedPartner.contact_phone}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-muted-foreground text-xs">Address</Label>
+                    <p className="font-medium">{selectedPartner.address}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Services */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm border-b pb-2">Services Offered</h3>
+                <div className="flex flex-wrap gap-2">
+                  {selectedPartner.services_offered?.map((service, idx) => (
+                    <Badge key={idx} variant="secondary">
+                      {service}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              {/* MOU & Budget */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm border-b pb-2">Partnership Details</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">MOU Signed Date</Label>
+                    <p className="font-medium">
+                      {selectedPartner.mou_signed_date || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">MOU Expiry Date</Label>
+                    <p className="font-medium">
+                      {selectedPartner.mou_expiry_date || "N/A"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Budget Allocation</Label>
+                    <p className="font-medium">
+                      ₱{selectedPartner.budget_allocation?.toLocaleString() || "0.00"}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Success Rate</Label>
+                    <p className="font-medium">{selectedPartner.success_rate || 0}%</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Referrals */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm border-b pb-2">Referral Statistics</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Referrals Sent</Label>
+                    <p className="font-medium">{selectedPartner.total_referrals_sent || 0}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Referrals Received</Label>
+                    <p className="font-medium">{selectedPartner.total_referrals_received || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notes */}
+              {selectedPartner.notes && (
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm border-b pb-2">Notes</h3>
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {selectedPartner.notes}
+                  </p>
+                </div>
+              )}
+
+              {/* Metadata */}
+              <div className="space-y-3">
+                <h3 className="font-semibold text-sm border-b pb-2">Record Information</h3>
+                <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Created</Label>
+                    <p>{new Date(selectedPartner.created_at).toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <Label className="text-muted-foreground text-xs">Last Updated</Label>
+                    <p>{new Date(selectedPartner.updated_at).toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDetailsDialogOpen(false);
+                setSelectedPartner(null);
+              }}
+            >
+              Close
+            </Button>
+            <Button onClick={() => {
+              setIsDetailsDialogOpen(false);
+              handleEditPartner(selectedPartner);
+            }}>
+              Edit Partner
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <AlertCircle className="h-5 w-5" />
+              Delete Partner Organization
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the partner organization and all associated data.
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedPartner && (
+            <div className="my-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="space-y-2">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Organization</Label>
+                  <p className="font-semibold text-red-900">{selectedPartner.organization_name}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Type</Label>
+                  <p className="text-sm text-red-800">{selectedPartner.organization_type}</p>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Contact Person</Label>
+                  <p className="text-sm text-red-800">{selectedPartner.contact_person}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+            <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+            <p className="text-sm text-amber-800">
+              <strong>Warning:</strong> Deleting this partner will remove all referral history and partnership data.
+            </p>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setSelectedPartner(null);
+              }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={confirmDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="mr-2 h-4 w-4" />
+                  Delete Permanently
+                </>
+              )}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
