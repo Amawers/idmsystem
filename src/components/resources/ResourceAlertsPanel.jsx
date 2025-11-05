@@ -143,24 +143,6 @@ export default function ResourceAlertsPanel() {
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Resource Alerts & Notifications</CardTitle>
-              <CardDescription>
-                Monitor low stock, budget thresholds, and critical alerts
-              </CardDescription>
-            </div>
-            {unresolvedCount > 0 && (
-              <Badge variant="destructive" className="text-lg px-4 py-2">
-                {unresolvedCount} Active
-              </Badge>
-            )}
-          </div>
-        </CardHeader>
-      </Card>
-
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-3">
         <Card>
