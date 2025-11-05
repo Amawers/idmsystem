@@ -45,25 +45,25 @@ function MetricCard({ title, value, subtitle, icon: Icon, trend, trendValue, col
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-0 pt-0 px-3">
-        <CardTitle className="text-[11px] font-medium">{title}</CardTitle>
-        <div className={`p-1 rounded-full ${colorClasses[color]}`}>
-          <Icon className="h-2.5 w-2.5" />
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <div className={`p-2 rounded-full ${colorClasses[color]}`}>
+          <Icon className="h-4 w-4" />
         </div>
       </CardHeader>
-      <CardContent className="pb-2 px-3">
-        <div className="text-lg font-bold">{value}</div>
+      <CardContent className="pb-4 px-4">
+        <div className="text-2xl font-bold">{value}</div>
         {subtitle && (
-          <p className="text-[10px] text-muted-foreground mt-0.5">{subtitle}</p>
+          <p className="text-xs text-muted-foreground mt-1">{subtitle}</p>
         )}
         {trend && (
-          <div className={`flex items-center gap-1 mt-1 text-[10px] ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
-            {trend === 'up' ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
+          <div className={`flex items-center gap-1 mt-2 text-xs ${trend === 'up' ? 'text-green-600' : 'text-red-600'}`}>
+            {trend === 'up' ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
             <span>{trendValue}</span>
           </div>
         )}
         {status && (
-          <Badge variant={status.variant} className="mt-1 text-[10px] py-0 h-4">
+          <Badge variant={status.variant} className="mt-2 text-xs py-0.5 h-5">
             {status.label}
           </Badge>
         )}
@@ -97,15 +97,15 @@ function BudgetOverview({ programs, loading }) {
           <div className="space-y-3">
             <div className="space-y-2">
               <div>
-                <p className="text-[10px] font-medium text-muted-foreground">Total Budget</p>
+                <p className="text-[11px] font-medium text-muted-foreground">Total Budget</p>
                 <p className="text-lg font-bold">₱{totalBudget.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-[10px] font-medium text-muted-foreground">Spent</p>
+                <p className="text-[11px] font-medium text-muted-foreground">Spent</p>
                 <p className="text-lg font-bold text-red-600">₱{totalSpent.toLocaleString()}</p>
               </div>
               <div>
-                <p className="text-[10px] font-medium text-muted-foreground">Remaining</p>
+                <p className="text-[11px] font-medium text-muted-foreground">Remaining</p>
                 <p className="text-lg font-bold text-green-600">₱{remaining.toLocaleString()}</p>
               </div>
             </div>
@@ -132,7 +132,7 @@ function BudgetOverview({ programs, loading }) {
                   <div key={program.id} className="space-y-0.5">
                     <div className="flex items-center justify-between text-xs">
                       <span className="truncate flex-1">{program.program_name}</span>
-                      <span className="font-medium ml-2 text-[10px]">
+                      <span className="font-medium ml-2 text-[11px]">
                         ₱{program.budget_spent.toLocaleString()} / ₱{program.budget_allocated.toLocaleString()}
                       </span>
                     </div>
@@ -172,18 +172,18 @@ function StaffAvailability({ assignments, loading }) {
       <CardContent className="space-y-3 pb-3">
         <div className="grid gap-2 md:grid-cols-2">
           <div className="flex items-center gap-2 p-2 bg-green-50 rounded-lg">
-            <CheckCircle className="h-6 w-6 text-green-600" />
+            <CheckCircle className="h-7 w-7 text-green-600" />
             <div>
               <p className="text-lg font-bold">{available}</p>
-              <p className="text-[10px] text-muted-foreground">Available</p>
+              <p className="text-[11px] text-muted-foreground">Available</p>
             </div>
           </div>
           
           <div className="flex items-center gap-2 p-2 bg-orange-50 rounded-lg">
-            <Clock className="h-6 w-6 text-orange-600" />
+            <Clock className="h-7 w-7 text-orange-600" />
             <div>
               <p className="text-lg font-bold">{busy}</p>
-              <p className="text-[10px] text-muted-foreground">Busy</p>
+              <p className="text-[11px] text-muted-foreground">Busy</p>
             </div>
           </div>
         </div>
@@ -269,25 +269,25 @@ function SuppliesInventory({ inventoryItems, loading }) {
               <p className="text-xs font-medium text-orange-900">
                 {lowStockCount} item{lowStockCount !== 1 ? 's' : ''} running low
               </p>
-              <p className="text-[10px] text-orange-700">Action required</p>
+              <p className="text-[11px] text-orange-700">Action required</p>
             </div>
           </div>
         )}
 
-        <div className="grid gap-2 max-h-[120px] overflow-y-auto pr-1">
+        <div className="grid gap-2 max-h-[140px] overflow-y-auto pr-1">
           {Object.entries(categories).map(([key, cat]) => (
             <div key={key} className="flex items-center justify-between p-2 border rounded-lg">
               <div className="flex items-center gap-2">
                 <cat.icon className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs font-medium">{cat.label}</p>
-                  <p className="text-[10px] text-muted-foreground">
+                  <p className="text-[11px] text-muted-foreground">
                     {cat.count} items • ₱{cat.value.toLocaleString()}
                   </p>
                 </div>
               </div>
               {cat.low > 0 && (
-                <Badge variant="destructive" className="text-[10px] py-0 h-4">
+                <Badge variant="destructive" className="text-[11px] py-0 h-4">
                   {cat.low} low
                 </Badge>
               )}
@@ -347,9 +347,9 @@ export default function RealTimeInventoryDashboard() {
   const loading = inventoryLoading || programsLoading;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-4">
       {/* Key Metrics */}
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
           title="Total Inventory Value"
           value={`₱${(inventoryStats.totalValue || 0).toLocaleString()}`}
@@ -393,7 +393,7 @@ export default function RealTimeInventoryDashboard() {
       </div>
 
       {/* Main Dashboard Sections */}
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         <BudgetOverview programs={programs} loading={loading} />
         <StaffAvailability assignments={staffAssignments} loading={loading} />
         <SuppliesInventory inventoryItems={inventoryItems} loading={loading} />
