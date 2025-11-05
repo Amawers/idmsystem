@@ -8,19 +8,66 @@ import { ChevronRight } from "lucide-react"
 // This allows the header to show a title that matches the current active page
 const pageTitles = {
   "/dashboard": "Dashboard",
+  
+  // Case Management
   "/case": "Case Management",
   "/case/dashboard": "Dashboard",
   "/case/management": "Management",
+  
+  // Program Management
   "/program": "Program Management",
+  "/program/dashboard": "Dashboard",
+  "/program/catalog": "Catalog",
+  "/program/enrollments": "Enrollments",
+  "/program/service-delivery": "Service Delivery",
+  "/program/partners": "Partners",
+  
+  // Resource Allocation
   "/resource": "Resource Allocation",
+  "/resource/dashboard": "Dashboard",
+  "/resource/stock": "Stock Management",
+  "/resource/approvals": "Approvals",
+  "/resource/client-tracker": "Client Tracker",
+  "/resource/eligibility": "Eligibility",
+  "/resource/staff": "Staff",
+  "/resource/programs": "Programs",
+  "/resource/alerts": "Alerts",
+  
+  // Account Management
   "/account": "Account Management",
+  
+  // Security & Audit
   "/controls": "Security & Audit",
+  "/controls/audit": "Audit Trail",
+  "/controls/permissions": "Role Permissions",
 }
 
 // Map parent sections for breadcrumb navigation
 const parentSections = {
+  // Case Management sub-pages
   "/case/dashboard": "Case Management",
   "/case/management": "Case Management",
+  
+  // Program Management sub-pages
+  "/program/dashboard": "Program Management",
+  "/program/catalog": "Program Management",
+  "/program/enrollments": "Program Management",
+  "/program/service-delivery": "Program Management",
+  "/program/partners": "Program Management",
+  
+  // Resource Allocation sub-pages
+  "/resource/dashboard": "Resource Allocation",
+  "/resource/stock": "Resource Allocation",
+  "/resource/approvals": "Resource Allocation",
+  "/resource/client-tracker": "Resource Allocation",
+  "/resource/eligibility": "Resource Allocation",
+  "/resource/staff": "Resource Allocation",
+  "/resource/programs": "Resource Allocation",
+  "/resource/alerts": "Resource Allocation",
+  
+  // Security & Audit sub-pages
+  "/controls/audit": "Security & Audit",
+  "/controls/permissions": "Security & Audit",
 }
 
 export function SiteHeader() {
