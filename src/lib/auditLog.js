@@ -191,6 +191,15 @@ export const AUDIT_ACTIONS = {
 	UPDATE_SERVICE_DELIVERY: "update_service_delivery",
 	DELETE_SERVICE_DELIVERY: "delete_service_delivery",
 
+	// Partner Management
+	CREATE_PARTNER: "create_partner",
+	UPDATE_PARTNER: "update_partner",
+	DELETE_PARTNER: "delete_partner",
+	VIEW_PARTNER: "view_partner",
+	EXPORT_PARTNERS: "export_partners",
+	CREATE_REFERRAL: "create_referral",
+	UPDATE_REFERRAL: "update_referral",
+
 	// System
 	SYSTEM_ERROR: "system_error",
 	EXPORT_DATA: "export_data",
@@ -206,6 +215,7 @@ export const AUDIT_CATEGORIES = {
 	USER: "user",
 	PERMISSION: "permission",
 	PROGRAM: "program",
+	PARTNER: "partner",
 	SYSTEM: "system",
 	REPORT: "report",
 };

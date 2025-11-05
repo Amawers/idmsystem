@@ -788,6 +788,87 @@ create index IF not exists idx_user_permissions_user_id on public.user_permissio
 
 create index IF not exists idx_user_permissions_permission_id on public.user_permissions using btree (permission_id) TABLESPACE pg_default;
 
+-- =====================================================
+-- Migration: Create Partners Table
+-- Description: Partner organizations management system
+-- Date: 2025-11-05
+-- =====================================================
+
+-- Create partners table
+CREATE TABLE IF NOT EXISTS public.partners (
+  id UUID NOT NULL DEFAULT gen_random_uuid(),
+  organization_name TEXT NOT NULL,
+  organization_type TEXT NOT NULL,
+  services_offered TEXT[] NOT NULL DEFAULT '{}',
+  contact_person TEXT NOT NULL,
+  contact_email TEXT NOT NULL,
+  contact_phone TEXT NOT NULL,
+  address TEXT NOT NULL,
+  partnership_status TEXT NOT NULL DEFAULT 'pending',
+  mou_signed_date DATE NULL,
+  mou_expiry_date DATE NULL,
+  total_referrals_sent INTEGER NOT NULL DEFAULT 0,
+  total_referrals_received INTEGER NOT NULL DEFAULT 0,
+  success_rate INTEGER NOT NULL DEFAULT 0,
+  budget_allocation NUMERIC(12, 2) NOT NULL DEFAULT 0,
+  notes TEXT NULL,
+  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+  created_by UUID NULL REFERENCES auth.users(id) ON DELETE SET NULL,
+  updated_by UUID NULL REFERENCES auth.users(id) ON DELETE SET NULL,
+  
+  CONSTRAINT partners_pkey PRIMARY KEY (id),
+  CONSTRAINT partners_organization_name_key UNIQUE (organization_name),
+  CONSTRAINT partners_contact_email_check CHECK (contact_email ~* '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$'),
+  CONSTRAINT partners_organization_type_check CHECK (
+    organization_type = ANY (ARRAY[
+      'NGO',
+      'Government Agency',
+      'Legal Service Provider',
+      'Medical Facility',
+      'Training Center',
+      'Sports Organization',
+      'Foundation',
+      'Crisis Center',
+      'Private Organization',
+      'Community-Based Organization'
+    ])
+  ),
+  CONSTRAINT partners_partnership_status_check CHECK (
+    partnership_status = ANY (ARRAY['active', 'inactive', 'pending', 'expired'])
+  ),
+  CONSTRAINT partners_success_rate_check CHECK (
+    success_rate >= 0 AND success_rate <= 100
+  ),
+  CONSTRAINT partners_referrals_check CHECK (
+    total_referrals_sent >= 0 AND total_referrals_received >= 0
+  ),
+  CONSTRAINT partners_budget_check CHECK (budget_allocation >= 0),
+  CONSTRAINT partners_mou_dates_check CHECK (
+    (mou_signed_date IS NULL AND mou_expiry_date IS NULL) OR
+    (mou_signed_date IS NOT NULL AND mou_expiry_date IS NOT NULL AND mou_expiry_date > mou_signed_date)
+  )
+);
+
+-- Create indexes for performance
+CREATE INDEX IF NOT EXISTS idx_partners_organization_type 
+  ON public.partners USING btree (organization_type);
+
+CREATE INDEX IF NOT EXISTS idx_partners_partnership_status 
+  ON public.partners USING btree (partnership_status);
+
+CREATE INDEX IF NOT EXISTS idx_partners_services_offered 
+  ON public.partners USING gin (services_offered);
+
+CREATE INDEX IF NOT EXISTS idx_partners_created_at 
+  ON public.partners USING btree (created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_partners_mou_expiry_date 
+  ON public.partners USING btree (mou_expiry_date) 
+  WHERE mou_expiry_date IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS idx_partners_created_by 
+  ON public.partners USING btree (created_by);
 
 ======================
 # FUNCTION DEFINITIONS
@@ -940,3 +1021,35 @@ BEGIN
   NEW.updated_at = NOW();
   RETURN NEW;
 END;
+
+======================
+
+-- Create trigger for updated_at
+CREATE OR REPLACE FUNCTION update_partners_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  NEW.updated_by = auth.uid();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_update_partners_updated_at
+  BEFORE UPDATE ON partners
+  FOR EACH ROW
+  EXECUTE FUNCTION update_partners_updated_at();
+
+-- Create trigger for created_by
+CREATE OR REPLACE FUNCTION set_partners_created_by()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.created_by = auth.uid();
+  NEW.updated_by = auth.uid();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_set_partners_created_by
+  BEFORE INSERT ON partners
+  FOR EACH ROW
+  EXECUTE FUNCTION set_partners_created_by();

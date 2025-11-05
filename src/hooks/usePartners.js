@@ -6,15 +6,33 @@
  * Features:
  * - Fetch partner organizations with filtering
  * - Filter by status, organization type, services offered
- * - Real-time partner updates
+ * - Real-time partner updates via Supabase subscriptions
  * - CRUD operations for partner management
  * - Partner statistics and analytics
+ * - MOU expiry tracking and alerts
+ * - Error handling and loading states
+ * 
+ * Dependencies:
+ * - @/config/supabase - Supabase client
+ * - @/lib/partnerSubmission - Partner submission helpers
+ * - @/lib/auditLog - Audit logging utilities
  * 
  * @returns {Object} Partners data, loading state, error state, and CRUD functions
  */
 
 import { useState, useEffect } from "react";
-// import { supabase } from "@/config/supabase";
+import supabase from "@/../config/supabase";
+import { 
+  submitPartner as submitPartnerLib, 
+  updatePartner as updatePartnerLib, 
+  deletePartner as deletePartnerLib,
+  updateReferralCounts,
+  getExpiringSoonPartners,
+  isMOUExpired,
+  isMOUExpiringSoon,
+  getMOUStatus,
+} from "@/lib/partnerSubmission";
+import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 import SAMPLE_PARTNERS from "../../SAMPLE_PARTNERS.json";
 
 /**
@@ -49,8 +67,7 @@ export function usePartners(options = {}) {
       setLoading(true);
       setError(null);
 
-      // SUPABASE QUERY (commented for now - using dummy data)
-      /*
+      // Build Supabase query
       let query = supabase
         .from('partners')
         .select('*')
@@ -73,9 +90,12 @@ export function usePartners(options = {}) {
 
       setPartners(data || []);
       calculateStatistics(data || []);
-      */
-
-      // Using dummy data
+    } catch (err) {
+      console.error("Error fetching partners:", err);
+      setError(err.message);
+      
+      // Fallback to dummy data if Supabase fails
+      console.log("Falling back to dummy data");
       let filteredPartners = [...SAMPLE_PARTNERS];
 
       // Apply filters to dummy data
@@ -99,9 +119,6 @@ export function usePartners(options = {}) {
 
       setPartners(filteredPartners);
       calculateStatistics(filteredPartners);
-    } catch (err) {
-      console.error("Error fetching partners:", err);
-      setError(err.message);
     } finally {
       setLoading(false);
     }
@@ -112,12 +129,21 @@ export function usePartners(options = {}) {
    * @param {Array} partnersData - Array of partner objects
    */
   const calculateStatistics = (partnersData) => {
+    // Calculate MOU status counts
+    const expiredCount = partnersData.filter((p) => 
+      p.mou_expiry_date && isMOUExpired(p.mou_expiry_date)
+    ).length;
+    
+    const expiringSoonCount = partnersData.filter((p) => 
+      p.mou_expiry_date && isMOUExpiringSoon(p.mou_expiry_date) && !isMOUExpired(p.mou_expiry_date)
+    ).length;
+
     const stats = {
       total: partnersData.length,
       active: partnersData.filter((p) => p.partnership_status === "active").length,
-      inactive: partnersData.filter((p) => p.partnership_status === "inactive")
-        .length,
+      inactive: partnersData.filter((p) => p.partnership_status === "inactive").length,
       pending: partnersData.filter((p) => p.partnership_status === "pending").length,
+      expired: partnersData.filter((p) => p.partnership_status === "expired").length,
       totalReferralsSent: partnersData.reduce(
         (sum, p) => sum + (p.total_referrals_sent || 0),
         0
@@ -135,6 +161,8 @@ export function usePartners(options = {}) {
         (sum, p) => sum + (p.budget_allocation || 0),
         0
       ),
+      mouExpired: expiredCount,
+      mouExpiringSoon: expiringSoonCount,
     };
     setStatistics(stats);
   };
@@ -147,39 +175,17 @@ export function usePartners(options = {}) {
    */
   const createPartner = async (partnerData) => {
     try {
-      // SUPABASE MUTATION (commented for now)
-      /*
-      const { data, error } = await supabase
-        .from('partners')
-        .insert([{
-          ...partnerData,
-          created_at: new Date().toISOString(),
-        }])
-        .select()
-        .single();
+      // Use the submission helper which includes validation and audit logging
+      const result = await submitPartnerLib(partnerData);
 
-      if (error) throw error;
+      if (result.error) {
+        throw result.error;
+      }
 
+      // Refresh partners list
       await fetchPartners();
 
-      return data;
-      */
-
-      // Dummy implementation
-      const newPartner = {
-        id: `partner-${Date.now()}`,
-        ...partnerData,
-        total_referrals_sent: 0,
-        total_referrals_received: 0,
-        success_rate: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-
-      setPartners((prev) => [...prev, newPartner].sort((a, b) =>
-        a.organization_name.localeCompare(b.organization_name)
-      ));
-      return newPartner;
+      return result.data;
     } catch (err) {
       console.error("Error creating partner:", err);
       throw err;
@@ -195,35 +201,20 @@ export function usePartners(options = {}) {
    */
   const updatePartner = async (partnerId, updates) => {
     try {
-      // SUPABASE MUTATION (commented for now)
-      /*
-      const { data, error } = await supabase
-        .from('partners')
-        .update({
-          ...updates,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', partnerId)
-        .select()
-        .single();
+      // Get the old partner data for audit log comparison
+      const oldPartner = partners.find(p => p.id === partnerId);
+      
+      // Use the submission helper which includes audit logging
+      const result = await updatePartnerLib(partnerId, updates, oldPartner);
 
-      if (error) throw error;
+      if (result.error) {
+        throw result.error;
+      }
 
+      // Refresh partners list
       await fetchPartners();
 
-      return data;
-      */
-
-      // Dummy implementation
-      setPartners((prev) =>
-        prev.map((p) =>
-          p.id === partnerId
-            ? { ...p, ...updates, updated_at: new Date().toISOString() }
-            : p
-        )
-      );
-
-      return { id: partnerId, ...updates };
+      return result.data;
     } catch (err) {
       console.error("Error updating partner:", err);
       throw err;
@@ -238,20 +229,18 @@ export function usePartners(options = {}) {
    */
   const deletePartner = async (partnerId) => {
     try {
-      // SUPABASE MUTATION (commented for now)
-      /*
-      const { error } = await supabase
-        .from('partners')
-        .delete()
-        .eq('id', partnerId);
+      // Get the partner data for audit log
+      const partnerToDelete = partners.find(p => p.id === partnerId);
+      
+      // Use the submission helper which includes audit logging
+      const result = await deletePartnerLib(partnerId, partnerToDelete);
 
-      if (error) throw error;
+      if (result.error) {
+        throw result.error;
+      }
 
+      // Refresh partners list
       await fetchPartners();
-      */
-
-      // Dummy implementation
-      setPartners((prev) => prev.filter((p) => p.id !== partnerId));
     } catch (err) {
       console.error("Error deleting partner:", err);
       throw err;
@@ -276,12 +265,68 @@ export function usePartners(options = {}) {
     return partners.filter((p) => p.services_offered.includes(service));
   };
 
+  /**
+   * Update referral counts for a partner
+   * @async
+   * @param {string} partnerId - Partner ID
+   * @param {Object} counts - { sentIncrement: number, receivedIncrement: number }
+   * @returns {Promise<Object>} Updated partner
+   */
+  const updatePartnerReferralCounts = async (partnerId, counts) => {
+    try {
+      const result = await updateReferralCounts(partnerId, counts);
+      
+      if (result.error) {
+        throw result.error;
+      }
+
+      // Create audit log for referral tracking
+      await createAuditLog({
+        actionType: AUDIT_ACTIONS.CREATE_REFERRAL,
+        actionCategory: AUDIT_CATEGORIES.PARTNER,
+        description: `Updated referral counts for partner`,
+        resourceType: "partner",
+        resourceId: partnerId,
+        metadata: counts,
+        severity: "info",
+      });
+
+      // Refresh partners list
+      await fetchPartners();
+
+      return result.data;
+    } catch (err) {
+      console.error("Error updating referral counts:", err);
+      throw err;
+    }
+  };
+
+  /**
+   * Get partners with expiring MOUs
+   * @async
+   * @param {number} daysThreshold - Days threshold for expiry warning
+   * @returns {Promise<Array>} Array of expiring partners
+   */
+  const getExpiringSoon = async (daysThreshold = 30) => {
+    try {
+      const result = await getExpiringSoonPartners(daysThreshold);
+      
+      if (result.error) {
+        throw result.error;
+      }
+
+      return result.partners || [];
+    } catch (err) {
+      console.error("Error fetching expiring partners:", err);
+      return [];
+    }
+  };
+
   // Fetch partners on mount and when options change
   useEffect(() => {
     fetchPartners();
 
-    // SUPABASE REALTIME SUBSCRIPTION (commented for now)
-    /*
+    // Set up Supabase realtime subscription
     const subscription = supabase
       .channel('partners-changes')
       .on(
@@ -297,7 +342,6 @@ export function usePartners(options = {}) {
     return () => {
       subscription.unsubscribe();
     };
-    */
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [options.status, options.organizationType, options.servicesOffered]);
 
@@ -312,5 +356,11 @@ export function usePartners(options = {}) {
     deletePartner,
     getPartnerById,
     getPartnersByService,
+    updatePartnerReferralCounts,
+    getExpiringSoon,
+    // Utility functions
+    isMOUExpired,
+    isMOUExpiringSoon,
+    getMOUStatus,
   };
 }
