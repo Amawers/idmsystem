@@ -661,7 +661,7 @@ export default function StockManagement() {
 
           {/* Table */}
           <div className="rounded-md border">
-            <div className={`${pageItems.length > 5 ? 'overflow-y-auto max-h-[296px]' : ''}`}>
+            <div className={`px-4 ${pageItems.length > 5 ? 'overflow-y-auto max-h-[296px]' : ''}`}>
               <Table>
                 <TableHeader>
                 <TableRow className="text-xs">
