@@ -456,7 +456,7 @@ export default function PartnersTable() {
 
       {/* Add Partner Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="min-w-[65vw] min-h-[70vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add Partner Organization</DialogTitle>
             <DialogDescription>
@@ -473,12 +473,12 @@ export default function PartnersTable() {
               </div>
             )}
 
-            {/* Organization Information */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-sm">Organization Information</h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
+            {/* Four Column Layout */}
+            <div className="grid grid-cols-4 gap-8">
+              {/* COLUMN 1: Organization Information */}
+              <div className="space-y-4">
+                {/* Organization Name */}
+                <div>
                   <Label htmlFor="organization_name">
                     Organization Name <span className="text-red-500">*</span>
                   </Label>
@@ -492,184 +492,192 @@ export default function PartnersTable() {
                   />
                 </div>
 
-                <div>
-                  <Label htmlFor="organization_type">
-                    Organization Type <span className="text-red-500">*</span>
-                  </Label>
-                  <Select
-                    value={formData.organization_type}
-                    onValueChange={(value) =>
-                      setFormData((prev) => ({ ...prev, organization_type: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ORGANIZATION_TYPES.map((type) => (
-                        <SelectItem key={type} value={type}>
-                          {type}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+                {/* Organization Type */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm border-b pb-2">Organization Type</h3>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <Label htmlFor="organization_type">
+                        Type <span className="text-red-500">*</span>
+                      </Label>
+                      <Select
+                        value={formData.organization_type}
+                        onValueChange={(value) =>
+                          setFormData((prev) => ({ ...prev, organization_type: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {ORGANIZATION_TYPES.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {type}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
-                <div>
-                  <Label htmlFor="partnership_status">Partnership Status</Label>
-                  <Select
-                    value={formData.partnership_status}
-                    onValueChange={(value) =>
-                      setFormData((prev) => ({ ...prev, partnership_status: value }))
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="active">Active</SelectItem>
-                      <SelectItem value="inactive">Inactive</SelectItem>
-                      <SelectItem value="expired">Expired</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
-
-            {/* Contact Information */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-sm">Contact Information</h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div className="col-span-2">
-                  <Label htmlFor="contact_person">
-                    Contact Person <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="contact_person"
-                    name="contact_person"
-                    value={formData.contact_person}
-                    onChange={handleInputChange}
-                    placeholder="e.g., Dr. Maria Santos"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="contact_email">
-                    Email <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="contact_email"
-                    name="contact_email"
-                    type="email"
-                    value={formData.contact_email}
-                    onChange={handleInputChange}
-                    placeholder="email@example.com"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="contact_phone">
-                    Phone <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="contact_phone"
-                    name="contact_phone"
-                    value={formData.contact_phone}
-                    onChange={handleInputChange}
-                    placeholder="+63-2-8123-4567"
-                    required
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <Label htmlFor="address">
-                    Address <span className="text-red-500">*</span>
-                  </Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleInputChange}
-                    placeholder="Street, City, Province"
-                    required
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Services Offered */}
-            <div className="space-y-2">
-              <Label>
-                Services Offered <span className="text-red-500">*</span>
-              </Label>
-              <div className="grid grid-cols-3 gap-2">
-                {SERVICE_TYPES.map((service) => (
-                  <div
-                    key={service}
-                    onClick={() => toggleService(service)}
-                    className={`
-                      px-3 py-2 rounded-md border cursor-pointer text-sm text-center
-                      transition-colors
-                      ${
-                        selectedServices.includes(service)
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-background hover:bg-accent"
-                      }
-                    `}
-                  >
-                    {service}
+                    <div>
+                      <Label htmlFor="partnership_status">Partnership Status</Label>
+                      <Select
+                        value={formData.partnership_status}
+                        onValueChange={(value) =>
+                          setFormData((prev) => ({ ...prev, partnership_status: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pending">Pending</SelectItem>
+                          <SelectItem value="active">Active</SelectItem>
+                          <SelectItem value="inactive">Inactive</SelectItem>
+                          <SelectItem value="expired">Expired</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
-                ))}
+                </div>
+              </div>
+
+              {/* COLUMN 2: Contact Information */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm border-b pb-2">Contact Information</h3>
+                
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="contact_person">
+                      Contact Person <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="contact_person"
+                      name="contact_person"
+                      value={formData.contact_person}
+                      onChange={handleInputChange}
+                      placeholder="e.g., Dr. Maria Santos"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="contact_email">
+                      Email <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="contact_email"
+                      name="contact_email"
+                      type="email"
+                      value={formData.contact_email}
+                      onChange={handleInputChange}
+                      placeholder="email@example.com"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="contact_phone">
+                      Phone <span className="text-red-500">*</span>
+                    </Label>
+                    <Input
+                      id="contact_phone"
+                      name="contact_phone"
+                      value={formData.contact_phone}
+                      onChange={handleInputChange}
+                      placeholder="+63-2-8123-4567"
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="address">
+                      Address <span className="text-red-500">*</span>
+                    </Label>
+                    <Textarea
+                      id="address"
+                      name="address"
+                      value={formData.address}
+                      onChange={handleInputChange}
+                      placeholder="Street, City, Province"
+                      rows={3}
+                      required
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* COLUMN 3: Services Offered */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm border-b pb-2">
+                  Services Offered <span className="text-red-500">*</span>
+                </h3>
+                <div className="grid grid-cols-2 gap-2">
+                  {SERVICE_TYPES.map((service) => (
+                    <div
+                      key={service}
+                      onClick={() => toggleService(service)}
+                      className={`
+                        px-3 py-2 rounded-md border cursor-pointer text-xs text-center
+                        transition-colors
+                        ${
+                          selectedServices.includes(service)
+                            ? "bg-primary text-primary-foreground border-primary"
+                            : "bg-background hover:bg-accent"
+                        }
+                      `}
+                    >
+                      {service}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* COLUMN 4: MOU Information */}
+              <div className="space-y-4">
+                <h3 className="font-semibold text-sm border-b pb-2">MOU Information</h3>
+                
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="mou_signed_date">MOU Signed Date</Label>
+                    <Input
+                      id="mou_signed_date"
+                      name="mou_signed_date"
+                      type="date"
+                      value={formData.mou_signed_date}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="mou_expiry_date">MOU Expiry Date</Label>
+                    <Input
+                      id="mou_expiry_date"
+                      name="mou_expiry_date"
+                      type="date"
+                      value={formData.mou_expiry_date}
+                      onChange={handleInputChange}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="budget_allocation">Budget Allocation (₱)</Label>
+                    <Input
+                      id="budget_allocation"
+                      name="budget_allocation"
+                      type="number"
+                      step="0.01"
+                      value={formData.budget_allocation}
+                      onChange={handleInputChange}
+                      placeholder="0.00"
+                    />
+                  </div>
+                </div>
               </div>
             </div>
 
-            {/* MOU Information */}
-            <div className="space-y-4">
-              <h3 className="font-semibold text-sm">MOU Information (Optional)</h3>
-              
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="mou_signed_date">MOU Signed Date</Label>
-                  <Input
-                    id="mou_signed_date"
-                    name="mou_signed_date"
-                    type="date"
-                    value={formData.mou_signed_date}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div>
-                  <Label htmlFor="mou_expiry_date">MOU Expiry Date</Label>
-                  <Input
-                    id="mou_expiry_date"
-                    name="mou_expiry_date"
-                    type="date"
-                    value={formData.mou_expiry_date}
-                    onChange={handleInputChange}
-                  />
-                </div>
-
-                <div className="col-span-2">
-                  <Label htmlFor="budget_allocation">Budget Allocation (₱)</Label>
-                  <Input
-                    id="budget_allocation"
-                    name="budget_allocation"
-                    type="number"
-                    step="0.01"
-                    value={formData.budget_allocation}
-                    onChange={handleInputChange}
-                    placeholder="0.00"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Notes */}
+            {/* Notes - Full Width */}
             <div>
               <Label htmlFor="notes">Notes</Label>
               <Textarea
