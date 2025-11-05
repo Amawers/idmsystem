@@ -978,7 +978,7 @@ export default function PartnersTable() {
 
       {/* View Details Dialog */}
       <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="min-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Partner Details</DialogTitle>
             <DialogDescription>
@@ -987,142 +987,141 @@ export default function PartnersTable() {
           </DialogHeader>
 
           {selectedPartner && (
-            <div className="space-y-6">
-              {/* Organization Info */}
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm border-b pb-2">Organization Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Organization Name</Label>
-                    <p className="font-medium">{selectedPartner.organization_name}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Organization Type</Label>
-                    <p className="font-medium">{selectedPartner.organization_type}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Partnership Status</Label>
-                    <Badge className="mt-1">
-                      {selectedPartner.partnership_status || "pending"}
-                    </Badge>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">MOU Status</Label>
-                    {selectedPartner.mou_expiry_date ? (
-                      <Badge
-                        className={`mt-1 bg-${getMOUStatus(selectedPartner.mou_expiry_date).color}-500`}
-                      >
-                        {getMOUStatus(selectedPartner.mou_expiry_date).label}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="mt-1">No MOU</Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Contact Info */}
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm border-b pb-2">Contact Information</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Contact Person</Label>
-                    <p className="font-medium">{selectedPartner.contact_person}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Email</Label>
-                    <p className="font-medium">{selectedPartner.contact_email}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Phone</Label>
-                    <p className="font-medium">{selectedPartner.contact_phone}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <Label className="text-muted-foreground text-xs">Address</Label>
-                    <p className="font-medium">{selectedPartner.address}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Services */}
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm border-b pb-2">Services Offered</h3>
-                <div className="flex flex-wrap gap-2">
-                  {selectedPartner.services_offered?.map((service, idx) => (
-                    <Badge key={idx} variant="secondary">
-                      {service}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* MOU & Budget */}
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm border-b pb-2">Partnership Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground text-xs">MOU Signed Date</Label>
-                    <p className="font-medium">
-                      {selectedPartner.mou_signed_date || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">MOU Expiry Date</Label>
-                    <p className="font-medium">
-                      {selectedPartner.mou_expiry_date || "N/A"}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Budget Allocation</Label>
-                    <p className="font-medium">
-                      ₱{selectedPartner.budget_allocation?.toLocaleString() || "0.00"}
-                    </p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Success Rate</Label>
-                    <p className="font-medium">{selectedPartner.success_rate || 0}%</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Referrals */}
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm border-b pb-2">Referral Statistics</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Referrals Sent</Label>
-                    <p className="font-medium">{selectedPartner.total_referrals_sent || 0}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Referrals Received</Label>
-                    <p className="font-medium">{selectedPartner.total_referrals_received || 0}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Notes */}
-              {selectedPartner.notes && (
+            <div className="grid grid-cols-2 gap-6">
+              {/* LEFT COLUMN */}
+              <div className="space-y-6">
+                {/* Organization Info */}
                 <div className="space-y-3">
-                  <h3 className="font-semibold text-sm border-b pb-2">Notes</h3>
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                    {selectedPartner.notes}
-                  </p>
+                  <h3 className="font-semibold text-sm border-b pb-2">Organization Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Organization Name</Label>
+                      <p className="font-medium">{selectedPartner.organization_name}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Organization Type</Label>
+                      <p className="font-medium">{selectedPartner.organization_type}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Partnership Status</Label>
+                      <Badge className="mt-1">
+                        {selectedPartner.partnership_status || "pending"}
+                      </Badge>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">MOU Status</Label>
+                      {selectedPartner.mou_expiry_date ? (
+                        <Badge
+                          className={`mt-1 bg-${getMOUStatus(selectedPartner.mou_expiry_date).color}-500`}
+                        >
+                          {getMOUStatus(selectedPartner.mou_expiry_date).label}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="mt-1">No MOU</Badge>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              )}
 
-              {/* Metadata */}
-              <div className="space-y-3">
-                <h3 className="font-semibold text-sm border-b pb-2">Record Information</h3>
-                <div className="grid grid-cols-2 gap-4 text-xs text-muted-foreground">
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Created</Label>
-                    <p>{new Date(selectedPartner.created_at).toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground text-xs">Last Updated</Label>
-                    <p>{new Date(selectedPartner.updated_at).toLocaleString()}</p>
+                {/* Contact Info */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm border-b pb-2">Contact Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Contact Person</Label>
+                      <p className="font-medium">{selectedPartner.contact_person}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Email</Label>
+                      <p className="font-medium">{selectedPartner.contact_email}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Phone</Label>
+                      <p className="font-medium">{selectedPartner.contact_phone}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Address</Label>
+                      <p className="font-medium">{selectedPartner.address}</p>
+                    </div>
                   </div>
                 </div>
+
+                {/* Services */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm border-b pb-2">Services Offered</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedPartner.services_offered?.map((service, idx) => (
+                      <Badge key={idx} variant="secondary">
+                        {service}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* RIGHT COLUMN */}
+              <div className="space-y-6">
+                {/* MOU & Budget */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm border-b pb-2">Partnership Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-xs">MOU Signed Date</Label>
+                      <p className="font-medium">
+                        {selectedPartner.mou_signed_date || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">MOU Expiry Date</Label>
+                      <p className="font-medium">
+                        {selectedPartner.mou_expiry_date || "N/A"}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Budget Allocation</Label>
+                      <p className="font-medium">
+                        ₱{selectedPartner.budget_allocation?.toLocaleString() || "0.00"}
+                      </p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Success Rate</Label>
+                      <p className="font-medium">{selectedPartner.success_rate || 0}%</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Referrals Sent</Label>
+                      <p className="font-medium">{selectedPartner.total_referrals_sent || 0}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Referrals Received</Label>
+                      <p className="font-medium">{selectedPartner.total_referrals_received || 0}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Record Information */}
+                <div className="space-y-3">
+                  <h3 className="font-semibold text-sm border-b pb-2">Record Information</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Created</Label>
+                      <p className="font-medium text-sm">{new Date(selectedPartner.created_at).toLocaleString()}</p>
+                    </div>
+                    <div>
+                      <Label className="text-muted-foreground text-xs">Last Updated</Label>
+                      <p className="font-medium text-sm">{new Date(selectedPartner.updated_at).toLocaleString()}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Notes */}
+                {selectedPartner.notes && (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-sm border-b pb-2">Notes</h3>
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {selectedPartner.notes}
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           )}
