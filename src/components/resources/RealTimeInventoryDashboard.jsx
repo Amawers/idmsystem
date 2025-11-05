@@ -91,50 +91,56 @@ function BudgetOverview({ programs, loading }) {
         <CardTitle className="text-sm">Budget Overview</CardTitle>
         <CardDescription className="text-xs">Cash on hand and program budgets</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3 pb-3">
-        <div className="grid gap-3 md:grid-cols-3">
-          <div>
-            <p className="text-[10px] font-medium text-muted-foreground">Total Budget</p>
-            <p className="text-lg font-bold">₱{totalBudget.toLocaleString()}</p>
+      <CardContent className="pb-3">
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Left Column: Budget Summary */}
+          <div className="space-y-3">
+            <div className="space-y-2">
+              <div>
+                <p className="text-[10px] font-medium text-muted-foreground">Total Budget</p>
+                <p className="text-lg font-bold">₱{totalBudget.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-medium text-muted-foreground">Spent</p>
+                <p className="text-lg font-bold text-red-600">₱{totalSpent.toLocaleString()}</p>
+              </div>
+              <div>
+                <p className="text-[10px] font-medium text-muted-foreground">Remaining</p>
+                <p className="text-lg font-bold text-green-600">₱{remaining.toLocaleString()}</p>
+              </div>
+            </div>
+            
+            <div className="space-y-1 pt-2">
+              <div className="flex items-center justify-between text-xs">
+                <span>Utilization Rate</span>
+                <span className="font-medium">{utilizationRate.toFixed(1)}%</span>
+              </div>
+              <Progress value={utilizationRate} className="h-2" />
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] font-medium text-muted-foreground">Spent</p>
-            <p className="text-lg font-bold text-red-600">₱{totalSpent.toLocaleString()}</p>
-          </div>
-          <div>
-            <p className="text-[10px] font-medium text-muted-foreground">Remaining</p>
-            <p className="text-lg font-bold text-green-600">₱{remaining.toLocaleString()}</p>
-          </div>
-        </div>
-        
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-xs">
-            <span>Utilization Rate</span>
-            <span className="font-medium">{utilizationRate.toFixed(1)}%</span>
-          </div>
-          <Progress value={utilizationRate} className="h-2" />
-        </div>
 
-        <div className="pt-3 border-t">
-          <h4 className="text-xs font-semibold mb-2">Budget by Program</h4>
-          <div className="space-y-2">
-            {programs.slice(0, 5).map((program) => {
-              const programUtilization = program.budget_allocated > 0 
-                ? (program.budget_spent / program.budget_allocated) * 100 
-                : 0;
-              
-              return (
-                <div key={program.id} className="space-y-0.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="truncate flex-1">{program.program_name}</span>
-                    <span className="font-medium ml-2 text-[10px]">
-                      ₱{program.budget_spent.toLocaleString()} / ₱{program.budget_allocated.toLocaleString()}
-                    </span>
+          {/* Right Column: Budget by Program */}
+          <div className="space-y-2 md:border-l md:pl-4">
+            <h4 className="text-xs font-semibold">Budget by Program</h4>
+            <div className="space-y-2">
+              {programs.slice(0, 5).map((program) => {
+                const programUtilization = program.budget_allocated > 0 
+                  ? (program.budget_spent / program.budget_allocated) * 100 
+                  : 0;
+                
+                return (
+                  <div key={program.id} className="space-y-0.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="truncate flex-1">{program.program_name}</span>
+                      <span className="font-medium ml-2 text-[10px]">
+                        ₱{program.budget_spent.toLocaleString()} / ₱{program.budget_allocated.toLocaleString()}
+                      </span>
+                    </div>
+                    <Progress value={programUtilization} className="h-1.5" />
                   </div>
-                  <Progress value={programUtilization} className="h-1.5" />
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         </div>
       </CardContent>
