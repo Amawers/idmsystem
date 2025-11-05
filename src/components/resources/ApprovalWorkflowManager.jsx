@@ -285,24 +285,7 @@ export default function ApprovalWorkflowManager() {
 
   return (
     <div className="space-y-4">
-      {/* Header */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Approval Workflow</CardTitle>
-              <CardDescription>
-                Review and approve resource requests
-              </CardDescription>
-            </div>
-            {pendingCount > 0 && (
-              <Badge variant="destructive" className="text-lg px-4 py-2">
-                {pendingCount} Pending
-              </Badge>
-            )}
-          </div>
-        </CardHeader>
-      </Card>
+      
 
       {/* Filters */}
       <div className="flex gap-2">
