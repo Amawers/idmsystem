@@ -208,7 +208,7 @@ export default function ProgramAllocationTracker() {
         <CardHeader>
           <CardTitle>Program Budget Utilization Details</CardTitle>
         </CardHeader>
-        <CardContent className="p-0">
+        <CardContent className="px-6">
           <Table>
             <TableHeader>
               <TableRow>
