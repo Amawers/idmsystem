@@ -17,7 +17,7 @@ import ApprovalWorkflowManager from "@/components/resources/ApprovalWorkflowMana
  */
 export default function ResourceApprovals() {
   return (
-    <div className="flex-1 space-y-3 p-3 md:px-6">
+    <div className="flex-1 space-y-3 md:px-6">
       {/* Page Header */}
       <div>
         <h2 className="text-xl font-bold tracking-tight">Approval Workflow</h2>

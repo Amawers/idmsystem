@@ -39,7 +39,16 @@ import {
   Eye,
   FileText,
   AlertCircle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useResourceStore } from "@/store/useResourceStore";
 import { useAuthStore } from "@/store/authStore";
 
@@ -251,6 +260,8 @@ export default function ApprovalWorkflowManager() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [filter, setFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(8);
 
   const {
     requests,
@@ -269,6 +280,21 @@ export default function ApprovalWorkflowManager() {
   });
 
   const pendingCount = requests.filter(r => r.status === "submitted").length;
+
+  // Pagination calculations
+  const totalFiltered = filteredRequests.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / rowsPerPage));
+  
+  // Reset to first page if filters change and current page is out of range
+  if (page > totalPages) {
+    setPage(1);
+  }
+
+  const sliceStart = (page - 1) * rowsPerPage;
+  const sliceEnd = sliceStart + rowsPerPage;
+  const pageRequests = filteredRequests.slice(sliceStart, sliceEnd);
+  const displayStart = totalFiltered === 0 ? 0 : sliceStart + 1;
+  const displayEnd = Math.min(totalFiltered, sliceEnd);
 
   const handleViewDetails = (request) => {
     setSelectedRequest(request);
@@ -321,9 +347,10 @@ export default function ApprovalWorkflowManager() {
 
       {/* Requests Table */}
       <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
+        <CardContent className="px-4">
+          <div className={`rounded-md border px-4 ${pageRequests.length > 8 ? 'overflow-y-auto max-h-[472px]' : ''}`}>
+            <Table>
+              <TableHeader>
               <TableRow>
                 <TableHead>Request #</TableHead>
                 <TableHead>Item</TableHead>
@@ -334,8 +361,8 @@ export default function ApprovalWorkflowManager() {
                 <TableHead>Date</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            </TableHeader>
-            <TableBody>
+              </TableHeader>
+              <TableBody>
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-8">
@@ -351,7 +378,7 @@ export default function ApprovalWorkflowManager() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRequests.map((request) => (
+                pageRequests.map((request) => (
                   <TableRow key={request.id}>
                     <TableCell className="font-medium">{request.request_number}</TableCell>
                     <TableCell>
@@ -390,8 +417,62 @@ export default function ApprovalWorkflowManager() {
                   </TableRow>
                 ))
               )}
-            </TableBody>
-          </Table>
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-between px-2 py-4">
+            <div className="flex items-center gap-2">
+              <p className="text-sm text-muted-foreground">
+                Showing {displayStart} to {displayEnd} of {totalFiltered} request{totalFiltered !== 1 ? 's' : ''}
+              </p>
+              <Select
+                value={rowsPerPage.toString()}
+                onValueChange={(value) => {
+                  setRowsPerPage(Number(value));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="h-8 w-[125px] cursor-pointer">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="8">8 per page</SelectItem>
+                  <SelectItem value="10">10 per page</SelectItem>
+                  <SelectItem value="20">20 per page</SelectItem>
+                  <SelectItem value="50">50 per page</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(page - 1)}
+                disabled={page === 1}
+                className="cursor-pointer"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                <span className="text-sm">
+                  Page {page} of {totalPages}
+                </span>
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage(page + 1)}
+                disabled={page === totalPages}
+                className="cursor-pointer"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </CardContent>
       </Card>
 
