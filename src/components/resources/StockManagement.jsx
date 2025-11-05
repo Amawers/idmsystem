@@ -523,11 +523,12 @@ export default function StockManagement() {
                 size="sm"
                 onClick={handleRefresh}
                 disabled={loading}
+                className="cursor-pointer"
               >
                 <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
-              <Button onClick={() => setShowAddDialog(true)} size="sm">
+              <Button onClick={() => setShowAddDialog(true)} size="sm" className="cursor-pointer">
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add Item
               </Button>
@@ -547,8 +548,8 @@ export default function StockManagement() {
               />
             </div>
 
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="w-[180px]">
+            <Select value={categoryFilter} onValueChange={setCategoryFilter} className="cursor-pointer">
+              <SelectTrigger className="w-[180px] cursor-pointer">
                 <SelectValue placeholder="Filter by category" />
               </SelectTrigger>
               <SelectContent>
@@ -561,7 +562,7 @@ export default function StockManagement() {
             </Select>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px] cursor-pointer">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
@@ -663,7 +664,7 @@ export default function StockManagement() {
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="h-8 w-[100px]">
+                <SelectTrigger className="h-8 w-[125px] cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -680,6 +681,7 @@ export default function StockManagement() {
                 size="sm"
                 onClick={() => setPage(page - 1)}
                 disabled={page === 1}
+                className="cursor-pointer"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
@@ -694,6 +696,7 @@ export default function StockManagement() {
                 size="sm"
                 onClick={() => setPage(page + 1)}
                 disabled={page === totalPages}
+                className="cursor-pointer"
               >
                 Next
                 <ChevronRight className="h-4 w-4" />
