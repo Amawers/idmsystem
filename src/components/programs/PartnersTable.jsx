@@ -10,8 +10,9 @@
  * - Partnership agreements
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePartners } from "@/hooks/usePartners";
+import { useCases } from "@/hooks/useCases";
 import { ORGANIZATION_TYPES, SERVICE_TYPES } from "@/lib/partnerSubmission";
 import {
   Table,
@@ -50,7 +51,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, MoreHorizontal, Plus, Building2, Phone, Mail, AlertCircle, Loader2 } from "lucide-react";
+import { Search, MoreHorizontal, Plus, Building2, Phone, Mail, AlertCircle, Loader2, FileText } from "lucide-react";
 
 /**
  * Partners Table Component
@@ -62,11 +63,23 @@ export default function PartnersTable() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isReferralsDialogOpen, setIsReferralsDialogOpen] = useState(false);
+  const [isNewReferralDialogOpen, setIsNewReferralDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [formError, setFormError] = useState("");
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedPartner, setSelectedPartner] = useState(null);
+  const [referralFormData, setReferralFormData] = useState({
+    case_number: "",
+    case_type: "",
+    beneficiary_name: "",
+    referral_date: new Date().toISOString().split('T')[0],
+    service_needed: "",
+    urgency_level: "normal",
+    reason: "",
+    notes: "",
+  });
   const [formData, setFormData] = useState({
     organization_name: "",
     organization_type: "",
@@ -82,11 +95,26 @@ export default function PartnersTable() {
   });
 
   const { partners, loading, statistics = {}, createPartner, updatePartner, deletePartner, getMOUStatus } = usePartners();
+  const { cases } = useCases();
 
   const filteredPartners = (partners || []).filter((partner) =>
     partner.organization_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     partner.contact_person.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // When a case is selected, auto-fill beneficiary name and case type
+  useEffect(() => {
+    if (referralFormData.case_number && cases) {
+      const selectedCase = cases.find(c => c.id === referralFormData.case_number);
+      if (selectedCase) {
+        setReferralFormData(prev => ({
+          ...prev,
+          beneficiary_name: selectedCase.header || selectedCase.identifying_name || "",
+          case_type: selectedCase.identifying_case_type || "",
+        }));
+      }
+    }
+  }, [referralFormData.case_number, cases]);
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -234,6 +262,73 @@ export default function PartnersTable() {
     });
     setSelectedServices(partner.services_offered || []);
     setIsEditDialogOpen(true);
+  };
+
+  // Handle view referrals
+  const handleViewReferrals = (partner) => {
+    setSelectedPartner(partner);
+    setIsReferralsDialogOpen(true);
+  };
+
+  // Handle new referral
+  const handleNewReferral = () => {
+    setIsNewReferralDialogOpen(true);
+  };
+
+  // Handle referral form input changes
+  const handleReferralInputChange = (e) => {
+    const { name, value } = e.target;
+    setReferralFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // Reset referral form
+  const resetReferralForm = () => {
+    setReferralFormData({
+      case_number: "",
+      case_type: "",
+      beneficiary_name: "",
+      referral_date: new Date().toISOString().split('T')[0],
+      service_needed: "",
+      urgency_level: "normal",
+      reason: "",
+      notes: "",
+    });
+  };
+
+  // Submit new referral
+  const handleReferralSubmit = async (e) => {
+    e.preventDefault();
+    setFormError("");
+    setIsSubmitting(true);
+
+    try {
+      // Validate required fields
+      if (!referralFormData.case_number || !referralFormData.beneficiary_name || !referralFormData.service_needed) {
+        setFormError("Please fill in all required fields");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // TODO: When referrals table is created, save to database
+      console.log("New Referral Data:", {
+        partner_id: selectedPartner.id,
+        partner_name: selectedPartner.organization_name,
+        ...referralFormData,
+        status: "pending",
+        direction: "sent",
+      });
+
+      // For now, just show success message
+      alert(`Referral Created!\n\nCase: ${referralFormData.case_number}\nBeneficiary: ${referralFormData.beneficiary_name}\nPartner: ${selectedPartner.organization_name}\nService: ${referralFormData.service_needed}\n\nNote: This will be saved to the database once the referrals table is implemented.`);
+
+      setIsNewReferralDialogOpen(false);
+      resetReferralForm();
+    } catch (error) {
+      console.error("Error creating referral:", error);
+      setFormError("Failed to create referral. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Open delete confirmation dialog
@@ -431,7 +526,9 @@ export default function PartnersTable() {
                             <DropdownMenuItem onClick={() => handleEditPartner(partner)}>
                               Edit Partner
                             </DropdownMenuItem>
-                            <DropdownMenuItem>View Referrals</DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleViewReferrals(partner)}>
+                              View Referrals
+                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem
                               className="text-red-600"
@@ -1227,6 +1324,393 @@ export default function PartnersTable() {
               )}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Referrals Dialog */}
+      <Dialog open={isReferralsDialogOpen} onOpenChange={setIsReferralsDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Partner Referrals</DialogTitle>
+            <DialogDescription>
+              View all referrals sent to and received from this partner organization
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedPartner && (
+            <div className="space-y-6">
+              {/* Partner Info Summary */}
+              <div className="p-4 bg-muted rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold text-lg">{selectedPartner.organization_name}</h3>
+                    <p className="text-sm text-muted-foreground">{selectedPartner.organization_type}</p>
+                  </div>
+                  <div className="flex gap-6 text-center">
+                    <div>
+                      <p className="text-2xl font-bold text-blue-600">{selectedPartner.total_referrals_sent || 0}</p>
+                      <p className="text-xs text-muted-foreground">Sent</p>
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold text-green-600">{selectedPartner.total_referrals_received || 0}</p>
+                      <p className="text-xs text-muted-foreground">Received</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Referrals Table */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-semibold text-sm">Referral History</h3>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    onClick={handleNewReferral}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    New Referral
+                  </Button>
+                </div>
+
+                <div className="border rounded-lg">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Case Number</TableHead>
+                        <TableHead>Beneficiary</TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>Direction</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Notes</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {/* Placeholder - No referrals data yet */}
+                      {(selectedPartner.total_referrals_sent === 0 && selectedPartner.total_referrals_received === 0) ? (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            <div className="flex flex-col items-center gap-2">
+                              <FileText className="h-8 w-8 text-muted-foreground/50" />
+                              <p>No referrals recorded yet</p>
+                              <p className="text-sm">Referral tracking will be available once the referrals system is configured</p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        <TableRow>
+                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                            <div className="flex flex-col items-center gap-2">
+                              <AlertCircle className="h-8 w-8 text-amber-500" />
+                              <p className="font-medium">Referral Details Coming Soon</p>
+                              <p className="text-sm">
+                                This partner has {selectedPartner.total_referrals_sent} sent and {selectedPartner.total_referrals_received} received referrals
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                Detailed referral tracking will be implemented in the next update
+                              </p>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="grid grid-cols-3 gap-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Success Rate</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{selectedPartner.success_rate || 0}%</div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Total Referrals</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">
+                      {(selectedPartner.total_referrals_sent || 0) + (selectedPartner.total_referrals_received || 0)}
+                    </div>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm font-medium text-muted-foreground">Services Offered</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-2xl font-bold">{selectedPartner.services_offered?.length || 0}</div>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsReferralsDialogOpen(false);
+                setSelectedPartner(null);
+              }}
+            >
+              Close
+            </Button>
+            <Button onClick={() => {
+              setIsReferralsDialogOpen(false);
+              handleEditPartner(selectedPartner);
+            }}>
+              Edit Partner
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* New Referral Dialog */}
+      <Dialog open={isNewReferralDialogOpen} onOpenChange={setIsNewReferralDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Create New Referral</DialogTitle>
+            <DialogDescription>
+              Refer a case to {selectedPartner?.organization_name} for specialized services
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleReferralSubmit} className="space-y-4">
+            {/* Error Message */}
+            {formError && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-800 text-sm">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
+
+            {/* Partner Info Banner */}
+            {selectedPartner && (
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-semibold text-blue-900">{selectedPartner.organization_name}</p>
+                    <p className="text-sm text-blue-700">{selectedPartner.organization_type}</p>
+                  </div>
+                  <Badge variant="secondary">Referral To</Badge>
+                </div>
+              </div>
+            )}
+
+            {/* Two Column Layout */}
+            <div className="grid grid-cols-2 gap-4">
+              {/* Left Column */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="case_number">
+                    Select Case <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={referralFormData.case_number}
+                    onValueChange={(value) =>
+                      setReferralFormData((prev) => ({ ...prev, case_number: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a case" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cases && cases.length > 0 ? (
+                        cases.map((caseItem) => (
+                          <SelectItem key={caseItem.id} value={caseItem.id}>
+                            {caseItem.header || caseItem.identifying_name || `Case ${caseItem.id.slice(0, 8)}`} - {caseItem.identifying_case_type || 'N/A'}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="no-cases" disabled>No cases available</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {referralFormData.case_number && cases && cases.find(c => c.id === referralFormData.case_number)?.id.slice(0, 13)}
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="beneficiary_name">
+                    Beneficiary Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={referralFormData.beneficiary_name}
+                    onValueChange={(value) =>
+                      setReferralFormData((prev) => ({ ...prev, beneficiary_name: value }))
+                    }
+                    disabled={!referralFormData.case_number}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={referralFormData.case_number ? "Auto-filled from case" : "Select a case first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cases && cases.length > 0 ? (
+                        cases
+                          .filter(c => c.header || c.identifying_name)
+                          .map((caseItem) => (
+                            <SelectItem key={caseItem.id} value={caseItem.header || caseItem.identifying_name}>
+                              {caseItem.header || caseItem.identifying_name}
+                            </SelectItem>
+                          ))
+                      ) : (
+                        <SelectItem value="no-names" disabled>No beneficiaries available</SelectItem>
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Auto-filled when case is selected
+                  </p>
+                </div>
+
+                <div>
+                  <Label htmlFor="case_type">
+                    Case Type
+                  </Label>
+                  <Input
+                    id="case_type"
+                    name="case_type"
+                    value={referralFormData.case_type}
+                    readOnly
+                    disabled
+                    placeholder="Auto-filled from case"
+                    className="bg-muted"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="referral_date">
+                    Referral Date <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="referral_date"
+                    name="referral_date"
+                    type="date"
+                    value={referralFormData.referral_date}
+                    onChange={handleReferralInputChange}
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Right Column */}
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="service_needed">
+                    Service Needed <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={referralFormData.service_needed}
+                    onValueChange={(value) =>
+                      setReferralFormData((prev) => ({ ...prev, service_needed: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select service" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectedPartner?.services_offered?.map((service) => (
+                        <SelectItem key={service} value={service}>
+                          {service}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="urgency_level">Urgency Level</Label>
+                  <Select
+                    value={referralFormData.urgency_level}
+                    onValueChange={(value) =>
+                      setReferralFormData((prev) => ({ ...prev, urgency_level: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="normal">Normal</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="urgent">Urgent</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="reason">
+                    Reason for Referral <span className="text-red-500">*</span>
+                  </Label>
+                  <Textarea
+                    id="reason"
+                    name="reason"
+                    value={referralFormData.reason}
+                    onChange={handleReferralInputChange}
+                    placeholder="Describe why this case needs to be referred..."
+                    rows={3}
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Full Width Notes */}
+            <div>
+              <Label htmlFor="notes">Additional Notes</Label>
+              <Textarea
+                id="notes"
+                name="notes"
+                value={referralFormData.notes}
+                onChange={handleReferralInputChange}
+                placeholder="Any additional information or special instructions..."
+                rows={2}
+              />
+            </div>
+
+            {/* Info Banner */}
+            <div className="flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-md">
+              <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800">
+                <strong>Note:</strong> This referral will be sent to {selectedPartner?.organization_name}. 
+                You can track its status in the referral history.
+              </p>
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsNewReferralDialogOpen(false);
+                  resetReferralForm();
+                }}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Referral...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Referral
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
         </DialogContent>
       </Dialog>
     </div>
