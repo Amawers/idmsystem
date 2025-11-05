@@ -12,6 +12,7 @@
 
 import { useState } from "react";
 import { usePartners } from "@/hooks/usePartners";
+import { ORGANIZATION_TYPES, SERVICE_TYPES } from "@/lib/partnerSubmission";
 import {
   Table,
   TableBody,
@@ -23,6 +24,23 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +50,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, MoreHorizontal, Plus, Building2, Phone, Mail } from "lucide-react";
+import { Search, MoreHorizontal, Plus, Building2, Phone, Mail, AlertCircle, Loader2 } from "lucide-react";
 
 /**
  * Partners Table Component
@@ -40,12 +58,108 @@ import { Search, MoreHorizontal, Plus, Building2, Phone, Mail } from "lucide-rea
  */
 export default function PartnersTable() {
   const [searchTerm, setSearchTerm] = useState("");
-  const { partners, loading, statistics = {} } = usePartners();
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const [selectedServices, setSelectedServices] = useState([]);
+  const [formData, setFormData] = useState({
+    organization_name: "",
+    organization_type: "",
+    contact_person: "",
+    contact_email: "",
+    contact_phone: "",
+    address: "",
+    partnership_status: "pending",
+    mou_signed_date: "",
+    mou_expiry_date: "",
+    budget_allocation: "",
+    notes: "",
+  });
+
+  const { partners, loading, statistics = {}, createPartner, getMOUStatus } = usePartners();
 
   const filteredPartners = (partners || []).filter((partner) =>
     partner.organization_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     partner.contact_person.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Handle form input changes
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormError(""); // Clear error on change
+  };
+
+  // Handle service selection toggle
+  const toggleService = (service) => {
+    setSelectedServices((prev) =>
+      prev.includes(service)
+        ? prev.filter((s) => s !== service)
+        : [...prev, service]
+    );
+  };
+
+  // Reset form
+  const resetForm = () => {
+    setFormData({
+      organization_name: "",
+      organization_type: "",
+      contact_person: "",
+      contact_email: "",
+      contact_phone: "",
+      address: "",
+      partnership_status: "pending",
+      mou_signed_date: "",
+      mou_expiry_date: "",
+      budget_allocation: "",
+      notes: "",
+    });
+    setSelectedServices([]);
+    setFormError("");
+  };
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setFormError("");
+    setIsSubmitting(true);
+
+    try {
+      // Validate services
+      if (selectedServices.length === 0) {
+        setFormError("Please select at least one service");
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Prepare data
+      const partnerData = {
+        ...formData,
+        services_offered: selectedServices,
+        budget_allocation: formData.budget_allocation
+          ? parseFloat(formData.budget_allocation)
+          : 0,
+        mou_signed_date: formData.mou_signed_date || null,
+        mou_expiry_date: formData.mou_expiry_date || null,
+      };
+
+      // Submit to backend
+      await createPartner(partnerData);
+
+      // Success - close dialog and reset
+      setIsAddDialogOpen(false);
+      resetForm();
+    } catch (error) {
+      console.error("Error creating partner:", error);
+      setFormError(
+        error.validationErrors?.join(", ") ||
+          error.message ||
+          "Failed to create partner. Please try again."
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -106,7 +220,7 @@ export default function PartnersTable() {
                 Manage partner organizations and service providers
               </CardDescription>
             </div>
-            <Button size="sm">
+            <Button size="sm" onClick={() => setIsAddDialogOpen(true)}>
               <Plus className="mr-2 h-4 w-4" />
               Add Partner
             </Button>
@@ -191,15 +305,15 @@ export default function PartnersTable() {
                         <div className="text-sm font-medium">{partner.referral_count}</div>
                       </TableCell>
                       <TableCell>
-                        <Badge 
-                          className={
-                            partner.status === "active" 
-                              ? "bg-green-500" 
-                              : "bg-gray-500"
-                          }
-                        >
-                          {partner.status}
-                        </Badge>
+                        {partner.mou_expiry_date ? (
+                          <Badge
+                            className={`bg-${getMOUStatus(partner.mou_expiry_date).color}-500`}
+                          >
+                            {getMOUStatus(partner.mou_expiry_date).label}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline">No MOU</Badge>
+                        )}
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
@@ -234,6 +348,264 @@ export default function PartnersTable() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Add Partner Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add Partner Organization</DialogTitle>
+            <DialogDescription>
+              Create a new partner organization record with contact and service information.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Error Message */}
+            {formError && (
+              <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md text-red-800 text-sm">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span>{formError}</span>
+              </div>
+            )}
+
+            {/* Organization Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Organization Information</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Label htmlFor="organization_name">
+                    Organization Name <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="organization_name"
+                    name="organization_name"
+                    value={formData.organization_name}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Hope Children's Foundation"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="organization_type">
+                    Organization Type <span className="text-red-500">*</span>
+                  </Label>
+                  <Select
+                    value={formData.organization_type}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, organization_type: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ORGANIZATION_TYPES.map((type) => (
+                        <SelectItem key={type} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="partnership_status">Partnership Status</Label>
+                  <Select
+                    value={formData.partnership_status}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, partnership_status: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="inactive">Inactive</SelectItem>
+                      <SelectItem value="expired">Expired</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </div>
+
+            {/* Contact Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">Contact Information</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <Label htmlFor="contact_person">
+                    Contact Person <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="contact_person"
+                    name="contact_person"
+                    value={formData.contact_person}
+                    onChange={handleInputChange}
+                    placeholder="e.g., Dr. Maria Santos"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="contact_email">
+                    Email <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="contact_email"
+                    name="contact_email"
+                    type="email"
+                    value={formData.contact_email}
+                    onChange={handleInputChange}
+                    placeholder="email@example.com"
+                    required
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="contact_phone">
+                    Phone <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="contact_phone"
+                    name="contact_phone"
+                    value={formData.contact_phone}
+                    onChange={handleInputChange}
+                    placeholder="+63-2-8123-4567"
+                    required
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <Label htmlFor="address">
+                    Address <span className="text-red-500">*</span>
+                  </Label>
+                  <Input
+                    id="address"
+                    name="address"
+                    value={formData.address}
+                    onChange={handleInputChange}
+                    placeholder="Street, City, Province"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Services Offered */}
+            <div className="space-y-2">
+              <Label>
+                Services Offered <span className="text-red-500">*</span>
+              </Label>
+              <div className="grid grid-cols-3 gap-2">
+                {SERVICE_TYPES.map((service) => (
+                  <div
+                    key={service}
+                    onClick={() => toggleService(service)}
+                    className={`
+                      px-3 py-2 rounded-md border cursor-pointer text-sm text-center
+                      transition-colors
+                      ${
+                        selectedServices.includes(service)
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-background hover:bg-accent"
+                      }
+                    `}
+                  >
+                    {service}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* MOU Information */}
+            <div className="space-y-4">
+              <h3 className="font-semibold text-sm">MOU Information (Optional)</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="mou_signed_date">MOU Signed Date</Label>
+                  <Input
+                    id="mou_signed_date"
+                    name="mou_signed_date"
+                    type="date"
+                    value={formData.mou_signed_date}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="mou_expiry_date">MOU Expiry Date</Label>
+                  <Input
+                    id="mou_expiry_date"
+                    name="mou_expiry_date"
+                    type="date"
+                    value={formData.mou_expiry_date}
+                    onChange={handleInputChange}
+                  />
+                </div>
+
+                <div className="col-span-2">
+                  <Label htmlFor="budget_allocation">Budget Allocation (₱)</Label>
+                  <Input
+                    id="budget_allocation"
+                    name="budget_allocation"
+                    type="number"
+                    step="0.01"
+                    value={formData.budget_allocation}
+                    onChange={handleInputChange}
+                    placeholder="0.00"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Notes */}
+            <div>
+              <Label htmlFor="notes">Notes</Label>
+              <Textarea
+                id="notes"
+                name="notes"
+                value={formData.notes}
+                onChange={handleInputChange}
+                placeholder="Additional information about the partnership..."
+                rows={3}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setIsAddDialogOpen(false);
+                  resetForm();
+                }}
+                disabled={isSubmitting}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isSubmitting}>
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Partner
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
