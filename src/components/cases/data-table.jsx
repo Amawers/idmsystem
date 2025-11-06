@@ -1431,6 +1431,7 @@ export function DataTable({
 							<IntakeSheetCICLCARCreate
 								open={openIntakeSheet}
 								setOpen={setOpenIntakeSheet}
+								onSuccess={reloadCiclcar}
 							/>
 
 							{/* CICL/CAR Edit Modal */}

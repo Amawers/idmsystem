@@ -68,7 +68,7 @@ const tabOrder = [
 	"Referral",
 ];
 
-export default function IntakeSheetCICLCARCreate({ open, setOpen }) {
+export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 	const [activeTab, setActiveTab] = useState(tabOrder[0]);
 	const { getAllData, resetAll } = useIntakeFormStore();
 	const [isSaving, setIsSaving] = useState(false);
@@ -240,6 +240,10 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen }) {
 			// Done
 			resetAll();
 			setOpen(false);
+			// Call onSuccess callback to refresh the table
+			if (onSuccess) {
+				await onSuccess();
+			}
 		} catch (err) {
 			console.error("Failed to create CICL/CAR record:", err);
 			// Optional: surface error to UI/toast
