@@ -130,7 +130,7 @@ export function ComplainantForm({ sectionKey, goNext, goBack }) {
 										defaultValue={field.value}
 									>
 										<FormControl>
-											<SelectTrigger>
+											<SelectTrigger className="cursor-pointer">
 												<SelectValue placeholder="Select sex" />
 											</SelectTrigger>
 										</FormControl>
@@ -200,7 +200,7 @@ export function ComplainantForm({ sectionKey, goNext, goBack }) {
 										defaultValue={field.value}
 									>
 										<FormControl>
-											<SelectTrigger>
+											<SelectTrigger className="cursor-pointer">
 												<SelectValue placeholder="Select answer" />
 											</SelectTrigger>
 										</FormControl>
@@ -225,13 +225,18 @@ export function ComplainantForm({ sectionKey, goNext, goBack }) {
 								<FormItem>
 									<FormLabel>Relationship</FormLabel>
 									<Select
-										onValueChange={(val) =>
-											field.onChange(val)
-										}
+										onValueChange={(val) => {
+											field.onChange(val);
+											setSectionField(
+												sectionKey,
+												"relationship",
+												val
+											);
+										}}
 										defaultValue={field.value}
 									>
 										<FormControl>
-											<SelectTrigger>
+											<SelectTrigger className="cursor-pointer">
 												<SelectValue placeholder="Select relationship" />
 											</SelectTrigger>
 										</FormControl>
@@ -263,8 +268,62 @@ export function ComplainantForm({ sectionKey, goNext, goBack }) {
 											<SelectItem value="grandmother">
 												Grandmother
 											</SelectItem>
+											<SelectItem value="uncle">
+												Uncle
+											</SelectItem>
+											<SelectItem value="aunt">
+												Aunt
+											</SelectItem>
+											<SelectItem value="nephew">
+												Nephew
+											</SelectItem>
+											<SelectItem value="niece">
+												Niece
+											</SelectItem>
+											<SelectItem value="cousin">
+												Cousin
+											</SelectItem>
+											<SelectItem value="stepfather">
+												Stepfather
+											</SelectItem>
+											<SelectItem value="stepmother">
+												Stepmother
+											</SelectItem>
+											<SelectItem value="stepbrother">
+												Stepbrother
+											</SelectItem>
+											<SelectItem value="stepsister">
+												Stepsister
+											</SelectItem>
+											<SelectItem value="father-in-law">
+												Father-in-law
+											</SelectItem>
+											<SelectItem value="mother-in-law">
+												Mother-in-law
+											</SelectItem>
 											<SelectItem value="guardian">
 												Guardian
+											</SelectItem>
+											<SelectItem value="foster-parent">
+												Foster Parent
+											</SelectItem>
+											<SelectItem value="relative">
+												Other Relative
+											</SelectItem>
+											<SelectItem value="neighbor">
+												Neighbor
+											</SelectItem>
+											<SelectItem value="friend">
+												Friend
+											</SelectItem>
+											<SelectItem value="acquaintance">
+												Acquaintance
+											</SelectItem>
+											<SelectItem value="stranger">
+												Stranger
+											</SelectItem>
+											<SelectItem value="other">
+												Other
 											</SelectItem>
 										</SelectContent>
 									</Select>
