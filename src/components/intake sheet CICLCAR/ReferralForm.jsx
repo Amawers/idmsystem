@@ -31,6 +31,7 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { useState, useEffect } from "react";
+import { useCaseManagers } from "@/hooks/useCaseManagers";
 
 // ✅ Schema with mix of text, select, and date
 const schema = z.object({
@@ -45,11 +46,8 @@ const schema = z.object({
 });
 
 export function ReferralForm({ sectionKey, goNext, goBack, isSaving, isEditing = false }) {
-    //! SAMPLE DATA – replace later with auth store profiles
-    const caseManagers = [
-        { id: "case-b83947bb", case_manager: "Elaiza Claire Q. Gamolo" },
-        { id: "case-a92d4c1f", case_manager: "Aaron S. Namoc" },
-    ];
+    // Fetch case managers from database
+    const { caseManagers, loading: loadingCaseManagers } = useCaseManagers();
 
     const statuses = [
         {
@@ -312,22 +310,29 @@ export function ReferralForm({ sectionKey, goNext, goBack, isSaving, isEditing =
                                     onValueChange={(val) =>
                                         updateCaseDetailField("caseManager", val)
                                     }
+                                    disabled={loadingCaseManagers}
                                 >
                                     <SelectTrigger
                                         className="w-full"
                                         id="caseManager"
                                     >
-                                        <SelectValue placeholder="Select" />
+                                        <SelectValue placeholder={loadingCaseManagers ? "Loading..." : "Select case manager"} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {caseManagers.map((item) => (
-                                            <SelectItem
-                                                key={item.id}
-                                                value={item.case_manager}
-                                            >
-                                                {item.case_manager}
+                                        {caseManagers.length === 0 ? (
+                                            <SelectItem value="no-managers" disabled>
+                                                No case managers available
                                             </SelectItem>
-                                        ))}
+                                        ) : (
+                                            caseManagers.map((manager) => (
+                                                <SelectItem
+                                                    key={manager.id}
+                                                    value={manager.full_name}
+                                                >
+                                                    {manager.full_name}
+                                                </SelectItem>
+                                            ))
+                                        )}
                                     </SelectContent>
                                 </Select>
                             </div>
