@@ -734,10 +734,6 @@ const facColumns = (handleDeleteClick) => [
 						e.stopPropagation();
 						handleEditClick(row.original, "FAC");
 					}}>Edit</DropdownMenuItem>
-					<DropdownMenuItem onClick={(e) => {
-						e.stopPropagation();
-						handleEnrollClick(row.original, "FAC");
-					}}>Enroll Program</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem variant="destructive" onClick={(e) => {
 						e.stopPropagation();
