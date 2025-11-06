@@ -16,13 +16,14 @@ import {
 	DialogHeader,
 	DialogTitle,
 } from "@/components/ui/dialog";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
 import { useState } from "react";
 
 export function ServicesForm({ sectionKey, goNext, goBack }) {
 	const { data, setSectionField } = useIntakeFormStore();
 	const [open, setOpen] = useState(false);
+	const [editingIndex, setEditingIndex] = useState(null);
 
 	// Load members from store, default to empty array
 	const [services, setServices] = useState(
@@ -41,12 +42,28 @@ export function ServicesForm({ sectionKey, goNext, goBack }) {
 	});
 
 	function onSubmit(values) {
-		const updated = [...services, values];
-		setServices(updated);
-		// Save array under "members" field
-		setSectionField(sectionKey, "services", updated);
+		if (editingIndex !== null) {
+			// Update existing service
+			const updated = [...services];
+			updated[editingIndex] = values;
+			setServices(updated);
+			setSectionField(sectionKey, "services", updated);
+		} else {
+			// Add new service
+			const updated = [...services, values];
+			setServices(updated);
+			setSectionField(sectionKey, "services", updated);
+		}
 		setOpen(false);
+		setEditingIndex(null);
 		form.reset();
+	}
+
+	function editService(index) {
+		const service = services[index];
+		form.reset(service);
+		setEditingIndex(index);
+		setOpen(true);
 	}
 
 	function removeMember(index) {
@@ -55,16 +72,24 @@ export function ServicesForm({ sectionKey, goNext, goBack }) {
 		setSectionField(sectionKey, "services", updated);
 	}
 
+	function handleDialogClose(isOpen) {
+		setOpen(isOpen);
+		if (!isOpen) {
+			setEditingIndex(null);
+			form.reset();
+		}
+	}
+
 	return (
 		<div className="space-y-4 ">
 			{/* Services Table */}
 			<div className="border rounded-lg overflow-hidden">
-				<div className="grid grid-cols-5 bg-muted font-medium text-sm px-3 py-2">
+				<div className="grid grid-cols-6 bg-muted font-medium text-sm px-3 py-2">
 					<div>Type</div>
 					<div>Service</div>
 					<div>Date Provided</div>
 					<div>Date Completed</div>
-					<div className="text-center">Action</div>
+					<div className="text-center col-span-2">Actions</div>
 				</div>
 
 				<div className="divide-y max-h-64 overflow-y-auto">
@@ -76,18 +101,30 @@ export function ServicesForm({ sectionKey, goNext, goBack }) {
 						services.map((m, i) => (
 							<div
 								key={i}
-								className="grid grid-cols-5 items-center px-3 py-2 text-sm"
+								className="grid grid-cols-6 items-center px-3 py-2 text-sm"
 							>
 								<div>{m.type}</div>
 								<div>{m.service}</div>
 								<div>{m.dateProvided}</div>
 								<div>{m.dateCompleted}</div>
-								<div className="flex justify-center">
+								<div className="flex justify-center gap-1 col-span-2">
+									<Button
+										type="button"
+										size="icon"
+										variant="ghost"
+										onClick={() => editService(i)}
+										title="Edit service"
+										className="cursor-pointer"
+									>
+										<Pencil className="h-4 w-4 text-blue-500" />
+									</Button>
 									<Button
 										type="button"
 										size="icon"
 										variant="ghost"
 										onClick={() => removeMember(i)}
+										title="Delete service"
+										className="cursor-pointer"
 									>
 										<Trash2 className="h-4 w-4 text-red-500" />
 									</Button>
@@ -100,14 +137,14 @@ export function ServicesForm({ sectionKey, goNext, goBack }) {
 
 			{/* Add Member Button */}
 			<div className="flex justify-end">
-				<Button onClick={() => setOpen(true)}>Add Service</Button>
+				<Button onClick={() => setOpen(true)} className="cursor-pointer">Add Service</Button>
 			</div>
 
 			{/* Add Service Modal */}
-			<Dialog open={open} onOpenChange={setOpen}>
+			<Dialog open={open} onOpenChange={handleDialogClose}>
 				<DialogContent>
 					<DialogHeader>
-						<DialogTitle>Add Service</DialogTitle>
+						<DialogTitle>{editingIndex !== null ? "Edit Service" : "Add Service"}</DialogTitle>
 					</DialogHeader>
 
 					<Form {...form}>
@@ -207,7 +244,9 @@ export function ServicesForm({ sectionKey, goNext, goBack }) {
 
 							{/*//* ADD SERVICE  */}
 							<div className="flex justify-end pt-2">
-								<Button type="submit">Save</Button>
+								<Button type="submit" className="cursor-pointer">
+									{editingIndex !== null ? "Update" : "Save"}
+								</Button>
 							</div>
 						</form>
 					</Form>
