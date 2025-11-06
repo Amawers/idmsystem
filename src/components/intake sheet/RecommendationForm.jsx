@@ -152,7 +152,8 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 w-full">
           <div className="flex gap-4">
-            {/* LEFT COLUMN - Case Details */}
+            {/* LEFT COLUMN - Case Details (Only show in Part 2) */}
+            {isSecond && (
               <div className="w-3/12 flex flex-col items-center justify-center border rounded-lg p-4">
                 <span className="font-bold mb-2">Case Details</span>
 
@@ -229,6 +230,7 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
                   </Select>
                 </div>
               </div>
+            )}
 
             {/* RIGHT COLUMN - Recommendation */}
             <div className={`${isSecond ? "w-9/12" : "w-full"}`}>
