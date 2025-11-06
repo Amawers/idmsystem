@@ -24,14 +24,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
@@ -48,6 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { IconX, IconPlus, IconFilter, IconEye, IconEyeOff, IconChevronDown } from "@tabler/icons-react";
+import supabase from "@/../config/supabase";
 
 // Fixed list of barangays
 const BARANGAYS = [
@@ -140,8 +133,9 @@ const initializeRecords = () => {
 
 export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditMode }) {
   const { data, setSectionField } = useIntakeFormStore();
-  const [isAddManagerDialogOpen, setIsAddManagerDialogOpen] = useState(false);
-  const [newManagerName, setNewManagerName] = useState("");
+  const [availableCaseManagers, setAvailableCaseManagers] = useState([]);
+  const [isCaseManagerDropdownOpen, setIsCaseManagerDropdownOpen] = useState(false);
+  const [selectedCaseManagerValue, setSelectedCaseManagerValue] = useState("");
   const [selectedBarangays, setSelectedBarangays] = useState(BARANGAYS); // All barangays selected by default
   const [visibleColumns, setVisibleColumns] = useState({
     barangay: true,
@@ -163,6 +157,31 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
       status: data[sectionKey]?.status || "",
     },
   });
+
+  // Fetch case managers on component mount
+  useEffect(() => {
+    const fetchCaseManagers = async () => {
+      try {
+        const { data: users, error } = await supabase
+          .from("profile")
+          .select("id, full_name, role")
+          .eq("role", "case_manager")
+          .eq("status", "active")
+          .order("full_name", { ascending: true });
+
+        if (error) {
+          console.error("Error fetching case managers:", error);
+          return;
+        }
+
+        setAvailableCaseManagers(users || []);
+      } catch (err) {
+        console.error("Failed to fetch case managers:", err);
+      }
+    };
+
+    fetchCaseManagers();
+  }, []);
 
   // Update form values when data changes (for edit mode)
   useEffect(() => {
@@ -274,32 +293,18 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
     setSectionField(sectionKey, "records", updatedRecords);
   };
 
-  // Handle adding a new case manager
-  const handleAddCaseManager = () => {
-    setIsAddManagerDialogOpen(true);
-  };
-
-  const handleConfirmAddManager = () => {
-    if (newManagerName && newManagerName.trim()) {
-      const updated = [...caseManagers, newManagerName.trim()];
+  // Handle adding a case manager from dropdown
+  const handleAddCaseManager = (managerId) => {
+    const manager = availableCaseManagers.find(m => m.id === managerId);
+    if (manager && !caseManagers.includes(manager.full_name)) {
+      const updated = [...caseManagers, manager.full_name];
       form.setValue("caseManagers", updated);
       setSectionField(sectionKey, "caseManagers", updated);
-      setNewManagerName("");
-      setIsAddManagerDialogOpen(false);
     }
-  };
-
-  const handleCancelAddManager = () => {
-    setNewManagerName("");
-    setIsAddManagerDialogOpen(false);
-  };
-
-  // Handle dialog state change (for Escape key and outside clicks)
-  const handleDialogChange = (open) => {
-    if (!open) {
-      setNewManagerName("");
-    }
-    setIsAddManagerDialogOpen(open);
+    // Reset the select value to allow re-selecting the same manager later
+    setSelectedCaseManagerValue("");
+    // Keep dropdown open for adding more managers
+    setTimeout(() => setIsCaseManagerDropdownOpen(true), 0);
   };
 
   // Handle removing a case manager
@@ -383,7 +388,6 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
   }
 
   return (
-    <>
     <Form {...form}>
       <form
         onSubmit={form.handleSubmit(onSubmit)}
@@ -415,16 +419,31 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
                   ))
                 )}
               </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleAddCaseManager}
-                className="w-full"
+              <Select 
+                value={selectedCaseManagerValue}
+                open={isCaseManagerDropdownOpen} 
+                onOpenChange={setIsCaseManagerDropdownOpen}
+                onValueChange={handleAddCaseManager}
               >
-                <IconPlus className="h-4 w-4 mr-2" />
-                Add Case Manager
-              </Button>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Add Case Manager" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableCaseManagers.length === 0 ? (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      No available case managers
+                    </div>
+                  ) : (
+                    availableCaseManagers
+                      .filter(manager => !caseManagers.includes(manager.full_name))
+                      .map((manager) => (
+                        <SelectItem key={manager.id} value={manager.id}>
+                          {manager.full_name}
+                        </SelectItem>
+                      ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-4">
@@ -913,48 +932,5 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
       </div>
       </form>
     </Form>
-
-    {/* Add Case Manager Dialog */}
-    <Dialog open={isAddManagerDialogOpen} onOpenChange={handleDialogChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Add Case Manager</DialogTitle>
-          <DialogDescription>
-            Enter the name of the case manager to add to this case.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="py-4">
-          <Input
-            placeholder="Case Manager Name"
-            value={newManagerName}
-            onChange={(e) => setNewManagerName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleConfirmAddManager();
-              }
-            }}
-            autoFocus
-          />
-        </div>
-        <DialogFooter className="gap-2 sm:gap-0">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleCancelAddManager}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="button"
-            onClick={handleConfirmAddManager}
-            disabled={!newManagerName.trim()}
-          >
-            Add Manager
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-    </>
   );
 }
