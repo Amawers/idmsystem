@@ -139,12 +139,25 @@ export function StatusDistributionChart({ data, loading, title = "Status Distrib
   const chartData = useMemo(() => {
     if (!data) return [];
     
+    // Color mapping for different status values across case types:
+    // - Case/CICL-CAR/FAR: Filed, Assessed, In Process, Resolved
+    // - FAC: active, closed, pending
     const colors = {
-      open: '#3b82f6',
+      // Standard case statuses (Case, CICL/CAR, FAR)
+      'Filed': '#6b7280',        // gray - newly filed
+      'Assessed': '#3b82f6',     // blue - assessed/reviewed
+      'In Process': '#f59e0b',   // orange - in progress
+      'Resolved': '#10b981',     // green - completed/resolved
+      
+      // FAC statuses (lowercase)
+      'active': '#f59e0b',       // orange - active/ongoing
+      'closed': '#10b981',       // green - closed/completed
+      'pending': '#8b5cf6',      // purple - pending action
+      
+      // Legacy/fallback statuses
+      'open': '#3b82f6',
       'in-progress': '#f59e0b',
-      pending: '#8b5cf6',
-      closed: '#10b981',
-      unknown: '#6b7280',
+      'unknown': '#6b7280',
     };
     
     return Object.entries(data).map(([status, count]) => ({
