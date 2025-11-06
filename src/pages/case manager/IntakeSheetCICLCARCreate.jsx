@@ -18,6 +18,7 @@ import { ReferralForm } from "@/components/intake sheet CICLCAR/ReferralForm";
 import { ServicesForm } from "@/components/intake sheet CICLCAR/ServicesForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import supabase from "@/../config/supabase";
+import { toast } from "sonner";
 
 // Helper utilities to make field mapping robust
 const pick = (obj, ...keys) => {
@@ -240,13 +241,23 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 			// Done
 			resetAll();
 			setOpen(false);
+			
+			// Show success toast
+			toast.success("Case Created", {
+				description: "CICL/CAR case has been successfully created.",
+			});
+			
 			// Call onSuccess callback to refresh the table
 			if (onSuccess) {
 				await onSuccess();
 			}
 		} catch (err) {
 			console.error("Failed to create CICL/CAR record:", err);
-			// Optional: surface error to UI/toast
+			
+			// Show error toast
+			toast.error("Creation Failed", {
+				description: err.message || "An error occurred while creating the case. Please try again.",
+			});
 		} finally {
 			setIsSaving(false);
 		}
@@ -387,6 +398,7 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 							goNext={goNext}
 							goBack={goBack}
 							isSaving={isSaving}
+							isEditing={false}
 						/>
 					</TabsContent>
 				</Tabs>

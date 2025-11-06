@@ -435,10 +435,10 @@ export function ReferralForm({ sectionKey, goNext, goBack, isSaving, isEditing =
                         {isSaving ? (
                             <>
                                 <IconLoader className="animate-spin mr-2" size={16} />
-                                {isEditing ? "Updating..." : "Saving..."}
+                                {isEditing ? "Updating..." : "Submitting..."}
                             </>
                         ) : (
-                            isEditing ? "Update" : "Next"
+                            isEditing ? "Update" : "Submit"
                         )}
                     </Button>
                 </div>
