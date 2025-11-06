@@ -18,7 +18,6 @@
  * ```
  */
 
-import { useState } from "react";
 import { useDashboard } from "@/hooks/useDashboard";
 import { DynamicMetricCard, MetricCardGrid } from "./DynamicMetricCard";
 import { TimeTrendChart, StatusDistributionChart, PriorityChart, WorkloadChart } from "./DashboardCharts";
@@ -49,7 +48,7 @@ import { cn } from "@/lib/utils";
 /**
  * Case Management Dashboard
  */
-function CaseDashboard({ filters, onFilterToggle, filterCount }) {
+function CaseDashboard({ filters }) {
   const { data, loading, error, refresh } = useDashboard('case', filters);
 
   if (error) {
@@ -75,20 +74,6 @@ function CaseDashboard({ filters, onFilterToggle, filterCount }) {
           <p className="text-muted-foreground text-[11px]">Overview of all case activities and metrics</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onFilterToggle}
-            className="gap-2 h-7 text-xs"
-          >
-            <Filter className="h-3 w-3" />
-            Filters
-            {filterCount > 0 && (
-              <Badge variant="secondary" className="ml-1 rounded-full px-1.5 text-[10px]">
-                {filterCount}
-              </Badge>
-            )}
-          </Button>
           <Button
             variant="outline"
             size="sm"
@@ -362,24 +347,21 @@ function GenericDashboard({ type }) {
  * @param {string} props.className - Additional CSS classes
  */
 export default function DynamicDashboard({ type = 'case', filters = {}, onFilterToggle, filterCount = 0, className }) {
-  const [localFilters, setLocalFilters] = useState(filters);
-
   // Render appropriate dashboard based on type
   const renderDashboard = () => {
     switch (type) {
       case 'case':
-        return <CaseDashboard filters={localFilters} onFilterToggle={onFilterToggle} filterCount={filterCount} />;
+        return <CaseDashboard filters={filters} onFilterToggle={onFilterToggle} filterCount={filterCount} />;
       case 'user':
-        return <UserDashboard filters={localFilters} onFilterToggle={onFilterToggle} filterCount={filterCount} />;
+        return <UserDashboard filters={filters} onFilterToggle={onFilterToggle} filterCount={filterCount} />;
       case 'program':
       case 'resource':
       case 'controls':
         return <GenericDashboard type={type} />;
       default:
-        return <CaseDashboard filters={localFilters} onFilterToggle={onFilterToggle} filterCount={filterCount} />;
+        return <CaseDashboard filters={filters} onFilterToggle={onFilterToggle} filterCount={filterCount} />;
     }
   };
-
   return (
     <div className={cn("flex flex-col gap-4", className)}>
       {renderDashboard()}
