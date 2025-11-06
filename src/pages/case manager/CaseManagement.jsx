@@ -5,11 +5,9 @@
  */
 
 import { DataTable } from "@/components/cases/data-table";
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { ArrowUp, ArrowDown } from "lucide-react";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCases } from "@/hooks/useCases";
 import { useCiclcarCases } from "@/hooks/useCiclcarCases";
 import { useFarCases } from "@/hooks/useFarCases";
@@ -19,9 +17,6 @@ import { useIvacCases } from "@/hooks/useIvacCases";
 export default function CaseManagement() {
 	// Track whether the user is currently at (or past) the DataTable section
 	const [atTable, setAtTable] = useState(false);
-
-	// Active/Closed filter state
-	const [caseFilter, setCaseFilter] = useState("active");
 
 	// Reference to the DataTable container for scrolling
 	const dataTableRef = useRef(null);
@@ -57,57 +52,6 @@ export default function CaseManagement() {
 		deleteIvacCase,
 	} = useIvacCases();
 
-	// Filter cases based on active/closed status
-	const filteredCaseRows = useMemo(() => {
-		if (!caseRows) return [];
-		if (caseFilter === "all") return caseRows;
-		
-		return caseRows.filter(row => {
-			const status = row.status?.toLowerCase();
-			if (caseFilter === "active") {
-				// Active = not closed/resolved
-				return status !== "closed" && status !== "resolved";
-			} else {
-				// Closed = closed or resolved
-				return status === "closed" || status === "resolved";
-			}
-		});
-	}, [caseRows, caseFilter]);
-
-	// Filter CICL/CAR cases based on active/closed status
-	const filteredCiclcarRows = useMemo(() => {
-		if (!ciclcarRows) return [];
-		if (caseFilter === "all") return ciclcarRows;
-		
-		return ciclcarRows.filter(row => {
-			const status = row.status?.toLowerCase();
-			if (caseFilter === "active") {
-				// Active = not closed/resolved
-				return status !== "closed" && status !== "resolved";
-			} else {
-				// Closed = closed or resolved
-				return status === "closed" || status === "resolved";
-			}
-		});
-	}, [ciclcarRows, caseFilter]);
-
-	// Calculate counts for all case types combined
-	const caseCounts = useMemo(() => {
-		const allCases = [...(caseRows || []), ...(ciclcarRows || [])];
-		
-		const active = allCases.filter(row => {
-			const status = row.status?.toLowerCase();
-			return status !== "closed" && status !== "resolved";
-		}).length;
-
-		const closed = allCases.filter(row => {
-			const status = row.status?.toLowerCase();
-			return status === "closed" || status === "resolved";
-		}).length;
-
-		return { active, closed, all: allCases.length };
-	}, [caseRows, ciclcarRows]);
-
 	// Effect: watch scroll position and update "atTable" state
 	useEffect(() => {
 		const handleScroll = () => {
@@ -138,30 +82,6 @@ export default function CaseManagement() {
 					<h2 className="text-base font-bold tracking-tight">Case Management</h2>
 					<p className="text-muted-foreground text-[11px]">View and manage all case records and intake forms</p>
 				</div>
-				
-				{/* Active/Closed Filter Tabs */}
-				<Tabs value={caseFilter} onValueChange={setCaseFilter} className="w-auto">
-					<TabsList className="grid w-full grid-cols-3">
-						<TabsTrigger value="active" className="text-xs gap-1.5">
-							Active Cases
-							<Badge variant="secondary" className="ml-1 rounded-full px-1.5 text-[10px]">
-								{caseCounts.active}
-							</Badge>
-						</TabsTrigger>
-						<TabsTrigger value="closed" className="text-xs gap-1.5">
-							Closed Cases
-							<Badge variant="secondary" className="ml-1 rounded-full px-1.5 text-[10px]">
-								{caseCounts.closed}
-							</Badge>
-						</TabsTrigger>
-						<TabsTrigger value="all" className="text-xs gap-1.5">
-							All Cases
-							<Badge variant="secondary" className="ml-1 rounded-full px-1.5 text-[10px]">
-								{caseCounts.all}
-							</Badge>
-						</TabsTrigger>
-					</TabsList>
-				</Tabs>
 			</div>
 
 			{/* ================= DATA TABLE ================= */}
@@ -209,8 +129,8 @@ export default function CaseManagement() {
 				) : null}
 
 				<DataTable
-					caseData={casesLoading ? [] : filteredCaseRows}
-					ciclcarData={ciclcarLoading ? [] : filteredCiclcarRows}
+					caseData={casesLoading ? [] : caseRows}
+					ciclcarData={ciclcarLoading ? [] : ciclcarRows}
 					farData={farLoading ? [] : farRows}
 					facData={facLoading ? [] : facRows}
 					ivacData={ivacLoading ? [] : ivacRows}
