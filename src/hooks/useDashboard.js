@@ -43,12 +43,30 @@ function computeCaseStats(cases) {
     new Date(c.created_at || c.date_filed) >= sevenDaysAgo
   );
 
-  // Status distribution
+  // Status distribution - normalize status values across different case types
+  // Different case tables use different status values:
+  // - case: no constraint (typically 'open', 'in-progress', 'closed', 'pending')
+  // - ciclcar_case: no constraint (typically 'open', 'in-progress', 'closed', 'pending')
+  // - far_case: 'Filed', 'Assessed', 'In Process', 'Resolved'
+  // - fac_case: 'active', 'closed', 'pending'
+  // We normalize to: 'active', 'in-progress', 'pending', 'closed', 'resolved'
   const statusCounts = cases.reduce((acc, c) => {
     const status = c.status || 'unknown';
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {});
+
+  // Count active cases (cases that are not closed/resolved)
+  const activeCases = cases.filter(c => {
+    const status = (c.status || '').toLowerCase();
+    return status !== 'closed' && status !== 'resolved';
+  }).length;
+
+  // Count closed cases (cases that are closed or resolved)
+  const closedCases = cases.filter(c => {
+    const status = (c.status || '').toLowerCase();
+    return status === 'closed' || status === 'resolved';
+  }).length;
 
   // Priority distribution - normalize to lowercase
   // Different case tables use different priority values:
@@ -78,10 +96,10 @@ function computeCaseStats(cases) {
 
   return {
     total: cases.length,
-    active: statusCounts.open || 0,
-    inProgress: statusCounts['in-progress'] || 0,
+    active: activeCases,
+    inProgress: statusCounts['in-progress'] || statusCounts['In Process'] || 0,
     pending: statusCounts.pending || 0,
-    closed: statusCounts.closed || 0,
+    closed: closedCases,
     highPriority: priorityCounts.high || 0,
     mediumPriority: priorityCounts.medium || 0,
     lowPriority: priorityCounts.low || 0,
