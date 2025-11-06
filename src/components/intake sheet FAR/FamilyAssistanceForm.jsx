@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
+import { useCaseManagers } from "../../hooks/useCaseManagers";
 
 const schema = z
     .object({
@@ -56,6 +57,7 @@ const schema = z
 
 export function FamilyAssistanceForm({ sectionKey, goNext, goBack, isSaving, isEditMode }) {
   const { data, setSectionField } = useIntakeFormStore();
+  const { caseManagers, loading: loadingCaseManagers } = useCaseManagers();
 
   const form = useForm({
     resolver: zodResolver(schema),
@@ -381,16 +383,27 @@ return (
                             render={({ field }) => (
                                 <FormItem>
                                     <FormLabel>Case Manager</FormLabel>
-                                    <FormControl>
-                                        <Input
-                                            {...field}
-                                            placeholder="Assigned case manager"
-                                            onChange={(e) => {
-                                                field.onChange(e);
-                                                setSectionField(sectionKey, "caseManager", e.target.value);
-                                            }}
-                                        />
-                                    </FormControl>
+                                    <Select
+                                        onValueChange={(val) => {
+                                            field.onChange(val);
+                                            setSectionField(sectionKey, "caseManager", val);
+                                        }}
+                                        defaultValue={field.value}
+                                        disabled={loadingCaseManagers}
+                                    >
+                                        <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder={loadingCaseManagers ? "Loading..." : "Select case manager"} />
+                                            </SelectTrigger>
+                                        </FormControl>
+                                        <SelectContent>
+                                            {caseManagers.map((manager) => (
+                                                <SelectItem key={manager.id} value={manager.full_name}>
+                                                    {manager.full_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
                                     <FormMessage />
                                 </FormItem>
                             )}
