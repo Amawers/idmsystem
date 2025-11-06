@@ -38,6 +38,7 @@ import {
 	IconPlus,
 	IconRefresh,
 } from "@tabler/icons-react";
+import { Edit } from "lucide-react";
 
 // Other utilities
 // import { toast } from "sonner";
@@ -253,12 +254,11 @@ const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
-						variant="ghost"
-						className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-						size="icon"
+						variant="outline"
+						size="sm"
+						className="h-6 px-2 text-xs"
 					>
-						<IconDotsVertical />
-						<span className="sr-only">Open menu</span>
+						<Edit className="h-3 w-3" />
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
@@ -402,12 +402,11 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) =
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
-						variant="ghost"
-						className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-						size="icon"
+						variant="outline"
+						size="sm"
+						className="h-6 px-2 text-xs"
 					>
-						<IconDotsVertical />
-						<span className="sr-only">Open menu</span>
+						<Edit className="h-3 w-3" />
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
@@ -570,12 +569,11 @@ const farColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) => [
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
-						variant="ghost"
-						className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-						size="icon"
+						variant="outline"
+						size="sm"
+						className="h-6 px-2 text-xs"
 					>
-						<IconDotsVertical />
-						<span className="sr-only">Open menu</span>
+						<Edit className="h-3 w-3" />
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
@@ -721,12 +719,11 @@ const facColumns = (handleEditClick, handleDeleteClick) => [
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
-						variant="ghost"
-						className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-						size="icon"
+						variant="outline"
+						size="sm"
+						className="h-6 px-2 text-xs"
 					>
-						<IconDotsVertical />
-						<span className="sr-only">Open menu</span>
+						<Edit className="h-3 w-3" />
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
@@ -867,12 +864,11 @@ const ivacColumns = (handleEditClick, handleDeleteClick) => [
 			<DropdownMenu>
 				<DropdownMenuTrigger asChild>
 					<Button
-						variant="ghost"
-						className="data-[state=open]:bg-muted text-muted-foreground flex size-8"
-						size="icon"
+						variant="outline"
+						size="sm"
+						className="h-6 px-2 text-xs"
 					>
-						<IconDotsVertical />
-						<span className="sr-only">Open menu</span>
+						<Edit className="h-3 w-3" />
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
