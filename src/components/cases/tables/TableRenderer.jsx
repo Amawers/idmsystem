@@ -236,7 +236,7 @@ export default function TableRenderer({ table, setData, columns, onRowClick }) {
                 ) : (
                   <TableRow>
                     <TableCell
-                      colSpan={columns.length}
+                      colSpan={colCount}
                       className="h-24 text-center"
                     >
                       No records from database.
