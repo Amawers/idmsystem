@@ -68,7 +68,7 @@ export function useIvacCases() {
     const deleteIvacCase = useCallback(async (caseId) => {
         try {
             const { error: err } = await supabase
-                .from("ivac_case")
+                .from("ivac_cases")
                 .delete()
                 .eq("id", caseId);
 
