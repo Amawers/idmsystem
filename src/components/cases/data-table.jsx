@@ -603,7 +603,7 @@ const farColumns = (handleDeleteClick) => [
 // =================================
 //* FAC Table COLUMN DEFINITIONS
 // =================================
-const facColumns = (handleDeleteClick) => [
+const facColumns = (handleEditClick, handleDeleteClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -1190,7 +1190,7 @@ export function DataTable({
 	// Table instance for FAC tab with its own data and column definitions
 	const facTable = useDataTable({
 		initialData: facData,
-		columns: facColumns(handleDeleteClick),
+		columns: facColumns(handleEditFacRow, handleDeleteClick),
 		onRowClick: handleEditFacRow, // Add click handler for FAC rows
 	});
 
@@ -1760,16 +1760,14 @@ export function DataTable({
 			<TabsContent
 				value="FAC"
 				className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
-			>
-				<TableRenderer
-					table={facTable.table}
-					setData={facTable.setData}
-					columns={facColumns}
-					onRowClick={handleEditFacRow}
-				/>
-			</TabsContent>
-
-			{/* Enrollment Dialog */}
+		>
+			<TableRenderer
+				table={facTable.table}
+				setData={facTable.setData}
+				columns={facColumns(handleEditFacRow, handleDeleteClick)}
+				onRowClick={handleEditFacRow}
+			/>
+		</TabsContent>			{/* Enrollment Dialog */}
 			<EnrollCaseDialog
 				open={openEnrollDialog}
 				onOpenChange={setOpenEnrollDialog}
