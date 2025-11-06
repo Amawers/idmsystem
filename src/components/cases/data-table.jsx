@@ -1359,6 +1359,7 @@ export function DataTable({
 							<IntakeSheetCaseCreate
 								open={openIntakeSheet}
 								setOpen={setOpenIntakeSheet}
+								onSuccess={reloadCases}
 							/>
 
 							{/* ADD: INTAKE SHEET EDIT (Edit) */}

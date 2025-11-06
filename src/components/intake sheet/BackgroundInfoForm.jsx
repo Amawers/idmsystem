@@ -16,14 +16,9 @@ import {
 } from "@/components/ui/form";
 
 // ✅ Schema for PresentingProblem
+// DISABLED FOR TESTING: All fields are now optional
 const schema = z.object({
-	backgroundInfo: z
-		.string()
-		.trim()
-		.refine(
-			(val) => val.split(/\s+/).filter(Boolean).length >= 5,
-			"Please provide background info (min 5 words)"
-		),
+	backgroundInfo: z.string().optional(),
 });
 
 export function BackgroundInfoForm({ sectionKey, goNext, goBack }) {

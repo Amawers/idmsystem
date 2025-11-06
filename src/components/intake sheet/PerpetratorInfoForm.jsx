@@ -21,15 +21,16 @@ import {
 } from "@/components/ui/form";
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
 
+// DISABLED FOR TESTING: All fields are now optional
 const schema = z.object({
-	name: z.string().min(2, "Required"),
-	age: z.string().min(1, "Required"),
-	alias: z.string().min(2, "Required"),
-	sex: z.string().min(1, "Required"),
-	address: z.string().min(2, "Required"),
-	victimRelation: z.string().min(1, "Required"),
-	offenceType: z.string().min(1, "Required"),
-	commissionDateTime: z.string({ required_error: "Commission date required" }),
+	name: z.string().optional(),
+	age: z.string().optional(),
+	alias: z.string().optional(),
+	sex: z.string().optional(),
+	address: z.string().optional(),
+	victimRelation: z.string().optional(),
+	offenceType: z.string().optional(),
+	commissionDateTime: z.string().optional(),
 });
 
 export function PerpetratorInfoForm({ sectionKey, goNext, goBack }) {

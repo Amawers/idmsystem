@@ -30,17 +30,12 @@ import {
   IconLoader,
 } from "@tabler/icons-react";
 
+// DISABLED FOR TESTING: All fields are now optional
 const schema = z.object({
-  recommendation: z
-    .string()
-    .trim()
-    .refine(
-      (val) => val.split(/\s+/).filter(Boolean).length >= 5,
-      "Please provide recommendation (min 5 words)"
-    ),
+  recommendation: z.string().optional(),
 });
 
-export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submitLabel }) {
+export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submitLabel, onSuccess, setOpen }) {
   const { data, setSectionField } = useIntakeFormStore();
 
   const form = useForm({
@@ -116,6 +111,16 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
       toast.success("Case saved", {
         description: `Case ID: ${caseId}`,
       });
+      
+      // Close the dialog
+      if (setOpen) {
+        setOpen(false);
+      }
+      
+      // Trigger refresh of case data
+      if (onSuccess) {
+        await onSuccess();
+      }
     } catch (err) {
       console.error(err);
       toast.error("Unexpected error", { description: err.message });

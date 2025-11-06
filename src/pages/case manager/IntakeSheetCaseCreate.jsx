@@ -42,7 +42,7 @@ const tabOrder = [
 //! 
 
 
-export default function IntakeSheetCaseCreate({ open, setOpen }) {
+export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 	// index-based tab state and completed set (match FAC behavior)
 	const [currentTabIndex, setCurrentTabIndex] = useState(0);
 	const [completedTabs, setCompletedTabs] = useState(new Set());
@@ -122,7 +122,8 @@ export default function IntakeSheetCaseCreate({ open, setOpen }) {
 									value={tab}
 									className="flex items-center whitespace-nowrap data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
 									onClick={() => setCurrentTabIndex(index)}
-									disabled={index > currentTabIndex && !completedTabs.has(index)}
+									// DISABLED FOR TESTING: Allow free navigation between all tabs
+									// disabled={index > currentTabIndex && !completedTabs.has(index)}
 								>
 									{completedTabs.has(index) ? (
 										<Badge
@@ -271,6 +272,8 @@ export default function IntakeSheetCaseCreate({ open, setOpen }) {
 								goNext={goNext}
 								goBack={goBack}
 								isSecond={true}
+								onSuccess={onSuccess}
+								setOpen={setOpen}
 							/>
 						</TabsContent>
 					</div>

@@ -15,14 +15,9 @@ import {
 	FormMessage,
 } from "@/components/ui/form";
 
+// DISABLED FOR TESTING: All fields are now optional
 const schema = z.object({
-	communityInfo: z
-		.string()
-		.trim()
-		.refine(
-			(val) => val.split(/\s+/).filter(Boolean).length >= 5,
-			"Please provide community info (min 5 words)"
-		),
+	communityInfo: z.string().optional(),
 });
 
 export function CommunityInfoForm({ sectionKey, goNext, goBack }) {
