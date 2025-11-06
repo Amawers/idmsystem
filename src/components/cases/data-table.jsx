@@ -1376,6 +1376,7 @@ export function DataTable({
 								size="sm"
 								onClick={handleRefresh}
 								disabled={isRefreshing}
+								className="cursor-pointer"
 							>
 								<IconRefresh className={isRefreshing ? "animate-spin" : ""} />
 								<span className="hidden lg:inline">
@@ -1454,6 +1455,7 @@ export function DataTable({
 								size="sm"
 								onClick={handleRefresh}
 								disabled={isRefreshing}
+								className="cursor-pointer"
 							>
 								<IconRefresh className={isRefreshing ? "animate-spin" : ""} />
 								<span className="hidden lg:inline">
@@ -1534,6 +1536,7 @@ export function DataTable({
 								size="sm"
 								onClick={handleRefresh}
 								disabled={isRefreshing}
+								className="cursor-pointer"
 							>
 								<IconRefresh className={isRefreshing ? "animate-spin" : ""} />
 								<span className="hidden lg:inline">
@@ -1615,6 +1618,7 @@ export function DataTable({
 								size="sm"
 								onClick={handleRefresh}
 								disabled={isRefreshing}
+								className="cursor-pointer"
 							>
 								<IconRefresh className={isRefreshing ? "animate-spin" : ""} />
 								<span className="hidden lg:inline">
