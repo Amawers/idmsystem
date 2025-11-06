@@ -36,6 +36,7 @@ import {
 	IconLayoutColumns,
 	IconLoader,
 	IconPlus,
+	IconRefresh,
 } from "@tabler/icons-react";
 
 // Other utilities
@@ -1000,6 +1001,9 @@ export function DataTable({
 	const [enrollingCase, setEnrollingCase] = useState(null);
 	const [enrollingCaseType, setEnrollingCaseType] = useState("");
 
+	// Refresh state
+	const [isRefreshing, setIsRefreshing] = useState(false);
+
 	// FAR edit state
 	const [openFarEditSheet, setOpenFarEditSheet] = useState(false);
 	const [editingFarRecord, setEditingFarRecord] = useState(null);
@@ -1117,6 +1121,55 @@ export function DataTable({
 		setOpenEnrollDialog(true);
 	}
 
+	// Handle refresh - reload data for active tab or all tabs
+	async function handleRefresh() {
+		setIsRefreshing(true);
+		try {
+			const promises = [];
+			
+			// Refresh based on active tab for efficiency, or all if needed
+			switch (activeTab) {
+				case "CASE":
+					promises.push(reloadCases());
+					break;
+				case "CICLCAR":
+					promises.push(reloadCiclcar());
+					break;
+				case "FAR":
+					promises.push(reloadFar());
+					break;
+				case "FAC":
+					promises.push(reloadFac());
+					break;
+				case "IVAC":
+					promises.push(reloadIvac());
+					break;
+				default:
+					// Optionally refresh all tabs
+					promises.push(
+						reloadCases(),
+						reloadCiclcar(),
+						reloadFar(),
+						reloadFac(),
+						reloadIvac()
+					);
+			}
+
+			await Promise.all(promises);
+			
+			toast.success("Refreshed", {
+				description: `${activeTab} data has been refreshed successfully.`,
+			});
+		} catch (error) {
+			console.error("Error refreshing data:", error);
+			toast.error("Refresh Failed", {
+				description: "Failed to refresh data. Please try again.",
+			});
+		} finally {
+			setIsRefreshing(false);
+		}
+	}
+
 	// Initialize CASE table with dynamic columns (handler referenced above)
 	const caseTable = useDataTable({
 		initialData: caseData,
@@ -1162,6 +1215,21 @@ export function DataTable({
 		window.addEventListener("open-intake-modal", onOpen);
 		return () => window.removeEventListener("open-intake-modal", onOpen);
 	}, []);
+
+	// ============================
+	//* KEYBOARD SHORTCUT FOR REFRESH
+	// ============================
+	React.useEffect(() => {
+		function handleKeyPress(e) {
+			// Ctrl+R or Cmd+R for refresh
+			if ((e.ctrlKey || e.metaKey) && e.key === "r") {
+				e.preventDefault();
+				handleRefresh();
+			}
+		}
+		window.addEventListener("keydown", handleKeyPress);
+		return () => window.removeEventListener("keydown", handleKeyPress);
+	}, [activeTab, isRefreshing]); // Dependencies to ensure fresh closure
 
 	return (
 		<Tabs
@@ -1226,6 +1294,20 @@ export function DataTable({
 					{/* CASES SECTION */}
 					{activeTab === "CASE" && (
 						<>
+							{/* Refresh Button */}
+							<Button 
+								variant="outline" 
+								size="sm"
+								onClick={handleRefresh}
+								disabled={isRefreshing}
+								className="cursor-pointer"
+							>
+								<IconRefresh className={isRefreshing ? "animate-spin" : ""} />
+								<span className="hidden lg:inline">
+									{isRefreshing ? "REFRESHING..." : "REFRESH"}
+								</span>
+							</Button>
+
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -1291,6 +1373,19 @@ export function DataTable({
 					{/* CICLCAR SECTION */}
 					{activeTab === "CICLCAR" && (
 						<>
+							{/* Refresh Button */}
+							<Button 
+								variant="outline" 
+								size="sm"
+								onClick={handleRefresh}
+								disabled={isRefreshing}
+							>
+								<IconRefresh className={isRefreshing ? "animate-spin" : ""} />
+								<span className="hidden lg:inline">
+									{isRefreshing ? "REFRESHING..." : "REFRESH"}
+								</span>
+							</Button>
+
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -1356,6 +1451,19 @@ export function DataTable({
 					{/* FAR SECTION */}
 					{activeTab === "FAR" && (
 						<>
+							{/* Refresh Button */}
+							<Button 
+								variant="outline" 
+								size="sm"
+								onClick={handleRefresh}
+								disabled={isRefreshing}
+							>
+								<IconRefresh className={isRefreshing ? "animate-spin" : ""} />
+								<span className="hidden lg:inline">
+									{isRefreshing ? "REFRESHING..." : "REFRESH"}
+								</span>
+							</Button>
+
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -1423,6 +1531,19 @@ export function DataTable({
 					{/* FAC SECTION */}
 					{activeTab === "FAC" && (
 						<>
+							{/* Refresh Button */}
+							<Button 
+								variant="outline" 
+								size="sm"
+								onClick={handleRefresh}
+								disabled={isRefreshing}
+							>
+								<IconRefresh className={isRefreshing ? "animate-spin" : ""} />
+								<span className="hidden lg:inline">
+									{isRefreshing ? "REFRESHING..." : "REFRESH"}
+								</span>
+							</Button>
+
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -1491,6 +1612,19 @@ export function DataTable({
 					{/* IVAC SECTION */}
 					{activeTab === "IVAC" && (
 						<>
+							{/* Refresh Button */}
+							<Button 
+								variant="outline" 
+								size="sm"
+								onClick={handleRefresh}
+								disabled={isRefreshing}
+							>
+								<IconRefresh className={isRefreshing ? "animate-spin" : ""} />
+								<span className="hidden lg:inline">
+									{isRefreshing ? "REFRESHING..." : "REFRESH"}
+								</span>
+							</Button>
+
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
