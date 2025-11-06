@@ -16,7 +16,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
 import { useState } from "react";
 import {
@@ -30,6 +30,7 @@ import {
 export function FamilyBackgroundForm({ sectionKey, goNext, goBack }) {
   const { data, setSectionField } = useIntakeFormStore();
   const [open, setOpen] = useState(false);
+  const [editingIndex, setEditingIndex] = useState(null);
 
   // Load members from store, default to empty array
   const [members, setMembers] = useState(
@@ -50,12 +51,28 @@ export function FamilyBackgroundForm({ sectionKey, goNext, goBack }) {
   });
 
   function onSubmit(values) {
-    const updated = [...members, values];
-    setMembers(updated);
-    // Save array under "members" field
-    setSectionField(sectionKey, "members", updated);
+    if (editingIndex !== null) {
+      // Update existing member
+      const updated = [...members];
+      updated[editingIndex] = values;
+      setMembers(updated);
+      setSectionField(sectionKey, "members", updated);
+    } else {
+      // Add new member
+      const updated = [...members, values];
+      setMembers(updated);
+      setSectionField(sectionKey, "members", updated);
+    }
     setOpen(false);
+    setEditingIndex(null);
     form.reset();
+  }
+
+  function editMember(index) {
+    const member = members[index];
+    form.reset(member);
+    setEditingIndex(index);
+    setOpen(true);
   }
 
   function removeMember(index) {
@@ -64,11 +81,19 @@ export function FamilyBackgroundForm({ sectionKey, goNext, goBack }) {
     setSectionField(sectionKey, "members", updated);
   }
 
+  function handleDialogClose(isOpen) {
+    setOpen(isOpen);
+    if (!isOpen) {
+      setEditingIndex(null);
+      form.reset();
+    }
+  }
+
   return (
     <div className="space-y-4">
       {/* Members Table */}
       <div className="border rounded-lg overflow-hidden">
-        <div className="grid grid-cols-9 bg-muted font-medium text-sm px-3 py-2">
+        <div className="grid grid-cols-10 bg-muted font-medium text-sm px-3 py-2">
           <div>Name</div>
           <div>Relationship</div>
           <div>Age</div>
@@ -77,7 +102,7 @@ export function FamilyBackgroundForm({ sectionKey, goNext, goBack }) {
           <div>Contact No</div>
           <div>Education</div>
           <div>Employment</div>
-          <div className="text-center">Action</div>
+          <div className="text-center col-span-2">Actions</div>
         </div>
 
         <div className="divide-y max-h-64 overflow-y-auto">
@@ -89,7 +114,7 @@ export function FamilyBackgroundForm({ sectionKey, goNext, goBack }) {
             members.map((m, i) => (
               <div
                 key={i}
-                className="grid grid-cols-9 items-center px-3 py-2 text-sm"
+                className="grid grid-cols-10 items-center px-3 py-2 text-sm"
               >
                 <div>{m.name}</div>
                 <div>{m.relationship}</div>
@@ -103,12 +128,24 @@ export function FamilyBackgroundForm({ sectionKey, goNext, goBack }) {
                     ? m.employment
                     : `${m.employment}`}
                 </div>
-                <div className="flex justify-center">
+                <div className="flex justify-center gap-1 col-span-2">
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => editMember(i)}
+                    title="Edit member"
+                    className="cursor-pointer"
+                  >
+                    <Pencil className="h-4 w-4 text-blue-500" />
+                  </Button>
                   <Button
                     type="button"
                     size="icon"
                     variant="ghost"
                     onClick={() => removeMember(i)}
+                    title="Delete member"
+                    className="cursor-pointer"
                   >
                     <Trash2 className="h-4 w-4 text-red-500" />
                   </Button>
@@ -121,14 +158,16 @@ export function FamilyBackgroundForm({ sectionKey, goNext, goBack }) {
 
       {/* Add Member Button */}
       <div className="flex justify-end">
-        <Button onClick={() => setOpen(true)}>Add Family Member</Button>
+        <Button onClick={() => setOpen(true)} className="cursor-pointer">Add Family Member</Button>
       </div>
 
       {/* Add Member Modal */}
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog open={open} onOpenChange={handleDialogClose}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Add Family Member</DialogTitle>
+            <DialogTitle>
+              {editingIndex !== null ? "Edit Family Member" : "Add Family Member"}
+            </DialogTitle>
           </DialogHeader>
 
           <Form {...form}>
@@ -294,7 +333,9 @@ export function FamilyBackgroundForm({ sectionKey, goNext, goBack }) {
               />
               {/*//* ADD FAMILY MEMBER  */}
               <div className="flex justify-end pt-2">
-                <Button type="submit">Save</Button>
+                <Button type="submit" className="cursor-pointer">
+                  {editingIndex !== null ? "Update" : "Save"}
+                </Button>
               </div>
             </form>
           </Form>
@@ -303,10 +344,10 @@ export function FamilyBackgroundForm({ sectionKey, goNext, goBack }) {
 
       {/* Navigation Buttons */}
       <div className="flex justify-between mt-4">
-        <Button type="button" variant="outline" onClick={goBack}>
+        <Button type="button" variant="outline" onClick={goBack} className="cursor-pointer">
           Back
         </Button>
-        <Button type="button" onClick={goNext} disabled={members.length === 0}>
+        <Button type="button" onClick={goNext} disabled={members.length === 0} className="cursor-pointer">
           Next
         </Button>
       </div>
