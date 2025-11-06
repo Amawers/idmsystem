@@ -435,7 +435,7 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) =
 // =================================
 //* FAR Table COLUMN DEFINITIONS
 // =================================
-const farColumns = (handleDeleteClick) => [
+const farColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -750,7 +750,7 @@ const facColumns = (handleEditClick, handleDeleteClick) => [
 // =================================
 //* IVAC Table COLUMN DEFINITIONS
 // =================================
-const ivacColumns = (handleDeleteClick) => [
+const ivacColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -1183,7 +1183,7 @@ export function DataTable({
 	// Table instance for FAR tab with its own data and column definitions
 	const farTable = useDataTable({
 		initialData: farData,
-		columns: farColumns(handleDeleteClick),
+		columns: farColumns(handleEnrollClick, handleEditFarRow, handleDeleteClick),
 		onRowClick: handleEditFarRow, // Add click handler for FAR rows
 	});
 
@@ -1197,7 +1197,7 @@ export function DataTable({
 	// Table instance for IVAC tab with its own data and column definitions
 	const ivacTable = useDataTable({
 		initialData: ivacData,
-		columns: ivacColumns(handleDeleteClick),
+		columns: ivacColumns(handleEnrollClick, handleEditIvacRow, handleDeleteClick),
 		onRowClick: handleEditIvacRow, // Add click handler for IVAC rows
 	});
 
@@ -1735,7 +1735,7 @@ export function DataTable({
 				<TableRenderer
 					table={farTable.table}
 					setData={farTable.setData}
-					columns={farColumns}
+					columns={farColumns(handleEnrollClick, handleEditFarRow, handleDeleteClick)}
 					onRowClick={handleEditFarRow}
 				/>
 			</TabsContent>
@@ -1752,7 +1752,7 @@ export function DataTable({
 				<TableRenderer
 					table={ivacTable.table}
 					setData={ivacTable.setData}
-					columns={ivacColumns}
+					columns={ivacColumns(handleEnrollClick, handleEditIvacRow, handleDeleteClick)}
 					onRowClick={handleEditIvacRow}
 				/>
 			</TabsContent>
