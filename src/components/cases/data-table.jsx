@@ -982,7 +982,7 @@ export function DataTable({
 
 	// ADD: edit modal state
 	const [openEditSheet, setOpenEditSheet] = useState(false);
-	// const [editingRecord, setEditingRecord] = useState(null);
+	const [editingRecord, setEditingRecord] = useState(null);
 
 	// CICL/CAR edit state
 	const [openCiclcarEditSheet, setOpenCiclcarEditSheet] = useState(false);
@@ -1010,6 +1010,13 @@ export function DataTable({
 
 	// Tracks which tab is currently active (default: "CASE")
 	const [activeTab, setActiveTab] = useState("CASE");
+
+	// Handle Case row click for editing
+	function handleEditCaseRow(record) {
+		console.log("Editing Case record:", record);
+		setEditingRecord(record);
+		setOpenEditSheet(true);
+	}
 
 	//  // ADD: when user clicks Edit, open IntakeSheetEdit modal instead of IntakeSheetCaseCreate
 	// function handleEditRow(record) {
@@ -1166,7 +1173,7 @@ export function DataTable({
 	const caseTable = useDataTable({
 		initialData: caseData,
 		// CHANGED: pass edit handler so actions column calls this for “Edit”
-		columns: createCaseColumns(handleEnrollClick, (record) => setOpenEditSheet(true)),
+		columns: createCaseColumns(handleEnrollClick, handleEditCaseRow, handleDeleteClick),
 	});
 
 	// Table instance for CICLCAR tab with its own data and column definitions
@@ -1357,8 +1364,9 @@ export function DataTable({
 							{/* ADD: INTAKE SHEET EDIT (Edit) */}
 							<IntakeSheetEdit
 								open={openEditSheet}
-								setOpen={setOpenEditSheet}
-								// record={editingRecord}
+								onOpenChange={setOpenEditSheet}
+								row={editingRecord}
+								onSuccess={reloadCases}
 							/>
 						</>
 					)}

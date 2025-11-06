@@ -40,7 +40,7 @@ const tabOrder = [
     "recommendation2",
 ];
 
-export default function IntakeSheetCaseEdit({ open, onOpenChange, row }) {
+export default function IntakeSheetCaseEdit({ open, onOpenChange, row, onSuccess }) {
     // index-based tab state and completed set (match FAC behavior)
     const [currentTabIndex, setCurrentTabIndex] = useState(0);
     const [completedTabs, setCompletedTabs] = useState(new Set());
@@ -297,6 +297,13 @@ export default function IntakeSheetCaseEdit({ open, onOpenChange, row }) {
             }
 
             toast.success("Case updated successfully");
+            
+            // Trigger refresh callback if provided
+            if (onSuccess) {
+                await onSuccess();
+            }
+            
+            // Close the modal
             onOpenChange(false);
         } catch (e) {
             console.error(e);
@@ -460,6 +467,7 @@ export default function IntakeSheetCaseEdit({ open, onOpenChange, row }) {
                                 sectionKey="Recommendation"
                                 goNext={goNext}
                                 goBack={goBack}
+                                isEditMode={true}
                             />
                         </TabsContent>
 
@@ -526,6 +534,10 @@ export default function IntakeSheetCaseEdit({ open, onOpenChange, row }) {
                                 goNext={goNext}
                                 goBack={goBack}
                                 submitLabel="Update"
+                                isSecond={true}
+                                isEditMode={true}
+                                onSuccess={onSuccess}
+                                setOpen={onOpenChange}
                             />
                         </TabsContent>
                     </div>

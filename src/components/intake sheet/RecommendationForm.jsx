@@ -42,7 +42,7 @@ const schema = z.object({
     ),
 });
 
-export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submitLabel, onSuccess, setOpen }) {
+export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submitLabel, onSuccess, setOpen, isEditMode }) {
   const { data, setSectionField } = useIntakeFormStore();
 
   const form = useForm({
@@ -165,6 +165,13 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
   function onSubmit(values) {
     setSectionField(sectionKey, values);
 
+    // In edit mode, always use goNext (which will trigger handleUpdate on last tab)
+    if (isEditMode) {
+      goNext();
+      return;
+    }
+
+    // In create mode, check if this is the second/final form
     if (isSecond) {
       const finalData = {
         ...data,
