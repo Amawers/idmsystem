@@ -50,9 +50,21 @@ function computeCaseStats(cases) {
     return acc;
   }, {});
 
-  // Priority distribution
+  // Priority distribution - normalize to lowercase
+  // Different case tables use different priority values:
+  // - case: no constraint (typically 'high', 'medium', 'low')
+  // - ciclcar_case: no constraint (typically 'high', 'medium', 'low')
+  // - far_case: 'Low', 'Medium', 'High' (capitalized)
+  // - fac_case: 'low', 'normal', 'high', 'urgent'
+  // We normalize all to lowercase 'high', 'medium', 'low' for consistent aggregation
   const priorityCounts = cases.reduce((acc, c) => {
-    const priority = c.priority || 'medium';
+    // Normalize priority values to lowercase and map variants
+    let priority = (c.priority || 'medium').toLowerCase();
+    
+    // Map FAC-specific values: 'normal' -> 'medium', 'urgent' -> 'high'
+    if (priority === 'normal') priority = 'medium';
+    if (priority === 'urgent') priority = 'high';
+    
     acc[priority] = (acc[priority] || 0) + 1;
     return acc;
   }, {});
