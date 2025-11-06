@@ -389,19 +389,31 @@ return (
                                             setSectionField(sectionKey, "caseManager", val);
                                         }}
                                         defaultValue={field.value}
-                                        disabled={loadingCaseManagers}
+                                        disabled={loadingCaseManagers || caseManagers.length === 0}
                                     >
                                         <FormControl>
                                             <SelectTrigger>
-                                                <SelectValue placeholder={loadingCaseManagers ? "Loading..." : "Select case manager"} />
+                                                <SelectValue placeholder={
+                                                    loadingCaseManagers 
+                                                        ? "Loading..." 
+                                                        : caseManagers.length === 0 
+                                                            ? "No case managers available" 
+                                                            : "Select case manager"
+                                                } />
                                             </SelectTrigger>
                                         </FormControl>
                                         <SelectContent>
-                                            {caseManagers.map((manager) => (
-                                                <SelectItem key={manager.id} value={manager.full_name}>
-                                                    {manager.full_name}
+                                            {caseManagers.length === 0 ? (
+                                                <SelectItem value="none" disabled>
+                                                    No case managers available
                                                 </SelectItem>
-                                            ))}
+                                            ) : (
+                                                caseManagers.map((manager) => (
+                                                    <SelectItem key={manager.id} value={manager.full_name}>
+                                                        {manager.full_name}
+                                                    </SelectItem>
+                                                ))
+                                            )}
                                         </SelectContent>
                                     </Select>
                                     <FormMessage />
