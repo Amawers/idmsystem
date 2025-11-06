@@ -1,7 +1,7 @@
 "use client";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
 import { submitCase } from "@/lib/caseSubmission";
 import { Label } from "@/components/ui/label";
+import supabase from "@/../config/supabase";
 import {
   Select,
   SelectContent,
@@ -45,11 +46,37 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
     },
   });
 
-  //! SAMPLE DATA – replace later with auth store profiles
-  const caseManagers = [
-    { id: "case-b83947bb", case_manager: "Elaiza Claire Q. Gamolo" },
-    { id: "case-a92d4c1f", case_manager: "Aaron S. Namoc" },
-  ];
+  // State for case managers from database
+  const [caseManagers, setCaseManagers] = useState([]);
+  const [loadingManagers, setLoadingManagers] = useState(true);
+
+  // Fetch case managers from database
+  useEffect(() => {
+    async function fetchCaseManagers() {
+      try {
+        const { data: profiles, error } = await supabase
+          .from("profile")
+          .select("id, full_name, email")
+          .eq("status", "active")
+          .eq("role", "case manager")
+          .order("full_name", { ascending: true });
+
+        if (error) {
+          console.error("Error fetching case managers:", error);
+          toast.error("Failed to load case managers");
+          return;
+        }
+
+        setCaseManagers(profiles || []);
+      } catch (err) {
+        console.error("Unexpected error fetching case managers:", err);
+      } finally {
+        setLoadingManagers(false);
+      }
+    }
+
+    fetchCaseManagers();
+  }, []);
 
   const statuses = [
     {
@@ -163,14 +190,15 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
                   <Select
                     defaultValue={data.caseDetails?.caseManager}
                     onValueChange={(val) => handleCaseDetailChange("caseManager", val)}
+                    disabled={loadingManagers}
                   >
                     <SelectTrigger className="w-[225px]" id="caseManager">
-                      <SelectValue placeholder="Select" />
+                      <SelectValue placeholder={loadingManagers ? "Loading..." : "Select Case Manager"} />
                     </SelectTrigger>
                     <SelectContent>
-                      {caseManagers.map((item) => (
-                        <SelectItem key={item.id} value={item.case_manager}>
-                          {item.case_manager}
+                      {caseManagers.map((manager) => (
+                        <SelectItem key={manager.id} value={manager.full_name}>
+                          {manager.full_name}
                         </SelectItem>
                       ))}
                     </SelectContent>
