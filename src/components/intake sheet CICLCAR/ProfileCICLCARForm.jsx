@@ -499,11 +499,8 @@ export function ProfileCICLCARForm({ sectionKey, goNext, goBack }) {
           </div>
         </div>
 
-        <div className="flex justify-between">
-          <Button type="button" variant="outline" onClick={goBack}>
-            Back
-          </Button>
-          <Button type="submit">Next</Button>
+        <div className="flex justify-end">
+          <Button type="submit" className="cursor-pointer">Next</Button>
         </div>
       </form>
     </Form>

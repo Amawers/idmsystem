@@ -73,10 +73,11 @@ export function RemarksForm({ sectionKey, goNext, goBack }) {
                             type="button"
                             variant="outline"
                             onClick={goBack}
+                            className="cursor-pointer"
                         >
                             Back
                         </Button>
-                        <Button type="submit">Next</Button>
+                        <Button type="submit" className="cursor-pointer">Next</Button>
                     </div>
                 </form>
             </Form>
