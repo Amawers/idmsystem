@@ -750,7 +750,7 @@ const facColumns = (handleEditClick, handleDeleteClick) => [
 // =================================
 //* IVAC Table COLUMN DEFINITIONS
 // =================================
-const ivacColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) => [
+const ivacColumns = (handleEditClick, handleDeleteClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -880,10 +880,6 @@ const ivacColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) => [
 						e.stopPropagation();
 						handleEditClick(row.original, "IVAC");
 					}}>Edit</DropdownMenuItem>
-					<DropdownMenuItem onClick={(e) => {
-						e.stopPropagation();
-						handleEnrollClick(row.original, "IVAC");
-					}}>Enroll Program</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<DropdownMenuItem variant="destructive" onClick={(e) => {
 						e.stopPropagation();
@@ -1197,7 +1193,7 @@ export function DataTable({
 	// Table instance for IVAC tab with its own data and column definitions
 	const ivacTable = useDataTable({
 		initialData: ivacData,
-		columns: ivacColumns(handleEnrollClick, handleEditIvacRow, handleDeleteClick),
+		columns: ivacColumns(handleEditIvacRow, handleDeleteClick),
 		onRowClick: handleEditIvacRow, // Add click handler for IVAC rows
 	});
 
@@ -1752,7 +1748,7 @@ export function DataTable({
 				<TableRenderer
 					table={ivacTable.table}
 					setData={ivacTable.setData}
-					columns={ivacColumns(handleEnrollClick, handleEditIvacRow, handleDeleteClick)}
+					columns={ivacColumns(handleEditIvacRow, handleDeleteClick)}
 					onRowClick={handleEditIvacRow}
 				/>
 			</TabsContent>
