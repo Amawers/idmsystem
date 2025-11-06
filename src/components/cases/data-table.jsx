@@ -1438,6 +1438,7 @@ export function DataTable({
 								open={openCiclcarEditSheet}
 								setOpen={setOpenCiclcarEditSheet}
 								row={editingCiclcarRecord}
+								onSuccess={reloadCiclcar}
 							/>
 						</>
 					)}

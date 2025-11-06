@@ -44,7 +44,7 @@ const schema = z.object({
     referralReason: z.string().min(2, "Required"),
 });
 
-export function ReferralForm({ sectionKey, goNext, goBack }) {
+export function ReferralForm({ sectionKey, goNext, goBack, isSaving, isEditing = false }) {
     //! SAMPLE DATA – replace later with auth store profiles
     const caseManagers = [
         { id: "case-b83947bb", case_manager: "Elaiza Claire Q. Gamolo" },
@@ -423,10 +423,19 @@ export function ReferralForm({ sectionKey, goNext, goBack }) {
                 </div>
 
                 <div className="flex justify-between">
-                    <Button type="button" variant="outline" onClick={goBack}>
+                    <Button type="button" variant="outline" onClick={goBack} className="cursor-pointer">
                         Back
                     </Button>
-                    <Button type="submit">Next</Button>
+                    <Button type="submit" disabled={isSaving} className="cursor-pointer">
+                        {isSaving ? (
+                            <>
+                                <IconLoader className="animate-spin mr-2" size={16} />
+                                {isEditing ? "Updating..." : "Saving..."}
+                            </>
+                        ) : (
+                            isEditing ? "Update" : "Next"
+                        )}
+                    </Button>
                 </div>
             </form>
         </Form>

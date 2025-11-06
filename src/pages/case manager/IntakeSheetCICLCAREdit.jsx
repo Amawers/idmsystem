@@ -18,6 +18,7 @@ import { ReferralForm } from "@/components/intake sheet CICLCAR/ReferralForm";
 import { ServicesForm } from "@/components/intake sheet CICLCAR/ServicesForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import supabase from "@/../config/supabase";
+import { toast } from "sonner";
 
 // Helper utilities to make field mapping robust
 const pick = (obj, ...keys) => {
@@ -82,7 +83,7 @@ const tabOrder = [
     "Referral",
 ];
 
-export default function IntakeSheetCICLCAREdit({ open, setOpen, row }) {
+export default function IntakeSheetCICLCAREdit({ open, setOpen, row, onSuccess }) {
     const [activeTab, setActiveTab] = useState(tabOrder[0]);
     const { getAllData, resetAll, setSectionField } = useIntakeFormStore();
     const [isSaving, setIsSaving] = useState(false);
@@ -417,12 +418,26 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row }) {
                 }
             }
 
-            // Done
+            // Done - close modal and reload data
             resetAll();
             setOpen(false);
+            
+            // Show success toast
+            toast.success(isEditing ? "Case Updated" : "Case Created", {
+                description: isEditing 
+                    ? "CICL/CAR case has been successfully updated." 
+                    : "CICL/CAR case has been successfully created.",
+            });
+            
+            // Call onSuccess callback to reload data in parent component
+            if (onSuccess) {
+                await onSuccess();
+            }
         } catch (err) {
             console.error("Failed to create/update CICL/CAR record:", err);
-            // Optional: surface error to UI/toast
+            toast.error(isEditing ? "Update Failed" : "Creation Failed", {
+                description: err.message || "An error occurred while saving the case.",
+            });
         } finally {
             setIsSaving(false);
         }
@@ -569,6 +584,7 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row }) {
                                     goNext={goNext}
                                     goBack={goBack}
                                     isSaving={isSaving}
+                                    isEditing={true}
                                 />
                             </TabsContent>
                         </>
