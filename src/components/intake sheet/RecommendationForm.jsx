@@ -33,7 +33,13 @@ import {
 
 // DISABLED FOR TESTING: All fields are now optional
 const schema = z.object({
-  recommendation: z.string().optional(),
+  recommendation: z
+    .string()
+    .trim()
+    .refine(
+      (val) => val.split(/\s+/).filter(Boolean).length >= 5,
+      "Please provide recommendation (min 5 words)"
+    ),
 });
 
 export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submitLabel, onSuccess, setOpen }) {

@@ -22,25 +22,24 @@ import {
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
 
 // ✅ Schema with mix of text, select, and date
-// DISABLED FOR TESTING: All fields are now optional
 const schema = z.object({
-	name: z.string().optional(),
-	alias: z.string().optional(),
-	age: z.string().optional(),
-	status: z.string().optional(),
-	address: z.string().optional(),
-	religion: z.string().optional(),
-	educationalAttainment: z.string().optional(),
-	sex: z.string().optional(),
-	birthday: z.string().optional(),
-	birthPlace: z.string().optional(),
-	referralSource: z.string().optional(),
-	occupation: z.string().optional(),
-	income: z.string().optional(),
-	intakeDate: z.string().optional(),
-	caseType: z.string().optional(),
-	contactPerson: z.string().optional(),
-	respondentName: z.string().optional(),
+	name: z.string().min(2, "Required"),
+	alias: z.string().min(2, "Required"),
+	age: z.string().min(1, "Required"),
+	status: z.string().min(1, "Required"),
+	address: z.string().min(2, "Required"),
+	religion: z.string().min(2, "Required"),
+	educationalAttainment: z.string().min(2, "Required"),
+	sex: z.string().min(1, "Required"),
+	birthday: z.string({ required_error: "Birthday required" }),
+	birthPlace: z.string().min(2, "Required"),
+	referralSource: z.string().min(2, "Required"),
+	occupation: z.string().min(2, "Required"),
+	income: z.string().min(1, "Required"),
+	intakeDate: z.string({ required_error: "Intake date required" }),
+	caseType: z.string().min(2, "Required"),
+	contactPerson: z.string().min(2, "Required"),
+	respondentName: z.string().min(2, "Required"),
 });
 
 export function IdentifyingDataForm({ sectionKey, goNext, goBack }) {

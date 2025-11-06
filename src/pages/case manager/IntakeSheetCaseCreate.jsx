@@ -122,8 +122,7 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 									value={tab}
 									className="flex items-center whitespace-nowrap data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
 									onClick={() => setCurrentTabIndex(index)}
-									// DISABLED FOR TESTING: Allow free navigation between all tabs
-									// disabled={index > currentTabIndex && !completedTabs.has(index)}
+									disabled={index > currentTabIndex && !completedTabs.has(index)}
 								>
 									{completedTabs.has(index) ? (
 										<Badge

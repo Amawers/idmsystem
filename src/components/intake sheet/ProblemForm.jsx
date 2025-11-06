@@ -16,9 +16,14 @@ import {
 } from "@/components/ui/form";
 
 // ✅ Schema for PresentingProblem
-// DISABLED FOR TESTING: All fields are now optional
 const schema = z.object({
-	presentingProblem: z.string().optional(),
+	presentingProblem: z
+		.string()
+		.trim()
+		.refine(
+			(val) => val.split(/\s+/).filter(Boolean).length >= 5,
+			"Please describe the problem (min 5 words)"
+		),
 });
 
 export function ProblemForm({ sectionKey, goNext, goBack }) {

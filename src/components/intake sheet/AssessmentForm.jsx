@@ -15,9 +15,14 @@ import {
     FormMessage,
 } from "@/components/ui/form";
 
-// DISABLED FOR TESTING: All fields are now optional
 const schema = z.object({
-    assessment: z.string().optional(),
+    assessment: z
+        .string()
+        .trim()
+        .refine(
+            (val) => val.split(/\s+/).filter(Boolean).length >= 5,
+            "Please provide assessment (min 5 words)"
+        ),
 });
 
 export function AssessmentForm({ sectionKey, goNext, goBack }) {
