@@ -418,21 +418,21 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row, onSuccess }
                 }
             }
 
-            // Done - close modal and reload data
+            // Done - close modal and clean up
             resetAll();
             setOpen(false);
-            
-            // Show success toast
-            toast.success(isEditing ? "Case Updated" : "Case Created", {
-                description: isEditing 
-                    ? "CICL/CAR case has been successfully updated." 
-                    : "CICL/CAR case has been successfully created.",
-            });
             
             // Call onSuccess callback to reload data in parent component
             if (onSuccess) {
                 await onSuccess();
             }
+            
+            // Show success toast after refresh completes
+            toast.success(isEditing ? "Case Updated" : "Case Created", {
+                description: isEditing 
+                    ? "CICL/CAR case has been successfully updated." 
+                    : "CICL/CAR case has been successfully created.",
+            });
         } catch (err) {
             console.error("Failed to create/update CICL/CAR record:", err);
             toast.error(isEditing ? "Update Failed" : "Creation Failed", {
