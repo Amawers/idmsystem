@@ -1253,10 +1253,10 @@ export function DataTable({
 					<SelectContent>
 						<SelectItem value="CASE">Cases</SelectItem>
 						<SelectItem value="CICLCAR">CICL/CAR</SelectItem>
+						<SelectItem value="IVAC">Incidence on VAC</SelectItem>
 						<SelectItem value="FAR">
 							Family Assistance Record
 						</SelectItem>
-						<SelectItem value="IVAC">Incidence on VAC</SelectItem>
 						<SelectItem value="FAC">
 							Family Assistance Card
 						</SelectItem>
@@ -1271,10 +1271,10 @@ export function DataTable({
 					<TabsList>
 						<TabsTrigger value="CASE">Cases</TabsTrigger>
 						<TabsTrigger value="CICLCAR">CICL/CAR</TabsTrigger>
+						<TabsTrigger value="IVAC">Incidence on VAC</TabsTrigger>
 						<TabsTrigger value="FAR">
 							Family Assistance Record
 						</TabsTrigger>
-						<TabsTrigger value="IVAC">Incidence on VAC</TabsTrigger>
 						<TabsTrigger value="FAC">
 							Family Assistance Card
 						</TabsTrigger>
