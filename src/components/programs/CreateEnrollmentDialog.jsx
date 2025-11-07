@@ -228,6 +228,13 @@ export default function CreateEnrollmentDialog({
 				throw new Error("Beneficiary name is required");
 			}
 
+			// Date validation: expected_completion_date must be >= enrollment_date
+			if (formData.expected_completion_date && formData.enrollment_date) {
+				if (formData.expected_completion_date < formData.enrollment_date) {
+					throw new Error("Expected completion date must be after or equal to enrollment date");
+				}
+			}
+
 			// Create enrollment
 			await createEnrollment({
 				...formData,
@@ -501,8 +508,16 @@ export default function CreateEnrollmentDialog({
 												e.target.value
 											)
 										}
+										min={formData.enrollment_date}
 										className="cursor-pointer"
 									/>
+									{formData.expected_completion_date && 
+									 formData.enrollment_date && 
+									 formData.expected_completion_date < formData.enrollment_date && (
+										<p className="text-xs text-red-600">
+											Expected completion must be after enrollment date
+										</p>
+									)}
 								</div>
 							</div>
 

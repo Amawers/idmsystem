@@ -169,6 +169,14 @@ export function useEnrollments(options = {}) {
     try {
       const { user } = useAuthStore.getState();
       
+      // Helper to convert empty strings to null
+      const sanitizeDate = (dateValue) => {
+        if (!dateValue || (typeof dateValue === 'string' && dateValue.trim() === '')) {
+          return null;
+        }
+        return dateValue;
+      };
+      
       // Prepare enrollment data with proper formatting
       const formattedData = {
         case_id: enrollmentData.case_id,
@@ -177,7 +185,7 @@ export function useEnrollments(options = {}) {
         beneficiary_name: enrollmentData.beneficiary_name,
         program_id: enrollmentData.program_id,
         enrollment_date: enrollmentData.enrollment_date || new Date().toISOString().split('T')[0],
-        expected_completion_date: enrollmentData.expected_completion_date || null,
+        expected_completion_date: sanitizeDate(enrollmentData.expected_completion_date),
         status: enrollmentData.status || 'active',
         progress_percentage: enrollmentData.progress_percentage || 0,
         progress_level: enrollmentData.progress_level || null,
@@ -190,6 +198,8 @@ export function useEnrollments(options = {}) {
         case_worker: enrollmentData.case_worker || null,
         notes: enrollmentData.notes || null,
       };
+
+      console.log('Creating enrollment with data:', formattedData);
 
       // Insert into Supabase
       const { data, error } = await supabase

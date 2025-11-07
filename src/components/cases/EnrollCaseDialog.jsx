@@ -191,13 +191,24 @@ export default function EnrollCaseDialog({
         expectedCompletionDate = format(completionDate, "yyyy-MM-dd");
       }
 
+      const enrollmentDateStr = format(enrollmentDate, "yyyy-MM-dd");
+      
+      // Validate dates before submission
+      if (expectedCompletionDate && expectedCompletionDate < enrollmentDateStr) {
+        toast.error("Date Error", {
+          description: "Expected completion date cannot be before enrollment date",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       const enrollmentData = {
         case_id: caseData.id,
         case_number: caseData.id, // Using ID as case number for now
         case_type: enrollmentCaseType, // Use DB-compliant case type (CICL, VAC, etc.)
         beneficiary_name: beneficiaryName,
         program_id: selectedProgramId,
-        enrollment_date: format(enrollmentDate, "yyyy-MM-dd"),
+        enrollment_date: enrollmentDateStr,
         expected_completion_date: expectedCompletionDate,
         status: "active",
         progress_percentage: 0,
@@ -210,6 +221,12 @@ export default function EnrollCaseDialog({
         case_worker: null,
         notes: null,
       };
+
+      console.log('Submitting enrollment with dates:', {
+        enrollment_date: enrollmentDateStr,
+        expected_completion_date: expectedCompletionDate,
+        isValid: !expectedCompletionDate || expectedCompletionDate >= enrollmentDateStr
+      });
 
       // Insert enrollment into Supabase
       const { data: newEnrollment, error } = await supabase
