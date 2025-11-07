@@ -242,7 +242,7 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
                     setValue("program_type", value);
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="cursor-pointer">
                     <SelectValue placeholder="Select program type" />
                   </SelectTrigger>
                   <SelectContent>
@@ -268,7 +268,7 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
                     setValue("target_beneficiary", value);
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="cursor-pointer">
                     <SelectValue placeholder="Select target beneficiary" />
                   </SelectTrigger>
                   <SelectContent>
@@ -405,7 +405,7 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
                     setValue("status", value);
                   }}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="cursor-pointer">
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -427,10 +427,11 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={submitting}
+              className="cursor-pointer"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting} className="cursor-pointer">
               {submitting
                 ? "Saving..."
                 : program
