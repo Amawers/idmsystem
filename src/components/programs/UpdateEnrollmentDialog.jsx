@@ -349,10 +349,11 @@ export default function UpdateEnrollmentDialog({ open, onOpenChange, enrollment,
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="cursor-pointer"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading} className="cursor-pointer">
               {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Update Enrollment
             </Button>

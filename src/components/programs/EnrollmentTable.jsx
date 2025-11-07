@@ -466,7 +466,7 @@ export default function EnrollmentTable() {
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Rows per page:</span>
               <Select value={String(rowsPerPage)} onValueChange={(v) => { setRowsPerPage(parseInt(v, 10)); setPage(1); }}>
-                <SelectTrigger className="w-[80px] h-8">
+                <SelectTrigger className="w-[80px] h-8 cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -490,6 +490,7 @@ export default function EnrollmentTable() {
                 size="sm"
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page <= 1}
+                className="cursor-pointer"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Previous
@@ -499,6 +500,7 @@ export default function EnrollmentTable() {
                 size="sm"
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page >= totalPages}
+                className="cursor-pointer"
               >
                 Next
                 <ChevronRight className="h-4 w-4 ml-1" />
