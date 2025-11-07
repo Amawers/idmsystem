@@ -10,6 +10,7 @@
  */
 
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Dialog,
   DialogContent,
@@ -70,6 +71,7 @@ export default function ProgramDetailsDialog({
   onEdit,
   onDelete 
 }) {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
 
   if (!program) return null;
@@ -277,9 +279,27 @@ export default function ProgramDetailsDialog({
             </div>
 
             <div className="p-4 border rounded-lg bg-muted/50">
-              <p className="text-sm text-muted-foreground text-center">
-                Enrollment management and beneficiary details will be available in the Enrollments section
-              </p>
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  View and manage all enrollments for this program
+                </p>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => {
+                    onOpenChange(false);
+                    navigate(
+                      `/program/enrollments?programId=${program.id}&programName=${encodeURIComponent(
+                        program.program_name
+                      )}`
+                    );
+                  }}
+                  className="cursor-pointer"
+                >
+                  <Users className="mr-2 h-4 w-4" />
+                  View Enrollments
+                </Button>
+              </div>
             </div>
           </TabsContent>
 

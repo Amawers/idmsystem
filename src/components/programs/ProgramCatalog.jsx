@@ -55,6 +55,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import ProgramDetailsDialog from "./ProgramDetailsDialog";
 import CreateProgramDialog from "./CreateProgramDialog";
+import ViewEnrollmentsDialog from "./ViewEnrollmentsDialog";
 
 const statusColors = {
   active: "bg-green-500",
@@ -86,6 +87,7 @@ export default function ProgramCatalog() {
   const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [enrollmentsDialogOpen, setEnrollmentsDialogOpen] = useState(false);
   const [programToDelete, setProgramToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
@@ -149,7 +151,13 @@ export default function ProgramCatalog() {
 
   const handleViewEnrollments = (program) => {
     // Navigate to enrollments page with program filter
-    navigate(`/enrollments?program=${program.id}`);
+    navigate(`/program/enrollments?programId=${program.id}&programName=${encodeURIComponent(program.program_name)}`);
+  };
+
+  const handleViewEnrollmentsDialog = (program) => {
+    // Open enrollments dialog for inline viewing
+    setSelectedProgram(program);
+    setEnrollmentsDialogOpen(true);
   };
 
   if (loading) {
@@ -314,7 +322,7 @@ export default function ProgramCatalog() {
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Program
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleViewEnrollments(program)}>
+                          <DropdownMenuItem onClick={() => handleViewEnrollmentsDialog(program)}>
                             <Users className="mr-2 h-4 w-4" />
                             View Enrollments
                           </DropdownMenuItem>
@@ -359,6 +367,13 @@ export default function ProgramCatalog() {
         open={editDialogOpen}
         onOpenChange={setEditDialogOpen}
         onSuccess={handleProgramSuccess}
+      />
+
+      {/* View Enrollments Dialog */}
+      <ViewEnrollmentsDialog
+        program={selectedProgram}
+        open={enrollmentsDialogOpen}
+        onOpenChange={setEnrollmentsDialogOpen}
       />
 
       {/* Delete Confirmation Dialog */}

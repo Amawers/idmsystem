@@ -13,6 +13,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useEnrollments } from "@/hooks/useEnrollments";
 import CreateEnrollmentDialog from "./CreateEnrollmentDialog";
 import UpdateEnrollmentDialog from "./UpdateEnrollmentDialog";
@@ -75,9 +76,11 @@ const progressColors = {
  * @returns {JSX.Element} Enrollment table with full CRUD operations
  */
 export default function EnrollmentTable() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [caseTypeFilter, setCaseTypeFilter] = useState("all");
+  const [programFilter, setProgramFilter] = useState("all");
   
   // Dialog states
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -87,9 +90,25 @@ export default function EnrollmentTable() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
+  // Read URL query parameters on mount
+  useEffect(() => {
+    const programIdParam = searchParams.get('programId');
+    const programNameParam = searchParams.get('programName');
+    
+    if (programIdParam) {
+      setProgramFilter(programIdParam);
+    }
+    
+    // Display info message if filtering by program
+    if (programNameParam) {
+      console.log(`Filtering enrollments for program: ${programNameParam}`);
+    }
+  }, [searchParams]);
+
   const filterOptions = {
     status: statusFilter !== "all" ? statusFilter : undefined,
     caseType: caseTypeFilter !== "all" ? caseTypeFilter : undefined,
+    programId: programFilter !== "all" ? programFilter : undefined,
   };
 
   const { enrollments, loading, error, deleteEnrollment, fetchEnrollments } = useEnrollments(filterOptions);
@@ -157,6 +176,30 @@ export default function EnrollmentTable() {
    */
   const handleSuccess = () => {
     fetchEnrollments();
+  };
+
+  /**
+   * Clear program filter and URL params
+   */
+  const handleClearProgramFilter = () => {
+    setProgramFilter("all");
+    searchParams.delete('programId');
+    searchParams.delete('programName');
+    setSearchParams(searchParams);
+  };
+
+  // Get the program name from URL or enrollments data
+  const getFilteredProgramName = () => {
+    const programName = searchParams.get('programName');
+    if (programName) return programName;
+    
+    // Fallback: try to find from enrollments
+    if (programFilter !== "all" && enrollments.length > 0) {
+      const enrollment = enrollments.find(e => e.program_id === programFilter);
+      return enrollment?.program?.program_name || 'Unknown Program';
+    }
+    
+    return null;
   };
 
   if (loading) {
@@ -248,6 +291,26 @@ export default function EnrollmentTable() {
           </div>
         </CardHeader>
         <CardContent>
+          {/* Program Filter Badge - Show when filtering by program */}
+          {programFilter !== "all" && getFilteredProgramName() && (
+            <div className="mb-4 p-3 bg-primary/10 border border-primary/20 rounded-lg flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Badge variant="default" className="text-sm">
+                  Filtered by Program
+                </Badge>
+                <span className="text-sm font-medium">{getFilteredProgramName()}</span>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearProgramFilter}
+                className="h-7 text-xs"
+              >
+                Clear Filter
+              </Button>
+            </div>
+          )}
+          
           {/* Filters */}
           <div className="flex items-center gap-4 mb-4">
             <div className="relative flex-1">
