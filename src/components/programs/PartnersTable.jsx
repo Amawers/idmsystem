@@ -416,7 +416,9 @@ export default function PartnersTable() {
             <Button size="sm" onClick={() => {
               resetForm();
               setIsAddDialogOpen(true);
-            }}>
+            }}
+            className="cursor-pointer"
+            >
               <Plus className="mr-2 h-4 w-4" />
               Add Partner
             </Button>
@@ -799,10 +801,11 @@ export default function PartnersTable() {
                   resetForm();
                 }}
                 disabled={isSubmitting}
+                className="cursor-pointer"
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
+              <Button type="submit" disabled={isSubmitting} className="cursor-pointer">
                 {isSubmitting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
