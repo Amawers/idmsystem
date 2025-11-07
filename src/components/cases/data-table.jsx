@@ -256,7 +256,7 @@ const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick
 					<Button
 						variant="outline"
 						size="sm"
-						className="h-6 px-2 text-xs"
+						className="h-6 px-2 text-xs cursor-pointer"
 					>
 						<Edit className="h-3 w-3" />
 					</Button>
@@ -404,7 +404,7 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) =
 					<Button
 						variant="outline"
 						size="sm"
-						className="h-6 px-2 text-xs"
+						className="h-6 px-2 text-xs cursor-pointer"
 					>
 						<Edit className="h-3 w-3" />
 					</Button>
@@ -571,7 +571,7 @@ const farColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) => [
 					<Button
 						variant="outline"
 						size="sm"
-						className="h-6 px-2 text-xs"
+						className="h-6 px-2 text-xs cursor-pointer"
 					>
 						<Edit className="h-3 w-3" />
 					</Button>
@@ -721,7 +721,7 @@ const facColumns = (handleEditClick, handleDeleteClick) => [
 					<Button
 						variant="outline"
 						size="sm"
-						className="h-6 px-2 text-xs"
+						className="h-6 px-2 text-xs cursor-pointer"
 					>
 						<Edit className="h-3 w-3" />
 					</Button>
@@ -866,7 +866,7 @@ const ivacColumns = (handleEditClick, handleDeleteClick) => [
 					<Button
 						variant="outline"
 						size="sm"
-						className="h-6 px-2 text-xs"
+						className="h-6 px-2 text-xs cursor-pointer"
 					>
 						<Edit className="h-3 w-3" />
 					</Button>
