@@ -176,23 +176,24 @@ export function useDashboard(dashboardType = 'case', filters = {}) {
       switch (dashboardType) {
         case 'case': {
           // Fetch all case types using correct table names
-          const [caseRes, ciclcarRes, farRes, facRes] = await Promise.all([
+          // Note: Using FAC (Family Assistance Card) instead of FAR (Family Assistance Record)
+          const [caseRes, ciclcarRes, facRes, ivacRes] = await Promise.all([
             supabase.from("case").select("*").order("updated_at", { ascending: false }),
             supabase.from("ciclcar_case").select("*").order("updated_at", { ascending: false }),
-            supabase.from("far_case").select("*").order("created_at", { ascending: false }),
             supabase.from("fac_case").select("*").order("created_at", { ascending: false }),
+            supabase.from("ivac_cases").select("*").order("created_at", { ascending: false }),
           ]);
 
           if (caseRes.error) throw caseRes.error;
           if (ciclcarRes.error) throw ciclcarRes.error;
-          if (farRes.error) throw farRes.error;
           if (facRes.error) throw facRes.error;
+          if (ivacRes.error) throw ivacRes.error;
 
           const allCases = [
             ...(caseRes.data || []),
             ...(ciclcarRes.data || []),
-            ...(farRes.data || []),
             ...(facRes.data || []),
+            ...(ivacRes.data || []),
           ];
 
           // Apply filters
@@ -241,8 +242,8 @@ export function useDashboard(dashboardType = 'case', filters = {}) {
             rawData: {
               cases: caseRes.data || [],
               ciclcar: ciclcarRes.data || [],
-              far: farRes.data || [],
               fac: facRes.data || [],
+              ivac: ivacRes.data || [],
             },
           });
           break;
