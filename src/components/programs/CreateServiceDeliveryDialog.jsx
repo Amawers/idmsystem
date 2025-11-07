@@ -210,7 +210,7 @@ export default function CreateServiceDeliveryDialog({ open, onOpenChange, onSucc
               onValueChange={handleEnrollmentChange}
               disabled={enrollmentsLoading}
             >
-              <SelectTrigger>
+              <SelectTrigger className="cursor-pointer">
                 <SelectValue placeholder="Select an enrollment" />
               </SelectTrigger>
               <SelectContent>
@@ -243,7 +243,7 @@ export default function CreateServiceDeliveryDialog({ open, onOpenChange, onSucc
                 <Button
                   variant="outline"
                   className={cn(
-                    "w-full justify-start text-left font-normal",
+                    "w-full justify-start text-left font-normal cursor-pointer",
                     !serviceDate && "text-muted-foreground"
                   )}
                 >
@@ -323,7 +323,7 @@ export default function CreateServiceDeliveryDialog({ open, onOpenChange, onSucc
                 onValueChange={(value) => setValue("attendance_status", value)}
                 defaultValue="absent"
               >
-                <SelectTrigger>
+                <SelectTrigger className="cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -396,10 +396,10 @@ export default function CreateServiceDeliveryDialog({ open, onOpenChange, onSucc
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleClose}>
+            <Button type="button" variant="outline" onClick={handleClose} className="cursor-pointer">
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button type="submit" disabled={isSubmitting} className="cursor-pointer">
               {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Log Service
             </Button>

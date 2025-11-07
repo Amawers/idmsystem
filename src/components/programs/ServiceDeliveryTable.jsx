@@ -260,15 +260,12 @@ export default function ServiceDeliveryTable() {
                 size="sm"
                 onClick={handleRefresh}
                 disabled={isRefreshing || loading}
+                className="cursor-pointer"
               >
                 <RefreshCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
                 Refresh
               </Button>
-              <Button variant="outline" size="sm">
-                <Download className="mr-2 h-4 w-4" />
-                Export
-              </Button>
-              <Button size="sm" onClick={() => setCreateDialogOpen(true)}>
+              <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
                 <Plus className="mr-2 h-4 w-4" />
                 Log Session
               </Button>
@@ -289,7 +286,7 @@ export default function ServiceDeliveryTable() {
             </div>
 
             <Select value={programFilter} onValueChange={setProgramFilter}>
-              <SelectTrigger className="w-[200px]">
+              <SelectTrigger className="w-[200px] cursor-pointer">
                 <SelectValue placeholder="Filter by program" />
               </SelectTrigger>
               <SelectContent>
@@ -303,7 +300,7 @@ export default function ServiceDeliveryTable() {
             </Select>
 
             <Select value={attendanceFilter} onValueChange={setAttendanceFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-[150px] cursor-pointer">
                 <SelectValue placeholder="Attendance" />
               </SelectTrigger>
               <SelectContent>
@@ -441,7 +438,7 @@ export default function ServiceDeliveryTable() {
                 value={itemsPerPage.toString()}
                 onValueChange={(value) => setItemsPerPage(Number(value))}
               >
-                <SelectTrigger className="h-8 w-[70px]">
+                <SelectTrigger className="h-8 w-[70px] cursor-pointer">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -464,6 +461,7 @@ export default function ServiceDeliveryTable() {
                 size="sm"
                 onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
                 disabled={currentPage === 1 || filteredDeliveries.length === 0}
+                className="cursor-pointer"
               >
                 Previous
               </Button>
@@ -475,6 +473,7 @@ export default function ServiceDeliveryTable() {
                 size="sm"
                 onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages || filteredDeliveries.length === 0}
+                className="cursor-pointer"
               >
                 Next
               </Button>
