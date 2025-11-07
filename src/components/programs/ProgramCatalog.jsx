@@ -182,7 +182,7 @@ export default function ProgramCatalog() {
           </div>
           
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-[180px] cursor-pointer">
               <Filter className="mr-2 h-4 w-4" />
               <SelectValue placeholder="Filter by status" />
             </SelectTrigger>
@@ -195,7 +195,7 @@ export default function ProgramCatalog() {
           </Select>
 
           <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-[200px] cursor-pointer">
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
             <SelectContent>
@@ -213,6 +213,7 @@ export default function ProgramCatalog() {
             onClick={() => fetchPrograms()}
             disabled={loading}
             title="Refresh programs"
+            className="cursor-pointer"
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
