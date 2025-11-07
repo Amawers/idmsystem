@@ -1254,11 +1254,11 @@ export function DataTable({
 						<SelectItem value="CASE">Cases</SelectItem>
 						<SelectItem value="CICLCAR">CICL/CAR</SelectItem>
 						<SelectItem value="IVAC">Incidence on VAC</SelectItem>
-						<SelectItem value="FAR">
-							Family Assistance Record
-						</SelectItem>
 						<SelectItem value="FAC">
 							Family Assistance Card
+						</SelectItem>
+						<SelectItem value="FAR">
+							Family Assistance Record
 						</SelectItem>
 					</SelectContent>
 				</Select>
@@ -1272,11 +1272,11 @@ export function DataTable({
 						<TabsTrigger value="CASE">Cases</TabsTrigger>
 						<TabsTrigger value="CICLCAR">CICL/CAR</TabsTrigger>
 						<TabsTrigger value="IVAC">Incidence on VAC</TabsTrigger>
-						<TabsTrigger value="FAR">
-							Family Assistance Record
-						</TabsTrigger>
 						<TabsTrigger value="FAC">
 							Family Assistance Card
+						</TabsTrigger>
+						<TabsTrigger value="FAR">
+							Family Assistance Record
 						</TabsTrigger>
 					</TabsList>
 				</div>
