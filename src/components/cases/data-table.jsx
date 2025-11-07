@@ -1306,7 +1306,7 @@ export function DataTable({
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
-									<Button variant="outline" size="sm">
+									<Button variant="outline" size="sm" className="cursor-pointer">
 										<IconLayoutColumns />
 										<span>COLUMNS</span>
 										<IconChevronDown />
@@ -1344,6 +1344,7 @@ export function DataTable({
 								variant="outline"
 								size="sm"
 								onClick={() => setOpenIntakeSheet(true)}
+								className="cursor-pointer"
 							>
 								<IconPlus />
 								<span className="hidden lg:inline">
@@ -1387,7 +1388,7 @@ export function DataTable({
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
-									<Button variant="outline" size="sm">
+									<Button variant="outline" size="sm" className="cursor-pointer">
 										<IconLayoutColumns />
 										<span>COLUMNS</span>
 										<IconChevronDown />
@@ -1425,6 +1426,7 @@ export function DataTable({
 								variant="outline"
 								size="sm"
 								onClick={() => setOpenIntakeSheet(true)}
+								className="cursor-pointer"
 							>
 								<IconPlus />
 								<span className="hidden lg:inline">
@@ -1468,7 +1470,7 @@ export function DataTable({
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
-									<Button variant="outline" size="sm">
+									<Button variant="outline" size="sm" className="cursor-pointer">
 										<IconLayoutColumns />
 										<span>COLUMNS</span>
 										<IconChevronDown />
@@ -1506,6 +1508,7 @@ export function DataTable({
 								variant="outline"
 								size="sm"
 								onClick={() => setOpenIntakeSheet(true)}
+								className="cursor-pointer"
 							>
 								<IconPlus />
 								<span className="hidden lg:inline">
@@ -1549,7 +1552,7 @@ export function DataTable({
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
-									<Button variant="outline" size="sm">
+									<Button variant="outline" size="sm" className="cursor-pointer">
 										<IconLayoutColumns />
 										<span>COLUMNS</span>
 										<IconChevronDown />
@@ -1587,6 +1590,7 @@ export function DataTable({
 								variant="outline"
 								size="sm"
 								onClick={() => setOpenIntakeSheet(true)}
+								className="cursor-pointer"
 							>
 								<IconPlus />
 								<span className="hidden lg:inline">
@@ -1631,7 +1635,7 @@ export function DataTable({
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
-									<Button variant="outline" size="sm">
+									<Button variant="outline" size="sm" className="cursor-pointer">
 										<IconLayoutColumns />
 										<span>COLUMNS</span>
 										<IconChevronDown />
@@ -1669,6 +1673,7 @@ export function DataTable({
 								variant="outline"
 								size="sm"
 								onClick={() => setOpenIntakeSheet(true)}
+								className="cursor-pointer"
 							>
 								<IconPlus />
 								<span className="hidden lg:inline">
