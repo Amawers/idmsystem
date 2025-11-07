@@ -1269,13 +1269,13 @@ export function DataTable({
          */}
 				<div className="hidden items-center gap-2 @4xl/main:flex">
 					<TabsList>
-						<TabsTrigger value="CASE">Cases</TabsTrigger>
-						<TabsTrigger value="CICLCAR">CICL/CAR</TabsTrigger>
-						<TabsTrigger value="IVAC">Incidence on VAC</TabsTrigger>
-						<TabsTrigger value="FAC">
+						<TabsTrigger value="CASE" className="cursor-pointer">Cases</TabsTrigger>
+						<TabsTrigger value="CICLCAR" className="cursor-pointer">CICL/CAR</TabsTrigger>
+						<TabsTrigger value="IVAC" className="cursor-pointer">Incidence on VAC</TabsTrigger>
+						<TabsTrigger value="FAC" className="cursor-pointer">
 							Family Assistance Card
 						</TabsTrigger>
-						<TabsTrigger value="FAR">
+						<TabsTrigger value="FAR" className="cursor-pointer">
 							Family Assistance Record
 						</TabsTrigger>
 					</TabsList>
