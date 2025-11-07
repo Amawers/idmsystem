@@ -485,10 +485,10 @@ return (
 
             {/* Footer (always visible, sits right below inputs when content is short) */}
             <div className="mt-2 py-2 bg-background flex justify-between items-center">
-                <Button type="button" variant="outline" onClick={goBack} disabled={isSaving}>
+                <Button type="button" variant="outline" onClick={goBack} disabled={isSaving} className="cursor-pointer">
                     Cancel
                 </Button>
-                <Button type="submit" disabled={isSaving}>
+                <Button type="submit" disabled={isSaving} className="cursor-pointer">
                     {isSaving ? (isEditMode ? "Updating..." : "Submitting...") : (isEditMode ? "Update" : "Submit")}
                 </Button>
             </div>
