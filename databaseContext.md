@@ -183,17 +183,6 @@ create table public.ciclcar_family_background (
   constraint ciclcar_family_background_fkey foreign KEY (ciclcar_case_id) references ciclcar_case (id) on delete CASCADE
 ) TABLESPACE pg_default;
 
-create table public.ciclcar_service (
-  id uuid not null default gen_random_uuid (),
-  ciclcar_case_id uuid null,
-  service_type text null,
-  service text null,
-  service_date_provided date null,
-  service_date_completed date null,
-  constraint ciclcar_ciclcar_service_pkey primary key (id),
-  constraint ciclcar_service_fkey foreign KEY (ciclcar_case_id) references ciclcar_case (id) on delete CASCADE
-) TABLESPACE pg_default;
-
 create table public.fac_case (
   id uuid not null default gen_random_uuid (),
   created_at timestamp with time zone null default now(),

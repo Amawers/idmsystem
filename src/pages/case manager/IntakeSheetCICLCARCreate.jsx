@@ -15,7 +15,6 @@ import { RecordDetailsForm } from "@/components/intake sheet CICLCAR/RecordDetai
 import { ComplainantForm } from "@/components/intake sheet CICLCAR/ComplainantForm";
 import { RemarksForm } from "@/components/intake sheet CICLCAR/RemarksForm";
 import { ReferralForm } from "@/components/intake sheet CICLCAR/ReferralForm";
-import { ServicesForm } from "@/components/intake sheet CICLCAR/ServicesForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import supabase from "@/../config/supabase";
 import { toast } from "sonner";
@@ -55,7 +54,6 @@ const computeAge = (dateStr) => {
 //* RECORD DETAILS
 //* COMPLAINANT
 //* REMARKS
-//* SERVICES
 //* REFERRAL
 
 const tabOrder = [
@@ -65,7 +63,6 @@ const tabOrder = [
 	"Record-Details",
 	"Complainant",
 	"Remarks",
-	"Services",
 	"Referral",
 ];
 
@@ -100,16 +97,6 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 				: Array.isArray(all.familyBackground?.members)
 				? all.familyBackground.members
 				: [];
-
-			// Normalize services rows (support multiple shapes/keys)
-			const rawServices =
-				Array.isArray(all.services?.services) ? all.services.services :
-				Array.isArray(all.services) ? all.services :
-				Array.isArray(all.services?.items) ? all.services.items :
-				Array.isArray(all.servicesProvided) ? all.servicesProvided :
-				Array.isArray(all.services_list) ? all.services_list :
-				Array.isArray(all.services?.list) ? all.services.list :
-				[];
 
 			// Extract case details from the referral section (where they're actually stored)
 			const caseDetails = referral?.caseDetails || {};
@@ -208,33 +195,6 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 						.from("ciclcar_family_background")
 						.insert(familyPayload);
 					if (famErr) throw famErr;
-				}
-			}
-
-			// 3) Insert services (if any)
-			if (caseRow?.id && rawServices.length > 0) {
-				const servicesPayload = rawServices
-					.map((s) => ({
-						ciclcar_case_id: caseRow.id,
-						service_type: pick(s, "type", "serviceType", "service_type"),
-						service: pick(s, "service", "description", "name"),
-						service_date_provided: normalizeDate(pick(s, "dateProvided", "date_provided", "providedOn", "startDate")),
-						service_date_completed: normalizeDate(pick(s, "dateCompleted", "date_completed", "completedOn", "endDate")),
-					}))
-					// avoid inserting completely empty rows
-					.filter(
-						(r) =>
-							r.service_type ||
-							r.service ||
-							r.service_date_provided ||
-							r.service_date_completed
-					);
-
-				if (servicesPayload.length > 0) {
-					const { error: svcErr } = await supabase
-						.from("ciclcar_service")
-						.insert(servicesPayload);
-					if (svcErr) throw svcErr;
 				}
 			}
 
@@ -379,14 +339,6 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 					<TabsContent value="Remarks">
 						<RemarksForm
 							sectionKey="remarks"
-							goNext={goNext}
-							goBack={goBack}
-						/>
-					</TabsContent>
-					<TabsContent value="Services" >
-						<ServicesForm
-							// filepath: fixed to store services in its own section
-							sectionKey="services"
 							goNext={goNext}
 							goBack={goBack}
 						/>

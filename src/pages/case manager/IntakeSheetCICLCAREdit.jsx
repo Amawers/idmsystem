@@ -15,7 +15,6 @@ import { RecordDetailsForm } from "@/components/intake sheet CICLCAR/RecordDetai
 import { ComplainantForm } from "@/components/intake sheet CICLCAR/ComplainantForm";
 import { RemarksForm } from "@/components/intake sheet CICLCAR/RemarksForm";
 import { ReferralForm } from "@/components/intake sheet CICLCAR/ReferralForm";
-import { ServicesForm } from "@/components/intake sheet CICLCAR/ServicesForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import supabase from "@/../config/supabase";
 import { toast } from "sonner";
@@ -69,7 +68,6 @@ const computeAge = (dateStr) => {
 //* RECORD DETAILS
 //* COMPLAINANT
 //* REMARKS
-//* SERVICES
 //* REFERRAL
 
 const tabOrder = [
@@ -79,7 +77,6 @@ const tabOrder = [
     "Record-Details",
     "Complainant",
     "Remarks",
-    "Services",
     "Referral",
 ];
 
@@ -197,26 +194,6 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row, onSuccess }
                         setSectionField("familyBackground", "members", familyMembers);
                         console.log("✅ Loaded family background:", familyMembers);
                     }
-
-                    // Fetch services
-                    const { data: servicesData, error: servicesError } = await supabase
-                        .from("ciclcar_service")
-                        .select("*")
-                        .eq("ciclcar_case_id", row.id);
-
-                    if (servicesError) {
-                        console.error("Error fetching services:", servicesError);
-                    } else {
-                        const services = (servicesData || []).map((service) => ({
-                            type: service.service_type || "",
-                            service: service.service || "",
-                            dateProvided: service.service_date_provided || "",
-                            dateCompleted: service.service_date_completed || "",
-                        }));
-                        // Store under nested key to match form expectations
-                        setSectionField("services", "services", services);
-                        console.log("✅ Loaded services:", services);
-                    }
                 } catch (error) {
                     console.error("Error fetching related data:", error);
                 } finally {
@@ -255,16 +232,6 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row, onSuccess }
                 : Array.isArray(all.familyBackground?.members)
                 ? all.familyBackground.members
                 : [];
-
-            // Normalize services rows (support multiple shapes/keys)
-            const rawServices =
-                Array.isArray(all.services?.services) ? all.services.services :
-                Array.isArray(all.services) ? all.services :
-                Array.isArray(all.services?.items) ? all.services.items :
-                Array.isArray(all.servicesProvided) ? all.servicesProvided :
-                Array.isArray(all.services_list) ? all.services_list :
-                Array.isArray(all.services?.list) ? all.services.list :
-                [];
 
             // Extract case details from the referral section (where they're actually stored)
             const caseDetails = referral?.caseDetails || {};
@@ -348,9 +315,8 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row, onSuccess }
                 caseRow = data;
                 console.log("✅ Updated case record:", caseRow);
 
-                // 2) Delete existing family members and services, then re-insert
+                // 2) Delete existing family members, then re-insert
                 await supabase.from("ciclcar_family_background").delete().eq("ciclcar_case_id", row.id);
-                await supabase.from("ciclcar_service").delete().eq("ciclcar_case_id", row.id);
             } else {
                 // 1) Insert new base case
                 const { data, error: caseErr } = await supabase
@@ -388,33 +354,6 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row, onSuccess }
                         .from("ciclcar_family_background")
                         .insert(familyPayload);
                     if (famErr) throw famErr;
-                }
-            }
-
-            // 3) Insert services (if any)
-            if (caseRow?.id && rawServices.length > 0) {
-                const servicesPayload = rawServices
-                    .map((s) => ({
-                        ciclcar_case_id: caseRow.id,
-                        service_type: pick(s, "type", "serviceType", "service_type"),
-                        service: pick(s, "service", "description", "name"),
-                        service_date_provided: normalizeDate(pick(s, "dateProvided", "date_provided", "providedOn", "startDate")),
-                        service_date_completed: normalizeDate(pick(s, "dateCompleted", "date_completed", "completedOn", "endDate")),
-                    }))
-                    // avoid inserting completely empty rows
-                    .filter(
-                        (r) =>
-                            r.service_type ||
-                            r.service ||
-                            r.service_date_provided ||
-                            r.service_date_completed
-                    );
-
-                if (servicesPayload.length > 0) {
-                    const { error: svcErr } = await supabase
-                        .from("ciclcar_service")
-                        .insert(servicesPayload);
-                    if (svcErr) throw svcErr;
                 }
             }
 
@@ -565,14 +504,6 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row, onSuccess }
                             <TabsContent value="Remarks">
                                 <RemarksForm
                                     sectionKey="remarks"
-                                    goNext={goNext}
-                                    goBack={goBack}
-                                />
-                            </TabsContent>
-                            <TabsContent value="Services" >
-                                <ServicesForm
-                                    // filepath: fixed to store services in its own section
-                                    sectionKey="services"
                                     goNext={goNext}
                                     goBack={goBack}
                                 />
