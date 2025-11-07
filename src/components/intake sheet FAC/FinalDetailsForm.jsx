@@ -6,13 +6,6 @@ import { useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Form,
   FormField,
   FormItem,
@@ -229,10 +222,10 @@ export function FinalDetailsForm({ sectionKey, goNext, goBack, isSubmitting = fa
         </div>
 
         <div className="flex justify-between">
-          <Button type="button" variant="outline" onClick={goBack} disabled={isSubmitting}>
+          <Button type="button" variant="outline" onClick={goBack} disabled={isSubmitting} className="cursor-pointer">
             Back
           </Button>
-          <Button type="submit" disabled={isSubmitting}>
+          <Button type="submit" disabled={isSubmitting} className="cursor-pointer">
             {isSubmitting ? (
               <>
                 <span className="mr-2">⏳</span>

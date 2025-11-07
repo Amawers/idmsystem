@@ -177,11 +177,10 @@ export function LocationForm({ sectionKey, goNext, goBack }) {
           </div>
         </div>
 
-        <div className="flex justify-between">
-          <Button type="button" variant="outline" onClick={goBack}>
-            Back
+        <div className="flex justify-end">
+          <Button type="submit" className="cursor-pointer">
+            Next
           </Button>
-          <Button type="submit">Next</Button>
         </div>
       </form>
     </Form>

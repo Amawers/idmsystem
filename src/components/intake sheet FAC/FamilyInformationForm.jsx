@@ -161,7 +161,7 @@ export function FamilyInformationForm({ sectionKey, goNext, goBack }) {
 
       {/* Add Member Button */}
       <div className="flex justify-end">
-        <Button onClick={handleAdd}>Add Family Member</Button>
+        <Button onClick={handleAdd} className="cursor-pointer">Add Family Member</Button>
       </div>
 
       {/* Add/Edit Member Modal */}
@@ -338,10 +338,10 @@ export function FamilyInformationForm({ sectionKey, goNext, goBack }) {
 
       {/* Navigation Buttons */}
       <div className="flex justify-between mt-4">
-        <Button type="button" variant="outline" onClick={goBack}>
+        <Button type="button" variant="outline" onClick={goBack} className="cursor-pointer">
           Back
         </Button>
-        <Button type="button" onClick={goNext} disabled={members.length === 0}>
+        <Button type="button" onClick={goNext} disabled={members.length === 0} className="cursor-pointer">
           Next
         </Button>
       </div>
