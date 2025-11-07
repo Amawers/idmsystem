@@ -14,7 +14,6 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { usePrograms } from "@/hooks/usePrograms";
-import { useEnrollments } from "@/hooks/useEnrollments";
 import { useAuthStore } from "@/store/authStore";
 import {
   Dialog,
@@ -55,7 +54,6 @@ export default function EnrollCaseDialog({
 }) {
   const { user } = useAuthStore();
   const { programs, loading: programsLoading } = usePrograms({ status: "active" });
-  const { createEnrollment, getEnrollmentsByCaseId } = useEnrollments();
   
   const [selectedProgramId, setSelectedProgramId] = useState("");
   const [enrollmentDate, setEnrollmentDate] = useState(new Date());

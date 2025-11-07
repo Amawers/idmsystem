@@ -360,7 +360,7 @@ export default function ViewEnrollmentsDialog({ program, open, onOpenChange }) {
                     }`
                   : 'No enrollments to display'}
               </p>
-              <Button onClick={handleViewFullPage} variant="default">
+              <Button onClick={handleViewFullPage} variant="default" className="cursor-pointer">
                 Manage Enrollments
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

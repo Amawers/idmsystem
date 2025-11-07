@@ -284,7 +284,7 @@ export default function EnrollmentTable() {
               <CardTitle className="text-base leading-tight">Program Enrollments</CardTitle>
               <CardDescription className="text-xs leading-snug mt-0">Track case enrollment and progress in programs</CardDescription>
             </div>
-            <Button onClick={() => setCreateDialogOpen(true)}>
+            <Button onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
               <Plus className="mr-2 h-4 w-4" />
               New Enrollment
             </Button>
@@ -324,7 +324,7 @@ export default function EnrollmentTable() {
             </div>
 
             <Select value={caseTypeFilter} onValueChange={setCaseTypeFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px] cursor-pointer">
                 <SelectValue placeholder="Filter by case type" />
               </SelectTrigger>
               <SelectContent>
@@ -338,7 +338,7 @@ export default function EnrollmentTable() {
             </Select>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px] cursor-pointer">
                 <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
               <SelectContent>
