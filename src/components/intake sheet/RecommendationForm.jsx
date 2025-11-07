@@ -296,11 +296,11 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
 
           {/* Navigation */}
           <div className="flex justify-between w-full">
-            <Button type="button" variant="outline" onClick={goBack}>
+            <Button type="button" variant="outline" onClick={goBack} className="cursor-pointer">
               Back
             </Button>
             <div className="flex gap-2">
-              <Button type="submit" disabled={submitting}>
+              <Button type="submit" disabled={submitting} className="cursor-pointer">
                 {submitting ? "Saving..." : (submitLabel || (isSecond ? "Submit All" : "Next"))}
               </Button>
             </div>

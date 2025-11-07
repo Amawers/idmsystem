@@ -551,7 +551,7 @@ export function IdentifyingDataForm({ sectionKey, goNext, goBack, isFirstStep = 
 
 				<div className="flex justify-between">
 					{!isFirstStep && (
-						<Button type="button" variant="outline" onClick={goBack}>
+						<Button type="button" variant="outline" onClick={goBack} className="cursor-pointer">
 							Back
 						</Button>
 					)}

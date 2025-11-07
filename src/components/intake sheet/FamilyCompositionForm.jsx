@@ -344,10 +344,10 @@ export function FamilyCompositionForm({ sectionKey, goNext, goBack }) {
 
       {/* Navigation Buttons */}
       <div className="flex justify-between mt-4">
-        <Button type="button" variant="outline" onClick={goBack}>
+        <Button type="button" variant="outline" onClick={goBack} className="cursor-pointer">
           Back
         </Button>
-        <Button type="button" onClick={goNext} disabled={members.length === 0}>
+        <Button type="button" onClick={goNext} disabled={members.length === 0} className="cursor-pointer">
           Next
         </Button>
       </div>
