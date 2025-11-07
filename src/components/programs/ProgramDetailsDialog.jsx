@@ -71,7 +71,6 @@ export default function ProgramDetailsDialog({
   onDelete 
 }) {
   const [activeTab, setActiveTab] = useState('overview');
-  const [isDeleting, setIsDeleting] = useState(false);
 
   if (!program) return null;
 
@@ -125,7 +124,6 @@ export default function ProgramDetailsDialog({
               <Button
                 variant="outline"
                 size="sm"
-                disabled={isDeleting}
                 onClick={() => {
                   onOpenChange(false);
                   onEdit(program);
@@ -138,33 +136,14 @@ export default function ProgramDetailsDialog({
               <Button
                 variant="destructive"
                 size="sm"
-                disabled={isDeleting}
-                className="cursor-pointer"
-                onClick={async () => {
-                  if (window.confirm(`Are you sure you want to delete "${program.program_name}"?`)) {
-                    setIsDeleting(true);
-                    try {
-                      await onDelete(program.id);
-                      onOpenChange(false);
-                    } catch (error) {
-                      console.error("Delete error:", error);
-                    } finally {
-                      setIsDeleting(false);
-                    }
-                  }
+                onClick={() => {
+                  onOpenChange(false);
+                  onDelete(program);
                 }}
+                className="cursor-pointer"
               >
-                {isDeleting ? (
-                  <>
-                    <div className="mr-1 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="h-4 w-4 mr-1" />
-                    Delete
-                  </>
-                )}
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
               </Button>
             </div>
           </div>
