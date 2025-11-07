@@ -39,7 +39,7 @@ export default function ProgramCatalogPage() {
             Manage intervention programs and services
           </p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)}>
+        <Button onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
           <Plus className="mr-2 h-4 w-4" />
           Create Program
         </Button>
