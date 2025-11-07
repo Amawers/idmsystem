@@ -67,7 +67,8 @@ const tabOrder = [
 ];
 
 export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
-	const [activeTab, setActiveTab] = useState(tabOrder[0]);
+	const [currentTabIndex, setCurrentTabIndex] = useState(0);
+	const [completedTabs, setCompletedTabs] = useState(new Set());
 	const { getAllData, resetAll } = useIntakeFormStore();
 	const [isSaving, setIsSaving] = useState(false);
 
@@ -224,9 +225,9 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 	};
 
 	const goNext = async () => {
-		const idx = tabOrder.indexOf(activeTab);
-		if (idx < tabOrder.length - 1) {
-			setActiveTab(tabOrder[idx + 1]);
+		setCompletedTabs((prev) => new Set([...prev, currentTabIndex]));
+		if (currentTabIndex < tabOrder.length - 1) {
+			setCurrentTabIndex((prev) => prev + 1);
 		} else {
 			// last tab -> create record
 			await handleCreate();
@@ -234,8 +235,9 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 	};
 
 	const goBack = () => {
-		const idx = tabOrder.indexOf(activeTab);
-		if (idx > 0) setActiveTab(tabOrder[idx - 1]);
+		if (currentTabIndex > 0) {
+			setCurrentTabIndex((prev) => prev - 1);
+		}
 	};
 
 	// ✅ Auto-center active tab
@@ -251,12 +253,13 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 				behavior: "smooth",
 			});
 		}
-	}, [activeTab]);
+	}, [currentTabIndex]);
 
 	// Reset when dialog opens/closes (mirror CaseCreate behavior)
 	useEffect(() => {
 		if (!open) {
-			setActiveTab(tabOrder[0]);
+			setCurrentTabIndex(0);
+			setCompletedTabs(new Set());
 		}
 	}, [open]);
 
@@ -266,6 +269,8 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 		}
 	}, [open, resetAll]);
 
+	const currentTab = tabOrder[currentTabIndex];
+
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent className="min-w-4/5 min-h-4/5 flex flex-col">
@@ -274,8 +279,8 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 				</DialogHeader>
 
 				<Tabs
-					value={activeTab}
-					onValueChange={setActiveTab}
+					value={currentTab}
+					onValueChange={(tab) => setCurrentTabIndex(tabOrder.indexOf(tab))}
 					className="w-full flex flex-col gap-4"
 				>
 					{/* ✅ Scrollable Tabs */}
@@ -284,13 +289,26 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 						className="w-full overflow-x-auto scrollbar-hide scrollbar-thin"
 					>
 						<TabsList className="flex w-max gap-2 px-2">
-							{tabOrder.map((tab, i) => (
+							{tabOrder.map((tab, index) => (
 								<TabsTrigger
 									key={tab}
 									value={tab}
 									className="flex items-center whitespace-nowrap data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+									onClick={() => setCurrentTabIndex(index)}
+									disabled={index > currentTabIndex && !completedTabs.has(index)}
 								>
-									<Badge variant="secondary">{i + 1}</Badge>
+									{completedTabs.has(index) ? (
+										<Badge
+											variant="secondary"
+											className="mr-2 h-4 w-4 rounded-full p-0 text-xs bg-green-100 text-green-700"
+										>
+											✓
+										</Badge>
+									) : (
+										<Badge variant="secondary" className="mr-2">
+											{index + 1}
+										</Badge>
+									)}
 									{tab.replace(/-/g, " ").replace("2", "")}
 								</TabsTrigger>
 							))}
@@ -302,6 +320,7 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 							sectionKey="profileOfCICLCar"
 							goNext={goNext}
 							goBack={goBack}
+							isFirstStep={true}
 						/>
 					</TabsContent>
 
