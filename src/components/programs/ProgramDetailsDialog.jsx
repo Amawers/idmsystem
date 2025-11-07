@@ -130,6 +130,7 @@ export default function ProgramDetailsDialog({
                   onOpenChange(false);
                   onEdit(program);
                 }}
+                className="cursor-pointer"
               >
                 <Edit className="h-4 w-4 mr-1" />
                 Edit
@@ -138,6 +139,7 @@ export default function ProgramDetailsDialog({
                 variant="destructive"
                 size="sm"
                 disabled={isDeleting}
+                className="cursor-pointer"
                 onClick={async () => {
                   if (window.confirm(`Are you sure you want to delete "${program.program_name}"?`)) {
                     setIsDeleting(true);
