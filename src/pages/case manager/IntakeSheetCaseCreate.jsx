@@ -149,6 +149,7 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 								sectionKey="IdentifyingData"
 								goNext={goNext}
 								goBack={goBack}
+								isFirstStep={true}
 							/>
 						</TabsContent>
 

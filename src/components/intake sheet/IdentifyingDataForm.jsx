@@ -42,7 +42,7 @@ const schema = z.object({
 	respondentName: z.string().min(2, "Required"),
 });
 
-export function IdentifyingDataForm({ sectionKey, goNext, goBack }) {
+export function IdentifyingDataForm({ sectionKey, goNext, goBack, isFirstStep = false }) {
 	const { data, setSectionField } = useIntakeFormStore();
 
 	const form = useForm({
@@ -550,10 +550,12 @@ export function IdentifyingDataForm({ sectionKey, goNext, goBack }) {
 				</div>
 
 				<div className="flex justify-between">
-					<Button type="button" variant="outline" onClick={goBack}>
-						Back
-					</Button>
-					<Button type="submit">Next</Button>
+					{!isFirstStep && (
+						<Button type="button" variant="outline" onClick={goBack}>
+							Back
+						</Button>
+					)}
+					<Button type="submit" className={`${isFirstStep ? "ml-auto" : ""} cursor-pointer`}>Next</Button>
 				</div>
 			</form>
 		</Form>

@@ -411,6 +411,7 @@ export default function IntakeSheetCaseEdit({ open, onOpenChange, row, onSuccess
                                 sectionKey="IdentifyingData"
                                 goNext={goNext}
                                 goBack={goBack}
+                                isFirstStep={true}
                             />
                         </TabsContent>
 
