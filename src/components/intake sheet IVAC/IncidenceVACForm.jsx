@@ -425,7 +425,7 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
                 onOpenChange={setIsCaseManagerDropdownOpen}
                 onValueChange={handleAddCaseManager}
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full cursor-pointer">
                   <SelectValue placeholder="Add Case Manager" />
                 </SelectTrigger>
                 <SelectContent>
@@ -487,7 +487,7 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
                       defaultValue={field.value}
                     >
                       <FormControl>
-                        <SelectTrigger>
+                        <SelectTrigger className="cursor-pointer">
                           <SelectValue placeholder="Select status" />
                         </SelectTrigger>
                       </FormControl>
@@ -504,10 +504,10 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
 
             {/* Footer buttons in sidebar */}
             <div className="mt-6 pt-4 border-t space-y-2">
-              <Button type="submit" className="w-full" disabled={isSaving}>
+              <Button type="submit" className="w-full cursor-pointer" disabled={isSaving}>
                 {isSaving ? (isEditMode ? "Updating..." : "Submitting...") : (isEditMode ? "Update" : "Submit")}
               </Button>
-              <Button type="button" variant="outline" className="w-full" onClick={goBack} disabled={isSaving}>
+              <Button type="button" variant="outline" className="w-full cursor-pointer" onClick={goBack} disabled={isSaving}>
                 Cancel
               </Button>
             </div>
@@ -521,7 +521,7 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
             {/* Column Groups Filter */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8">
+                <Button variant="outline" size="sm" className="h-8 cursor-pointer">
                   <IconFilter className="h-4 w-4 mr-2" />
                   Column Groups
                   <IconChevronDown className="h-4 w-4 ml-2" />
@@ -601,7 +601,7 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
             {/* Barangay Filter */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="h-8">
+                <Button variant="outline" size="sm" className="h-8 cursor-pointer">
                   <IconFilter className="h-4 w-4 mr-2" />
                   Barangays ({selectedBarangays.length}/{BARANGAYS.length})
                   <IconChevronDown className="h-4 w-4 ml-2" />
