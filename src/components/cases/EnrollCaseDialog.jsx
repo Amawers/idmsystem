@@ -183,6 +183,14 @@ export default function EnrollCaseDialog({
       const beneficiaryName = getBeneficiaryName();
       
       // Prepare enrollment data - ONLY include columns that exist in program_enrollments table
+      // Calculate expected completion date based on program duration
+      let expectedCompletionDate = null;
+      if (selectedProgram?.duration_weeks) {
+        const completionDate = new Date(enrollmentDate);
+        completionDate.setDate(completionDate.getDate() + (selectedProgram.duration_weeks * 7));
+        expectedCompletionDate = format(completionDate, "yyyy-MM-dd");
+      }
+
       const enrollmentData = {
         case_id: caseData.id,
         case_number: caseData.id, // Using ID as case number for now
@@ -190,7 +198,7 @@ export default function EnrollCaseDialog({
         beneficiary_name: beneficiaryName,
         program_id: selectedProgramId,
         enrollment_date: format(enrollmentDate, "yyyy-MM-dd"),
-        expected_completion_date: null, // Can be calculated based on program duration
+        expected_completion_date: expectedCompletionDate,
         status: "active",
         progress_percentage: 0,
         sessions_total: 0,

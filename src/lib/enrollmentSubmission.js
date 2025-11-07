@@ -66,17 +66,25 @@ export function validateEnrollmentData(enrollmentData) {
 
   // Date validations
   if (enrollmentData.expected_completion_date && enrollmentData.enrollment_date) {
-    const enrollDate = new Date(enrollmentData.enrollment_date);
-    const completionDate = new Date(enrollmentData.expected_completion_date);
-    if (completionDate < enrollDate) {
-      errors.push("Expected completion date must be after enrollment date");
+    // Only validate if expected_completion_date is not an empty string
+    const expectedDate = enrollmentData.expected_completion_date.trim();
+    if (expectedDate) {
+      const enrollDate = new Date(enrollmentData.enrollment_date);
+      const completionDate = new Date(expectedDate);
+      if (completionDate < enrollDate) {
+        errors.push("Expected completion date must be after enrollment date");
+      }
     }
   }
   if (enrollmentData.completion_date && enrollmentData.enrollment_date) {
-    const enrollDate = new Date(enrollmentData.enrollment_date);
-    const completionDate = new Date(enrollmentData.completion_date);
-    if (completionDate < enrollDate) {
-      errors.push("Completion date must be after enrollment date");
+    // Only validate if completion_date is not an empty string
+    const completionDateStr = enrollmentData.completion_date.trim();
+    if (completionDateStr) {
+      const enrollDate = new Date(enrollmentData.enrollment_date);
+      const completionDate = new Date(completionDateStr);
+      if (completionDate < enrollDate) {
+        errors.push("Completion date must be after enrollment date");
+      }
     }
   }
 
@@ -113,6 +121,7 @@ export function formatEnrollmentData(enrollmentData, userId = null, userName = n
     beneficiary_name: enrollmentData.beneficiary_name?.trim(),
     program_id: enrollmentData.program_id,
     enrollment_date: enrollmentData.enrollment_date,
+    // Ensure empty strings are converted to null to satisfy DB constraints
     expected_completion_date: enrollmentData.expected_completion_date || null,
     completion_date: enrollmentData.completion_date || null,
     status: enrollmentData.status || 'active',

@@ -231,6 +231,8 @@ export default function CreateEnrollmentDialog({
 			// Create enrollment
 			await createEnrollment({
 				...formData,
+				// Ensure empty strings for dates are converted to null to satisfy DB constraints
+				expected_completion_date: formData.expected_completion_date || null,
 				status: "active",
 				progress_percentage: 0,
 				sessions_attended: 0,
