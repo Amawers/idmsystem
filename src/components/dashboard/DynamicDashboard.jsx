@@ -74,7 +74,7 @@ function CaseDashboard({ filters }) {
             size="sm"
             onClick={refresh}
             disabled={loading}
-            className="gap-2 h-7 text-xs"
+            className="gap-2 h-7 text-xs cursor-pointer"
           >
             <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
             Refresh
