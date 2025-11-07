@@ -67,6 +67,8 @@ const PROGRAM_TYPES = [
 const BENEFICIARY_TYPES = [
   { value: "CASE", label: "CASE" },
   { value: "CICL/CAR", label: "CICL/CAR" },
+  { value: "IVAC", label: "IVAC" },
+  { value: "FAC", label: "FAC" },
 ];
 
 /**
