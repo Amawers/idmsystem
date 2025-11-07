@@ -323,7 +323,7 @@ export default function EnrollCaseDialog({
                     <Button
                       variant="outline"
                       className={cn(
-                        "w-full justify-start text-left font-normal",
+                        "w-full justify-start text-left font-normal cursor-pointer",
                         !enrollmentDate && "text-muted-foreground"
                       )}
                     >
@@ -463,12 +463,14 @@ export default function EnrollCaseDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
+              className="cursor-pointer"
             >
               Cancel
             </Button>
             <Button 
               type="submit" 
               disabled={isSubmitting || !selectedProgramId || isAlreadyEnrolled || compatiblePrograms.length === 0}
+              className="cursor-pointer"
             >
               {isSubmitting ? (
                 <>
