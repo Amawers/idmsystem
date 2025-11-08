@@ -55,7 +55,6 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
   Search, 
-  MoreHorizontal, 
   Calendar,
   CheckCircle2,
   XCircle,
@@ -64,6 +63,8 @@ import {
   Clock,
   MinusCircle,
   RefreshCw,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -403,13 +404,14 @@ export default function ServiceDeliveryTable() {
                       <TableCell className="text-right">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" className="h-8 w-8 p-0">
-                              <MoreHorizontal className="h-4 w-4" />
+                            <Button variant="outline" size="sm" className="h-6 px-2 text-xs cursor-pointer">
+                              <Edit className="h-3 w-3" />
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => handleEdit(delivery)}>
+                              <Edit className="mr-2 h-4 w-4" />
                               Edit Log
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
@@ -417,6 +419,7 @@ export default function ServiceDeliveryTable() {
                               className="text-red-600"
                               onClick={() => handleDeleteConfirm(delivery)}
                             >
+                              <Trash2 className="mr-2 h-4 w-4" />
                               Delete Log
                             </DropdownMenuItem>
                           </DropdownMenuContent>
