@@ -338,6 +338,7 @@ export default function CreateEnrollmentDialog({
 										<SelectItem value="CICL/CAR">
 											CICL/CAR
 										</SelectItem>
+										<SelectItem value="CASE">CASE</SelectItem>
 										<SelectItem value="FAC">FAC</SelectItem>
 										<SelectItem value="IVAC">
 											IVAC
