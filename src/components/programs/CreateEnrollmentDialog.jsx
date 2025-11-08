@@ -340,7 +340,6 @@ export default function CreateEnrollmentDialog({
 										</SelectItem>
 										<SelectItem value="VAC">VAC</SelectItem>
 										<SelectItem value="FAC">FAC</SelectItem>
-										<SelectItem value="FAR">FAR</SelectItem>
 										<SelectItem value="IVAC">
 											IVAC
 										</SelectItem>
