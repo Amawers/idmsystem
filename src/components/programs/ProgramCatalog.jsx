@@ -11,7 +11,7 @@
  * - View program details
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePrograms } from "@/hooks/usePrograms";
 import { useNavigate } from "react-router-dom";
 import {
@@ -50,7 +50,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, Search, Filter, RefreshCw, Eye, Edit, Trash2, Users } from "lucide-react";
+import { MoreHorizontal, Search, Filter, RefreshCw, Eye, Edit, Trash2, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import ProgramDetailsDialog from "./ProgramDetailsDialog";
@@ -90,8 +90,8 @@ export default function ProgramCatalog() {
   const [enrollmentsDialogOpen, setEnrollmentsDialogOpen] = useState(false);
   const [programToDelete, setProgramToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(10);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   
   const navigate = useNavigate();
 
@@ -108,20 +108,29 @@ export default function ProgramCatalog() {
   );
 
   // Pagination calculations
-  const totalPages = Math.ceil(filteredPrograms.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedPrograms = filteredPrograms.slice(startIndex, endIndex);
+  const totalFiltered = filteredPrograms.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / rowsPerPage));
+  
+  useEffect(() => {
+    // Reset to first page if filters or rows-per-page change and current page is out of range
+    if (page > totalPages) setPage(1);
+  }, [page, totalPages]);
+
+  const sliceStart = (page - 1) * rowsPerPage;
+  const sliceEnd = sliceStart + rowsPerPage;
+  const paginatedPrograms = filteredPrograms.slice(sliceStart, sliceEnd);
+  const displayStart = totalFiltered === 0 ? 0 : sliceStart + 1;
+  const displayEnd = Math.min(totalFiltered, sliceEnd);
 
   // Reset to page 1 when filters change
   const handleFilterChange = (setter) => (value) => {
     setter(value);
-    setCurrentPage(1);
+    setPage(1);
   };
 
   const handleSearchChange = (e) => {
     setSearchTerm(e.target.value);
-    setCurrentPage(1);
+    setPage(1);
   };
 
   // Action handlers
@@ -364,77 +373,51 @@ export default function ProgramCatalog() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-muted-foreground">
-              Showing {startIndex + 1} to {Math.min(endIndex, filteredPrograms.length)} of {filteredPrograms.length} programs
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                disabled={currentPage === 1}
-                className="cursor-pointer"
-              >
-                Previous
-              </Button>
-              <div className="flex items-center gap-1">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                  // Show first page, last page, current page, and pages around current
-                  const showPage = 
-                    page === 1 || 
-                    page === totalPages || 
-                    (page >= currentPage - 1 && page <= currentPage + 1);
-                  
-                  // Show ellipsis
-                  const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
-                  const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2;
-
-                  if (showEllipsisBefore || showEllipsisAfter) {
-                    return (
-                      <span key={page} className="px-2 text-muted-foreground">
-                        ...
-                      </span>
-                    );
-                  }
-
-                  if (!showPage) return null;
-
-                  return (
-                    <Button
-                      key={page}
-                      variant={currentPage === page ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(page)}
-                      className="cursor-pointer w-9"
-                    >
-                      {page}
-                    </Button>
-                  );
-                })}
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                disabled={currentPage === totalPages}
-                className="cursor-pointer"
-              >
-                Next
-              </Button>
-            </div>
+        <div className="flex items-center justify-between mt-4">
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Rows per page:</span>
+            <Select value={String(rowsPerPage)} onValueChange={(v) => { setRowsPerPage(parseInt(v, 10)); setPage(1); }}>
+              <SelectTrigger className="w-[80px] h-8 cursor-pointer">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5</SelectItem>
+                <SelectItem value="10">10</SelectItem>
+                <SelectItem value="20">20</SelectItem>
+                <SelectItem value="50">50</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-        )}
-        
-        {/* Show info even without pagination */}
-        {totalPages <= 1 && (
-          <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-muted-foreground">
-              Showing {filteredPrograms.length} of {programs.length} programs
-            </div>
+
+          <div className="text-sm text-muted-foreground">
+            {totalFiltered > 0
+              ? `Showing ${displayStart}–${displayEnd} of ${totalFiltered} (total ${programs.length})`
+              : `Showing 0 of 0 (total ${programs.length})`}
           </div>
-        )}
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              disabled={page <= 1}
+              className="cursor-pointer"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="cursor-pointer"
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        </div>
       </CardContent>
 
       {/* Program Details Dialog */}
