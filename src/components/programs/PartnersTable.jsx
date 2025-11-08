@@ -51,7 +51,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, MoreHorizontal, Plus, Building2, Phone, Mail, AlertCircle, Loader2, FileText } from "lucide-react";
+import { Search, MoreHorizontal, Plus, Building2, Phone, Mail, AlertCircle, Loader2, FileText, RefreshCw } from "lucide-react";
 
 /**
  * Partners Table Component
@@ -94,8 +94,10 @@ export default function PartnersTable() {
     notes: "",
   });
 
-  const { partners, loading, statistics = {}, createPartner, updatePartner, deletePartner, getMOUStatus } = usePartners();
+  const { partners, loading, statistics = {}, createPartner, updatePartner, deletePartner, getMOUStatus, fetchPartners } = usePartners();
   const { cases } = useCases();
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const filteredPartners = (partners || []).filter((partner) =>
     partner.organization_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -354,6 +356,18 @@ export default function PartnersTable() {
     }
   };
 
+  // Handle refresh
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchPartners();
+    } catch (error) {
+      console.error("Error refreshing partners:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -413,15 +427,27 @@ export default function PartnersTable() {
                 Manage partner organizations and service providers
               </CardDescription>
             </div>
-            <Button size="sm" onClick={() => {
-              resetForm();
-              setIsAddDialogOpen(true);
-            }}
-            className="cursor-pointer"
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Partner
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={handleRefresh}
+                disabled={isRefreshing || loading}
+                className="cursor-pointer"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Button size="sm" onClick={() => {
+                resetForm();
+                setIsAddDialogOpen(true);
+              }}
+              className="cursor-pointer"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                Add Partner
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
