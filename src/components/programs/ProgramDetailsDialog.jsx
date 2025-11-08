@@ -152,11 +152,11 @@ export default function ProgramDetailsDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="beneficiaries">Beneficiaries</TabsTrigger>
-            <TabsTrigger value="budget">Budget</TabsTrigger>
-            <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 h-9">
+            <TabsTrigger value="overview" className="text-xs py-1">Overview</TabsTrigger>
+            <TabsTrigger value="beneficiaries" className="text-xs py-1">Beneficiaries</TabsTrigger>
+            <TabsTrigger value="budget" className="text-xs py-1">Budget</TabsTrigger>
+            <TabsTrigger value="details" className="text-xs py-1">Details</TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
