@@ -90,6 +90,8 @@ export default function ProgramCatalog() {
   const [enrollmentsDialogOpen, setEnrollmentsDialogOpen] = useState(false);
   const [programToDelete, setProgramToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage] = useState(10);
   
   const navigate = useNavigate();
 
@@ -104,6 +106,23 @@ export default function ProgramCatalog() {
   const filteredPrograms = (programs || []).filter((program) =>
     program.program_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Pagination calculations
+  const totalPages = Math.ceil(filteredPrograms.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedPrograms = filteredPrograms.slice(startIndex, endIndex);
+
+  // Reset to page 1 when filters change
+  const handleFilterChange = (setter) => (value) => {
+    setter(value);
+    setCurrentPage(1);
+  };
+
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
+    setCurrentPage(1);
+  };
 
   // Action handlers
   const handleViewDetails = (program) => {
@@ -184,12 +203,12 @@ export default function ProgramCatalog() {
             <Input
               placeholder="Search programs..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={handleSearchChange}
               className="pl-8"
             />
           </div>
           
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <Select value={statusFilter} onValueChange={handleFilterChange(setStatusFilter)}>
             <SelectTrigger className="w-[180px] cursor-pointer">
               <Filter className="mr-2 h-4 w-4" />
               <SelectValue placeholder="Filter by status" />
@@ -202,7 +221,7 @@ export default function ProgramCatalog() {
             </SelectContent>
           </Select>
 
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <Select value={typeFilter} onValueChange={handleFilterChange(setTypeFilter)}>
             <SelectTrigger className="w-[200px] cursor-pointer">
               <SelectValue placeholder="Filter by type" />
             </SelectTrigger>
@@ -244,14 +263,14 @@ export default function ProgramCatalog() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredPrograms.length === 0 ? (
+              {paginatedPrograms.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center text-muted-foreground">
                     No programs found
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPrograms.map((program) => (
+                paginatedPrograms.map((program) => (
                   <TableRow key={program.id}>
                     <TableCell className="font-medium">
                       <div>
@@ -344,12 +363,78 @@ export default function ProgramCatalog() {
           </Table>
         </div>
 
-        {/* Pagination info */}
-        <div className="flex items-center justify-between mt-4">
-          <div className="text-sm text-muted-foreground">
-            Showing {filteredPrograms.length} of {programs.length} programs
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-muted-foreground">
+              Showing {startIndex + 1} to {Math.min(endIndex, filteredPrograms.length)} of {filteredPrograms.length} programs
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+                className="cursor-pointer"
+              >
+                Previous
+              </Button>
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  // Show first page, last page, current page, and pages around current
+                  const showPage = 
+                    page === 1 || 
+                    page === totalPages || 
+                    (page >= currentPage - 1 && page <= currentPage + 1);
+                  
+                  // Show ellipsis
+                  const showEllipsisBefore = page === currentPage - 2 && currentPage > 3;
+                  const showEllipsisAfter = page === currentPage + 2 && currentPage < totalPages - 2;
+
+                  if (showEllipsisBefore || showEllipsisAfter) {
+                    return (
+                      <span key={page} className="px-2 text-muted-foreground">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  if (!showPage) return null;
+
+                  return (
+                    <Button
+                      key={page}
+                      variant={currentPage === page ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setCurrentPage(page)}
+                      className="cursor-pointer w-9"
+                    >
+                      {page}
+                    </Button>
+                  );
+                })}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage === totalPages}
+                className="cursor-pointer"
+              >
+                Next
+              </Button>
+            </div>
           </div>
-        </div>
+        )}
+        
+        {/* Show info even without pagination */}
+        {totalPages <= 1 && (
+          <div className="flex items-center justify-between mt-4">
+            <div className="text-sm text-muted-foreground">
+              Showing {filteredPrograms.length} of {programs.length} programs
+            </div>
+          </div>
+        )}
       </CardContent>
 
       {/* Program Details Dialog */}
