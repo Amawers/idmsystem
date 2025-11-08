@@ -35,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MoreHorizontal, Plus, Trash2, Edit, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, MoreHorizontal, Plus, Trash2, Edit, AlertCircle, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -89,6 +89,7 @@ export default function EnrollmentTable() {
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Read URL query parameters on mount
   useEffect(() => {
@@ -168,6 +169,20 @@ export default function EnrollmentTable() {
     } catch (err) {
       console.error('Error deleting enrollment:', err);
       alert('Failed to delete enrollment. Please try again.');
+    }
+  };
+
+  /**
+   * Handle refresh
+   */
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchEnrollments();
+    } catch (error) {
+      console.error("Error refreshing enrollments:", error);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -284,10 +299,22 @@ export default function EnrollmentTable() {
               <CardTitle className="text-base leading-tight">Program Enrollments</CardTitle>
               <CardDescription className="text-xs leading-snug mt-0">Track case enrollment and progress in programs</CardDescription>
             </div>
-            <Button onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
-              <Plus className="mr-2 h-4 w-4" />
-              New Enrollment
-            </Button>
+            <div className="flex gap-2">
+              <Button 
+                size="sm" 
+                variant="outline"
+                onClick={handleRefresh}
+                disabled={isRefreshing || loading}
+                className="cursor-pointer"
+              >
+                <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Button onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
+                <Plus className="mr-2 h-4 w-4" />
+                New Enrollment
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
