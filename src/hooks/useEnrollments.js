@@ -70,7 +70,8 @@ export function useEnrollments(options = {}) {
             role
           )
         `)
-        .order('enrollment_date', { ascending: false });
+        .order('enrollment_date', { ascending: false })
+        .order('created_at', { ascending: false });
 
       // Apply filters
       if (options.status) {
