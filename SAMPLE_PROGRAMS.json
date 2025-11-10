@@ -18,6 +18,7 @@
     "location": "Main Office - Room 201",
     "schedule": "Mon, Wed, Fri 2:00 PM - 4:00 PM",
     "success_rate": 78,
+    "partner_ids": ["partner-001", "partner-003"],
     "created_at": "2025-01-10T08:00:00Z",
     "updated_at": "2025-10-15T14:30:00Z"
   },
@@ -40,6 +41,7 @@
     "location": "Legal Office - 3rd Floor",
     "schedule": "Tue, Thu 9:00 AM - 12:00 PM",
     "success_rate": 85,
+    "partner_ids": ["partner-002", "partner-005"],
     "created_at": "2025-01-25T10:00:00Z",
     "updated_at": "2025-10-20T11:15:00Z"
   },
@@ -62,6 +64,7 @@
     "location": "Medical Center - Wing B",
     "schedule": "Daily 8:00 AM - 5:00 PM",
     "success_rate": 92,
+    "partner_ids": ["partner-004"],
     "created_at": "2025-01-15T09:00:00Z",
     "updated_at": "2025-10-28T16:45:00Z"
   },
@@ -84,6 +87,7 @@
     "location": "Learning Center - Building A",
     "schedule": "Mon-Fri 4:00 PM - 6:00 PM",
     "success_rate": 88,
+    "partner_ids": ["partner-006"],
     "created_at": "2025-05-15T08:30:00Z",
     "updated_at": "2025-10-25T13:20:00Z"
   },
@@ -106,6 +110,7 @@
     "location": "Community Center - Hall 1",
     "schedule": "Wed, Sat 1:00 PM - 5:00 PM",
     "success_rate": 76,
+    "partner_ids": [],
     "created_at": "2025-02-20T11:00:00Z",
     "updated_at": "2025-10-30T09:30:00Z"
   },
@@ -128,6 +133,7 @@
     "location": "Various Barangay Halls",
     "schedule": "Saturdays 2:00 PM - 5:00 PM",
     "success_rate": 82,
+    "partner_ids": ["partner-003", "partner-007"],
     "created_at": "2025-08-15T14:00:00Z",
     "updated_at": "2025-10-29T10:15:00Z"
   },
@@ -150,6 +156,7 @@
     "location": "Vocational Center - Workshop Area",
     "schedule": "Tue, Thu, Sat 9:00 AM - 4:00 PM",
     "success_rate": 71,
+    "partner_ids": ["partner-006", "partner-008"],
     "created_at": "2025-07-01T08:00:00Z",
     "updated_at": "2025-10-27T15:30:00Z"
   },
@@ -172,6 +179,7 @@
     "location": "Safe House - Confidential",
     "schedule": "24/7 Emergency Response",
     "success_rate": 95,
+    "partner_ids": ["partner-009"],
     "created_at": "2024-12-15T07:00:00Z",
     "updated_at": "2025-10-31T08:00:00Z"
   },
@@ -194,6 +202,7 @@
     "location": "Counseling Center - 2nd Floor",
     "schedule": "Mon, Wed 3:00 PM - 6:00 PM",
     "success_rate": 84,
+    "partner_ids": ["partner-001"],
     "created_at": "2025-07-20T10:30:00Z",
     "updated_at": "2025-10-26T12:00:00Z"
   },
@@ -216,6 +225,7 @@
     "location": "Sports Complex - Outdoor Field",
     "schedule": "Sat, Sun 7:00 AM - 12:00 PM",
     "success_rate": 79,
+    "partner_ids": ["partner-010"],
     "created_at": "2025-04-15T09:00:00Z",
     "updated_at": "2025-10-24T14:45:00Z"
   }

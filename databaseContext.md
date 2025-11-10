@@ -614,6 +614,7 @@ create table public.programs (
   location text null,
   schedule text null,
   success_rate integer null default 0,
+  partner_ids uuid[] null default '{}',
   created_at timestamp with time zone not null default now(),
   updated_at timestamp with time zone not null default now(),
   constraint programs_pkey primary key (id),
@@ -676,6 +677,8 @@ create index IF not exists idx_programs_coordinator_id on public.programs using 
 create index IF not exists idx_programs_created_at on public.programs using btree (created_at desc) TABLESPACE pg_default;
 
 create index IF not exists idx_programs_target_beneficiary on public.programs using gin (target_beneficiary) TABLESPACE pg_default;
+
+create index IF not exists idx_programs_partner_ids on public.programs using gin (partner_ids) TABLESPACE pg_default;
 
 create trigger update_programs_updated_at BEFORE
 update on programs for EACH row
@@ -1013,6 +1016,28 @@ END;
 
 ======================
 
+validate_program_partner_ids
+RETURN TYPE: trigger
+
+BEGIN
+  -- Check if any partner_ids don't exist in partners table
+  IF NEW.partner_ids IS NOT NULL AND array_length(NEW.partner_ids, 1) > 0 THEN
+    IF EXISTS (
+      SELECT 1 
+      FROM unnest(NEW.partner_ids) AS partner_id
+      WHERE NOT EXISTS (
+        SELECT 1 FROM partners WHERE id = partner_id
+      )
+    ) THEN
+      RAISE EXCEPTION 'One or more partner IDs do not exist in the partners table';
+    END IF;
+  END IF;
+  
+  RETURN NEW;
+END;
+
+======================
+
 -- Create trigger for updated_at
 CREATE OR REPLACE FUNCTION update_partners_updated_at()
 RETURNS TRIGGER AS $$
@@ -1042,3 +1067,9 @@ CREATE TRIGGER trigger_set_partners_created_by
   BEFORE INSERT ON partners
   FOR EACH ROW
   EXECUTE FUNCTION set_partners_created_by();
+
+-- Create trigger to validate partner IDs in programs
+CREATE TRIGGER trigger_validate_program_partner_ids
+  BEFORE INSERT OR UPDATE ON programs
+  FOR EACH ROW
+  EXECUTE FUNCTION validate_program_partner_ids();

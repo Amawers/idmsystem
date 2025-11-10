@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { usePrograms } from "@/hooks/usePrograms";
+import { usePartners } from "@/hooks/usePartners";
 import { toast } from "sonner";
 
 // Program form schema
@@ -50,6 +51,7 @@ const programSchema = z.object({
   schedule: z.string().min(1, "Schedule is required"),
   start_date: z.string().min(1, "Start date is required"),
   status: z.enum(["active", "inactive", "completed"]),
+  partner_ids: z.array(z.string()).optional(),
 });
 
 const PROGRAM_TYPES = [
@@ -85,8 +87,18 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
   const [programType, setProgramType] = useState("");
   const [targetBeneficiary, setTargetBeneficiary] = useState("");
   const [status, setStatus] = useState("active");
+  const [selectedPartners, setSelectedPartners] = useState([]);
   
   const { createProgram, updateProgram } = usePrograms();
+  const { partners, loading: partnersLoading } = usePartners();
+
+  // Debug: Log partners data
+  useEffect(() => {
+    if (open && !partnersLoading) {
+      console.log('Partners loaded:', partners);
+      console.log('Partners count:', partners?.length || 0);
+    }
+  }, [open, partners, partnersLoading]);
 
   const {
     register,
@@ -113,6 +125,7 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
         setProgramType(program.program_type || "");
         setTargetBeneficiary(targetBenef);
         setStatus(program.status || "active");
+        setSelectedPartners(program.partner_ids || []);
         
         reset({
           program_name: program.program_name || "",
@@ -127,15 +140,18 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
           schedule: program.schedule || "",
           start_date: program.start_date || "",
           status: program.status || "active",
+          partner_ids: program.partner_ids || [],
         });
       } else {
         // Create mode - reset to defaults
         setProgramType("");
         setTargetBeneficiary("");
         setStatus("active");
+        setSelectedPartners([]);
         
         reset({
           status: "active",
+          partner_ids: [],
         });
       }
     }
@@ -150,6 +166,7 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
         budget_allocated: parseFloat(data.budget_allocated),
         duration_weeks: parseInt(data.duration_weeks),
         capacity: parseInt(data.capacity),
+        partner_ids: selectedPartners,
       };
 
       if (program) {
@@ -419,6 +436,76 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
                 {errors.status && (
                   <p className="text-sm text-red-600">{errors.status.message}</p>
                 )}
+              </div>
+
+              {/* Partner Organizations */}
+              <div className="space-y-2">
+                <Label htmlFor="partners">Partner Organizations</Label>
+                <Select
+                  value={selectedPartners.length > 0 ? selectedPartners[0] : ""}
+                  onValueChange={(value) => {
+                    if (value && !selectedPartners.includes(value)) {
+                      const newPartners = [...selectedPartners, value];
+                      setSelectedPartners(newPartners);
+                      setValue("partner_ids", newPartners);
+                    }
+                  }}
+                  disabled={partnersLoading}
+                >
+                  <SelectTrigger className="cursor-pointer">
+                    <SelectValue placeholder={partnersLoading ? "Loading partners..." : "Select partners"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {partners && partners.length > 0 ? (
+                      partners.map((partner) => (
+                        <SelectItem key={partner.id} value={partner.id}>
+                          {partner.organization_name}
+                          {partner.partnership_status !== 'active' && (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              ({partner.partnership_status})
+                            </span>
+                          )}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="no-partners" disabled>
+                        {partnersLoading ? "Loading..." : "No partners available"}
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+                {selectedPartners.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-2">
+                    {selectedPartners.map((partnerId) => {
+                      const partner = partners?.find(p => p.id === partnerId);
+                      return (
+                        <div
+                          key={partnerId}
+                          className="inline-flex items-center gap-1 px-2 py-1 bg-primary/10 text-primary rounded-md text-xs"
+                        >
+                          <span>{partner?.organization_name || partnerId.slice(0, 8)}</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const newPartners = selectedPartners.filter(id => id !== partnerId);
+                              setSelectedPartners(newPartners);
+                              setValue("partner_ids", newPartners);
+                            }}
+                            className="ml-1 hover:bg-primary/20 rounded-full p-0.5"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+                <p className="text-xs text-muted-foreground">
+                  Select partner organizations collaborating on this program
+                  {partners && partners.length > 0 && (
+                    <span className="ml-1">({partners.length} available)</span>
+                  )}
+                </p>
               </div>
             </div>
           </div>

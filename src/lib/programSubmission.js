@@ -90,6 +90,7 @@ export function formatProgramData(programData, userId = null) {
     location: programData.location?.trim() || null,
     schedule: programData.schedule?.trim() || null,
     success_rate: 0, // Always start at 0
+    partner_ids: programData.partner_ids || [],
   };
 }
 
@@ -151,6 +152,7 @@ export async function submitProgram(programData, userId = null) {
         capacity: data.capacity,
         coordinator: data.coordinator,
         startDate: data.start_date,
+        partnerIds: data.partner_ids || [],
       },
       severity: 'info',
     });
@@ -177,6 +179,7 @@ export async function updateProgram(programId, updates, oldData = null) {
       target_beneficiary: Array.isArray(updates.target_beneficiary)
         ? updates.target_beneficiary
         : updates.target_beneficiary ? [updates.target_beneficiary] : undefined,
+      partner_ids: updates.partner_ids !== undefined ? updates.partner_ids : undefined,
       updated_at: new Date().toISOString(),
     };
 
