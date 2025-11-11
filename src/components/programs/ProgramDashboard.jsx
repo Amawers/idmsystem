@@ -187,7 +187,7 @@ export default function ProgramDashboard() {
         <MetricCard
           title="Total Programs"
           value={programStats.total}
-          description={`${programStats.active} active programs`}
+          description={`${programStats.active} active, ${programStats.inactive} inactive`}
           icon={Activity}
           trend={trends.programTrend}
         />
@@ -287,14 +287,17 @@ export default function ProgramDashboard() {
 
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
+            <CardTitle className="text-sm font-medium">Completed Programs</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">
-              {enrollmentStats.completed}
+              {programStats.completed}
             </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {((programStats.completed / programStats.total) * 100 || 0).toFixed(1)}% of all programs
+            </p>
             <Progress 
-              value={(enrollmentStats.completed / enrollmentStats.total) * 100} 
+              value={(programStats.completed / programStats.total) * 100 || 0} 
               className="mt-2 h-2" 
             />
           </CardContent>
