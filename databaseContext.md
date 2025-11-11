@@ -795,8 +795,6 @@ CREATE TABLE IF NOT EXISTS public.partners (
   partnership_status TEXT NOT NULL DEFAULT 'pending',
   mou_signed_date DATE NULL,
   mou_expiry_date DATE NULL,
-  total_referrals_sent INTEGER NOT NULL DEFAULT 0,
-  total_referrals_received INTEGER NOT NULL DEFAULT 0,
   success_rate INTEGER NOT NULL DEFAULT 0,
   budget_allocation NUMERIC(12, 2) NOT NULL DEFAULT 0,
   notes TEXT NULL,
@@ -827,9 +825,6 @@ CREATE TABLE IF NOT EXISTS public.partners (
   ),
   CONSTRAINT partners_success_rate_check CHECK (
     success_rate >= 0 AND success_rate <= 100
-  ),
-  CONSTRAINT partners_referrals_check CHECK (
-    total_referrals_sent >= 0 AND total_referrals_received >= 0
   ),
   CONSTRAINT partners_budget_check CHECK (budget_allocation >= 0),
   CONSTRAINT partners_mou_dates_check CHECK (

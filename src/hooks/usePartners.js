@@ -135,12 +135,21 @@ export function usePartners(options = {}) {
       p.mou_expiry_date && isMOUExpiringSoon(p.mou_expiry_date) && !isMOUExpired(p.mou_expiry_date)
     ).length;
 
+    // Calculate total unique services offered across all partners
+    const allServices = partnersData.reduce((acc, partner) => {
+      if (Array.isArray(partner.services_offered)) {
+        partner.services_offered.forEach(service => acc.add(service));
+      }
+      return acc;
+    }, new Set());
+
     const stats = {
       total: partnersData.length,
       active: partnersData.filter((p) => p.partnership_status === "active").length,
       inactive: partnersData.filter((p) => p.partnership_status === "inactive").length,
       pending: partnersData.filter((p) => p.partnership_status === "pending").length,
       expired: partnersData.filter((p) => p.partnership_status === "expired").length,
+      totalServices: allServices.size, // Count of unique services offered
       averageSuccessRate:
         partnersData.length > 0
           ? partnersData.reduce((sum, p) => sum + (p.success_rate || 0), 0) /
