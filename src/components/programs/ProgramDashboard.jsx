@@ -21,8 +21,10 @@ import {
   TrendingUp,
   Target,
   Award,
+  RefreshCw,
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
 
 /**
  * Metric Card Component
@@ -65,10 +67,18 @@ function MetricCard({ title, value, description, icon: Icon, trend }) {
  * @returns {JSX.Element} Program dashboard
  */
 export default function ProgramDashboard() {
-  const { programs, statistics: programStats, loading: programsLoading } = usePrograms();
-  const { enrollments, statistics: enrollmentStats, loading: enrollmentsLoading } = useEnrollments();
+  const { programs, statistics: programStats, loading: programsLoading, fetchPrograms } = usePrograms();
+  const { enrollments, statistics: enrollmentStats, loading: enrollmentsLoading, fetchEnrollments } = useEnrollments();
 
   const loading = programsLoading || enrollmentsLoading;
+
+  /**
+   * Handle refresh button click
+   * Refreshes both programs and enrollments data
+   */
+  const handleRefresh = async () => {
+    await Promise.all([fetchPrograms(), fetchEnrollments()]);
+  };
 
   // Calculate budget utilization percentage
   const budgetUtilization = programStats.totalBudget > 0
@@ -182,6 +192,26 @@ export default function ProgramDashboard() {
 
   return (
     <div className="space-y-4">
+      {/* Header with Refresh Button */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Program Dashboard</h2>
+          <p className="text-muted-foreground">
+            Overview of all programs and enrollments
+          </p>
+        </div>
+        <Button
+          onClick={handleRefresh}
+          disabled={loading}
+          variant="outline"
+          size="sm"
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
+      </div>
+
       {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <MetricCard
