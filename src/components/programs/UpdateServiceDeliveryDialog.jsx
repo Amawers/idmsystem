@@ -36,6 +36,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useServiceDelivery } from "@/hooks/useServiceDelivery";
+import { useCaseManagers } from "@/hooks/useCaseManagers";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
@@ -49,8 +50,7 @@ import { cn } from "@/lib/utils";
 // Validation schema
 const updateServiceDeliverySchema = z.object({
   service_date: z.string().min(1, "Service date is required"),
-  service_type: z.string().min(1, "Service type is required"),
-  service_provider: z.string().min(1, "Service provider is required"),
+  delivered_by_name: z.string().min(1, "Case manager is required"),
   attendance: z.boolean(),
   attendance_status: z.enum(["present", "absent", "excused"]),
   duration_minutes: z.string().optional(),
@@ -78,6 +78,7 @@ export default function UpdateServiceDeliveryDialog({
   const [serviceDate, setServiceDate] = useState(new Date());
 
   const { updateServiceDelivery } = useServiceDelivery();
+  const { caseManagers, loading: caseManagersLoading } = useCaseManagers();
 
   const {
     register,
@@ -114,8 +115,7 @@ export default function UpdateServiceDeliveryDialog({
 
       reset({
         service_date: serviceDelivery.service_date || format(new Date(), "yyyy-MM-dd"),
-        service_type: serviceDelivery.service_type || "",
-        service_provider: serviceDelivery.service_provider || "",
+        delivered_by_name: serviceDelivery.delivered_by_name || "",
         attendance: serviceDelivery.attendance || false,
         attendance_status: serviceDelivery.attendance_status || "absent",
         duration_minutes: serviceDelivery.duration_minutes?.toString() || "",
@@ -142,8 +142,7 @@ export default function UpdateServiceDeliveryDialog({
       // Prepare update data
       const updates = {
         service_date: data.service_date,
-        service_type: data.service_type,
-        service_provider: data.service_provider,
+        delivered_by_name: data.delivered_by_name,
         attendance: data.attendance,
         attendance_status: data.attendance_status,
         duration_minutes: data.duration_minutes ? parseInt(data.duration_minutes) : null,
@@ -225,36 +224,30 @@ export default function UpdateServiceDeliveryDialog({
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            {/* Service Type */}
-            <div className="space-y-2">
-              <Label htmlFor="service_type">
-                Service Type <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="service_type"
-                placeholder="e.g., Individual Counseling"
-                {...register("service_type")}
-              />
-              {errors.service_type && (
-                <p className="text-sm text-red-500">{errors.service_type.message}</p>
-              )}
-            </div>
-
-            {/* Service Provider */}
-            <div className="space-y-2">
-              <Label htmlFor="service_provider">
-                Service Provider <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="service_provider"
-                placeholder="Provider name"
-                {...register("service_provider")}
-              />
-              {errors.service_provider && (
-                <p className="text-sm text-red-500">{errors.service_provider.message}</p>
-              )}
-            </div>
+          {/* Case Manager / Delivered By */}
+          <div className="space-y-2">
+            <Label htmlFor="delivered_by_name">
+              Delivered By (Case Manager) <span className="text-red-500">*</span>
+            </Label>
+            <Select
+              onValueChange={(value) => setValue("delivered_by_name", value)}
+              value={watch("delivered_by_name")}
+              disabled={caseManagersLoading}
+            >
+              <SelectTrigger className="cursor-pointer">
+                <SelectValue placeholder="Select case manager" />
+              </SelectTrigger>
+              <SelectContent>
+                {caseManagers.map((manager) => (
+                  <SelectItem key={manager.id} value={manager.full_name}>
+                    {manager.full_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.delivered_by_name && (
+              <p className="text-sm text-red-500">{errors.delivered_by_name.message}</p>
+            )}
           </div>
 
           {/* Attendance */}

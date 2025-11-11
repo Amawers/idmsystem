@@ -26,7 +26,6 @@ import SAMPLE_SERVICE_DELIVERY from "../../SAMPLE_SERVICE_DELIVERY.json";
  * @param {string} options.enrollmentId - Filter by enrollment ID
  * @param {string} options.programId - Filter by program ID
  * @param {string} options.caseId - Filter by case ID
- * @param {string} options.serviceType - Filter by service type
  * @param {string} options.dateFrom - Filter from date (YYYY-MM-DD)
  * @param {string} options.dateTo - Filter to date (YYYY-MM-DD)
  * @param {boolean} options.attendance - Filter by attendance (true/false)
@@ -74,16 +73,6 @@ export function useServiceDelivery(options = {}) {
             program_name,
             program_type,
             coordinator
-          ),
-          service_provider_profile:profile!service_delivery_service_provider_id_fkey(
-            id,
-            full_name,
-            role
-          ),
-          delivered_by_profile:profile!service_delivery_delivered_by_fkey(
-            id,
-            full_name,
-            role
           )
         `)
         .order('service_date', { ascending: false });
@@ -97,9 +86,6 @@ export function useServiceDelivery(options = {}) {
       }
       if (options.caseId) {
         query = query.eq('case_id', options.caseId);
-      }
-      if (options.serviceType) {
-        query = query.eq('service_type', options.serviceType);
       }
       if (options.dateFrom) {
         query = query.gte('service_date', options.dateFrom);
@@ -142,11 +128,6 @@ export function useServiceDelivery(options = {}) {
       if (options.caseId) {
         filteredServices = filteredServices.filter(
           (s) => s.case_id === options.caseId
-        );
-      }
-      if (options.serviceType) {
-        filteredServices = filteredServices.filter(
-          (s) => s.service_type === options.serviceType
         );
       }
       if (options.dateFrom) {
@@ -216,17 +197,13 @@ export function useServiceDelivery(options = {}) {
         program_name: serviceData.program_name,
         program_type: serviceData.program_type,
         service_date: serviceData.service_date || new Date().toISOString().split('T')[0],
-        service_type: serviceData.service_type,
-        service_provider: serviceData.service_provider,
-        service_provider_id: serviceData.service_provider_id || null,
         attendance: serviceData.attendance || false,
         attendance_status: serviceData.attendance_status || 'absent',
         duration_minutes: parseInt(serviceData.duration_minutes) || null,
         progress_notes: serviceData.progress_notes || null,
         milestones_achieved: serviceData.milestones_achieved || [],
         next_steps: serviceData.next_steps || null,
-        delivered_by: user?.id || null,
-        delivered_by_name: user?.full_name || null,
+        delivered_by_name: serviceData.delivered_by_name || null,
       };
 
       // Insert into Supabase
@@ -248,16 +225,6 @@ export function useServiceDelivery(options = {}) {
             program_name,
             program_type,
             coordinator
-          ),
-          service_provider_profile:profile!service_delivery_service_provider_id_fkey(
-            id,
-            full_name,
-            role
-          ),
-          delivered_by_profile:profile!service_delivery_delivered_by_fkey(
-            id,
-            full_name,
-            role
           )
         `)
         .single();
@@ -276,10 +243,10 @@ export function useServiceDelivery(options = {}) {
           caseId: data.case_id,
           caseNumber: data.case_number,
           programName: data.program_name,
-          serviceType: data.service_type,
           serviceDate: data.service_date,
           attendance: data.attendance,
           attendanceStatus: data.attendance_status,
+          deliveredBy: data.delivered_by_name,
         },
         severity: 'info',
       });
@@ -339,16 +306,6 @@ export function useServiceDelivery(options = {}) {
             program_name,
             program_type,
             coordinator
-          ),
-          service_provider_profile:profile!service_delivery_service_provider_id_fkey(
-            id,
-            full_name,
-            role
-          ),
-          delivered_by_profile:profile!service_delivery_delivered_by_fkey(
-            id,
-            full_name,
-            role
           )
         `)
         .single();
@@ -375,8 +332,8 @@ export function useServiceDelivery(options = {}) {
           beneficiaryName: data.beneficiary_name,
           caseId: data.case_id,
           programName: data.program_name,
-          serviceType: data.service_type,
           serviceDate: data.service_date,
+          deliveredBy: data.delivered_by_name,
           changes,
         },
         severity: 'info',
@@ -424,8 +381,8 @@ export function useServiceDelivery(options = {}) {
             caseId: serviceToDelete.case_id,
             caseNumber: serviceToDelete.case_number,
             programName: serviceToDelete.program_name,
-            serviceType: serviceToDelete.service_type,
             serviceDate: serviceToDelete.service_date,
+            deliveredBy: serviceToDelete.delivered_by_name,
           },
           severity: 'warning',
         });
@@ -482,7 +439,6 @@ export function useServiceDelivery(options = {}) {
     options.enrollmentId,
     options.programId,
     options.caseId,
-    options.serviceType,
     options.dateFrom,
     options.dateTo,
     options.attendance,

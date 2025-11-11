@@ -323,7 +323,6 @@ export default function ServiceDeliveryTable() {
                     <TableHead>Date</TableHead>
                     <TableHead>Beneficiary</TableHead>
                     <TableHead>Program</TableHead>
-                    <TableHead>Service Type</TableHead>
                     <TableHead>Delivered By</TableHead>
                     <TableHead>Attendance</TableHead>
                     <TableHead>Progress Notes</TableHead>
@@ -333,7 +332,7 @@ export default function ServiceDeliveryTable() {
                 <TableBody>
                 {paginatedDeliveries.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center text-muted-foreground">
+                    <TableCell colSpan={7} className="text-center text-muted-foreground">
                       {filteredDeliveries.length === 0 
                         ? "No service delivery records found"
                         : "No records on this page"}
@@ -363,9 +362,6 @@ export default function ServiceDeliveryTable() {
                             {delivery.program_type}
                           </Badge>
                         </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{delivery.service_type}</Badge>
                       </TableCell>
                       <TableCell>
                         <div className="text-sm">{delivery.delivered_by_name}</div>
