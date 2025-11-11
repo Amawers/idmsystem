@@ -34,8 +34,10 @@ import {
   Trash2,
   CheckCircle2,
   XCircle,
+  Building2,
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { usePartners } from '@/hooks/usePartners';
 
 const statusColors = {
   active: 'bg-green-500',
@@ -73,8 +75,14 @@ export default function ProgramDetailsDialog({
 }) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('overview');
+  const { partners } = usePartners();
 
   if (!program) return null;
+
+  // Get partner details for this program
+  const programPartners = program.partner_ids
+    ? partners?.filter(p => program.partner_ids.includes(p.id)) || []
+    : [];
 
   // Calculate metrics
   const enrollmentRate = program.capacity > 0
@@ -432,6 +440,71 @@ export default function ProgramDetailsDialog({
                 <p className="text-sm text-muted-foreground">{program.schedule}</p>
               </div>
             )}
+
+            {/* Partner Organizations */}
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center gap-2 mb-3">
+                <Building2 className="h-4 w-4" />
+                <label className="text-sm font-medium">Partner Organizations</label>
+              </div>
+              {programPartners.length > 0 ? (
+                <div className="space-y-3">
+                  {programPartners.map((partner) => (
+                    <div
+                      key={partner.id}
+                      className="flex items-start justify-between p-3 bg-muted/50 rounded-lg"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="font-medium text-sm">{partner.organization_name}</p>
+                          <Badge 
+                            variant="outline" 
+                            className="text-xs"
+                          >
+                            {partner.organization_type}
+                          </Badge>
+                        </div>
+                        {partner.services_offered && partner.services_offered.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {partner.services_offered.slice(0, 3).map((service, idx) => (
+                              <Badge key={idx} variant="secondary" className="text-xs">
+                                {service}
+                              </Badge>
+                            ))}
+                            {partner.services_offered.length > 3 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{partner.services_offered.length - 3} more
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+                          <span>{partner.contact_person}</span>
+                          <span>•</span>
+                          <span>{partner.contact_phone}</span>
+                        </div>
+                      </div>
+                      <Badge 
+                        className={
+                          partner.partnership_status === 'active' 
+                            ? 'bg-green-500' 
+                            : partner.partnership_status === 'pending'
+                            ? 'bg-yellow-500'
+                            : 'bg-gray-500'
+                        }
+                      >
+                        {partner.partnership_status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6 text-muted-foreground">
+                  <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">No partner organizations assigned to this program</p>
+                </div>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>
