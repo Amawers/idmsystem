@@ -49,7 +49,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, MoreHorizontal, Plus, Building2, Phone, Mail, AlertCircle, Loader2, FileText, RefreshCw, Edit, Eye, Trash2, AlertTriangle } from "lucide-react";
+import { Search, MoreHorizontal, Plus, Building2, Phone, Mail, AlertCircle, Loader2, FileText, RefreshCw, Edit, Eye, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 
 /**
  * Partners Table Component
@@ -66,6 +66,8 @@ export default function PartnersTable() {
   const [formError, setFormError] = useState("");
   const [selectedServices, setSelectedServices] = useState([]);
   const [selectedPartner, setSelectedPartner] = useState(null);
+  const [page, setPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
   const [formData, setFormData] = useState({
     organization_name: "",
     organization_type: "",
@@ -88,6 +90,27 @@ export default function PartnersTable() {
     partner.organization_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     partner.contact_person.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Pagination calculations
+  const totalFiltered = filteredPartners.length;
+  const totalPages = Math.max(1, Math.ceil(totalFiltered / rowsPerPage));
+  
+  useEffect(() => {
+    // Reset to first page if filters or rows-per-page change and current page is out of range
+    if (page > totalPages && totalPages > 0) {
+      setPage(1);
+    }
+  }, [totalPages, page]);
+
+  // Slice data for current page
+  const sliceStart = (page - 1) * rowsPerPage;
+  const sliceEnd = sliceStart + rowsPerPage;
+  const paginatedPartners = filteredPartners.slice(sliceStart, sliceEnd);
+
+  // Display range for pagination info
+  const displayStart = totalFiltered > 0 ? sliceStart + 1 : 0;
+  const displayEnd = Math.min(sliceEnd, totalFiltered);
+
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -393,14 +416,14 @@ export default function PartnersTable() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPartners.length === 0 ? (
+                {paginatedPartners.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground">
                       No partner organizations found
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredPartners.map((partner) => (
+                  paginatedPartners.map((partner) => (
                     <TableRow key={partner.id}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -483,9 +506,56 @@ export default function PartnersTable() {
             </Table>
           </div>
 
+          {/* Pagination Controls */}
           <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>Rows per page:</span>
+              <Select 
+                value={String(rowsPerPage)} 
+                onValueChange={(v) => { 
+                  setRowsPerPage(parseInt(v, 10)); 
+                  setPage(1); 
+                }}
+              >
+                <SelectTrigger className="w-[80px] h-8 cursor-pointer">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="5">5</SelectItem>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="20">20</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="text-sm text-muted-foreground">
-              Showing {filteredPartners.length} of {partners.length} partners
+              {totalFiltered > 0
+                ? `Showing ${displayStart}–${displayEnd} of ${totalFiltered} (total ${partners.length})`
+                : `Showing 0 of 0 (total ${partners.length})`}
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page <= 1}
+                className="cursor-pointer"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page >= totalPages}
+                className="cursor-pointer"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
           </div>
         </CardContent>
