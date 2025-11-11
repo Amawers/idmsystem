@@ -160,10 +160,11 @@ export default function ProgramDetailsDialog({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
-          <TabsList className="grid w-full grid-cols-4 h-9">
+          <TabsList className="grid w-full grid-cols-5 h-9">
             <TabsTrigger value="overview" className="text-xs py-1">Overview</TabsTrigger>
             <TabsTrigger value="beneficiaries" className="text-xs py-1">Beneficiaries</TabsTrigger>
             <TabsTrigger value="budget" className="text-xs py-1">Budget</TabsTrigger>
+            <TabsTrigger value="partners" className="text-xs py-1">Partners</TabsTrigger>
             <TabsTrigger value="details" className="text-xs py-1">Details</TabsTrigger>
           </TabsList>
 
@@ -383,6 +384,80 @@ export default function ProgramDetailsDialog({
             )}
           </TabsContent>
 
+          {/* Partners Tab */}
+          <TabsContent value="partners" className="space-y-4">
+            <div className="p-4 border rounded-lg">
+              <div className="flex items-center gap-2 mb-4">
+                <Building2 className="h-5 w-5" />
+                <h3 className="font-semibold text-lg">Partner Organizations</h3>
+              </div>
+              {programPartners.length > 0 ? (
+                <div className="space-y-3">
+                  {programPartners.map((partner) => (
+                    <div
+                      key={partner.id}
+                      className="flex items-start justify-between p-4 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors"
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          <p className="font-medium text-base">{partner.organization_name}</p>
+                          <Badge 
+                            variant="outline" 
+                            className="text-xs"
+                          >
+                            {partner.organization_type}
+                          </Badge>
+                        </div>
+                        {partner.services_offered && partner.services_offered.length > 0 && (
+                          <div className="flex flex-wrap gap-1 mb-2">
+                            {partner.services_offered.slice(0, 5).map((service, idx) => (
+                              <Badge key={idx} variant="secondary" className="text-xs">
+                                {service}
+                              </Badge>
+                            ))}
+                            {partner.services_offered.length > 5 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{partner.services_offered.length - 5} more
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                        <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-2">
+                            <User className="h-3 w-3" />
+                            <span>{partner.contact_person}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span>{partner.contact_phone}</span>
+                            <span>•</span>
+                            <span>{partner.contact_email}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <Badge 
+                        className={
+                          partner.partnership_status === 'active' 
+                            ? 'bg-green-500' 
+                            : partner.partnership_status === 'pending'
+                            ? 'bg-yellow-500'
+                            : 'bg-gray-500'
+                        }
+                      >
+                        {partner.partnership_status}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-12 text-muted-foreground">
+                  <Building2 className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-base font-medium">No partner organizations</p>
+                  <p className="text-sm mt-1">This program has no partner organizations assigned yet</p>
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
           {/* Details Tab */}
           <TabsContent value="details" className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
@@ -440,71 +515,6 @@ export default function ProgramDetailsDialog({
                 <p className="text-sm text-muted-foreground">{program.schedule}</p>
               </div>
             )}
-
-            {/* Partner Organizations */}
-            <div className="p-4 border rounded-lg">
-              <div className="flex items-center gap-2 mb-3">
-                <Building2 className="h-4 w-4" />
-                <label className="text-sm font-medium">Partner Organizations</label>
-              </div>
-              {programPartners.length > 0 ? (
-                <div className="space-y-3">
-                  {programPartners.map((partner) => (
-                    <div
-                      key={partner.id}
-                      className="flex items-start justify-between p-3 bg-muted/50 rounded-lg"
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm">{partner.organization_name}</p>
-                          <Badge 
-                            variant="outline" 
-                            className="text-xs"
-                          >
-                            {partner.organization_type}
-                          </Badge>
-                        </div>
-                        {partner.services_offered && partner.services_offered.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-2">
-                            {partner.services_offered.slice(0, 3).map((service, idx) => (
-                              <Badge key={idx} variant="secondary" className="text-xs">
-                                {service}
-                              </Badge>
-                            ))}
-                            {partner.services_offered.length > 3 && (
-                              <Badge variant="outline" className="text-xs">
-                                +{partner.services_offered.length - 3} more
-                              </Badge>
-                            )}
-                          </div>
-                        )}
-                        <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
-                          <span>{partner.contact_person}</span>
-                          <span>•</span>
-                          <span>{partner.contact_phone}</span>
-                        </div>
-                      </div>
-                      <Badge 
-                        className={
-                          partner.partnership_status === 'active' 
-                            ? 'bg-green-500' 
-                            : partner.partnership_status === 'pending'
-                            ? 'bg-yellow-500'
-                            : 'bg-gray-500'
-                        }
-                      >
-                        {partner.partnership_status}
-                      </Badge>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-muted-foreground">
-                  <Building2 className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">No partner organizations assigned to this program</p>
-                </div>
-              )}
-            </div>
           </TabsContent>
         </Tabs>
       </DialogContent>
