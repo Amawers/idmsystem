@@ -49,7 +49,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, MoreHorizontal, Plus, Building2, Phone, Mail, AlertCircle, Loader2, FileText, RefreshCw, Edit, Eye, Trash2 } from "lucide-react";
+import { Search, MoreHorizontal, Plus, Building2, Phone, Mail, AlertCircle, Loader2, FileText, RefreshCw, Edit, Eye, Trash2, AlertTriangle } from "lucide-react";
 
 /**
  * Partners Table Component
@@ -308,6 +308,27 @@ export default function PartnersTable() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{statistics.totalServices || 0}</div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              MOU Alerts
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Expiring Soon</span>
+                <span className="text-sm font-bold text-amber-600">{statistics.mouExpiringSoon || 0}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Expired</span>
+                <span className="text-sm font-bold text-red-600">{statistics.mouExpired || 0}</span>
+              </div>
+            </div>
           </CardContent>
         </Card>
       </div>
