@@ -1086,7 +1086,7 @@ export default function PartnersTable() {
 
               {/* RIGHT COLUMN */}
               <div className="space-y-6">
-                {/* MOU & Budget */}
+                {/* MOU Details */}
                 <div className="space-y-3">
                   <h3 className="font-semibold text-sm border-b pb-2">Partnership Details</h3>
                   <div className="grid grid-cols-2 gap-4">
@@ -1101,16 +1101,6 @@ export default function PartnersTable() {
                       <p className="font-medium">
                         {selectedPartner.mou_expiry_date || "N/A"}
                       </p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Budget Allocation</Label>
-                      <p className="font-medium">
-                        ₱{selectedPartner.budget_allocation?.toLocaleString() || "0.00"}
-                      </p>
-                    </div>
-                    <div>
-                      <Label className="text-muted-foreground text-xs">Success Rate</Label>
-                      <p className="font-medium">{selectedPartner.success_rate || 0}%</p>
                     </div>
                   </div>
                 </div>
