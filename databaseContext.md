@@ -934,6 +934,7 @@ DECLARE
   absent_excused_sessions INTEGER;
   new_attendance_rate DECIMAL(5,2);
   new_progress_percentage INTEGER;
+  new_progress_level TEXT;
 BEGIN
   -- Get counts for this enrollment from service_delivery table
   SELECT 
@@ -978,6 +979,19 @@ BEGIN
     ELSE
       new_progress_percentage := 0;
     END IF;
+    
+    -- Determine progress level based on progress percentage
+    IF new_progress_percentage >= 80 THEN
+      new_progress_level := 'excellent';
+    ELSIF new_progress_percentage >= 60 THEN
+      new_progress_level := 'good';
+    ELSIF new_progress_percentage >= 40 THEN
+      new_progress_level := 'fair';
+    ELSIF new_progress_percentage > 0 THEN
+      new_progress_level := 'poor';
+    ELSE
+      new_progress_level := NULL;  -- No progress yet
+    END IF;
   END;
   
   -- Update enrollment record with all calculated values
@@ -990,6 +1004,7 @@ BEGIN
     sessions_absent_excused = absent_excused_sessions,
     attendance_rate = new_attendance_rate,
     progress_percentage = new_progress_percentage,
+    progress_level = new_progress_level,
     updated_at = NOW()
   WHERE id = COALESCE(NEW.enrollment_id, OLD.enrollment_id);
   
