@@ -193,6 +193,8 @@ export function useEnrollments(options = {}) {
         sessions_total: parseInt(enrollmentData.sessions_total) || 0,
         sessions_attended: 0,
         sessions_completed: 0,
+        sessions_absent_unexcused: 0,
+        sessions_absent_excused: 0,
         attendance_rate: 0,
         assigned_by: user?.id || null,
         assigned_by_name: user?.full_name || null,

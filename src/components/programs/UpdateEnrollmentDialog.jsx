@@ -2,12 +2,13 @@
  * @file UpdateEnrollmentDialog.jsx
  * @description Dialog component for updating existing program enrollments
  * @module components/programs/UpdateEnrollmentDialog
- * 
+ *  
  * Features:
  * - Update enrollment status and progress
- * - Update attendance metrics
+ * - View auto-calculated attendance metrics from service delivery logs
  * - Set completion date
  * - Add notes and case worker updates
+ * - Sessions attended and completed are automatically calculated by database trigger
  */
 
 import { useState, useEffect } from "react";
@@ -33,7 +34,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, AlertCircle } from "lucide-react";
-import { calculateAttendanceRate, calculateProgressPercentage, determineProgressLevel } from "@/lib/enrollmentSubmission";
 
 /**
  * Update Enrollment Dialog Component
@@ -57,6 +57,8 @@ export default function UpdateEnrollmentDialog({ open, onOpenChange, enrollment,
     sessions_total: '',
     sessions_attended: '',
     sessions_completed: '',
+    sessions_absent_unexcused: '',
+    sessions_absent_excused: '',
     attendance_rate: '',
     completion_date: '',
     expected_completion_date: '',
@@ -74,6 +76,8 @@ export default function UpdateEnrollmentDialog({ open, onOpenChange, enrollment,
         sessions_total: enrollment.sessions_total?.toString() || '0',
         sessions_attended: enrollment.sessions_attended?.toString() || '0',
         sessions_completed: enrollment.sessions_completed?.toString() || '0',
+        sessions_absent_unexcused: enrollment.sessions_absent_unexcused?.toString() || '0',
+        sessions_absent_excused: enrollment.sessions_absent_excused?.toString() || '0',
         attendance_rate: enrollment.attendance_rate?.toString() || '0',
         completion_date: enrollment.completion_date || '',
         expected_completion_date: enrollment.expected_completion_date || '',
@@ -90,21 +94,6 @@ export default function UpdateEnrollmentDialog({ open, onOpenChange, enrollment,
   const handleChange = (field, value) => {
     setFormData(prev => {
       const updated = { ...prev, [field]: value };
-      
-      // Auto-calculate metrics when sessions change
-      if (field === 'sessions_attended' || field === 'sessions_total') {
-        const attended = parseInt(field === 'sessions_attended' ? value : prev.sessions_attended) || 0;
-        const total = parseInt(field === 'sessions_total' ? value : prev.sessions_total) || 0;
-        updated.attendance_rate = calculateAttendanceRate(attended, total).toString();
-      }
-      
-      if (field === 'sessions_completed' || field === 'sessions_total') {
-        const completed = parseInt(field === 'sessions_completed' ? value : prev.sessions_completed) || 0;
-        const total = parseInt(field === 'sessions_total' ? value : prev.sessions_total) || 0;
-        const percentage = calculateProgressPercentage(completed, total);
-        updated.progress_percentage = percentage.toString();
-        updated.progress_level = determineProgressLevel(percentage);
-      }
       
       // Auto-set completion date when status changes to completed
       if (field === 'status' && value === 'completed' && !prev.completion_date) {
@@ -124,26 +113,24 @@ export default function UpdateEnrollmentDialog({ open, onOpenChange, enrollment,
     setError(null);
 
     try {
-      // Validation
+      // Get current values for read-only fields (they will be recalculated by the trigger)
       const sessionsAttended = parseInt(formData.sessions_attended) || 0;
       const sessionsCompleted = parseInt(formData.sessions_completed) || 0;
+      const sessionsAbsentUnexcused = parseInt(formData.sessions_absent_unexcused) || 0;
+      const sessionsAbsentExcused = parseInt(formData.sessions_absent_excused) || 0;
       const sessionsTotal = parseInt(formData.sessions_total) || 0;
-
-      if (sessionsAttended > sessionsTotal) {
-        throw new Error('Sessions attended cannot exceed total sessions');
-      }
-      if (sessionsCompleted > sessionsTotal) {
-        throw new Error('Sessions completed cannot exceed total sessions');
-      }
 
       // Prepare update data
       const updates = {
         status: formData.status,
         progress_percentage: parseInt(formData.progress_percentage) || 0,
         progress_level: formData.progress_level || null,
-        sessions_total: sessionsTotal,
+        sessions_total: sessionsTotal, // Only update the expected total
+        // sessions_attended, sessions_completed, and absent fields are auto-calculated by trigger
         sessions_attended: sessionsAttended,
         sessions_completed: sessionsCompleted,
+        sessions_absent_unexcused: sessionsAbsentUnexcused,
+        sessions_absent_excused: sessionsAbsentExcused,
         attendance_rate: parseFloat(formData.attendance_rate) || 0,
         completion_date: formData.completion_date || null,
         expected_completion_date: formData.expected_completion_date || null,
@@ -229,7 +216,7 @@ export default function UpdateEnrollmentDialog({ open, onOpenChange, enrollment,
           {/* Session Metrics */}
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="sessions_total">Total Sessions</Label>
+              <Label htmlFor="sessions_total">Total Sessions (Expected)</Label>
               <Input
                 id="sessions_total"
                 type="number"
@@ -237,26 +224,69 @@ export default function UpdateEnrollmentDialog({ open, onOpenChange, enrollment,
                 value={formData.sessions_total}
                 onChange={(e) => handleChange('sessions_total', e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                Expected number of sessions
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sessions_attended">Attended</Label>
+              <Label htmlFor="sessions_attended">Attended (Auto)</Label>
               <Input
                 id="sessions_attended"
                 type="number"
                 min="0"
                 value={formData.sessions_attended}
-                onChange={(e) => handleChange('sessions_attended', e.target.value)}
+                readOnly
+                className="bg-muted cursor-not-allowed"
               />
+              <p className="text-xs text-muted-foreground">
+                Auto-calculated from service logs
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="sessions_completed">Completed</Label>
+              <Label htmlFor="sessions_completed">Completed (Auto)</Label>
               <Input
                 id="sessions_completed"
                 type="number"
                 min="0"
                 value={formData.sessions_completed}
-                onChange={(e) => handleChange('sessions_completed', e.target.value)}
+                readOnly
+                className="bg-muted cursor-not-allowed"
               />
+              <p className="text-xs text-muted-foreground">
+                Auto-calculated from service logs
+              </p>
+            </div>
+          </div>
+
+          {/* Absent Session Metrics */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="sessions_absent_unexcused">Absent - Unexcused (Auto)</Label>
+              <Input
+                id="sessions_absent_unexcused"
+                type="number"
+                min="0"
+                value={formData.sessions_absent_unexcused}
+                readOnly
+                className="bg-muted cursor-not-allowed"
+              />
+              <p className="text-xs text-muted-foreground">
+                Auto-calculated from service logs
+              </p>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="sessions_absent_excused">Absent - Excused (Auto)</Label>
+              <Input
+                id="sessions_absent_excused"
+                type="number"
+                min="0"
+                value={formData.sessions_absent_excused}
+                readOnly
+                className="bg-muted cursor-not-allowed"
+              />
+              <p className="text-xs text-muted-foreground">
+                Auto-calculated from service logs
+              </p>
             </div>
           </div>
 

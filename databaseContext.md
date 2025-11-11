@@ -495,6 +495,8 @@ create table public.program_enrollments (
   sessions_total integer not null default 0,
   sessions_attended integer not null default 0,
   sessions_completed integer not null default 0,
+  sessions_absent_unexcused integer not null default 0,
+  sessions_absent_excused integer not null default 0,
   attendance_rate numeric(5, 2) null default 0,
   assigned_by uuid null,
   assigned_by_name text null,
@@ -933,29 +935,68 @@ RETURN TYPE: trigger
 DECLARE
   total_sessions INTEGER;
   attended_sessions INTEGER;
+  completed_sessions INTEGER;
+  absent_unexcused_sessions INTEGER;
+  absent_excused_sessions INTEGER;
   new_attendance_rate DECIMAL(5,2);
+  new_progress_percentage INTEGER;
 BEGIN
-  -- Get total scheduled sessions and attended sessions for this enrollment
+  -- Get counts for this enrollment from service_delivery table
   SELECT 
-    COUNT(*),
-    COUNT(*) FILTER (WHERE attendance = true)
-  INTO total_sessions, attended_sessions
+    COUNT(*) as total,
+    COUNT(*) FILTER (WHERE attendance = true AND attendance_status = 'present') as attended,
+    COUNT(*) FILTER (WHERE attendance = true AND attendance_status = 'present') as completed,
+    COUNT(*) FILTER (WHERE attendance_status = 'absent') as absent_unexcused,
+    COUNT(*) FILTER (WHERE attendance_status = 'excused') as absent_excused
+  INTO 
+    total_sessions, 
+    attended_sessions, 
+    completed_sessions,
+    absent_unexcused_sessions,
+    absent_excused_sessions
   FROM service_delivery
   WHERE enrollment_id = COALESCE(NEW.enrollment_id, OLD.enrollment_id);
   
-  -- Calculate attendance rate
+  -- Calculate attendance rate based on attended vs total sessions
   IF total_sessions > 0 THEN
     new_attendance_rate := (attended_sessions::DECIMAL / total_sessions::DECIMAL) * 100;
   ELSE
     new_attendance_rate := 0;
   END IF;
   
-  -- Update enrollment record
+  -- Calculate progress percentage based on sessions_completed
+  -- Get the expected sessions_total from enrollment
+  DECLARE
+    expected_total INTEGER;
+  BEGIN
+    SELECT sessions_total INTO expected_total
+    FROM program_enrollments
+    WHERE id = COALESCE(NEW.enrollment_id, OLD.enrollment_id);
+    
+    -- Use the greater of: (1) expected_total or (2) total_sessions logged
+    IF expected_total IS NULL OR expected_total < total_sessions THEN
+      expected_total := total_sessions;
+    END IF;
+    
+    -- Calculate progress percentage
+    IF expected_total > 0 THEN
+      new_progress_percentage := ROUND((completed_sessions::DECIMAL / expected_total::DECIMAL) * 100);
+    ELSE
+      new_progress_percentage := 0;
+    END IF;
+  END;
+  
+  -- Update enrollment record with all calculated values
   UPDATE program_enrollments
   SET 
-    sessions_total = total_sessions,
+    sessions_total = GREATEST(COALESCE(sessions_total, 0), total_sessions),
     sessions_attended = attended_sessions,
-    attendance_rate = new_attendance_rate
+    sessions_completed = completed_sessions,
+    sessions_absent_unexcused = absent_unexcused_sessions,
+    sessions_absent_excused = absent_excused_sessions,
+    attendance_rate = new_attendance_rate,
+    progress_percentage = new_progress_percentage,
+    updated_at = NOW()
   WHERE id = COALESCE(NEW.enrollment_id, OLD.enrollment_id);
   
   RETURN COALESCE(NEW, OLD);

@@ -244,6 +244,8 @@ export default function CreateEnrollmentDialog({
 				progress_percentage: 0,
 				sessions_attended: 0,
 				sessions_completed: 0,
+				sessions_absent_unexcused: 0,
+				sessions_absent_excused: 0,
 				attendance_rate: 0,
 			});
 
