@@ -121,14 +121,6 @@ export function validatePartnerData(partnerData) {
   }
 
   // Numeric validations
-  if (partnerData.total_referrals_sent && partnerData.total_referrals_sent < 0) {
-    errors.push("Total referrals sent cannot be negative");
-  }
-  
-  if (partnerData.total_referrals_received && partnerData.total_referrals_received < 0) {
-    errors.push("Total referrals received cannot be negative");
-  }
-  
   if (partnerData.success_rate !== undefined && partnerData.success_rate !== null) {
     if (partnerData.success_rate < 0 || partnerData.success_rate > 100) {
       errors.push("Success rate must be between 0 and 100");
@@ -180,8 +172,6 @@ export function formatPartnerData(partnerData) {
     partnership_status: partnerData.partnership_status || PARTNERSHIP_STATUS.PENDING,
     mou_signed_date: partnerData.mou_signed_date || null,
     mou_expiry_date: partnerData.mou_expiry_date || null,
-    total_referrals_sent: parseInt(partnerData.total_referrals_sent) || 0,
-    total_referrals_received: parseInt(partnerData.total_referrals_received) || 0,
     success_rate: parseInt(partnerData.success_rate) || 0,
     budget_allocation: parseFloat(partnerData.budget_allocation) || 0,
     notes: partnerData.notes?.trim() || null,
@@ -421,51 +411,6 @@ export async function deletePartner(partnerId, partnerData = null) {
   } catch (err) {
     console.error("Error in deletePartner:", err);
     return { success: false, error: err };
-  }
-}
-
-/**
- * Updates referral counts for a partner
- * @param {string} partnerId - Partner ID
- * @param {Object} updates - { sentIncrement: number, receivedIncrement: number }
- * @returns {Promise<{data: Object|null, error: any}>}
- */
-export async function updateReferralCounts(partnerId, { sentIncrement = 0, receivedIncrement = 0 }) {
-  try {
-    // Get current counts
-    const { data: partner, error: fetchError } = await supabase
-      .from("partners")
-      .select("total_referrals_sent, total_referrals_received")
-      .eq("id", partnerId)
-      .single();
-
-    if (fetchError) {
-      return { data: null, error: fetchError };
-    }
-
-    // Calculate new counts
-    const newSentCount = (partner.total_referrals_sent || 0) + sentIncrement;
-    const newReceivedCount = (partner.total_referrals_received || 0) + receivedIncrement;
-
-    // Update counts
-    const { data, error } = await supabase
-      .from("partners")
-      .update({
-        total_referrals_sent: Math.max(0, newSentCount),
-        total_referrals_received: Math.max(0, newReceivedCount),
-      })
-      .eq("id", partnerId)
-      .select()
-      .single();
-
-    if (error) {
-      return { data: null, error };
-    }
-
-    return { data, error: null };
-  } catch (err) {
-    console.error("Error in updateReferralCounts:", err);
-    return { data: null, error: err };
   }
 }
 

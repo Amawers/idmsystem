@@ -26,7 +26,6 @@ import {
   submitPartner as submitPartnerLib, 
   updatePartner as updatePartnerLib, 
   deletePartner as deletePartnerLib,
-  updateReferralCounts,
   getExpiringSoonPartners,
   isMOUExpired,
   isMOUExpiringSoon,
@@ -52,8 +51,6 @@ export function usePartners(options = {}) {
     active: 0,
     inactive: 0,
     pending: 0,
-    totalReferralsSent: 0,
-    totalReferralsReceived: 0,
     averageSuccessRate: 0,
     totalBudgetAllocation: 0,
   });
@@ -144,14 +141,6 @@ export function usePartners(options = {}) {
       inactive: partnersData.filter((p) => p.partnership_status === "inactive").length,
       pending: partnersData.filter((p) => p.partnership_status === "pending").length,
       expired: partnersData.filter((p) => p.partnership_status === "expired").length,
-      totalReferralsSent: partnersData.reduce(
-        (sum, p) => sum + (p.total_referrals_sent || 0),
-        0
-      ),
-      totalReferralsReceived: partnersData.reduce(
-        (sum, p) => sum + (p.total_referrals_received || 0),
-        0
-      ),
       averageSuccessRate:
         partnersData.length > 0
           ? partnersData.reduce((sum, p) => sum + (p.success_rate || 0), 0) /
@@ -266,42 +255,6 @@ export function usePartners(options = {}) {
   };
 
   /**
-   * Update referral counts for a partner
-   * @async
-   * @param {string} partnerId - Partner ID
-   * @param {Object} counts - { sentIncrement: number, receivedIncrement: number }
-   * @returns {Promise<Object>} Updated partner
-   */
-  const updatePartnerReferralCounts = async (partnerId, counts) => {
-    try {
-      const result = await updateReferralCounts(partnerId, counts);
-      
-      if (result.error) {
-        throw result.error;
-      }
-
-      // Create audit log for referral tracking
-      await createAuditLog({
-        actionType: AUDIT_ACTIONS.CREATE_REFERRAL,
-        actionCategory: AUDIT_CATEGORIES.PARTNER,
-        description: `Updated referral counts for partner`,
-        resourceType: "partner",
-        resourceId: partnerId,
-        metadata: counts,
-        severity: "info",
-      });
-
-      // Refresh partners list
-      await fetchPartners();
-
-      return result.data;
-    } catch (err) {
-      console.error("Error updating referral counts:", err);
-      throw err;
-    }
-  };
-
-  /**
    * Get partners with expiring MOUs
    * @async
    * @param {number} daysThreshold - Days threshold for expiry warning
@@ -356,7 +309,6 @@ export function usePartners(options = {}) {
     deletePartner,
     getPartnerById,
     getPartnersByService,
-    updatePartnerReferralCounts,
     getExpiringSoon,
     // Utility functions
     isMOUExpired,

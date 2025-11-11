@@ -197,8 +197,6 @@ export const AUDIT_ACTIONS = {
 	DELETE_PARTNER: "delete_partner",
 	VIEW_PARTNER: "view_partner",
 	EXPORT_PARTNERS: "export_partners",
-	CREATE_REFERRAL: "create_referral",
-	UPDATE_REFERRAL: "update_referral",
 
 	// System
 	SYSTEM_ERROR: "system_error",
