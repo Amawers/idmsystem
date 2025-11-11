@@ -159,7 +159,7 @@ export default function UpdateEnrollmentDialog({ open, onOpenChange, enrollment,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="min-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Update Enrollment</DialogTitle>
           <DialogDescription>
@@ -175,202 +175,211 @@ export default function UpdateEnrollmentDialog({ open, onOpenChange, enrollment,
             </Alert>
           )}
 
-          {/* Enrollment Info (Read-only) */}
-          <div className="bg-muted p-4 rounded-md space-y-2">
-            <div className="grid grid-cols-2 gap-2 text-sm">
-              <div>
-                <span className="font-medium">Case Type:</span> {enrollment.case_type}
+          {/* 2-Column Grid Layout */}
+          <div className="grid grid-cols-2 gap-6">
+            {/* LEFT COLUMN */}
+            <div className="space-y-4">
+              {/* Row 1: Case Type & Case Number */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Case Type</Label>
+                  <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                    {enrollment.case_type}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Case Number</Label>
+                  <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                    {enrollment.case_number}
+                  </div>
+                </div>
               </div>
-              <div>
-                <span className="font-medium">Case Number:</span> {enrollment.case_number}
+
+              {/* Row 2: Program & Enrollment Date */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Program</Label>
+                  <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                    {enrollment.program?.program_name || 'N/A'}
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Enrollment Date</Label>
+                  <div className="px-3 py-2 bg-muted rounded-md text-sm">
+                    {new Date(enrollment.enrollment_date).toLocaleDateString()}
+                  </div>
+                </div>
               </div>
-              <div>
-                <span className="font-medium">Program:</span> {enrollment.program?.program_name || 'N/A'}
+
+              {/* Row 3: Status */}
+              <div className="space-y-2">
+                <Label htmlFor="status">Status *</Label>
+                <Select
+                  value={formData.status}
+                  onValueChange={(value) => handleChange('status', value)}
+                  required
+                >
+                  <SelectTrigger id="status">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="dropped">Dropped</SelectItem>
+                    <SelectItem value="at_risk">At Risk</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-              <div>
-                <span className="font-medium">Enrollment Date:</span> {new Date(enrollment.enrollment_date).toLocaleDateString()}
+
+              {/* Row 4: Total Sessions, Attended, Completed */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="sessions_total" className="text-xs">Total Sessions</Label>
+                  <Input
+                    id="sessions_total"
+                    type="number"
+                    min="0"
+                    value={formData.sessions_total}
+                    onChange={(e) => handleChange('sessions_total', e.target.value)}
+                    className="text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sessions_attended" className="text-xs">Attended</Label>
+                  <Input
+                    id="sessions_attended"
+                    type="number"
+                    min="0"
+                    value={formData.sessions_attended}
+                    readOnly
+                    className="bg-muted cursor-not-allowed text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sessions_completed" className="text-xs">Completed</Label>
+                  <Input
+                    id="sessions_completed"
+                    type="number"
+                    min="0"
+                    value={formData.sessions_completed}
+                    readOnly
+                    className="bg-muted cursor-not-allowed text-sm"
+                  />
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Status */}
-          <div className="space-y-2">
-            <Label htmlFor="status">Status *</Label>
-            <Select
-              value={formData.status}
-              onValueChange={(value) => handleChange('status', value)}
-              required
-            >
-              <SelectTrigger id="status">
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="dropped">Dropped</SelectItem>
-                <SelectItem value="at_risk">At Risk</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+            {/* RIGHT COLUMN */}
+            <div className="space-y-4">
+              {/* Row 1: Absent Unexcused & Absent Excused */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="sessions_absent_unexcused" className="text-xs">Absent Unexcused</Label>
+                  <Input
+                    id="sessions_absent_unexcused"
+                    type="number"
+                    min="0"
+                    value={formData.sessions_absent_unexcused}
+                    readOnly
+                    className="bg-muted cursor-not-allowed text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="sessions_absent_excused" className="text-xs">Absent Excused</Label>
+                  <Input
+                    id="sessions_absent_excused"
+                    type="number"
+                    min="0"
+                    value={formData.sessions_absent_excused}
+                    readOnly
+                    className="bg-muted cursor-not-allowed text-sm"
+                  />
+                </div>
+              </div>
 
-          {/* Session Metrics */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="sessions_total">Total Sessions (Expected)</Label>
-              <Input
-                id="sessions_total"
-                type="number"
-                min="0"
-                value={formData.sessions_total}
-                onChange={(e) => handleChange('sessions_total', e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Expected number of sessions
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sessions_attended">Attended (Auto)</Label>
-              <Input
-                id="sessions_attended"
-                type="number"
-                min="0"
-                value={formData.sessions_attended}
-                readOnly
-                className="bg-muted cursor-not-allowed"
-              />
-              <p className="text-xs text-muted-foreground">
-                Auto-calculated from service logs
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sessions_completed">Completed (Auto)</Label>
-              <Input
-                id="sessions_completed"
-                type="number"
-                min="0"
-                value={formData.sessions_completed}
-                readOnly
-                className="bg-muted cursor-not-allowed"
-              />
-              <p className="text-xs text-muted-foreground">
-                Auto-calculated from service logs
-              </p>
-            </div>
-          </div>
+              {/* Row 2: Attendance Rate, Progress, Progress Level */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="attendance_rate" className="text-xs">Attendance %</Label>
+                  <Input
+                    id="attendance_rate"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    value={formData.attendance_rate}
+                    readOnly
+                    className="bg-muted text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="progress_percentage" className="text-xs">Progress %</Label>
+                  <Input
+                    id="progress_percentage"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={formData.progress_percentage}
+                    readOnly
+                    className="bg-muted text-sm"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="progress_level" className="text-xs">Progress Level</Label>
+                  <Input
+                    id="progress_level"
+                    value={formData.progress_level || 'N/A'}
+                    readOnly
+                    className="bg-muted capitalize text-sm"
+                  />
+                </div>
+              </div>
 
-          {/* Absent Session Metrics */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="sessions_absent_unexcused">Absent - Unexcused (Auto)</Label>
-              <Input
-                id="sessions_absent_unexcused"
-                type="number"
-                min="0"
-                value={formData.sessions_absent_unexcused}
-                readOnly
-                className="bg-muted cursor-not-allowed"
-              />
-              <p className="text-xs text-muted-foreground">
-                Auto-calculated from service logs
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="sessions_absent_excused">Absent - Excused (Auto)</Label>
-              <Input
-                id="sessions_absent_excused"
-                type="number"
-                min="0"
-                value={formData.sessions_absent_excused}
-                readOnly
-                className="bg-muted cursor-not-allowed"
-              />
-              <p className="text-xs text-muted-foreground">
-                Auto-calculated from service logs
-              </p>
-            </div>
-          </div>
+              {/* Row 3: Expected Completion & Completion Date */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="expected_completion_date" className="text-sm">Expected Completion</Label>
+                  <Input
+                    id="expected_completion_date"
+                    type="date"
+                    value={formData.expected_completion_date}
+                    onChange={(e) => handleChange('expected_completion_date', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="completion_date" className="text-sm">Completion Date</Label>
+                  <Input
+                    id="completion_date"
+                    type="date"
+                    value={formData.completion_date}
+                    onChange={(e) => handleChange('completion_date', e.target.value)}
+                  />
+                </div>
+              </div>
 
-          {/* Calculated Metrics (Read-only) */}
-          <div className="grid grid-cols-3 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="attendance_rate">Attendance Rate (%)</Label>
-              <Input
-                id="attendance_rate"
-                type="number"
-                min="0"
-                max="100"
-                step="0.01"
-                value={formData.attendance_rate}
-                readOnly
-                className="bg-muted"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="progress_percentage">Progress (%)</Label>
-              <Input
-                id="progress_percentage"
-                type="number"
-                min="0"
-                max="100"
-                value={formData.progress_percentage}
-                readOnly
-                className="bg-muted"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="progress_level">Progress Level</Label>
-              <Input
-                id="progress_level"
-                value={formData.progress_level || 'N/A'}
-                readOnly
-                className="bg-muted capitalize"
-              />
-            </div>
-          </div>
+              {/* Row 4: Case Worker */}
+              <div className="space-y-2">
+                <Label htmlFor="case_worker">Case Worker</Label>
+                <Input
+                  id="case_worker"
+                  value={formData.case_worker}
+                  onChange={(e) => handleChange('case_worker', e.target.value)}
+                  placeholder="Enter case worker name"
+                />
+              </div>
 
-          {/* Date Fields */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="expected_completion_date">Expected Completion</Label>
-              <Input
-                id="expected_completion_date"
-                type="date"
-                value={formData.expected_completion_date}
-                onChange={(e) => handleChange('expected_completion_date', e.target.value)}
-              />
+              {/* Row 5: Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes</Label>
+                <Textarea
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => handleChange('notes', e.target.value)}
+                  placeholder="Additional notes or comments"
+                  rows={3}
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="completion_date">Completion Date</Label>
-              <Input
-                id="completion_date"
-                type="date"
-                value={formData.completion_date}
-                onChange={(e) => handleChange('completion_date', e.target.value)}
-              />
-            </div>
-          </div>
-
-          {/* Case Worker */}
-          <div className="space-y-2">
-            <Label htmlFor="case_worker">Case Worker</Label>
-            <Input
-              id="case_worker"
-              value={formData.case_worker}
-              onChange={(e) => handleChange('case_worker', e.target.value)}
-              placeholder="Enter case worker name"
-            />
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder="Additional notes or comments"
-              rows={3}
-            />
           </div>
 
           <DialogFooter>
