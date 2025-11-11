@@ -38,7 +38,7 @@ import {
 	IconPlus,
 	IconRefresh,
 } from "@tabler/icons-react";
-import { Edit } from "lucide-react";
+import { Edit, ChevronLeft, ChevronRight } from "lucide-react";
 
 // Other utilities
 // import { toast } from "sonner";
@@ -927,6 +927,72 @@ const formatToMMDDYYYY = (str) => {
 // ==========================
 
 /**
+ * PaginationControls
+ *
+ * @description Reusable pagination component for table navigation
+ *
+ * @param {Object} props - Component props
+ * @param {Object} props.table - TanStack Table instance
+ *
+ * @returns {JSX.Element} Rendered pagination controls
+ */
+function PaginationControls({ table }) {
+	const currentPage = table.getState().pagination.pageIndex + 1;
+	const totalPages = table.getPageCount();
+	const pageSize = table.getState().pagination.pageSize;
+
+	return (
+		<div className="flex items-center justify-between mt-4 pt-4 border-t">
+			<div className="flex items-center gap-4">
+				<div className="text-sm text-muted-foreground">
+					Page {currentPage} of {totalPages || 1}
+				</div>
+				<div className="flex items-center gap-2">
+					<span className="text-sm text-muted-foreground">Rows per page:</span>
+					<Select
+						value={String(pageSize)}
+						onValueChange={(value) => {
+							table.setPageSize(Number(value));
+						}}
+					>
+						<SelectTrigger className="w-[70px] h-8">
+							<SelectValue />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="5">5</SelectItem>
+							<SelectItem value="10">10</SelectItem>
+							<SelectItem value="15">15</SelectItem>
+							<SelectItem value="25">25</SelectItem>
+							<SelectItem value="50">50</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
+			</div>
+			<div className="flex gap-2">
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={() => table.previousPage()}
+					disabled={!table.getCanPreviousPage()}
+				>
+					<ChevronLeft className="h-4 w-4 mr-1" />
+					Previous
+				</Button>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={() => table.nextPage()}
+					disabled={!table.getCanNextPage()}
+				>
+					Next
+					<ChevronRight className="h-4 w-4 ml-1" />
+				</Button>
+			</div>
+		</div>
+	);
+}
+
+/**
  * DataTable
  *
  * @description Main component for displaying tabbed data tables with intake functionality.
@@ -1713,6 +1779,7 @@ export function DataTable({
 					setData={caseTable.setData}
 					columns={caseTable.table.getAllColumns()}
 				/>
+				<PaginationControls table={caseTable.table} />
 			</TabsContent>
 			{/*
         // ==============
@@ -1729,6 +1796,7 @@ export function DataTable({
 					columns={ciclcarColumns(handleEnrollClick, handleEditCiclcarRow)}
 					onRowClick={handleEditCiclcarRow}
 				/>
+				<PaginationControls table={ciclcarTable.table} />
 			</TabsContent>
 			{/*
         // ============
@@ -1745,6 +1813,7 @@ export function DataTable({
 					columns={farColumns(handleEnrollClick, handleEditFarRow, handleDeleteClick)}
 					onRowClick={handleEditFarRow}
 				/>
+				<PaginationControls table={farTable.table} />
 			</TabsContent>
 
 			{/*
@@ -1762,6 +1831,7 @@ export function DataTable({
 					columns={ivacColumns(handleEditIvacRow, handleDeleteClick)}
 					onRowClick={handleEditIvacRow}
 				/>
+				<PaginationControls table={ivacTable.table} />
 			</TabsContent>
 			{/*
         // ============
@@ -1778,6 +1848,7 @@ export function DataTable({
 				columns={facColumns(handleEditFacRow, handleDeleteClick)}
 				onRowClick={handleEditFacRow}
 			/>
+			<PaginationControls table={facTable.table} />
 		</TabsContent>			{/* Enrollment Dialog */}
 			<EnrollCaseDialog
 				open={openEnrollDialog}

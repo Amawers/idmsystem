@@ -7,6 +7,13 @@
 import { DataTable } from "@/components/cases/data-table";
 import React, { useEffect, useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { useCases } from "@/hooks/useCases";
 import { useCiclcarCases } from "@/hooks/useCiclcarCases";
@@ -85,66 +92,76 @@ export default function CaseManagement() {
 			</div>
 
 			{/* ================= DATA TABLE ================= */}
-			<div ref={dataTableRef}>
-				{/* Optional: simple loading/error states */}
-				{casesError ? (
-					<div className="px-4 text-sm text-red-600">
-						Failed to load cases.{" "}
-						<button className="underline" onClick={reload}>
-							Retry
-						</button>
-					</div>
-				) : null}
-				{ciclcarError ? (
-					<div className="px-4 text-sm text-red-600">
-						Failed to load CICL-CAR cases.{" "}
-						<button className="underline" onClick={reloadCiclcar}>
-							Retry
-						</button>
-					</div>
-				) : null}
-				{farError ? (
-					<div className="px-4 text-sm text-red-600">
-						Failed to load FAR cases.{" "}
-						<button className="underline" onClick={reloadFar}>
-							Retry
-						</button>
-					</div>
-				) : null}
-				{facError ? (
-					<div className="px-4 text-sm text-red-600">
-						Failed to load FAC cases.{" "}
-						<button className="underline" onClick={reloadFac}>
-							Retry
-						</button>
-					</div>
-				) : null}
-				{ivacError ? (
-					<div className="px-4 text-sm text-red-600">
-						Failed to load IVAC cases.{" "}
-						<button className="underline" onClick={reloadIvac}>
-							Retry
-						</button>
-					</div>
-				) : null}
+			<div ref={dataTableRef} className="px-4 lg:px-6">
+				<Card>
+					<CardHeader className="pb-0">
+						<CardTitle className="text-lg">Case Records</CardTitle>
+						<CardDescription>
+							Manage and track all case intake forms and records across different categories
+						</CardDescription>
+					</CardHeader>
+					<CardContent className="pt-0">
+						{/* Optional: simple loading/error states */}
+						{casesError ? (
+							<div className="text-sm text-red-600">
+								Failed to load cases.{" "}
+								<button className="underline" onClick={reload}>
+									Retry
+								</button>
+							</div>
+						) : null}
+						{ciclcarError ? (
+							<div className="text-sm text-red-600">
+								Failed to load CICL-CAR cases.{" "}
+								<button className="underline" onClick={reloadCiclcar}>
+									Retry
+								</button>
+							</div>
+						) : null}
+						{farError ? (
+							<div className="text-sm text-red-600">
+								Failed to load FAR cases.{" "}
+								<button className="underline" onClick={reloadFar}>
+									Retry
+								</button>
+							</div>
+						) : null}
+						{facError ? (
+							<div className="text-sm text-red-600">
+								Failed to load FAC cases.{" "}
+								<button className="underline" onClick={reloadFac}>
+									Retry
+								</button>
+							</div>
+						) : null}
+						{ivacError ? (
+							<div className="text-sm text-red-600">
+								Failed to load IVAC cases.{" "}
+								<button className="underline" onClick={reloadIvac}>
+									Retry
+								</button>
+							</div>
+						) : null}
 
-				<DataTable
-					caseData={casesLoading ? [] : caseRows}
-					ciclcarData={ciclcarLoading ? [] : ciclcarRows}
-					farData={farLoading ? [] : farRows}
-					facData={facLoading ? [] : facRows}
-					ivacData={ivacLoading ? [] : ivacRows}
-					reloadCases={reload}
-					reloadCiclcar={reloadCiclcar}
-					reloadFar={reloadFar}
-					reloadFac={reloadFac}
-					reloadIvac={reloadIvac}
-					deleteCase={deleteCase}
-					deleteCiclcarCase={deleteCiclcarCase}
-					deleteFarCase={deleteFarCase}
-					deleteFacCase={deleteFacCase}
-					deleteIvacCase={deleteIvacCase}
-				/>
+						<DataTable
+							caseData={casesLoading ? [] : caseRows}
+							ciclcarData={ciclcarLoading ? [] : ciclcarRows}
+							farData={farLoading ? [] : farRows}
+							facData={facLoading ? [] : facRows}
+							ivacData={ivacLoading ? [] : ivacRows}
+							reloadCases={reload}
+							reloadCiclcar={reloadCiclcar}
+							reloadFar={reloadFar}
+							reloadFac={reloadFac}
+							reloadIvac={reloadIvac}
+							deleteCase={deleteCase}
+							deleteCiclcarCase={deleteCiclcarCase}
+							deleteFarCase={deleteFarCase}
+							deleteFacCase={deleteFacCase}
+							deleteIvacCase={deleteIvacCase}
+						/>
+					</CardContent>
+				</Card>
 			</div>
 
 			{/* ================= FLOATING SCROLL BUTTON ================= */}
