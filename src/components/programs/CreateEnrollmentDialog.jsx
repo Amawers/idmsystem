@@ -102,7 +102,7 @@ export default function CreateEnrollmentDialog({
 					query = supabase
 						.from(tableName)
 						.select("id, profile_name, case_manager, status")
-						.eq("status", "active")
+						.in("status", ["Filed", "Assessed", "In Process", "Resolved"])
 						.order("created_at", { ascending: false });
 					break;
 				case "VAC":
