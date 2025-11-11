@@ -16,6 +16,7 @@ import { useServiceDelivery } from "@/hooks/useServiceDelivery";
 import { usePrograms } from "@/hooks/usePrograms";
 import CreateServiceDeliveryDialog from "./CreateServiceDeliveryDialog";
 import UpdateServiceDeliveryDialog from "./UpdateServiceDeliveryDialog";
+import ViewServiceDeliveryDialog from "./ViewServiceDeliveryDialog";
 import {
   Table,
   TableBody,
@@ -65,6 +66,7 @@ import {
   RefreshCw,
   Edit,
   Trash2,
+  Eye,
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -79,6 +81,7 @@ export default function ServiceDeliveryTable() {
   const [attendanceFilter, setAttendanceFilter] = useState("all");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [selectedService, setSelectedService] = useState(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [serviceToDelete, setServiceToDelete] = useState(null);
@@ -114,6 +117,15 @@ export default function ServiceDeliveryTable() {
     } finally {
       setIsRefreshing(false);
     }
+  };
+
+  /**
+   * Handle view service details
+   * @param {Object} service - Service delivery record
+   */
+  const handleView = (service) => {
+    setSelectedService(service);
+    setViewDialogOpen(true);
   };
 
   /**
@@ -406,6 +418,10 @@ export default function ServiceDeliveryTable() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem onClick={() => handleView(delivery)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleEdit(delivery)}>
                               <Edit className="mr-2 h-4 w-4" />
                               Edit Log
@@ -486,6 +502,13 @@ export default function ServiceDeliveryTable() {
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
         onSuccess={handleRefresh}
+      />
+
+      {/* View Service Delivery Dialog */}
+      <ViewServiceDeliveryDialog
+        open={viewDialogOpen}
+        onOpenChange={setViewDialogOpen}
+        serviceDelivery={selectedService}
       />
 
       {/* Update Service Delivery Dialog */}
