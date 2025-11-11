@@ -321,7 +321,11 @@ export default function ProgramCatalog() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        <div className="text-sm font-medium">{program.success_rate}%</div>
+                        <div className="text-sm font-medium">
+                          {program.success_rate !== undefined && program.success_rate !== null 
+                            ? `${program.success_rate}%` 
+                            : '0%'}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>

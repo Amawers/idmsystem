@@ -1083,6 +1083,98 @@ END;
 
 ======================
 
+calculate_program_success_rate
+RETURN TYPE: INTEGER
+PARAMETERS: program_id_param UUID
+
+DECLARE
+  total_enrollments INTEGER;
+  completed_enrollments INTEGER;
+  total_progress DECIMAL;
+  success_rate_calculated INTEGER;
+BEGIN
+  -- Get enrollment statistics for this program
+  SELECT 
+    COUNT(*) as total,
+    COUNT(*) FILTER (WHERE status = 'completed') as completed,
+    -- Sum of all progress: completed count as 100%, active use their progress_percentage
+    SUM(
+      CASE 
+        WHEN status = 'completed' THEN 100
+        WHEN status = 'active' THEN COALESCE(progress_percentage, 0)
+        ELSE 0  -- dropped, at_risk count as 0%
+      END
+    ) as total_progress
+  INTO 
+    total_enrollments,
+    completed_enrollments,
+    total_progress
+  FROM program_enrollments
+  WHERE program_id = program_id_param;
+  
+  -- If no enrollments, success rate is 0
+  IF total_enrollments = 0 THEN
+    RETURN 0;
+  END IF;
+  
+  -- Calculate average success rate across all enrollments
+  success_rate_calculated := ROUND(total_progress / total_enrollments);
+  
+  -- Ensure result is within 0-100 range
+  success_rate_calculated := GREATEST(0, LEAST(100, success_rate_calculated));
+  
+  RETURN success_rate_calculated;
+END;
+
+======================
+
+update_program_success_rate
+RETURN TYPE: trigger
+
+DECLARE
+  new_success_rate INTEGER;
+  affected_program_id UUID;
+BEGIN
+  -- Determine which program to update based on trigger operation
+  IF TG_OP = 'DELETE' THEN
+    affected_program_id := OLD.program_id;
+  ELSE
+    affected_program_id := NEW.program_id;
+  END IF;
+  
+  -- Calculate new success rate
+  new_success_rate := calculate_program_success_rate(affected_program_id);
+  
+  -- Update the program
+  UPDATE programs
+  SET 
+    success_rate = new_success_rate,
+    updated_at = NOW()
+  WHERE id = affected_program_id;
+  
+  RETURN COALESCE(NEW, OLD);
+END;
+
+======================
+
+refresh_program_success_rate
+RETURN TYPE: INTEGER
+PARAMETERS: program_id_param UUID
+
+DECLARE
+  new_success_rate INTEGER;
+BEGIN
+  new_success_rate := calculate_program_success_rate(program_id_param);
+  
+  UPDATE programs
+  SET success_rate = new_success_rate, updated_at = NOW()
+  WHERE id = program_id_param;
+  
+  RETURN new_success_rate;
+END;
+
+======================
+
 -- Create trigger for updated_at
 CREATE OR REPLACE FUNCTION update_partners_updated_at()
 RETURNS TRIGGER AS $$

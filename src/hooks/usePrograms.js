@@ -308,6 +308,54 @@ export function usePrograms(options = {}) {
     return programs.find((p) => p.id === programId) || null;
   };
 
+  /**
+   * Refresh success rate for a specific program
+   * Calls the database function to recalculate success rate based on enrollments
+   * @async
+   * @param {string} programId - Program ID
+   * @returns {Promise<number>} Updated success rate
+   */
+  const refreshProgramSuccessRate = async (programId) => {
+    try {
+      // Call the database function to refresh success rate
+      const { data, error } = await supabase
+        .rpc('refresh_program_success_rate', { program_id_param: programId });
+
+      if (error) throw error;
+
+      // Refresh programs list to show updated success rate
+      await fetchPrograms();
+
+      return data;
+    } catch (err) {
+      console.error("Error refreshing program success rate:", err);
+      throw err;
+    }
+  };
+
+  /**
+   * Refresh success rates for all programs
+   * Useful for manual recalculation after bulk enrollment updates
+   * @async
+   * @returns {Promise<void>}
+   */
+  const refreshAllSuccessRates = async () => {
+    try {
+      // Refresh each program's success rate
+      const refreshPromises = programs.map((program) =>
+        supabase.rpc('refresh_program_success_rate', { program_id_param: program.id })
+      );
+
+      await Promise.all(refreshPromises);
+
+      // Refresh programs list to show updated success rates
+      await fetchPrograms();
+    } catch (err) {
+      console.error("Error refreshing all program success rates:", err);
+      throw err;
+    }
+  };
+
   // Fetch programs on mount and when options change
   useEffect(() => {
     fetchPrograms();
@@ -324,5 +372,7 @@ export function usePrograms(options = {}) {
     updateProgram,
     deleteProgram,
     getProgramById,
+    refreshProgramSuccessRate,
+    refreshAllSuccessRates,
   };
 }
