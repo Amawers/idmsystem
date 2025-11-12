@@ -9,16 +9,14 @@
  * Changes are staged and can be saved in batch.
  * 
  * @dependencies
- * - usePermissions hook for permission CRUD operations
  * - Supabase for user list and permission data
  * - auditLog for tracking permission changes
  */
 
 import React, { useState, useEffect } from "react";
-// TEMP: Import sample data
-import sampleUsers from "@/../SAMPLE_USERS.json";
-import samplePermissions from "@/../SAMPLE_PERMISSIONS.json";
-import sampleUserPermissions from "@/../SAMPLE_USER_PERMISSIONS.json";
+import supabase from "@/../config/supabase";
+import { useAuthStore } from "@/store/authStore";
+import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 import {
 	Card,
 	CardContent,
@@ -52,37 +50,101 @@ import { toast } from "sonner";
 
 export default function RolePermissions() {
 	// ================= STATE MANAGEMENT =================
-	// TEMP: Use sample data instead of hook
-	const [permissions] = useState(samplePermissions);
+	const currentUser = useAuthStore((state) => state.user);
+	
+	const [permissions, setPermissions] = useState([]);
 	const [userPermissions, setUserPermissions] = useState({});
-	const permissionsLoading = false;
-	const permissionsError = null;
+	const [permissionsLoading, setPermissionsLoading] = useState(true);
+	const [permissionsError, setPermissionsError] = useState(null);
 
 	const [users, setUsers] = useState([]);
-	const usersLoading = false;
+	const [usersLoading, setUsersLoading] = useState(true);
 	const [selectedUser, setSelectedUser] = useState(null);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [pendingChanges, setPendingChanges] = useState({});
 	const [saving, setSaving] = useState(false);
 
-	// ================= LOAD SAMPLE DATA =================
+	// ================= LOAD DATA FROM DATABASE =================
 	useEffect(() => {
-		// Load sample users
-		setUsers(sampleUsers);
-
-		// Organize user permissions by user_id
-		const permsByUser = {};
-		sampleUserPermissions.forEach((up) => {
-			if (!permsByUser[up.user_id]) {
-				permsByUser[up.user_id] = [];
-			}
-			permsByUser[up.user_id].push({
-				...up,
-				permission: up.permissions,
-			});
-		});
-		setUserPermissions(permsByUser);
+		loadPermissions();
+		loadUsers();
+		loadUserPermissions();
 	}, []);
+
+	// Fetch all available permissions
+	const loadPermissions = async () => {
+		try {
+			setPermissionsLoading(true);
+			const { data, error } = await supabase
+				.from("permissions")
+				.select("*")
+				.order("category", { ascending: true })
+				.order("display_name", { ascending: true });
+
+			if (error) throw error;
+			setPermissions(data || []);
+			setPermissionsError(null);
+		} catch (err) {
+			console.error("Error loading permissions:", err);
+			setPermissionsError(err.message);
+		} finally {
+			setPermissionsLoading(false);
+		}
+	};
+
+	// Fetch all users from profile table
+	const loadUsers = async () => {
+		try {
+			setUsersLoading(true);
+			const { data, error } = await supabase
+				.from("profile")
+				.select("id, email, role, status")
+				.order("email", { ascending: true });
+
+			if (error) throw error;
+			setUsers(data || []);
+		} catch (err) {
+			console.error("Error loading users:", err);
+		} finally {
+			setUsersLoading(false);
+		}
+	};
+
+	// Fetch all user permissions with permission details
+	const loadUserPermissions = async () => {
+		try {
+			const { data, error } = await supabase
+				.from("user_permissions")
+				.select(`
+					id,
+					user_id,
+					permission_id,
+					granted_at,
+					granted_by,
+					permissions:permission_id (
+						id,
+						name,
+						display_name,
+						description,
+						category
+					)
+				`);
+
+			if (error) throw error;
+
+			// Organize by user_id
+			const permsByUser = {};
+			(data || []).forEach((up) => {
+				if (!permsByUser[up.user_id]) {
+					permsByUser[up.user_id] = [];
+				}
+				permsByUser[up.user_id].push(up);
+			});
+			setUserPermissions(permsByUser);
+		} catch (err) {
+			console.error("Error loading user permissions:", err);
+		}
+	};
 
 	// ================= FILTERING =================
 	const filteredUsers = users.filter((user) => {
@@ -142,48 +204,89 @@ export default function RolePermissions() {
 
 		setSaving(true);
 
-		// TEMP: Simulate save with sample data
-		setTimeout(() => {
+		try {
 			const changes = [];
+			const grantsToAdd = [];
+			const grantsToRemove = [];
+
+			// Process each pending change
 			for (const [key, shouldGrant] of Object.entries(pendingChanges)) {
 				const [userId, permissionId] = key.split("_");
 				const permission = permissions.find((p) => p.id === permissionId);
-				
+
 				changes.push({
 					action: shouldGrant ? "granted" : "revoked",
 					user: selectedUser.email,
 					permission: permission?.display_name,
 				});
 
-				// Update local state
 				if (shouldGrant) {
-					if (!userPermissions[userId]) {
-						userPermissions[userId] = [];
-					}
-					if (!userPermissions[userId].some(up => up.permission_id === permissionId)) {
-						userPermissions[userId].push({
-							id: `up-${Date.now()}`,
-							user_id: userId,
-							permission_id: permissionId,
-							granted_at: new Date().toISOString(),
-							granted_by: null,
-							permissions: permission
-						});
-					}
+					// Add permission
+					grantsToAdd.push({
+						user_id: userId,
+						permission_id: permissionId,
+						granted_by: currentUser.id,
+					});
 				} else {
-					if (userPermissions[userId]) {
-						userPermissions[userId] = userPermissions[userId].filter(
-							up => up.permission_id !== permissionId
-						);
+					// Remove permission - need to find the existing record
+					const existingPerm = userPermissions[userId]?.find(
+						(up) => up.permission_id === permissionId
+					);
+					if (existingPerm) {
+						grantsToRemove.push(existingPerm.id);
 					}
 				}
 			}
 
-			setUserPermissions({...userPermissions});
-			toast.success(`Permissions updated successfully! (${changes.length} changes)`);
+			// Execute database operations
+			if (grantsToAdd.length > 0) {
+				const { error: insertError } = await supabase
+					.from("user_permissions")
+					.insert(grantsToAdd);
+				if (insertError) throw insertError;
+			}
+
+			if (grantsToRemove.length > 0) {
+				const { error: deleteError } = await supabase
+					.from("user_permissions")
+					.delete()
+					.in("id", grantsToRemove);
+				if (deleteError) throw deleteError;
+			}
+
+			// Create audit log entries for each change
+			for (const change of changes) {
+				await createAuditLog({
+					actionType:
+						change.action === "granted"
+							? AUDIT_ACTIONS.GRANT_PERMISSION
+							: AUDIT_ACTIONS.REVOKE_PERMISSION,
+					actionCategory: AUDIT_CATEGORIES.PERMISSION,
+					description: `${change.action === "granted" ? "Granted" : "Revoked"} permission "${change.permission}" ${change.action === "granted" ? "to" : "from"} user ${change.user}`,
+					resourceType: "user_permission",
+					resourceId: selectedUser.id,
+					metadata: {
+						targetUser: change.user,
+						permission: change.permission,
+						action: change.action,
+					},
+					severity: "warning",
+				});
+			}
+
+			// Reload user permissions to reflect changes
+			await loadUserPermissions();
+
+			toast.success(
+				`Permissions updated successfully! (${changes.length} ${changes.length === 1 ? "change" : "changes"})`
+			);
 			setPendingChanges({});
+		} catch (err) {
+			console.error("Error saving permissions:", err);
+			toast.error("Failed to save permissions. Please try again.");
+		} finally {
 			setSaving(false);
-		}, 800);
+		}
 	};
 
 	const discardChanges = () => {
@@ -288,16 +391,11 @@ export default function RolePermissions() {
 									<Shield className="h-5 w-5" />
 									<CardTitle className="text-lg">Permissions</CardTitle>
 								</div>
-							<div className="flex gap-2">
-								{hasPendingChanges && (
-									<Badge variant="outline" className="border-orange-500 text-orange-600">
-										{Object.keys(pendingChanges).length} unsaved changes
-									</Badge>
-								)}
-								<Badge variant="secondary" className="text-xs">
-									Using Sample Data
+							{hasPendingChanges && (
+								<Badge variant="outline" className="border-orange-500 text-orange-600">
+									{Object.keys(pendingChanges).length} unsaved change{Object.keys(pendingChanges).length !== 1 ? "s" : ""}
 								</Badge>
-							</div>
+							)}
 							</div>
 							{selectedUser ? (
 								<CardDescription>
