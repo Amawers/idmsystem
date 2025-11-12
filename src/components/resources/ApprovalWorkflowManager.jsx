@@ -10,7 +10,7 @@
  * - Bulk approval actions
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +41,7 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  RefreshCw,
 } from "lucide-react";
 import {
   Select,
@@ -472,17 +473,36 @@ export default function ApprovalWorkflowManager() {
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(8);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const {
     requests: storeRequests,
     updateRequestStatus,
+    fetchRequests,
     loading,
   } = useResourceStore();
 
   const { role } = useAuthStore();
 
+  // Fetch requests on component mount
+  useEffect(() => {
+    fetchRequests();
+  }, [fetchRequests]);
+
   // Use sample data if store is empty, otherwise use store data
   const requests = storeRequests.length > 0 ? storeRequests : SAMPLE_REQUESTS;
+
+  // Handle refresh
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await fetchRequests();
+    } catch (error) {
+      console.error("Error refreshing requests:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Filter requests based on user role and filter selection
   const filteredRequests = requests.filter(req => {
@@ -524,37 +544,48 @@ export default function ApprovalWorkflowManager() {
 
   return (
     <div className="space-y-4">
-      
-
-      {/* Filters */}
-      <div className="flex gap-2">
+      {/* Filters and Refresh Button */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-2">
+          <Button
+            variant={filter === "all" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("all")}
+          >
+            All ({requests.length})
+          </Button>
+          <Button
+            variant={filter === "pending" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("pending")}
+          >
+            Pending ({pendingCount})
+          </Button>
+          <Button
+            variant={filter === "approved" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("approved")}
+          >
+            Approved ({requests.filter(r => ["approved", "disbursed"].includes(r.status)).length})
+          </Button>
+          <Button
+            variant={filter === "rejected" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setFilter("rejected")}
+          >
+            Rejected ({requests.filter(r => r.status === "rejected").length})
+          </Button>
+        </div>
+        
         <Button
-          variant={filter === "all" ? "default" : "outline"}
+          variant="outline"
           size="sm"
-          onClick={() => setFilter("all")}
+          onClick={handleRefresh}
+          disabled={isRefreshing || loading}
+          className="cursor-pointer"
         >
-          All ({requests.length})
-        </Button>
-        <Button
-          variant={filter === "pending" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFilter("pending")}
-        >
-          Pending ({pendingCount})
-        </Button>
-        <Button
-          variant={filter === "approved" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFilter("approved")}
-        >
-          Approved ({requests.filter(r => ["approved", "disbursed"].includes(r.status)).length})
-        </Button>
-        <Button
-          variant={filter === "rejected" ? "default" : "outline"}
-          size="sm"
-          onClick={() => setFilter("rejected")}
-        >
-          Rejected ({requests.filter(r => r.status === "rejected").length})
+          <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          Refresh
         </Button>
       </div>
 
