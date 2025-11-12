@@ -64,10 +64,10 @@ import RequestSubmissionDialog from "./RequestSubmissionDialog";
  */
 function StatusBadge({ status }) {
   const variants = {
-    available: { variant: "success", label: "Available", icon: CheckCircle },
-    low_stock: { variant: "warning", label: "Low Stock", icon: AlertTriangle },
-    critical_stock: { variant: "destructive", label: "Critical", icon: AlertTriangle },
-    depleted: { variant: "destructive", label: "Depleted", icon: AlertTriangle },
+    available: { variant: "success", label: "Available", icon: CheckCircle, iconColor: "text-green-600" },
+    low_stock: { variant: "warning", label: "Low Stock", icon: AlertTriangle, iconColor: "text-yellow-600" },
+    critical_stock: { variant: "destructive", label: "Critical", icon: AlertTriangle, iconColor: "text-orange-600" },
+    depleted: { variant: "destructive", label: "Depleted", icon: AlertTriangle, iconColor: "text-red-600" },
   };
 
   const config = variants[status] || variants.available;
@@ -75,7 +75,7 @@ function StatusBadge({ status }) {
 
   return (
     <Badge variant={config.variant} className="text-xs flex items-center gap-1 w-fit">
-      <Icon className="h-3 w-3" />
+      <Icon className={`h-3 w-3 ${config.iconColor}`} />
       {config.label}
     </Badge>
   );
