@@ -27,7 +27,6 @@ export default function RequestSubmissionDialog({ open, onOpenChange, onSubmit }
   const { items: inventoryItems, loading: inventoryLoading } = useInventory({ autoFetch: true });
 
   const [formData, setFormData] = useState({
-    request_type: "",
     category: "",
     item_id: "",
     item_name: "",
@@ -40,11 +39,18 @@ export default function RequestSubmissionDialog({ open, onOpenChange, onSubmit }
     priority: "medium",
   });
 
-  // Extract unique categories from inventory
-  const categories = useMemo(() => {
-    const uniqueCategories = [...new Set(inventoryItems.map(item => item.category))];
-    return uniqueCategories.filter(Boolean).sort();
-  }, [inventoryItems]);
+  // Define standard inventory categories (matching Add New Inventory Item modal)
+  const INVENTORY_CATEGORIES = [
+    { value: "food", label: "Food & Nutrition" },
+    { value: "medicine", label: "Medicine & Health" },
+    { value: "supplies", label: "Supplies" },
+    { value: "equipment", label: "Equipment" },
+    { value: "material", label: "Materials" },
+    { value: "other", label: "Other" },
+  ];
+
+  // Show all standard categories (not filtered by inventory)
+  const categories = INVENTORY_CATEGORIES;
 
   // Filter items by selected category
   const filteredItems = useMemo(() => {
@@ -75,16 +81,23 @@ export default function RequestSubmissionDialog({ open, onOpenChange, onSubmit }
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit({
-      ...formData,
+      request_type: "material", // Default to material since we removed the dropdown
+      request_category: formData.category,
+      item_id: formData.item_id,
+      item_description: formData.item_name,
       quantity: parseFloat(formData.quantity),
+      unit: formData.unit_of_measure,
       unit_cost: parseFloat(formData.unit_cost),
       total_amount: parseFloat(formData.quantity) * parseFloat(formData.unit_cost),
-      resource_category: formData.category,
-      item_description: formData.item_name,
+      justification: formData.justification,
+      priority: formData.priority,
+      // Add beneficiary fields if needed (to be filled in later steps)
+      beneficiary_type: "",
+      beneficiary_name: "",
+      requester_name: "", // Will be filled by the store from auth
     });
     // Reset form
     setFormData({
-      request_type: "",
       category: "",
       item_id: "",
       item_name: "",
@@ -112,45 +125,6 @@ export default function RequestSubmissionDialog({ open, onOpenChange, onSubmit }
           <div className="grid grid-cols-2 gap-6">
             {/* Left Column - Form Inputs */}
             <div className="space-y-4">
-              {/* Request Type and Priority */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Request Type</Label>
-                  <Select 
-                    value={formData.request_type} 
-                    onValueChange={(value) => setFormData({ ...formData, request_type: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="financial">Financial</SelectItem>
-                      <SelectItem value="material">Material</SelectItem>
-                      <SelectItem value="human_resource">Human Resource</SelectItem>
-                      <SelectItem value="equipment">Equipment</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>Priority</Label>
-                  <Select 
-                    value={formData.priority} 
-                    onValueChange={(value) => setFormData({ ...formData, priority: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="critical">Critical</SelectItem>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
               {/* Category and Item Name */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -176,8 +150,8 @@ export default function RequestSubmissionDialog({ open, onOpenChange, onSubmit }
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((category) => (
-                        <SelectItem key={category} value={category}>
-                          {category.charAt(0).toUpperCase() + category.slice(1)}
+                        <SelectItem key={category.value} value={category.value}>
+                          {category.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -209,6 +183,25 @@ export default function RequestSubmissionDialog({ open, onOpenChange, onSubmit }
                     </SelectContent>
                   </Select>
                 </div>
+              </div>
+
+              {/* Priority */}
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select 
+                  value={formData.priority} 
+                  onValueChange={(value) => setFormData({ ...formData, priority: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Unit Cost and Unit Measure */}

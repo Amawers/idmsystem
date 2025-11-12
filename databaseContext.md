@@ -1397,6 +1397,7 @@ CREATE TABLE IF NOT EXISTS public.resource_requests (
   request_number TEXT NOT NULL UNIQUE,
   request_type TEXT NOT NULL,
   request_category TEXT NOT NULL,
+  item_id UUID NULL REFERENCES inventory_items(id) ON DELETE SET NULL,
   item_description TEXT NOT NULL,
   quantity NUMERIC NOT NULL,
   unit TEXT NOT NULL,
@@ -1442,6 +1443,7 @@ CREATE INDEX IF NOT EXISTS idx_resource_requests_request_type ON public.resource
 CREATE INDEX IF NOT EXISTS idx_resource_requests_program_id ON public.resource_requests USING btree (program_id);
 CREATE INDEX IF NOT EXISTS idx_resource_requests_created_at ON public.resource_requests USING btree (created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_resource_requests_case_id ON public.resource_requests USING btree (case_id);
+CREATE INDEX IF NOT EXISTS idx_resource_requests_item_id ON public.resource_requests USING btree (item_id);
 
 -- 2. INVENTORY ITEMS TABLE
 CREATE TABLE IF NOT EXISTS public.inventory_items (
