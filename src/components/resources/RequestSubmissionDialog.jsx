@@ -91,10 +91,7 @@ export default function RequestSubmissionDialog({ open, onOpenChange, onSubmit }
       total_amount: parseFloat(formData.quantity) * parseFloat(formData.unit_cost),
       justification: formData.justification,
       priority: formData.priority,
-      // Add beneficiary fields if needed (to be filled in later steps)
-      beneficiary_type: "",
-      beneficiary_name: "",
-      requester_name: "", // Will be filled by the store from auth
+      requester_name: null, // Will be filled by the store from auth
     });
     // Reset form
     setFormData({
@@ -295,7 +292,15 @@ export default function RequestSubmissionDialog({ open, onOpenChange, onSubmit }
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!formData.item_id || !formData.quantity || !formData.justification}>
+            <Button 
+              type="submit" 
+              disabled={
+                !formData.item_id || 
+                !formData.quantity || 
+                parseFloat(formData.quantity) <= 0 ||
+                !formData.justification?.trim()
+              }
+            >
               Submit Request
             </Button>
           </div>
