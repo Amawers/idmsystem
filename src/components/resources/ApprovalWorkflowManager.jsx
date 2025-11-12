@@ -427,6 +427,7 @@ export default function ApprovalWorkflowManager() {
               <TableRow>
                 <TableHead>Request #</TableHead>
                 <TableHead>Item</TableHead>
+                <TableHead>Quantity</TableHead>
                 <TableHead>Requester</TableHead>
                 <TableHead>Amount</TableHead>
                 <TableHead>Priority</TableHead>
@@ -438,7 +439,7 @@ export default function ApprovalWorkflowManager() {
               <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8">
+                  <TableCell colSpan={9} className="text-center py-8">
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                     </div>
@@ -446,7 +447,7 @@ export default function ApprovalWorkflowManager() {
                 </TableRow>
               ) : filteredRequests.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                     No requests found
                   </TableCell>
                 </TableRow>
@@ -456,9 +457,9 @@ export default function ApprovalWorkflowManager() {
                     <TableCell className="font-medium">{request.request_number}</TableCell>
                     <TableCell>
                       <div className="max-w-xs truncate">{request.item_description}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {request.quantity} {request.unit}
-                      </div>
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {request.quantity} {request.unit}
                     </TableCell>
                     <TableCell>{request.requester?.full_name || 'Unknown'}</TableCell>
                     <TableCell className="font-medium">
