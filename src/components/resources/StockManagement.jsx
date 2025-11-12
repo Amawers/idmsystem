@@ -57,6 +57,7 @@ import {
 } from "lucide-react";
 import { useResourceStore } from "@/store/useResourceStore";
 import { useAuthStore } from "@/store/authStore";
+import RequestSubmissionDialog from "./RequestSubmissionDialog";
 
 /**
  * Status Badge Component
@@ -486,6 +487,7 @@ export default function StockManagement() {
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
@@ -494,7 +496,10 @@ export default function StockManagement() {
     inventoryStats,
     fetchInventory,
     loading,
+    submitRequest,
   } = useResourceStore();
+
+  const { role } = useAuthStore();
 
   useEffect(() => {
     fetchInventory();
@@ -516,6 +521,16 @@ export default function StockManagement() {
 
   const handleSuccess = () => {
     fetchInventory();
+  };
+
+  const handleSubmitRequest = async (requestData) => {
+    try {
+      await submitRequest(requestData);
+      setShowRequestDialog(false);
+      fetchInventory();
+    } catch (error) {
+      console.error("Failed to submit request:", error);
+    }
   };
 
   // Filter items
@@ -614,10 +629,17 @@ export default function StockManagement() {
                 <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                 Refresh
               </Button>
-              <Button onClick={() => setShowAddDialog(true)} size="sm" className="cursor-pointer">
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add Item
-              </Button>
+              {role === "case_manager" ? (
+                <Button onClick={() => setShowRequestDialog(true)} size="sm" className="cursor-pointer">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  New Request
+                </Button>
+              ) : (
+                <Button onClick={() => setShowAddDialog(true)} size="sm" className="cursor-pointer">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add Item
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -827,6 +849,12 @@ export default function StockManagement() {
         open={showAddDialog}
         onClose={() => setShowAddDialog(false)}
         onSuccess={handleSuccess}
+      />
+
+      <RequestSubmissionDialog
+        open={showRequestDialog}
+        onOpenChange={setShowRequestDialog}
+        onSubmit={handleSubmitRequest}
       />
     </div>
   );
