@@ -22,7 +22,6 @@ import UserManagement from "./pages/head/UserManagement";
 import ResourceDashboard from "./pages/head/ResourceDashboard";
 import ResourceStock from "./pages/head/ResourceStock";
 import ResourceApprovals from "./pages/head/ResourceApprovals";
-import ResourceClientTracker from "./pages/head/ResourceClientTracker";
 import ResourceEligibility from "./pages/head/ResourceEligibility";
 import ResourceStaff from "./pages/head/ResourceStaff";
 import ResourcePrograms from "./pages/head/ResourcePrograms";
@@ -219,18 +218,6 @@ export default function App() {
             <ProtectedRoute allowedRoles={["case_manager", "head"]}>
               <Layout>
                 <ResourceApprovals />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Protected route: Resource Client Tracker (case manager + head) */}
-        <Route
-          path="/resource/client-tracker"
-          element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
-              <Layout>
-                <ResourceClientTracker />
               </Layout>
             </ProtectedRoute>
           }
