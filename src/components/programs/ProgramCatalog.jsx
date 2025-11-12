@@ -279,7 +279,22 @@ export default function ProgramCatalog() {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedPrograms.map((program) => (
+                paginatedPrograms.map((program) => {
+                  // Ensure budget values are numbers
+                  const budgetAllocated = parseFloat(program.budget_allocated) || 0;
+                  const budgetSpent = parseFloat(program.budget_spent) || 0;
+                  
+                  // Debug: log budget values for troubleshooting
+                  console.log(`Program "${program.program_name}":`, {
+                    raw_budget_allocated: program.budget_allocated,
+                    raw_budget_spent: program.budget_spent,
+                    parsed_budget_allocated: budgetAllocated,
+                    parsed_budget_spent: budgetSpent,
+                    display_allocated: (budgetAllocated / 1000).toFixed(1),
+                    display_spent: (budgetSpent / 1000).toFixed(1)
+                  });
+                  
+                  return (
                   <TableRow key={program.id}>
                     <TableCell className="font-medium">
                       <div>
@@ -313,10 +328,12 @@ export default function ProgramCatalog() {
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">
-                        ₱{(program.budget_spent / 1000).toFixed(0)}K / ₱{(program.budget_allocated / 1000).toFixed(0)}K
+                        ₱{(budgetSpent / 1000).toFixed(1)}K / ₱{(budgetAllocated / 1000).toFixed(1)}K
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        {((program.budget_spent / program.budget_allocated) * 100).toFixed(0)}% used
+                        {budgetAllocated > 0 
+                          ? ((budgetSpent / budgetAllocated) * 100).toFixed(0) 
+                          : '0'}% used
                       </div>
                     </TableCell>
                     <TableCell>
@@ -370,7 +387,8 @@ export default function ProgramCatalog() {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))
+                  );
+                })
               )}
             </TableBody>
           </Table>

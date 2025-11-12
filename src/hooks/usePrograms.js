@@ -118,8 +118,8 @@ export function usePrograms(options = {}) {
       active: programsData.filter((p) => p.status === "active").length,
       completed: programsData.filter((p) => p.status === "completed").length,
       inactive: programsData.filter((p) => p.status === "inactive").length,
-      totalBudget: programsData.reduce((sum, p) => sum + (p.budget_allocated || 0), 0),
-      totalSpent: programsData.reduce((sum, p) => sum + (p.budget_spent || 0), 0),
+      totalBudget: programsData.reduce((sum, p) => sum + (parseFloat(p.budget_allocated) || 0), 0),
+      totalSpent: programsData.reduce((sum, p) => sum + (parseFloat(p.budget_spent) || 0), 0),
       totalEnrollment: programsData.reduce((sum, p) => sum + (p.current_enrollment || 0), 0),
       averageSuccessRate:
         programsData.length > 0
@@ -150,9 +150,11 @@ export function usePrograms(options = {}) {
           : [programData.target_beneficiary],
         // Set coordinator_id if user exists
         coordinator_id: user?.id || null,
+        // Ensure budget values are properly formatted as numbers
+        budget_allocated: parseFloat(programData.budget_allocated) || 0,
+        budget_spent: parseFloat(programData.budget_spent) || 0,
         // Initialize default values
         current_enrollment: 0,
-        budget_spent: 0,
         success_rate: 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -214,6 +216,13 @@ export function usePrograms(options = {}) {
         target_beneficiary: Array.isArray(updates.target_beneficiary) 
           ? updates.target_beneficiary 
           : [updates.target_beneficiary],
+        // Ensure budget values are properly formatted if they exist
+        ...(updates.budget_allocated !== undefined && {
+          budget_allocated: parseFloat(updates.budget_allocated) || 0
+        }),
+        ...(updates.budget_spent !== undefined && {
+          budget_spent: parseFloat(updates.budget_spent) || 0
+        }),
         updated_at: new Date().toISOString(),
       };
 

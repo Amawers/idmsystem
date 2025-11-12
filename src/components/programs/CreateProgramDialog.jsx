@@ -45,6 +45,7 @@ const programSchema = z.object({
   description: z.string().min(10, "Description must be at least 10 characters"),
   duration_weeks: z.coerce.number().min(1, "Duration must be at least 1 week"),
   budget_allocated: z.coerce.number().min(0, "Budget must be a positive number"),
+  budget_spent: z.coerce.number().min(0, "Budget spent must be a positive number").optional(),
   capacity: z.coerce.number().min(1, "Capacity must be at least 1"),
   coordinator: z.string().min(1, "Coordinator name is required"),
   location: z.string().min(1, "Location is required"),
@@ -52,6 +53,15 @@ const programSchema = z.object({
   start_date: z.string().min(1, "Start date is required"),
   status: z.enum(["active", "inactive", "completed"]),
   partner_ids: z.array(z.string()).optional(),
+}).refine((data) => {
+  // Validate budget_spent doesn't exceed budget_allocated
+  if (data.budget_spent && data.budget_allocated) {
+    return data.budget_spent <= data.budget_allocated;
+  }
+  return true;
+}, {
+  message: "Budget spent cannot exceed budget allocated",
+  path: ["budget_spent"],
 });
 
 const PROGRAM_TYPES = [
@@ -134,6 +144,7 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
           description: program.description || "",
           duration_weeks: program.duration_weeks || "",
           budget_allocated: program.budget_allocated || "",
+          budget_spent: program.budget_spent || 0,
           capacity: program.capacity || "",
           coordinator: program.coordinator || "",
           location: program.location || "",
@@ -164,6 +175,7 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
       const programData = {
         ...data,
         budget_allocated: parseFloat(data.budget_allocated),
+        budget_spent: data.budget_spent ? parseFloat(data.budget_spent) : 0,
         duration_weeks: parseInt(data.duration_weeks),
         capacity: parseInt(data.capacity),
         partner_ids: selectedPartners,
@@ -369,9 +381,33 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
                   <p className="text-sm text-red-600">{errors.start_date.message}</p>
                 )}
               </div>
+
+              {/* Status */}
+              <div className="space-y-2">
+                <Label htmlFor="status">Status *</Label>
+                <Select
+                  value={status}
+                  onValueChange={(value) => {
+                    setStatus(value);
+                    setValue("status", value);
+                  }}
+                >
+                  <SelectTrigger className="cursor-pointer">
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="active">Active</SelectItem>
+                    <SelectItem value="inactive">Inactive</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.status && (
+                  <p className="text-sm text-red-600">{errors.status.message}</p>
+                )}
+              </div>
             </div>
 
-            {/* THIRD COLUMN: Budget Allocated, Coordinator, Schedule, Status */}
+            {/* THIRD COLUMN: Budget Allocated, Budget Spent, Coordinator, Schedule */}
             <div className="space-y-4">
               {/* Budget Allocated */}
               <div className="space-y-2">
@@ -385,6 +421,21 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
                 />
                 {errors.budget_allocated && (
                   <p className="text-sm text-red-600">{errors.budget_allocated.message}</p>
+                )}
+              </div>
+
+              {/* Budget Spent */}
+              <div className="space-y-2">
+                <Label htmlFor="budget_spent">Budget Spent</Label>
+                <Input
+                  id="budget_spent"
+                  type="number"
+                  step="0.01"
+                  {...register("budget_spent")}
+                  placeholder="0.00"
+                />
+                {errors.budget_spent && (
+                  <p className="text-sm text-red-600">{errors.budget_spent.message}</p>
                 )}
               </div>
 
@@ -411,30 +462,6 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
                 />
                 {errors.schedule && (
                   <p className="text-sm text-red-600">{errors.schedule.message}</p>
-                )}
-              </div>
-
-              {/* Status */}
-              <div className="space-y-2">
-                <Label htmlFor="status">Status *</Label>
-                <Select
-                  value={status}
-                  onValueChange={(value) => {
-                    setStatus(value);
-                    setValue("status", value);
-                  }}
-                >
-                  <SelectTrigger className="cursor-pointer">
-                    <SelectValue placeholder="Select status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="completed">Completed</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.status && (
-                  <p className="text-sm text-red-600">{errors.status.message}</p>
                 )}
               </div>
 
