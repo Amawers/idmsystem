@@ -42,6 +42,7 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
+  Plus,
 } from "lucide-react";
 import {
   Select,
@@ -52,6 +53,7 @@ import {
 } from "@/components/ui/select";
 import { useResourceStore } from "@/store/useResourceStore";
 import { useAuthStore } from "@/store/authStore";
+import RequestSubmissionDialog from "./RequestSubmissionDialog";
 
 /**
  * Status Badge Component
@@ -275,6 +277,7 @@ function RequestDetailsDialog({ request, open, onOpenChange, onApprove, onReject
 export default function ApprovalWorkflowManager() {
   const [selectedRequest, setSelectedRequest] = useState(null);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
+  const [showNewRequestDialog, setShowNewRequestDialog] = useState(false);
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(8);
@@ -284,6 +287,7 @@ export default function ApprovalWorkflowManager() {
     requests: storeRequests,
     updateRequestStatus,
     fetchRequests,
+    submitRequest,
     loading,
   } = useResourceStore();
 
@@ -344,9 +348,21 @@ export default function ApprovalWorkflowManager() {
     await updateRequestStatus(requestId, "rejected", notes);
   };
 
+  const handleNewRequest = async (requestData) => {
+    try {
+      await submitRequest(requestData);
+      setShowNewRequestDialog(false);
+      // Refresh the list to show the new request
+      await fetchRequests();
+    } catch (error) {
+      console.error("Error submitting request:", error);
+      alert("Failed to submit request: " + error.message);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {/* Filters and Refresh Button */}
+      {/* Filters and Action Buttons */}
       <div className="flex items-center justify-between">
         <div className="flex gap-2">
           <Button
@@ -379,16 +395,27 @@ export default function ApprovalWorkflowManager() {
           </Button>
         </div>
         
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isRefreshing || loading}
-          className="cursor-pointer"
-        >
-          <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="default"
+            size="sm"
+            onClick={() => setShowNewRequestDialog(true)}
+            className="cursor-pointer"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            New Request
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleRefresh}
+            disabled={isRefreshing || loading}
+            className="cursor-pointer"
+          >
+            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Requests Table */}
@@ -529,6 +556,13 @@ export default function ApprovalWorkflowManager() {
         onOpenChange={setShowDetailsDialog}
         onApprove={handleApprove}
         onReject={handleReject}
+      />
+
+      {/* New Request Submission Dialog */}
+      <RequestSubmissionDialog
+        open={showNewRequestDialog}
+        onOpenChange={setShowNewRequestDialog}
+        onSubmit={handleNewRequest}
       />
     </div>
   );
