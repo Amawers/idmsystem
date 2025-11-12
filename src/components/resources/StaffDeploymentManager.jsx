@@ -5,9 +5,14 @@
  * 
  * Features:
  * - Assign staff to programs or home visits
- * - Track staff workload and availability
+ * - Track staff workload and availability based on REAL case data
+ * - Display case breakdown by type (VAC, CICL/CAR, FAC, FAR, IVAC)
  * - Schedule management
  * - Prevent staff overload
+ * 
+ * Data Source:
+ * - Derives workload from Case Management > Cases, CICL/CAR, and IVAC sections
+ * - Uses useCaseWorkload hook to aggregate data from all case tables
  */
 
 import { useState, useEffect } from "react";
@@ -15,16 +20,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Users, Plus, Calendar, AlertCircle, CheckCircle, RefreshCw } from "lucide-react";
-import supabase from "@/../config/supabase";
+import { Users, Plus, AlertCircle, CheckCircle, RefreshCw } from "lucide-react";
+import { useCaseWorkload } from "@/hooks/useCaseWorkload";
 
 function StaffAvailabilityCard({ staff }) {
   const getAvailabilityColor = (status) => {
@@ -48,92 +45,103 @@ function StaffAvailabilityCard({ staff }) {
   };
 
   return (
-    <div className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
-      <div className="flex items-center gap-3">
-        <div className={`w-3 h-3 rounded-full ${getAvailabilityColor(staff.availability_status)}`} />
-        <div>
-          <p className="font-medium">{staff.staff_name}</p>
-          <p className="text-xs text-muted-foreground">{staff.staff_role}</p>
+    <div className="flex items-start justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+      <div className="flex items-start gap-3 flex-1">
+        <div className={`w-3 h-3 rounded-full mt-1 ${getAvailabilityColor(staff.availability_status)}`} />
+        <div className="flex-1">
+          <div className="flex items-center justify-between mb-1">
+            <p className="font-medium">{staff.staff_name}</p>
+            <Badge variant={staff.workload_percentage >= 80 ? "destructive" : "secondary"}>
+              {staff.workload_percentage}% Load
+            </Badge>
+          </div>
+          <p className="text-xs text-muted-foreground mb-2">{staff.staff_role}</p>
+          
+          {/* Case Breakdown */}
+          <div className="grid grid-cols-5 gap-1 text-xs">
+            <div className="flex flex-col items-center p-1 bg-blue-50 rounded">
+              <span className="font-semibold text-blue-700">{staff.breakdown?.vac || 0}</span>
+              <span className="text-[10px] text-blue-600">VAC</span>
+            </div>
+            <div className="flex flex-col items-center p-1 bg-purple-50 rounded">
+              <span className="font-semibold text-purple-700">{staff.breakdown?.ciclcar || 0}</span>
+              <span className="text-[10px] text-purple-600">CICL/CAR</span>
+            </div>
+            <div className="flex flex-col items-center p-1 bg-green-50 rounded">
+              <span className="font-semibold text-green-700">{staff.breakdown?.fac || 0}</span>
+              <span className="text-[10px] text-green-600">FAC</span>
+            </div>
+            <div className="flex flex-col items-center p-1 bg-orange-50 rounded">
+              <span className="font-semibold text-orange-700">{staff.breakdown?.far || 0}</span>
+              <span className="text-[10px] text-orange-600">FAR</span>
+            </div>
+            <div className="flex flex-col items-center p-1 bg-red-50 rounded">
+              <span className="font-semibold text-red-700">{staff.breakdown?.ivac || 0}</span>
+              <span className="text-[10px] text-red-600">IVAC</span>
+            </div>
+          </div>
+          
+          {/* Totals */}
+          <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
+            <span>Total: {staff.total_cases || 0} cases</span>
+            {staff.active_cases > 0 && (
+              <span className="text-green-600">• {staff.active_cases} active</span>
+            )}
+            {staff.urgent_cases > 0 && (
+              <span className="text-red-600">• {staff.urgent_cases} urgent</span>
+            )}
+          </div>
         </div>
-      </div>
-      <div className="text-right">
-        <Badge variant={staff.workload_percentage >= 80 ? "destructive" : "secondary"}>
-          {staff.workload_percentage}% Load
-        </Badge>
-        <p className="text-xs text-muted-foreground mt-1">
-          {staff.active_assignments || 0} assignments
-        </p>
       </div>
     </div>
   );
 }
 
 export default function StaffDeploymentManager() {
+  // Use the case workload hook to get real data from Case Management
+  const { 
+    data: caseWorkloadData, 
+    loading: workloadLoading, 
+    error: workloadError,
+    reload: reloadWorkload 
+  } = useCaseWorkload();
+
   const [staffList, setStaffList] = useState([]);
-  const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     available: 0,
     busy: 0,
     overloaded: 0,
+    totalCases: 0,
+    activeCases: 0,
+    urgentCases: 0,
   });
 
+  // Update staff list when case workload data changes
   useEffect(() => {
-    fetchStaffAssignments();
-  }, []);
-
-  const fetchStaffAssignments = async () => {
-    setLoading(true);
-    try {
-      const { data: assignmentsData, error } = await supabase
-        .from('staff_assignments')
-        .select(`
-          *,
-          staff:staff_id (
-            id,
-            email,
-            full_name
-          )
-        `)
-        .eq('status', 'active')
-        .order('start_date', { ascending: false });
-
-      if (error) throw error;
-
-      setAssignments(assignmentsData || []);
-
-      // Calculate staff statistics
-      const staffMap = {};
-      assignmentsData?.forEach(assignment => {
-        const staffId = assignment.staff_id;
-        if (!staffMap[staffId]) {
-          staffMap[staffId] = {
-            staff_id: staffId,
-            staff_name: assignment.staff_name,
-            staff_role: assignment.staff_role,
-            availability_status: assignment.availability_status,
-            workload_percentage: assignment.workload_percentage,
-            active_assignments: 0,
-          };
-        }
-        staffMap[staffId].active_assignments++;
-      });
-
-      const staffArray = Object.values(staffMap);
-      setStaffList(staffArray);
-
+    if (caseWorkloadData && caseWorkloadData.length > 0) {
+      setStaffList(caseWorkloadData);
+      
+      // Calculate statistics
+      const totalCases = caseWorkloadData.reduce((sum, staff) => sum + staff.total_cases, 0);
+      const activeCases = caseWorkloadData.reduce((sum, staff) => sum + staff.active_cases, 0);
+      const urgentCases = caseWorkloadData.reduce((sum, staff) => sum + staff.urgent_cases, 0);
+      
       setStats({
-        total: staffArray.length,
-        available: staffArray.filter(s => s.availability_status === 'available').length,
-        busy: staffArray.filter(s => s.availability_status === 'busy').length,
-        overloaded: staffArray.filter(s => s.workload_percentage >= 80).length,
+        total: caseWorkloadData.length,
+        available: caseWorkloadData.filter(s => s.availability_status === 'available').length,
+        busy: caseWorkloadData.filter(s => s.availability_status === 'busy').length,
+        overloaded: caseWorkloadData.filter(s => s.workload_percentage >= 80).length,
+        totalCases,
+        activeCases,
+        urgentCases,
       });
-    } catch (error) {
-      console.error('Error fetching staff assignments:', error);
-    } finally {
-      setLoading(false);
     }
+  }, [caseWorkloadData]);
+
+  const handleRefresh = () => {
+    reloadWorkload();
   };
 
   return (
@@ -141,46 +149,65 @@ export default function StaffDeploymentManager() {
       {/* Refresh Button */}
       <div className="flex justify-end">
         <Button 
-          onClick={fetchStaffAssignments} 
-          disabled={loading}
+          onClick={handleRefresh} 
+          disabled={loading || workloadLoading}
           variant="outline"
           size="sm"
           className="cursor-pointer"
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 mr-2 ${(loading || workloadLoading) ? 'animate-spin' : ''}`} />
           Refresh Data
         </Button>
       </div>
 
+      {/* Error Display */}
+      {workloadError && (
+        <Card className="border-red-200 bg-red-50">
+          <CardContent className="pt-4">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-red-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-red-900">Error Loading Case Data</p>
+                <p className="text-xs text-red-700 mt-1">
+                  Failed to load case workload data. Please try refreshing.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Header Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.total}</div>
-            <p className="text-xs text-muted-foreground">Active members</p>
+            <p className="text-xs text-muted-foreground">Case Managers</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Available</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Cases</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalCases}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.activeCases} active • {stats.urgentCases} urgent
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Available Staff</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-green-600">{stats.available}</div>
-            <p className="text-xs text-muted-foreground">Ready for deployment</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Busy</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-600">{stats.busy}</div>
-            <p className="text-xs text-muted-foreground">Currently assigned</p>
+            <p className="text-xs text-muted-foreground">&lt;40% workload</p>
           </CardContent>
         </Card>
 
@@ -199,69 +226,128 @@ export default function StaffDeploymentManager() {
         {/* Staff Availability */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Staff Availability</CardTitle>
-                <CardDescription>Current availability status</CardDescription>
-              </div>
-              <Button size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Assign Staff
-              </Button>
-            </div>
+            <CardTitle>Staff Workload (from Case Management)</CardTitle>
+            <CardDescription>Real-time case assignments by type</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-3">
-            {loading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : staffList.length > 0 ? (
-              staffList.map((staff) => (
-                <StaffAvailabilityCard key={staff.staff_id} staff={staff} />
-              ))
-            ) : (
-              <p className="text-sm text-muted-foreground text-center py-4">
-                No staff assignments found
-              </p>
-            )}
+          <CardContent>
+            <div className={staffList.length > 2 ? 'overflow-y-scroll max-h-[400px] space-y-3 pr-2' : 'space-y-3'}>
+              {workloadLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                </div>
+              ) : staffList.length > 0 ? (
+                staffList.map((staff, index) => (
+                  <StaffAvailabilityCard key={`${staff.case_manager}-${index}`} staff={staff} />
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground text-center py-4">
+                  No case managers found with active cases
+                </p>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Active Assignments */}
+        {/* Case Distribution by Type */}
         <Card>
           <CardHeader>
-            <CardTitle>Active Assignments</CardTitle>
-            <CardDescription>Current staff deployments</CardDescription>
+            <CardTitle>Case Distribution by Type</CardTitle>
+            <CardDescription>Total cases across all types</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {assignments.slice(0, 5).map((assignment) => (
-                <div key={assignment.id} className="p-3 border rounded-lg">
-                  <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <p className="font-medium text-sm">{assignment.assignment_title}</p>
-                      <p className="text-xs text-muted-foreground">{assignment.staff_name}</p>
-                    </div>
-                    <Badge variant="secondary" className="text-xs">
-                      {assignment.assignment_type}
-                    </Badge>
+            <div className="space-y-4">
+              {/* VAC Cases */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                    <span className="text-sm font-medium">VAC</span>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {new Date(assignment.start_date).toLocaleDateString()}
-                    </span>
-                    <Badge variant={assignment.workload_percentage >= 80 ? "destructive" : "secondary"}>
-                      {assignment.workload_percentage}%
-                    </Badge>
-                  </div>
+                  <span className="text-sm font-bold text-blue-700">
+                    {staffList.reduce((sum, staff) => sum + (staff.breakdown?.vac || 0), 0)}
+                  </span>
                 </div>
-              ))}
-              {assignments.length === 0 && (
-                <p className="text-sm text-muted-foreground text-center py-4">
-                  No active assignments
-                </p>
-              )}
+                <Progress 
+                  value={(staffList.reduce((sum, staff) => sum + (staff.breakdown?.vac || 0), 0) / stats.totalCases * 100) || 0} 
+                  className="h-2 bg-blue-100"
+                />
+              </div>
+
+              {/* CICL/CAR Cases */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                    <span className="text-sm font-medium">CICL/CAR</span>
+                  </div>
+                  <span className="text-sm font-bold text-purple-700">
+                    {staffList.reduce((sum, staff) => sum + (staff.breakdown?.ciclcar || 0), 0)}
+                  </span>
+                </div>
+                <Progress 
+                  value={(staffList.reduce((sum, staff) => sum + (staff.breakdown?.ciclcar || 0), 0) / stats.totalCases * 100) || 0} 
+                  className="h-2 bg-purple-100"
+                />
+              </div>
+
+              {/* FAC Cases */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span className="text-sm font-medium">FAC</span>
+                  </div>
+                  <span className="text-sm font-bold text-green-700">
+                    {staffList.reduce((sum, staff) => sum + (staff.breakdown?.fac || 0), 0)}
+                  </span>
+                </div>
+                <Progress 
+                  value={(staffList.reduce((sum, staff) => sum + (staff.breakdown?.fac || 0), 0) / stats.totalCases * 100) || 0} 
+                  className="h-2 bg-green-100"
+                />
+              </div>
+
+              {/* FAR Cases */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-orange-500"></div>
+                    <span className="text-sm font-medium">FAR</span>
+                  </div>
+                  <span className="text-sm font-bold text-orange-700">
+                    {staffList.reduce((sum, staff) => sum + (staff.breakdown?.far || 0), 0)}
+                  </span>
+                </div>
+                <Progress 
+                  value={(staffList.reduce((sum, staff) => sum + (staff.breakdown?.far || 0), 0) / stats.totalCases * 100) || 0} 
+                  className="h-2 bg-orange-100"
+                />
+              </div>
+
+              {/* IVAC Cases */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <span className="text-sm font-medium">IVAC</span>
+                  </div>
+                  <span className="text-sm font-bold text-red-700">
+                    {staffList.reduce((sum, staff) => sum + (staff.breakdown?.ivac || 0), 0)}
+                  </span>
+                </div>
+                <Progress 
+                  value={(staffList.reduce((sum, staff) => sum + (staff.breakdown?.ivac || 0), 0) / stats.totalCases * 100) || 0} 
+                  className="h-2 bg-red-100"
+                />
+              </div>
+
+              {/* Summary */}
+              <div className="pt-4 border-t">
+                <div className="flex items-center justify-between text-sm font-medium">
+                  <span>Total Cases</span>
+                  <span className="text-lg font-bold">{stats.totalCases}</span>
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -279,7 +365,7 @@ export default function StaffDeploymentManager() {
           <CardContent>
             <p className="text-sm text-orange-800">
               {stats.overloaded} staff member{stats.overloaded !== 1 ? 's are' : ' is'} currently overloaded 
-              with ≥80% workload. Consider redistributing assignments.
+              with ≥80% workload. Consider redistributing case assignments.
             </p>
           </CardContent>
         </Card>
