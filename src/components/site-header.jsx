@@ -29,7 +29,6 @@ const pageTitles = {
   "/resource/approvals": "Approvals",
   "/resource/staff": "Staff",
   "/resource/programs": "Programs",
-  "/resource/alerts": "Alerts",
   
   // Account Management
   "/account": "Account Management",
@@ -59,7 +58,6 @@ const parentSections = {
   "/resource/approvals": "Resource Allocation",
   "/resource/staff": "Resource Allocation",
   "/resource/programs": "Resource Allocation",
-  "/resource/alerts": "Resource Allocation",
   
   // Security & Audit sub-pages
   "/controls/audit": "Security & Audit",

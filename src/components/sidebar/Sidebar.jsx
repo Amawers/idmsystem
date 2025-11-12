@@ -76,7 +76,6 @@ export default function Sidebar(props) {
           { path: "/resource/approvals", label: "Approvals", icon: IconCircleCheck },
           { path: "/resource/staff", label: "Staff", icon: IconUserCheck },
           { path: "/resource/programs", label: "Programs", icon: IconFolders },
-          { path: "/resource/alerts", label: "Alerts", icon: IconBell },
         ]
       },
       // Security & Audit is hidden for case managers (heads only)
@@ -113,7 +112,6 @@ export default function Sidebar(props) {
           { path: "/resource/approvals", label: "Approvals", icon: IconCircleCheck },
           { path: "/resource/staff", label: "Staff", icon: IconUserCheck },
           { path: "/resource/programs", label: "Programs", icon: IconFolders },
-          { path: "/resource/alerts", label: "Alerts", icon: IconBell },
         ]
       },
       { path: "/account", label: "Account Management", icon: IconUsersGroup },
