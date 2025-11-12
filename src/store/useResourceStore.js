@@ -502,30 +502,30 @@ export const useResourceStore = create((set, get) => ({
 				status = 'low_stock';
 			}
 
-			// Prepare item data
-			const newItem = {
-				item_name: itemData.item_name,
-				category: itemData.category,
-				current_stock: currentStock,
-				minimum_stock: minStock,
-				unit_cost: parseFloat(itemData.unit_cost),
-				unit_of_measure: itemData.unit_of_measure,
-				location: itemData.location || null,
-				description: itemData.description || null,
-				status: status,
-				total_value: currentStock * parseFloat(itemData.unit_cost),
-			};
+		// Prepare item data (total_value removed - computed on read)
+		const newItem = {
+			item_name: itemData.item_name,
+			category: itemData.category,
+			current_stock: currentStock,
+			minimum_stock: minStock,
+			unit_cost: parseFloat(itemData.unit_cost),
+			unit_of_measure: itemData.unit_of_measure,
+			location: itemData.location || null,
+			description: itemData.description || null,
+			status: status,
+		};
 
-			// Insert into Supabase
-			const { data, error } = await supabase
-				.from('inventory_items')
-				.insert([newItem])
-				.select()
-				.single();
+		// Insert into Supabase
+		const { data, error } = await supabase
+			.from('inventory_items')
+			.insert([newItem])
+			.select()
+			.single();
 
-			if (error) throw error;
-
-			// Update local state
+		if (error) {
+			console.error('Supabase insert error:', error);
+			throw error;
+		}			// Update local state
 			set(state => ({
 				inventoryItems: [...state.inventoryItems, data],
 				loading: false,

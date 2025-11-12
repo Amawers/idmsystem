@@ -105,7 +105,7 @@ export default function InventoryByCategory({
                             ? 'text-yellow-600 font-medium'
                             : ''
                         }>
-                          {item.current_stock} {item.unit}
+                          {item.current_stock} {item.unit_of_measure}
                         </span>
                       </div>
                     );

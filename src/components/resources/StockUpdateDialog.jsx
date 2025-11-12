@@ -79,11 +79,11 @@ export default function StockUpdateDialog({ open, onOpenChange, item, onUpdate }
               </div>
               <div>
                 <p className="text-muted-foreground">Current Stock</p>
-                <p className="font-medium">{item.current_stock} {item.unit}</p>
+                <p className="font-medium">{item.current_stock} {item.unit_of_measure}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Minimum Stock</p>
-                <p className="font-medium">{item.minimum_stock} {item.unit}</p>
+                <p className="font-medium">{item.minimum_stock} {item.unit_of_measure}</p>
               </div>
               <div>
                 <p className="text-muted-foreground">Location</p>
@@ -117,7 +117,7 @@ export default function StockUpdateDialog({ open, onOpenChange, item, onUpdate }
                   min="0"
                   value={formData.quantity}
                   onChange={(e) => setFormData({ ...formData, quantity: e.target.value })}
-                  placeholder={`Enter quantity in ${item.unit}`}
+                  placeholder={`Enter quantity in ${item.unit_of_measure}`}
                   required
                 />
               </div>
@@ -127,7 +127,7 @@ export default function StockUpdateDialog({ open, onOpenChange, item, onUpdate }
                   <p className="text-sm">
                     <span className="text-muted-foreground">New Stock Level: </span>
                     <span className={`font-bold ${newStock < item.minimum_stock ? 'text-red-600' : 'text-green-600'}`}>
-                      {newStock} {item.unit}
+                      {newStock} {item.unit_of_measure}
                     </span>
                   </p>
                   {newStock < item.minimum_stock && (

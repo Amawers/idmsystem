@@ -77,8 +77,8 @@ export default function InventoryAlerts({
             
             {item.alertType === "stock" ? (
               <p className="text-xs">
-                Current: <span className="font-bold">{item.current_stock} {item.unit}</span>
-                {" "}• Min: {item.minimum_stock} {item.unit}
+                Current: <span className="font-bold">{item.current_stock} {item.unit_of_measure}</span>
+                {" "}• Min: {item.minimum_stock} {item.unit_of_measure}
               </p>
             ) : (
               <p className="text-xs text-orange-600">

@@ -77,10 +77,10 @@ export default function InventoryTable({
                 </TableCell>
                 <TableCell>
                   <span className={item.current_stock <= item.minimum_stock ? "text-red-600 font-bold" : ""}>
-                    {item.current_stock} {item.unit}
+                    {item.current_stock} {item.unit_of_measure}
                   </span>
                 </TableCell>
-                <TableCell>{item.minimum_stock} {item.unit}</TableCell>
+                <TableCell>{item.minimum_stock} {item.unit_of_measure}</TableCell>
                 <TableCell>{getStatusBadge(item)}</TableCell>
                 <TableCell>{item.location}</TableCell>
                 <TableCell>₱{(item.current_stock * item.unit_cost).toLocaleString()}</TableCell>

@@ -371,8 +371,10 @@ function AddItemDialog({ open, onClose, onSuccess }) {
                 <SelectContent>
                   <SelectItem value="food" className="text-xs">Food & Nutrition</SelectItem>
                   <SelectItem value="medicine" className="text-xs">Medicine & Health</SelectItem>
-                  <SelectItem value="supplies" className="text-xs">Office Supplies</SelectItem>
-                  <SelectItem value="relief_goods" className="text-xs">Relief Goods</SelectItem>
+                  <SelectItem value="supplies" className="text-xs">Supplies</SelectItem>
+                  <SelectItem value="equipment" className="text-xs">Equipment</SelectItem>
+                  <SelectItem value="material" className="text-xs">Materials</SelectItem>
+                  <SelectItem value="other" className="text-xs">Other</SelectItem>
                 </SelectContent>
               </Select>
             </div>
