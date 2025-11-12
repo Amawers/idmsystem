@@ -23,15 +23,6 @@
 import { create } from "zustand";
 import supabase from "@/../config/supabase";
 
-//* ================================================
-//* IMPORT SAMPLE DATA (Fallback for development)
-//* ================================================
-import SAMPLE_REQUESTS from "../../SAMPLE_RESOURCE_REQUESTS.json";
-import SAMPLE_INVENTORY from "../../SAMPLE_INVENTORY_ITEMS.json";
-import SAMPLE_TRANSACTIONS from "../../SAMPLE_INVENTORY_TRANSACTIONS.json";
-import SAMPLE_DISBURSEMENTS from "../../SAMPLE_RESOURCE_DISBURSEMENTS.json";
-import SAMPLE_ALERTS from "../../SAMPLE_INVENTORY_ALERTS.json";
-
 /**
  * Resource Store - Zustand State Store
  * 
@@ -145,14 +136,19 @@ export const useResourceStore = create((set, get) => ({
 			
 			if (error) {
 				console.error('Supabase error:', error);
-				// Fallback to sample data if Supabase fails
-				const stats = get().computeRequestStats(SAMPLE_REQUESTS);
 				set({ 
-					requests: SAMPLE_REQUESTS,
-					filteredRequests: SAMPLE_REQUESTS,
-					requestStats: stats,
+					requests: [],
+					filteredRequests: [],
+					requestStats: {
+						total: 0,
+						submitted: 0,
+						approved: 0,
+						rejected: 0,
+						disbursed: 0,
+						totalAmount: 0,
+					},
 					loading: false,
-					error: 'Using sample data - Database connection issue'
+					error: 'Database connection issue'
 				});
 				return;
 			}
@@ -360,14 +356,18 @@ export const useResourceStore = create((set, get) => ({
 			
 			if (error) {
 				console.error('Supabase error:', error);
-				// Fallback to sample data
-				const stats = get().computeInventoryStats(SAMPLE_INVENTORY);
 				set({ 
-					inventoryItems: SAMPLE_INVENTORY,
-					filteredInventory: SAMPLE_INVENTORY,
-					inventoryStats: stats,
+					inventoryItems: [],
+					filteredInventory: [],
+					inventoryStats: {
+						totalItems: 0,
+						totalValue: 0,
+						lowStock: 0,
+						criticalStock: 0,
+						available: 0,
+					},
 					loading: false,
-					error: 'Using sample data - Database connection issue'
+					error: 'Database connection issue'
 				});
 				return;
 			}
@@ -601,24 +601,38 @@ export const useResourceStore = create((set, get) => ({
 		set({ loading: true, error: null });
 		
 		try {
-			await new Promise(resolve => setTimeout(resolve, 400));
+			let query = supabase
+				.from('inventory_transactions')
+				.select('*')
+				.order('created_at', { ascending: false });
 			
-			let filteredData = [...SAMPLE_TRANSACTIONS];
-			
+			// Apply filters
 			if (filters.item_id) {
-				filteredData = filteredData.filter(txn => txn.item_id === filters.item_id);
+				query = query.eq('item_id', filters.item_id);
 			}
 			
 			if (filters.transaction_type) {
-				filteredData = filteredData.filter(txn => txn.transaction_type === filters.transaction_type);
+				query = query.eq('transaction_type', filters.transaction_type);
 			}
 			
 			if (filters.program_id) {
-				filteredData = filteredData.filter(txn => txn.program_id === filters.program_id);
+				query = query.eq('program_id', filters.program_id);
+			}
+			
+			const { data, error } = await query;
+			
+			if (error) {
+				console.error('Supabase error:', error);
+				set({ 
+					transactions: [],
+					loading: false,
+					error: 'Database connection issue'
+				});
+				return;
 			}
 			
 			set({ 
-				transactions: filteredData,
+				transactions: data || [],
 				loading: false 
 			});
 			
@@ -634,10 +648,23 @@ export const useResourceStore = create((set, get) => ({
 		set({ loading: true, error: null });
 		
 		try {
-			await new Promise(resolve => setTimeout(resolve, 400));
+			const { data, error } = await supabase
+				.from('resource_disbursements')
+				.select('*')
+				.order('created_at', { ascending: false });
+			
+			if (error) {
+				console.error('Supabase error:', error);
+				set({ 
+					disbursements: [],
+					loading: false,
+					error: 'Database connection issue'
+				});
+				return;
+			}
 			
 			set({ 
-				disbursements: SAMPLE_DISBURSEMENTS,
+				disbursements: data || [],
 				loading: false 
 			});
 			
@@ -660,13 +687,11 @@ export const useResourceStore = create((set, get) => ({
 			
 			if (error) {
 				console.error('Supabase error:', error);
-				// Fallback to sample data
-				const unresolvedAlerts = SAMPLE_ALERTS.filter(alert => !alert.is_resolved);
 				set({ 
-					alerts: SAMPLE_ALERTS,
-					unresolvedAlerts,
+					alerts: [],
+					unresolvedAlerts: [],
 					loading: false,
-					error: 'Using sample data - Database connection issue'
+					error: 'Database connection issue'
 				});
 				return;
 			}
