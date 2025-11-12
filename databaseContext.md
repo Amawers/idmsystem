@@ -1405,18 +1405,10 @@ CREATE TABLE IF NOT EXISTS public.resource_requests (
   total_amount NUMERIC(12, 2) NOT NULL,
   justification TEXT NOT NULL,
   priority TEXT NOT NULL DEFAULT 'medium',
-  case_id UUID NULL,
-  program_id UUID NULL REFERENCES programs(id) ON DELETE SET NULL,
-  program_name TEXT NULL,
-  barangay TEXT NULL,
   requested_by UUID NULL REFERENCES auth.users(id) ON DELETE SET NULL,
-  requester_name TEXT NULL,
   submitted_at TIMESTAMP WITH TIME ZONE NULL DEFAULT NOW(),
   status TEXT NOT NULL DEFAULT 'submitted',
   rejection_reason TEXT NULL,
-  disbursement_method TEXT NULL,
-  disbursement_date DATE NULL,
-  attachments JSONB NULL DEFAULT '[]',
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
   
@@ -1437,9 +1429,7 @@ CREATE TABLE IF NOT EXISTS public.resource_requests (
 
 CREATE INDEX IF NOT EXISTS idx_resource_requests_status ON public.resource_requests USING btree (status);
 CREATE INDEX IF NOT EXISTS idx_resource_requests_request_type ON public.resource_requests USING btree (request_type);
-CREATE INDEX IF NOT EXISTS idx_resource_requests_program_id ON public.resource_requests USING btree (program_id);
 CREATE INDEX IF NOT EXISTS idx_resource_requests_created_at ON public.resource_requests USING btree (created_at DESC);
-CREATE INDEX IF NOT EXISTS idx_resource_requests_case_id ON public.resource_requests USING btree (case_id);
 CREATE INDEX IF NOT EXISTS idx_resource_requests_item_id ON public.resource_requests USING btree (item_id);
 CREATE INDEX IF NOT EXISTS idx_resource_requests_requested_by ON public.resource_requests USING btree (requested_by);
 CREATE INDEX IF NOT EXISTS idx_resource_requests_submitted_at ON public.resource_requests USING btree (submitted_at DESC);
