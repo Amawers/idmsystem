@@ -181,12 +181,25 @@ export const useResourceStore = create((set, get) => ({
 			// Get current user
 			const { data: { user } } = await supabase.auth.getUser();
 			
+			if (!user) {
+				throw new Error('User not authenticated. Please log in and try again.');
+			}
+			
 			const newRequest = {
 				...requestData,
-				requested_by: user?.id,
+				requested_by: user.id,
 				status: 'submitted',
 				submitted_at: new Date().toISOString(),
 			};
+			
+			// Remove any undefined or null values that aren't needed
+			Object.keys(newRequest).forEach(key => {
+				if (newRequest[key] === undefined || newRequest[key] === null && key !== 'item_id') {
+					delete newRequest[key];
+				}
+			});
+			
+			console.log('Submitting request:', newRequest); // Debug log
 			
 			const { data, error } = await supabase
 				.from('resource_requests')
@@ -194,7 +207,10 @@ export const useResourceStore = create((set, get) => ({
 				.select()
 				.single();
 			
-			if (error) throw error;
+			if (error) {
+				console.error('Supabase insert error:', error);
+				throw new Error(error.message || 'Failed to submit request to database');
+			}
 			
 			// Optimistic update
 			set(state => ({

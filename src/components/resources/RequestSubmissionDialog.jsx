@@ -91,7 +91,7 @@ export default function RequestSubmissionDialog({ open, onOpenChange, onSubmit }
       total_amount: parseFloat(formData.quantity) * parseFloat(formData.unit_cost),
       justification: formData.justification,
       priority: formData.priority,
-      requester_name: null, // Will be filled by the store from auth
+      // Note: requested_by will be filled by the store from auth
     });
     // Reset form
     setFormData({

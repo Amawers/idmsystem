@@ -764,6 +764,9 @@ export default function StockManagement() {
       fetchInventory();
     } catch (error) {
       console.error("Failed to submit request:", error);
+      // Show error details to help diagnose the issue
+      const errorMessage = error?.message || "An unknown error occurred";
+      alert(`Failed to submit request: ${errorMessage}\n\nPlease try again.`);
     }
   };
 
