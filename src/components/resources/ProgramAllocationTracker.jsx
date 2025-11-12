@@ -10,12 +10,11 @@
  * - Resource allocation history
  */
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -24,9 +23,66 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TrendingUp, TrendingDown, DollarSign, Package, Users, RefreshCw } from "lucide-react";
+import { 
+  TrendingUp, 
+  TrendingDown,
+  RefreshCw,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Pause
+} from "lucide-react";
 import { usePrograms } from "@/hooks/usePrograms";
 import { useResourceAllocations } from "@/hooks/useResourceAllocations";
+
+/**
+ * Get status icon and styling based on program status
+ * @param {string} status - Program status (active, inactive, completed, etc.)
+ * @returns {Object} Icon component, color classes, and variant
+ */
+const getStatusConfig = (status) => {
+  const statusLower = status?.toLowerCase() || 'inactive';
+  
+  const configs = {
+    active: {
+      icon: CheckCircle,
+      colorClass: 'text-green-600',
+      bgClass: 'bg-green-50',
+      variant: 'success',
+      label: 'Active'
+    },
+    completed: {
+      icon: CheckCircle,
+      colorClass: 'text-blue-600',
+      bgClass: 'bg-blue-50',
+      variant: 'default',
+      label: 'Completed'
+    },
+    inactive: {
+      icon: Pause,
+      colorClass: 'text-gray-600',
+      bgClass: 'bg-gray-50',
+      variant: 'secondary',
+      label: 'Inactive'
+    },
+    cancelled: {
+      icon: XCircle,
+      colorClass: 'text-red-600',
+      bgClass: 'bg-red-50',
+      variant: 'destructive',
+      label: 'Cancelled'
+    },
+    pending: {
+      icon: Clock,
+      colorClass: 'text-orange-600',
+      bgClass: 'bg-orange-50',
+      variant: 'outline',
+      label: 'Pending'
+    }
+  };
+  
+  return configs[statusLower] || configs.inactive;
+};
 
 function ProgramCard({ program, allocations }) {
   const utilization = program.budget_allocated > 0 
@@ -40,6 +96,9 @@ function ProgramCard({ program, allocations }) {
     return "text-green-600";
   };
 
+  const statusConfig = getStatusConfig(program.status);
+  const StatusIcon = statusConfig.icon;
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -50,8 +109,12 @@ function ProgramCard({ program, allocations }) {
               {program.program_type} • {program.coordinator}
             </CardDescription>
           </div>
-          <Badge variant={program.status === 'active' ? 'success' : 'secondary'}>
-            {program.status}
+          <Badge 
+            variant={statusConfig.variant} 
+            className={`flex items-center gap-1 ${statusConfig.bgClass} ${statusConfig.colorClass}`}
+          >
+            <StatusIcon className="h-3 w-3" />
+            {statusConfig.label}
           </Badge>
         </div>
       </CardHeader>
@@ -261,6 +324,8 @@ export default function ProgramAllocationTracker() {
                   ? (program.budget_spent / program.budget_allocated) * 100 
                   : 0;
                 const remaining = program.budget_allocated - program.budget_spent;
+                const statusConfig = getStatusConfig(program.status);
+                const StatusIcon = statusConfig.icon;
 
                 return (
                   <TableRow key={program.id}>
@@ -284,8 +349,12 @@ export default function ProgramAllocationTracker() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={program.status === 'active' ? 'success' : 'secondary'}>
-                        {program.status}
+                      <Badge 
+                        variant={statusConfig.variant} 
+                        className={`flex items-center gap-1 ${statusConfig.bgClass} ${statusConfig.colorClass}`}
+                      >
+                        <StatusIcon className="h-3 w-3" />
+                        {statusConfig.label}
                       </Badge>
                     </TableCell>
                   </TableRow>
