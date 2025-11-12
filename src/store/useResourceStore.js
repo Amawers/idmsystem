@@ -275,20 +275,13 @@ export const useResourceStore = create((set, get) => ({
 		set({ loading: true, error: null });
 		
 		try {
-			const { data: { user } } = await supabase.auth.getUser();
-			
 			const updateData = {
 				status: newStatus,
 				updated_at: new Date().toISOString(),
 			};
 			
-			if (newStatus === 'rejected') {
+			if (newStatus === 'rejected' && notes) {
 				updateData.rejection_reason = notes;
-			}
-			
-			if (newStatus === 'approved') {
-				updateData.approved_by = user?.id;
-				updateData.approved_at = new Date().toISOString();
 			}
 			
 			const { data, error } = await supabase
@@ -298,7 +291,10 @@ export const useResourceStore = create((set, get) => ({
 				.select()
 				.single();
 			
-			if (error) throw error;
+			if (error) {
+				console.error('Supabase update error:', error);
+				throw error;
+			}
 			
 			set(state => ({
 				requests: state.requests.map(req => req.id === requestId ? data : req),
@@ -313,6 +309,7 @@ export const useResourceStore = create((set, get) => ({
 		} catch (err) {
 			console.error('Error updating request status:', err);
 			set({ error: err.message, loading: false });
+			throw err;
 		}
 	},
 

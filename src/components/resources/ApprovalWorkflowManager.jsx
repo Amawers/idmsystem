@@ -62,7 +62,7 @@ function StatusBadge({ status }) {
   const variants = {
     submitted: { variant: "secondary", icon: Clock, label: "Pending" },
     under_review: { variant: "default", icon: Eye, label: "Under Review" },
-    approved: { variant: "success", icon: CheckCircle, label: "Approved" },
+    head_approved: { variant: "success", icon: CheckCircle, label: "Approved" },
     rejected: { variant: "destructive", icon: XCircle, label: "Rejected" },
     disbursed: { variant: "success", icon: CheckCircle, label: "Disbursed" },
   };
@@ -252,7 +252,7 @@ function RequestDetailsDialog({ request, open, onOpenChange, onApprove, onReject
               <Button
                 variant="destructive"
                 onClick={handleReject}
-                disabled={actionLoading}
+                disabled={actionLoading || !notes.trim()}
               >
                 <XCircle className="h-4 w-4 mr-2" />
                 Reject
@@ -288,6 +288,7 @@ export default function ApprovalWorkflowManager() {
     updateRequestStatus,
     fetchRequests,
     submitRequest,
+    updateStock,
     loading,
   } = useResourceStore();
 
@@ -313,7 +314,7 @@ export default function ApprovalWorkflowManager() {
   // Filter requests based on user role and filter selection
   const filteredRequests = storeRequests.filter(req => {
     if (filter === "pending" && req.status !== "submitted") return false;
-    if (filter === "approved" && !["approved", "disbursed"].includes(req.status)) return false;
+    if (filter === "approved" && !["head_approved", "disbursed"].includes(req.status)) return false;
     if (filter === "rejected" && req.status !== "rejected") return false;
     return true;
   });
@@ -341,7 +342,40 @@ export default function ApprovalWorkflowManager() {
   };
 
   const handleApprove = async (requestId, notes) => {
-    await updateRequestStatus(requestId, "approved", notes);
+    try {
+      // Find the request to get item_id and quantity
+      const request = storeRequests.find(r => r.id === requestId);
+      
+      if (!request) {
+        throw new Error("Request not found");
+      }
+
+      // Update the request status to head_approved (matching DB constraint)
+      await updateRequestStatus(requestId, "head_approved", notes);
+
+      // If the request has an item_id (linked to inventory), deduct the stock
+      if (request.item_id && request.quantity) {
+        try {
+          await updateStock(
+            request.item_id,
+            -Math.abs(request.quantity), // Negative to deduct
+            'allocation',
+            `Stock allocated for approved request ${request.request_number}${notes ? ': ' + notes : ''}`
+          );
+        } catch (stockError) {
+          console.error("Error updating stock:", stockError);
+          // Show warning but don't fail the approval
+          alert(`Request approved, but stock deduction failed: ${stockError.message}. Please update inventory manually.`);
+        }
+      }
+
+      // Refresh the requests list
+      await fetchRequests();
+    } catch (error) {
+      console.error("Error approving request:", error);
+      alert(`Failed to approve request: ${error.message}`);
+      throw error;
+    }
   };
 
   const handleReject = async (requestId, notes) => {
@@ -384,7 +418,7 @@ export default function ApprovalWorkflowManager() {
             size="sm"
             onClick={() => setFilter("approved")}
           >
-            Approved ({storeRequests.filter(r => ["approved", "disbursed"].includes(r.status)).length})
+            Approved ({storeRequests.filter(r => ["head_approved", "disbursed"].includes(r.status)).length})
           </Button>
           <Button
             variant={filter === "rejected" ? "default" : "outline"}
