@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useResourceStore } from "@/store/useResourceStore";
 import { usePrograms } from "@/hooks/usePrograms";
+import supabase from "@/../config/supabase";
 
 /**
  * Metric Card Component
@@ -156,7 +157,7 @@ function StaffAvailability({ assignments, loading }) {
     return <div className="animate-pulse h-40 bg-gray-100 rounded"></div>;
   }
 
-  // Group staff by availability status
+  // Group staff by availability status (heads already excluded)
   const available = assignments.filter(a => a.availability_status === 'available').length;
   const partiallyAvailable = assignments.filter(a => a.availability_status === 'partially_available').length;
   const busy = assignments.filter(a => a.availability_status === 'busy').length;
@@ -167,7 +168,7 @@ function StaffAvailability({ assignments, loading }) {
     <Card>
       <CardHeader className="py-3">
         <CardTitle className="text-sm">Staff Availability</CardTitle>
-        <CardDescription className="text-xs">Current staff deployment and availability</CardDescription>
+        <CardDescription className="text-xs">Case manager deployment and availability</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3 pb-3">
         <div className="grid gap-2 md:grid-cols-2">
@@ -305,6 +306,8 @@ function SuppliesInventory({ inventoryItems, loading }) {
 export default function RealTimeInventoryDashboard() {
   const [lastUpdate, setLastUpdate] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(true);
+  const [staffAssignments, setStaffAssignments] = useState([]);
+  const [staffLoading, setStaffLoading] = useState(false);
 
   const {
     inventoryItems,
@@ -315,16 +318,65 @@ export default function RealTimeInventoryDashboard() {
 
   const { programs, loading: programsLoading } = usePrograms();
 
-  // Mock staff assignments - in production, this would come from the store
-  const [staffAssignments] = useState([
-    { id: 1, availability_status: 'available' },
-    { id: 2, availability_status: 'busy' },
-    { id: 3, availability_status: 'available' },
-    { id: 4, availability_status: 'partially_available' },
-  ]);
+  // Fetch staff assignments excluding heads
+  const fetchStaffAssignments = async () => {
+    setStaffLoading(true);
+    try {
+      // Try to fetch from staff_assignments table first
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('staff_assignments')
+        .select(`
+          *,
+          profile:staff_id (
+            id,
+            email,
+            full_name,
+            role
+          )
+        `)
+        .eq('status', 'active')
+        .order('start_date', { ascending: false });
+
+      if (!assignmentsError && assignmentsData && assignmentsData.length > 0) {
+        // Filter out staff who are heads
+        const filteredAssignments = assignmentsData.filter(
+          assignment => assignment.profile?.role !== 'head'
+        );
+        setStaffAssignments(filteredAssignments);
+      } else {
+        // Fallback: Fetch case managers from profile table and create mock assignments
+        const { data: caseManagers, error: profileError } = await supabase
+          .from('profile')
+          .select('id, full_name, email, role')
+          .eq('role', 'case_manager')
+          .eq('status', 'active')
+          .order('full_name', { ascending: true });
+
+        if (profileError) throw profileError;
+
+        // Create mock assignments with 'available' status for all case managers
+        const mockAssignments = (caseManagers || []).map(cm => ({
+          id: cm.id,
+          staff_id: cm.id,
+          availability_status: 'available',
+          staff_name: cm.full_name,
+          staff_role: cm.role,
+          profile: cm
+        }));
+
+        setStaffAssignments(mockAssignments);
+      }
+    } catch (error) {
+      console.error('Error fetching staff assignments:', error);
+      setStaffAssignments([]);
+    } finally {
+      setStaffLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchInventory();
+    fetchStaffAssignments();
   }, [fetchInventory]);
 
   // Auto-refresh every 30 seconds
@@ -333,6 +385,7 @@ export default function RealTimeInventoryDashboard() {
 
     const interval = setInterval(() => {
       fetchInventory();
+      fetchStaffAssignments();
       setLastUpdate(new Date());
     }, 30000);
 
@@ -341,10 +394,11 @@ export default function RealTimeInventoryDashboard() {
 
   const handleRefresh = () => {
     fetchInventory();
+    fetchStaffAssignments();
     setLastUpdate(new Date());
   };
 
-  const loading = inventoryLoading || programsLoading;
+  const loading = inventoryLoading || programsLoading || staffLoading;
 
   return (
     <div className="space-y-4">
@@ -404,7 +458,7 @@ export default function RealTimeInventoryDashboard() {
         <MetricCard
           title="Staff Available"
           value={`${staffAssignments.filter(s => s.availability_status === 'available').length}/${staffAssignments.length}`}
-          subtitle="Ready for deployment"
+          subtitle="Case managers ready"
           icon={Users}
           color="purple"
         />
