@@ -22,7 +22,6 @@ import UserManagement from "./pages/head/UserManagement";
 import ResourceDashboard from "./pages/head/ResourceDashboard";
 import ResourceStock from "./pages/head/ResourceStock";
 import ResourceApprovals from "./pages/head/ResourceApprovals";
-import ResourceEligibility from "./pages/head/ResourceEligibility";
 import ResourceStaff from "./pages/head/ResourceStaff";
 import ResourcePrograms from "./pages/head/ResourcePrograms";
 import ResourceAlerts from "./pages/head/ResourceAlerts";
@@ -218,18 +217,6 @@ export default function App() {
             <ProtectedRoute allowedRoles={["case_manager", "head"]}>
               <Layout>
                 <ResourceApprovals />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Protected route: Resource Eligibility (case manager + head) */}
-        <Route
-          path="/resource/eligibility"
-          element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
-              <Layout>
-                <ResourceEligibility />
               </Layout>
             </ProtectedRoute>
           }
