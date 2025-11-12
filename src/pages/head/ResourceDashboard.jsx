@@ -23,7 +23,7 @@ export default function ResourceDashboard() {
         <div>
           <h2 className="text-xl font-bold tracking-tight">Resource Dashboard</h2>
           <p className="text-sm text-muted-foreground">
-            Real-time resource inventory overview with auto-updates
+            Comprehensive resource inventory overview and tracking
           </p>
         </div>
       </div>
