@@ -185,25 +185,6 @@ export default function RequestSubmissionDialog({ open, onOpenChange, onSubmit }
                 </div>
               </div>
 
-              {/* Priority */}
-              <div className="space-y-2">
-                <Label>Priority</Label>
-                <Select 
-                  value={formData.priority} 
-                  onValueChange={(value) => setFormData({ ...formData, priority: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="critical">Critical</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="low">Low</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               {/* Unit Cost and Unit Measure */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
@@ -225,6 +206,25 @@ export default function RequestSubmissionDialog({ open, onOpenChange, onSubmit }
                     placeholder="Select item first"
                   />
                 </div>
+              </div>
+
+              {/* Priority */}
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select 
+                  value={formData.priority} 
+                  onValueChange={(value) => setFormData({ ...formData, priority: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="critical">Critical</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Total Amount Display */}
