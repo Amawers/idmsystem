@@ -93,6 +93,7 @@ import useDataTable from "@/hooks/useDataTable";
 import TableRenderer from "@/components/cases/tables/TableRenderer";
 import EnrollCaseDialog from "@/components/cases/EnrollCaseDialog";
 import ProgramEnrollmentBadge from "@/components/cases/ProgramEnrollmentBadge";
+import { useCaseManagers } from "@/hooks/useCaseManagers";
 
 // =============================================
 // DATA VALIDATION SCHEMA
@@ -1073,6 +1074,16 @@ export function DataTable({
 	// Tracks which tab is currently active (default: "CASE")
 	const [activeTab, setActiveTab] = useState("CASE");
 
+	// Case manager filter state for each tab
+	const [caseCaseManager, setCaseCaseManager] = useState("all");
+	const [ciclcarCaseManager, setCiclcarCaseManager] = useState("all");
+	const [farCaseManager, setFarCaseManager] = useState("all");
+	const [facCaseManager, setFacCaseManager] = useState("all");
+	const [ivacCaseManager, setIvacCaseManager] = useState("all");
+
+	// Fetch case managers
+	const { caseManagers, loading: caseManagersLoading } = useCaseManagers();
+
 	// Handle Case row click for editing
 	function handleEditCaseRow(record) {
 		console.log("Editing Case record:", record);
@@ -1233,35 +1244,42 @@ export function DataTable({
 
 	// Initialize CASE table with dynamic columns (handler referenced above)
 	const caseTable = useDataTable({
-		initialData: caseData,
+		initialData: caseCaseManager === "all" ? caseData : caseData.filter(row => row.case_manager === caseCaseManager),
 		// CHANGED: pass edit handler so actions column calls this for “Edit”
 		columns: createCaseColumns(handleEnrollClick, handleEditCaseRow, handleDeleteClick),
 	});
 
 	// Table instance for CICLCAR tab with its own data and column definitions
 	const ciclcarTable = useDataTable({
-		initialData: ciclcarData,
+		initialData: ciclcarCaseManager === "all" ? ciclcarData : ciclcarData.filter(row => row.case_manager === ciclcarCaseManager),
 		columns: ciclcarColumns(handleEnrollClick, handleEditCiclcarRow, handleDeleteClick),
 		onRowClick: handleEditCiclcarRow, // Add click handler for CICL/CAR rows
 	});
 
 	// Table instance for FAR tab with its own data and column definitions
 	const farTable = useDataTable({
-		initialData: farData,
+		initialData: farCaseManager === "all" ? farData : farData.filter(row => row.case_manager === farCaseManager),
 		columns: farColumns(handleEnrollClick, handleEditFarRow, handleDeleteClick),
 		onRowClick: handleEditFarRow, // Add click handler for FAR rows
 	});
 
 	// Table instance for FAC tab with its own data and column definitions
 	const facTable = useDataTable({
-		initialData: facData,
+		initialData: facCaseManager === "all" ? facData : facData.filter(row => row.case_manager === facCaseManager),
 		columns: facColumns(handleEditFacRow, handleDeleteClick),
 		onRowClick: handleEditFacRow, // Add click handler for FAC rows
 	});
 
 	// Table instance for IVAC tab with its own data and column definitions
 	const ivacTable = useDataTable({
-		initialData: ivacData,
+		initialData: ivacCaseManager === "all" ? ivacData : ivacData.filter(row => {
+			// IVAC uses case_managers array, so check if it includes the selected manager
+			if (Array.isArray(row.case_managers)) {
+				return row.case_managers.includes(ivacCaseManager);
+			}
+			// Fallback to single case_manager field
+			return row.case_manager === ivacCaseManager;
+		}),
 		columns: ivacColumns(handleEditIvacRow, handleDeleteClick),
 		onRowClick: handleEditIvacRow, // Add click handler for IVAC rows
 	});
@@ -1355,6 +1373,25 @@ export function DataTable({
 					{/* CASES SECTION */}
 					{activeTab === "CASE" && (
 						<>
+							{/* Case Manager Filter */}
+							<Select value={caseCaseManager} onValueChange={setCaseCaseManager}>
+								<SelectTrigger className="w-[180px] h-9">
+									<SelectValue placeholder="Filter by Manager" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All Managers</SelectItem>
+									{caseManagersLoading ? (
+										<SelectItem value="loading" disabled>Loading...</SelectItem>
+									) : (
+										caseManagers.map((manager) => (
+											<SelectItem key={manager.id} value={manager.full_name}>
+												{manager.full_name}
+											</SelectItem>
+										))
+									)}
+								</SelectContent>
+							</Select>
+
 							{/* Refresh Button */}
 							<Button 
 								variant="outline" 
@@ -1437,6 +1474,25 @@ export function DataTable({
 					{/* CICLCAR SECTION */}
 					{activeTab === "CICLCAR" && (
 						<>
+							{/* Case Manager Filter */}
+							<Select value={ciclcarCaseManager} onValueChange={setCiclcarCaseManager}>
+								<SelectTrigger className="w-[180px] h-9">
+									<SelectValue placeholder="Filter by Manager" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All Managers</SelectItem>
+									{caseManagersLoading ? (
+										<SelectItem value="loading" disabled>Loading...</SelectItem>
+									) : (
+										caseManagers.map((manager) => (
+											<SelectItem key={manager.id} value={manager.full_name}>
+												{manager.full_name}
+											</SelectItem>
+										))
+									)}
+								</SelectContent>
+							</Select>
+
 							{/* Refresh Button */}
 							<Button 
 								variant="outline" 
@@ -1519,6 +1575,25 @@ export function DataTable({
 					{/* FAR SECTION */}
 					{activeTab === "FAR" && (
 						<>
+							{/* Case Manager Filter */}
+							<Select value={farCaseManager} onValueChange={setFarCaseManager}>
+								<SelectTrigger className="w-[180px] h-9">
+									<SelectValue placeholder="Filter by Manager" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All Managers</SelectItem>
+									{caseManagersLoading ? (
+										<SelectItem value="loading" disabled>Loading...</SelectItem>
+									) : (
+										caseManagers.map((manager) => (
+											<SelectItem key={manager.id} value={manager.full_name}>
+												{manager.full_name}
+											</SelectItem>
+										))
+									)}
+								</SelectContent>
+							</Select>
+
 							{/* Refresh Button */}
 							<Button 
 								variant="outline" 
@@ -1601,6 +1676,25 @@ export function DataTable({
 					{/* FAC SECTION */}
 					{activeTab === "FAC" && (
 						<>
+							{/* Case Manager Filter */}
+							<Select value={facCaseManager} onValueChange={setFacCaseManager}>
+								<SelectTrigger className="w-[180px] h-9">
+									<SelectValue placeholder="Filter by Manager" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All Managers</SelectItem>
+									{caseManagersLoading ? (
+										<SelectItem value="loading" disabled>Loading...</SelectItem>
+									) : (
+										caseManagers.map((manager) => (
+											<SelectItem key={manager.id} value={manager.full_name}>
+												{manager.full_name}
+											</SelectItem>
+										))
+									)}
+								</SelectContent>
+							</Select>
+
 							{/* Refresh Button */}
 							<Button 
 								variant="outline" 
@@ -1684,6 +1778,25 @@ export function DataTable({
 					{/* IVAC SECTION */}
 					{activeTab === "IVAC" && (
 						<>
+							{/* Case Manager Filter */}
+							<Select value={ivacCaseManager} onValueChange={setIvacCaseManager}>
+								<SelectTrigger className="w-[180px] h-9">
+									<SelectValue placeholder="Filter by Manager" />
+								</SelectTrigger>
+								<SelectContent>
+									<SelectItem value="all">All Managers</SelectItem>
+									{caseManagersLoading ? (
+										<SelectItem value="loading" disabled>Loading...</SelectItem>
+									) : (
+										caseManagers.map((manager) => (
+											<SelectItem key={manager.id} value={manager.full_name}>
+												{manager.full_name}
+											</SelectItem>
+										))
+									)}
+								</SelectContent>
+							</Select>
+
 							{/* Refresh Button */}
 							<Button 
 								variant="outline" 
