@@ -362,43 +362,6 @@ export default function ProgramDashboard() {
           </CardContent>
         </Card>
       </div>
-
-      {/* Budget Overview */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Budget Overview</CardTitle>
-          <CardDescription>Financial allocation and utilization</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">Total Allocated</span>
-                <span className="text-sm font-medium">
-                  ₱{programStats.totalBudget.toLocaleString()}
-                </span>
-              </div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-muted-foreground">Total Spent</span>
-                <span className="text-sm font-medium text-primary">
-                  ₱{programStats.totalSpent.toLocaleString()}
-                </span>
-              </div>
-              <Progress value={budgetUtilization} className="h-3" />
-              <p className="text-xs text-muted-foreground mt-2">
-                {budgetUtilization.toFixed(1)}% of budget utilized
-              </p>
-            </div>
-            
-            <div className="flex items-center justify-between pt-2 border-t">
-              <span className="text-sm font-medium">Remaining Budget</span>
-              <span className="text-lg font-bold text-green-600">
-                ₱{(programStats.totalBudget - programStats.totalSpent).toLocaleString()}
-              </span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
