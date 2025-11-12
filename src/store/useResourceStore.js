@@ -544,6 +544,101 @@ export const useResourceStore = create((set, get) => ({
 	},
 
 	/**
+	 * Delete inventory item
+	 * @param {string} itemId - Item ID to delete
+	 */
+	deleteInventoryItem: async (itemId) => {
+		set({ loading: true, error: null });
+		
+		try {
+			// Delete from Supabase
+			const { error } = await supabase
+				.from('inventory_items')
+				.delete()
+				.eq('id', itemId);
+
+			if (error) {
+				console.error('Supabase delete error:', error);
+				throw error;
+			}
+
+			// Update local state
+			set(state => ({
+				inventoryItems: state.inventoryItems.filter(item => item.id !== itemId),
+				filteredInventory: state.filteredInventory.filter(item => item.id !== itemId),
+				loading: false,
+			}));
+
+			// Recompute stats
+			const stats = get().computeInventoryStats(get().inventoryItems);
+			set({ inventoryStats: stats });
+
+		} catch (err) {
+			console.error('Error deleting inventory item:', err);
+			set({ error: err.message, loading: false });
+			throw err;
+		}
+	},
+
+	/**
+	 * Update inventory item details (excluding stock quantity)
+	 * @param {string} itemId - Item ID to update
+	 * @param {Object} updateData - Updated item data
+	 */
+	updateInventoryItem: async (itemId, updateData) => {
+		set({ loading: true, error: null });
+		
+		try {
+			// Prepare update data
+			const updates = {
+				item_name: updateData.item_name,
+				category: updateData.category,
+				unit_cost: parseFloat(updateData.unit_cost),
+				minimum_stock: parseFloat(updateData.minimum_stock),
+				unit_of_measure: updateData.unit_of_measure,
+				location: updateData.location || null,
+				description: updateData.description || null,
+				updated_at: new Date().toISOString(),
+			};
+
+			// Update in Supabase
+			const { data, error } = await supabase
+				.from('inventory_items')
+				.update(updates)
+				.eq('id', itemId)
+				.select()
+				.single();
+
+			if (error) {
+				console.error('Supabase update error:', error);
+				throw error;
+			}
+
+			// Update local state
+			set(state => ({
+				inventoryItems: state.inventoryItems.map(item => 
+					item.id === itemId ? data : item
+				),
+				filteredInventory: state.filteredInventory.map(item => 
+					item.id === itemId ? data : item
+				),
+				loading: false,
+			}));
+
+			// Recompute stats
+			const stats = get().computeInventoryStats(get().inventoryItems);
+			set({ inventoryStats: stats });
+
+			return data;
+
+		} catch (err) {
+			console.error('Error updating inventory item:', err);
+			set({ error: err.message, loading: false });
+			throw err;
+		}
+	},
+
+	/**
 	 * Allocate inventory items to a program/request
 	 * @param {Object} allocationData - Allocation details
 	 */

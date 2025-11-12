@@ -43,6 +43,24 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Package,
   Plus,
   Minus,
@@ -54,6 +72,8 @@ import {
   PlusCircle,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  Trash2,
 } from "lucide-react";
 import { useResourceStore } from "@/store/useResourceStore";
 import { useAuthStore } from "@/store/authStore";
@@ -293,6 +313,193 @@ function ViewItemDetailsDialog({ item, open, onClose }) {
 }
 
 /**
+ * Edit Item Record Dialog
+ */
+function EditItemDialog({ item, open, onClose, onSuccess }) {
+  const [formData, setFormData] = useState({
+    item_name: "",
+    category: "supplies",
+    unit_cost: "",
+    minimum_stock: "",
+    unit_of_measure: "",
+    location: "",
+    description: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const { updateInventoryItem } = useResourceStore();
+
+  // Initialize form data when item changes
+  useEffect(() => {
+    if (item) {
+      setFormData({
+        item_name: item.item_name || "",
+        category: item.category || "supplies",
+        unit_cost: item.unit_cost || "",
+        minimum_stock: item.minimum_stock || "",
+        unit_of_measure: item.unit_of_measure || "",
+        location: item.location || "",
+        description: item.description || "",
+      });
+    }
+  }, [item]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      await updateInventoryItem(item.id, formData);
+      onSuccess?.();
+      onClose();
+    } catch (error) {
+      console.error("Error updating item:", error);
+      alert("Failed to update item. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (!item) return null;
+
+  return (
+    <Dialog open={open} onOpenChange={onClose}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-lg">Edit Item Record</DialogTitle>
+          <DialogDescription className="text-xs">
+            Update inventory item information (stock quantity cannot be changed here)
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label className="text-xs">Item Name *</Label>
+              <Input
+                placeholder="e.g., Rice 25kg"
+                value={formData.item_name}
+                onChange={(e) => setFormData({ ...formData, item_name: e.target.value })}
+                required
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Category *</Label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData({ ...formData, category: value })}
+              >
+                <SelectTrigger className="h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="food" className="text-xs">Food & Nutrition</SelectItem>
+                  <SelectItem value="medicine" className="text-xs">Medicine & Health</SelectItem>
+                  <SelectItem value="supplies" className="text-xs">Supplies</SelectItem>
+                  <SelectItem value="equipment" className="text-xs">Equipment</SelectItem>
+                  <SelectItem value="material" className="text-xs">Materials</SelectItem>
+                  <SelectItem value="other" className="text-xs">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Unit Cost (₱) *</Label>
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={formData.unit_cost}
+                onChange={(e) => setFormData({ ...formData, unit_cost: e.target.value })}
+                required
+                min="0"
+                step="0.01"
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Unit of Measure *</Label>
+              <Input
+                placeholder="e.g., sack, box, piece"
+                value={formData.unit_of_measure}
+                onChange={(e) => setFormData({ ...formData, unit_of_measure: e.target.value })}
+                required
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Current Stock (Read-only)</Label>
+              <Input
+                type="number"
+                value={item.current_stock}
+                disabled
+                className="h-8 text-xs bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">
+                Use "Adjust Stock" to change quantity
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs">Minimum Stock (Alert Level) *</Label>
+              <Input
+                type="number"
+                placeholder="0"
+                value={formData.minimum_stock}
+                onChange={(e) => setFormData({ ...formData, minimum_stock: e.target.value })}
+                required
+                min="0"
+                step="0.01"
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label className="text-xs">Storage Location</Label>
+              <Input
+                placeholder="e.g., Warehouse A, Office Storage"
+                value={formData.location}
+                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                className="h-8 text-xs"
+              />
+            </div>
+
+            <div className="space-y-2 md:col-span-2">
+              <Label className="text-xs">Description (Optional)</Label>
+              <Textarea
+                placeholder="Additional details about the item..."
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={2}
+                className="text-xs resize-none"
+              />
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={loading}
+              size="sm"
+              className="h-7 text-xs"
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={loading} size="sm" className="h-7 text-xs">
+              {loading ? "Updating..." : "Update Item"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
  * Add New Item Dialog
  */
 function AddItemDialog({ open, onClose, onSuccess }) {
@@ -485,9 +692,11 @@ export default function StockManagement() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedItem, setSelectedItem] = useState(null);
   const [showAdjustDialog, setShowAdjustDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
@@ -497,6 +706,7 @@ export default function StockManagement() {
     fetchInventory,
     loading,
     submitRequest,
+    deleteInventoryItem,
   } = useResourceStore();
 
   const { role } = useAuthStore();
@@ -514,6 +724,11 @@ export default function StockManagement() {
     setShowAdjustDialog(true);
   };
 
+  const handleEditItem = (item) => {
+    setSelectedItem(item);
+    setShowEditDialog(true);
+  };
+
   const handleViewDetails = (item) => {
     setSelectedItem(item);
     setShowDetailsDialog(true);
@@ -521,6 +736,25 @@ export default function StockManagement() {
 
   const handleSuccess = () => {
     fetchInventory();
+  };
+
+  const handleDeleteClick = (item) => {
+    setSelectedItem(item);
+    setShowDeleteDialog(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!selectedItem) return;
+
+    try {
+      await deleteInventoryItem(selectedItem.id);
+      setShowDeleteDialog(false);
+      setSelectedItem(null);
+      fetchInventory();
+    } catch (error) {
+      console.error("Failed to delete item:", error);
+      alert("Failed to delete item. Please try again.");
+    }
   };
 
   const handleSubmitRequest = async (requestData) => {
@@ -744,19 +978,59 @@ export default function StockManagement() {
                         <StatusBadge status={item.status} />
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleAdjustStock(item);
-                            }}
-                            className="h-6 px-2 text-xs"
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => e.stopPropagation()}
+                              className="h-6 px-2 text-xs cursor-pointer"
+                            >
+                              <Edit className="h-3 w-3" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewDetails(item);
+                              }}
+                            >
+                              <Eye className="mr-2 h-4 w-4" />
+                              View Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEditItem(item);
+                              }}
+                            >
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Record
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAdjustStock(item);
+                              }}
+                            >
+                              <Package className="mr-2 h-4 w-4" />
+                              Adjust Stock
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteClick(item);
+                              }}
+                              className="text-red-600"
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Record
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))
@@ -834,6 +1108,16 @@ export default function StockManagement() {
             onSuccess={handleSuccess}
           />
           
+          <EditItemDialog
+            item={selectedItem}
+            open={showEditDialog}
+            onClose={() => {
+              setShowEditDialog(false);
+              setSelectedItem(null);
+            }}
+            onSuccess={handleSuccess}
+          />
+          
           <ViewItemDetailsDialog
             item={selectedItem}
             open={showDetailsDialog}
@@ -856,6 +1140,25 @@ export default function StockManagement() {
         onOpenChange={setShowRequestDialog}
         onSubmit={handleSubmitRequest}
       />
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete <span className="font-semibold">{selectedItem?.item_name}</span> from the inventory.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setSelectedItem(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
