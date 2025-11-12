@@ -60,18 +60,18 @@ import RequestSubmissionDialog from "./RequestSubmissionDialog";
  */
 function StatusBadge({ status }) {
   const variants = {
-    submitted: { variant: "secondary", icon: Clock, label: "Pending" },
-    under_review: { variant: "default", icon: Eye, label: "Under Review" },
-    head_approved: { variant: "success", icon: CheckCircle, label: "Approved" },
-    rejected: { variant: "destructive", icon: XCircle, label: "Rejected" },
-    disbursed: { variant: "success", icon: CheckCircle, label: "Disbursed" },
+    submitted: { variant: "secondary", icon: Clock, label: "Pending", className: "" },
+    under_review: { variant: "default", icon: Eye, label: "Under Review", className: "" },
+    head_approved: { variant: "success", icon: CheckCircle, label: "Approved", className: "bg-green-100 text-green-800 border-green-300" },
+    rejected: { variant: "destructive", icon: XCircle, label: "Rejected", className: "" },
+    disbursed: { variant: "success", icon: CheckCircle, label: "Disbursed", className: "bg-green-100 text-green-800 border-green-300" },
   };
 
   const config = variants[status] || variants.submitted;
   const Icon = config.icon;
 
   return (
-    <Badge variant={config.variant} className="flex items-center gap-1 w-fit">
+    <Badge variant={config.variant} className={`flex items-center gap-1 w-fit ${config.className}`}>
       <Icon className="h-3 w-3" />
       {config.label}
     </Badge>
