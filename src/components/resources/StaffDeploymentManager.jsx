@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Users, Plus, Calendar, AlertCircle, CheckCircle } from "lucide-react";
+import { Users, Plus, Calendar, AlertCircle, CheckCircle, RefreshCw } from "lucide-react";
 import supabase from "@/../config/supabase";
 
 function StaffAvailabilityCard({ staff }) {
@@ -138,6 +138,20 @@ export default function StaffDeploymentManager() {
 
   return (
     <div className="space-y-4">
+      {/* Refresh Button */}
+      <div className="flex justify-end">
+        <Button 
+          onClick={fetchStaffAssignments} 
+          disabled={loading}
+          variant="outline"
+          size="sm"
+          className="cursor-pointer"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          Refresh Data
+        </Button>
+      </div>
+
       {/* Header Stats */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
