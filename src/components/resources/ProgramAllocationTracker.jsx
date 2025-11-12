@@ -14,6 +14,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -23,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TrendingUp, TrendingDown, DollarSign, Package, Users } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, Package, Users, RefreshCw } from "lucide-react";
 import { usePrograms } from "@/hooks/usePrograms";
 import { useResourceAllocations } from "@/hooks/useResourceAllocations";
 
@@ -106,10 +107,29 @@ function ProgramCard({ program, allocations }) {
 }
 
 export default function ProgramAllocationTracker() {
-  const { programs, loading: programsLoading } = usePrograms({ status: 'active' });
-  const { allocations, budgetUtilization, loading: allocationsLoading } = useResourceAllocations();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const { programs, loading: programsLoading, fetchPrograms } = usePrograms({ status: 'active' });
+  const { allocations, budgetUtilization, loading: allocationsLoading, refresh: refreshAllocations } = useResourceAllocations();
   
   const loading = programsLoading || allocationsLoading;
+
+  /**
+   * Handle manual refresh of programs and allocations data
+   * @async
+   */
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await Promise.all([
+        fetchPrograms(),
+        refreshAllocations ? refreshAllocations() : Promise.resolve()
+      ]);
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
 
   // Calculate summary statistics
   const totalPrograms = programs.length;
@@ -127,6 +147,20 @@ export default function ProgramAllocationTracker() {
 
   return (
     <div className="space-y-4">
+      {/* Header with Refresh Button */}
+      <div className="flex items-center justify-end">
+        <Button 
+          onClick={handleRefresh} 
+          disabled={isRefreshing || loading}
+          variant="outline"
+          size="sm"
+          className="cursor-pointer"
+        >
+          <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
