@@ -378,12 +378,12 @@ function AddItemDialog({ open, onClose, onSuccess }) {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs">Initial Stock *</Label>
+              <Label className="text-xs">Unit Cost (₱) *</Label>
               <Input
                 type="number"
-                placeholder="0"
-                value={formData.current_stock}
-                onChange={(e) => setFormData({ ...formData, current_stock: e.target.value })}
+                placeholder="0.00"
+                value={formData.unit_cost}
+                onChange={(e) => setFormData({ ...formData, unit_cost: e.target.value })}
                 required
                 min="0"
                 step="0.01"
@@ -403,12 +403,12 @@ function AddItemDialog({ open, onClose, onSuccess }) {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs">Unit Cost (₱) *</Label>
+              <Label className="text-xs">Initial Stock *</Label>
               <Input
                 type="number"
-                placeholder="0.00"
-                value={formData.unit_cost}
-                onChange={(e) => setFormData({ ...formData, unit_cost: e.target.value })}
+                placeholder="0"
+                value={formData.current_stock}
+                onChange={(e) => setFormData({ ...formData, current_stock: e.target.value })}
                 required
                 min="0"
                 step="0.01"
