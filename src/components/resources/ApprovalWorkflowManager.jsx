@@ -53,201 +53,6 @@ import {
 import { useResourceStore } from "@/store/useResourceStore";
 import { useAuthStore } from "@/store/authStore";
 
-// Sample data for testing
-const SAMPLE_REQUESTS = [
-  {
-    id: 1,
-    request_number: "REQ-2025-001",
-    item_description: "Rice 25kg - NFA Quality",
-    quantity: 50,
-    unit: "sacks",
-    unit_cost: 1850,
-    total_amount: 92500,
-    requester_name: "Maria Santos",
-    program_name: "Food Assistance Program",
-    beneficiary_name: "Juan Dela Cruz",
-    request_type: "material",
-    request_category: "food",
-    priority: "urgent",
-    status: "submitted",
-    purpose: "Monthly food assistance for 50 beneficiary families",
-    justification: "Stock depletion due to increased demand from new beneficiaries",
-    created_at: "2025-11-01T10:30:00",
-  },
-  {
-    id: 2,
-    request_number: "REQ-2025-002",
-    item_description: "Educational Supplies Bundle",
-    quantity: 100,
-    unit: "sets",
-    unit_cost: 450,
-    total_amount: 45000,
-    requester_name: "Pedro Reyes",
-    program_name: "Education Support Program",
-    beneficiary_name: "Ana Garcia",
-    request_type: "material",
-    request_category: "supplies",
-    priority: "normal",
-    status: "approved",
-    purpose: "School supplies for children enrolled in the program",
-    justification: "School year preparation for Q2 2025",
-    created_at: "2025-10-28T14:20:00",
-  },
-  {
-    id: 3,
-    request_number: "REQ-2025-003",
-    item_description: "Medical Supplies - First Aid Kits",
-    quantity: 30,
-    unit: "boxes",
-    unit_cost: 2500,
-    total_amount: 75000,
-    requester_name: "Dr. Rosa Cruz",
-    program_name: "Health Services Program",
-    beneficiary_name: null,
-    request_type: "material",
-    request_category: "medicine",
-    priority: "urgent",
-    status: "submitted",
-    purpose: "Replenishment of medical supplies for health centers",
-    justification: "Current stock below minimum threshold, critical for emergency response",
-    created_at: "2025-11-02T09:15:00",
-  },
-  {
-    id: 4,
-    request_number: "REQ-2025-004",
-    item_description: "Relief Goods Packs",
-    quantity: 200,
-    unit: "packs",
-    unit_cost: 850,
-    total_amount: 170000,
-    requester_name: "Carlos Martinez",
-    program_name: "Disaster Response Program",
-    beneficiary_name: null,
-    request_type: "material",
-    request_category: "relief_goods",
-    priority: "urgent",
-    status: "submitted",
-    purpose: "Emergency relief distribution for affected areas",
-    justification: "Typhoon preparation and response requirements",
-    created_at: "2025-11-03T11:45:00",
-  },
-  {
-    id: 5,
-    request_number: "REQ-2025-005",
-    item_description: "Office Supplies - Paper, Pens, Folders",
-    quantity: 1,
-    unit: "lot",
-    unit_cost: 15000,
-    total_amount: 15000,
-    requester_name: "Linda Gomez",
-    program_name: null,
-    beneficiary_name: null,
-    request_type: "material",
-    request_category: "supplies",
-    priority: "normal",
-    status: "rejected",
-    purpose: "Office administrative supplies for Q4",
-    justification: "Standard quarterly procurement",
-    rejection_reason: "Budget allocation for office supplies has been exhausted for this quarter",
-    created_at: "2025-10-25T16:00:00",
-  },
-  {
-    id: 6,
-    request_number: "REQ-2025-006",
-    item_description: "Financial Assistance - Livelihood Grant",
-    quantity: 20,
-    unit: "grants",
-    unit_cost: 5000,
-    total_amount: 100000,
-    requester_name: "Elena Torres",
-    program_name: "Livelihood Development Program",
-    beneficiary_name: "Multiple Beneficiaries",
-    request_type: "financial",
-    request_category: "financial",
-    priority: "normal",
-    status: "approved",
-    purpose: "Seed capital for beneficiaries starting small businesses",
-    justification: "Part of Q4 livelihood program implementation plan",
-    created_at: "2025-10-30T13:30:00",
-  },
-  {
-    id: 7,
-    request_number: "REQ-2025-007",
-    item_description: "Transportation Allowance",
-    quantity: 15,
-    unit: "beneficiaries",
-    unit_cost: 500,
-    total_amount: 7500,
-    requester_name: "Miguel Santos",
-    program_name: "Skills Training Program",
-    beneficiary_name: "Training Participants",
-    request_type: "financial",
-    request_category: "financial",
-    priority: "normal",
-    status: "submitted",
-    purpose: "Transportation support for training attendees",
-    justification: "Required for November training sessions",
-    created_at: "2025-11-04T08:00:00",
-  },
-  {
-    id: 8,
-    request_number: "REQ-2025-008",
-    item_description: "Vitamin Supplements for Children",
-    quantity: 500,
-    unit: "bottles",
-    unit_cost: 280,
-    total_amount: 140000,
-    requester_name: "Dr. Carmen Reyes",
-    program_name: "Nutrition Program",
-    beneficiary_name: null,
-    request_type: "material",
-    request_category: "medicine",
-    priority: "urgent",
-    status: "submitted",
-    purpose: "Nutritional supplementation for malnourished children",
-    justification: "High malnutrition rate detected in recent health assessments",
-    created_at: "2025-11-05T07:30:00",
-  },
-  {
-    id: 9,
-    request_number: "REQ-2025-009",
-    item_description: "Hygiene Kits",
-    quantity: 150,
-    unit: "kits",
-    unit_cost: 650,
-    total_amount: 97500,
-    requester_name: "Sofia Lopez",
-    program_name: "Community Health Program",
-    beneficiary_name: null,
-    request_type: "material",
-    request_category: "supplies",
-    priority: "normal",
-    status: "disbursed",
-    purpose: "Distribution to low-income families",
-    justification: "Part of community health initiative",
-    created_at: "2025-10-20T10:00:00",
-  },
-  {
-    id: 10,
-    request_number: "REQ-2025-010",
-    item_description: "Construction Materials for House Repair",
-    quantity: 10,
-    unit: "sets",
-    unit_cost: 8500,
-    total_amount: 85000,
-    requester_name: "Roberto Cruz",
-    program_name: "Housing Assistance Program",
-    beneficiary_name: "Storm-affected Families",
-    request_type: "material",
-    request_category: "supplies",
-    priority: "urgent",
-    status: "approved",
-    purpose: "Emergency housing repairs for typhoon-damaged homes",
-    justification: "Urgent need to provide shelter before rainy season",
-    created_at: "2025-11-01T15:00:00",
-  },
-];
-
 /**
  * Status Badge Component
  */
@@ -346,7 +151,7 @@ function RequestDetailsDialog({ request, open, onOpenChange, onApprove, onReject
               </div>
               <div>
                 <Label className="text-[10px] text-muted-foreground">Requester</Label>
-                <p className="text-xs font-medium">{request.requester_name}</p>
+                <p className="text-xs font-medium">{request.requester?.full_name || 'Unknown'}</p>
               </div>
               <div>
                 <Label className="text-[10px] text-muted-foreground">Program</Label>
@@ -489,9 +294,6 @@ export default function ApprovalWorkflowManager() {
     fetchRequests();
   }, [fetchRequests]);
 
-  // Use sample data if store is empty, otherwise use store data
-  const requests = storeRequests.length > 0 ? storeRequests : SAMPLE_REQUESTS;
-
   // Handle refresh
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -505,14 +307,14 @@ export default function ApprovalWorkflowManager() {
   };
 
   // Filter requests based on user role and filter selection
-  const filteredRequests = requests.filter(req => {
+  const filteredRequests = storeRequests.filter(req => {
     if (filter === "pending" && req.status !== "submitted") return false;
     if (filter === "approved" && !["approved", "disbursed"].includes(req.status)) return false;
     if (filter === "rejected" && req.status !== "rejected") return false;
     return true;
   });
 
-  const pendingCount = requests.filter(r => r.status === "submitted").length;
+  const pendingCount = storeRequests.filter(r => r.status === "submitted").length;
 
   // Pagination calculations
   const totalFiltered = filteredRequests.length;
@@ -552,7 +354,7 @@ export default function ApprovalWorkflowManager() {
             size="sm"
             onClick={() => setFilter("all")}
           >
-            All ({requests.length})
+            All ({storeRequests.length})
           </Button>
           <Button
             variant={filter === "pending" ? "default" : "outline"}
@@ -566,14 +368,14 @@ export default function ApprovalWorkflowManager() {
             size="sm"
             onClick={() => setFilter("approved")}
           >
-            Approved ({requests.filter(r => ["approved", "disbursed"].includes(r.status)).length})
+            Approved ({storeRequests.filter(r => ["approved", "disbursed"].includes(r.status)).length})
           </Button>
           <Button
             variant={filter === "rejected" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("rejected")}
           >
-            Rejected ({requests.filter(r => r.status === "rejected").length})
+            Rejected ({storeRequests.filter(r => r.status === "rejected").length})
           </Button>
         </div>
         
@@ -631,7 +433,7 @@ export default function ApprovalWorkflowManager() {
                         {request.quantity} {request.unit}
                       </div>
                     </TableCell>
-                    <TableCell>{request.requester_name}</TableCell>
+                    <TableCell>{request.requester?.full_name || 'Unknown'}</TableCell>
                     <TableCell className="font-medium">
                       ₱{request.total_amount?.toLocaleString()}
                     </TableCell>

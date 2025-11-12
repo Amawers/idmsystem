@@ -96,6 +96,7 @@ export const useResourceStore = create((set, get) => ({
 		set({ loading: true, error: null });
 		
 		try {
+			// First, fetch resource requests
 			let query = supabase
 				.from('resource_requests')
 				.select('*')
@@ -132,7 +133,7 @@ export const useResourceStore = create((set, get) => ({
 				query = query.gte('created_at', from).lte('created_at', to);
 			}
 			
-			const { data, error } = await query;
+			const { data: requests, error } = await query;
 			
 			if (error) {
 				console.error('Supabase error:', error);
@@ -152,6 +153,38 @@ export const useResourceStore = create((set, get) => ({
 				});
 				return;
 			}
+			
+			// Manually join with profile table
+			// Get unique user IDs from requested_by field
+			const userIds = [...new Set(
+				(requests || [])
+					.map(req => req.requested_by)
+					.filter(id => id !== null)
+			)];
+			
+			let profiles = {};
+			
+			// Fetch profiles for all requesters
+			if (userIds.length > 0) {
+				const { data: profileData, error: profileError } = await supabase
+					.from('profile')
+					.select('id, full_name, email, role')
+					.in('id', userIds);
+				
+				if (!profileError && profileData) {
+					// Create a map of user_id -> profile for quick lookup
+					profiles = profileData.reduce((acc, profile) => {
+						acc[profile.id] = profile;
+						return acc;
+					}, {});
+				}
+			}
+			
+			// Attach requester profile to each request
+			const data = (requests || []).map(request => ({
+				...request,
+				requester: request.requested_by ? profiles[request.requested_by] || null : null
+			}));
 			
 			// Compute statistics
 			const stats = get().computeRequestStats(data || []);
