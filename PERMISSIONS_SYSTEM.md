@@ -57,6 +57,20 @@ The IDM System implements a robust, granular permissions system that allows head
 - `delete_case` - Delete case records
 - ~~`export_cases`~~ - **REMOVED** - All users can export case data by default
 
+### Program Management
+- `create_program` - Create new intervention programs
+- `edit_program` - Modify existing program details
+- `delete_program` - Delete programs and associated data
+- `create_enrollment` - Enroll cases into programs
+- `edit_enrollment` - Update enrollment progress and status
+- `delete_enrollment` - Remove case enrollments
+- `create_service_delivery` - Log service delivery sessions
+- `edit_service_delivery` - Modify service delivery records
+- `delete_service_delivery` - Delete service delivery logs
+- `create_partner` - Add partner organizations
+- `edit_partner` - Update partner information
+- `delete_partner` - Remove partner organizations
+
 ### User Management
 - `view_users` - View user accounts
 - `create_user` - Create new user accounts
@@ -79,9 +93,37 @@ The IDM System implements a robust, granular permissions system that allows head
 - `view_resources` - View resource allocation
 - `allocate_resources` - Manage resource allocation
 
+## Integration Points
+
+### Case Management (`src/components/cases/data-table.jsx`)
+- **INTAKE SHEET button** - Protected by `create_case`
+- **Edit menu items** - Protected by `edit_case`
+- **Delete menu items** - Protected by `delete_case`
+- Applied across all case tabs: CASE, CICL/CAR, FAR, FAC, IVAC
+
 ### Program Management
-- `view_programs` - View program information
-- `manage_programs` - Create and modify programs
+#### Programs Tab (`src/components/programs/ProgramCatalog.jsx`)
+- **Create Program button** (in ProgramCatalogPage) - Protected by `create_program`
+- **Edit Program menu item** - Protected by `edit_program`
+- **Delete Program menu item** - Protected by `delete_program`
+
+#### Enrollments Tab (`src/components/programs/EnrollmentTable.jsx`)
+- **New Enrollment button** - Protected by `create_enrollment`
+- **Update Progress menu item** - Protected by `edit_enrollment`
+- **Delete Enrollment menu item** - Protected by `delete_enrollment`
+
+#### Service Delivery Tab (`src/components/programs/ServiceDeliveryTable.jsx`)
+- **Log Session button** - Protected by `create_service_delivery`
+- **Edit Log menu item** - Protected by `edit_service_delivery`
+- **Delete Log menu item** - Protected by `delete_service_delivery`
+
+#### Partners Tab (`src/components/programs/PartnersTable.jsx`)
+- **Add Partner button** - Protected by `create_partner`
+- **Edit Partner menu item** - Protected by `edit_partner`
+- **Delete Partner menu item** - Protected by `delete_partner`
+
+### Program Management Main Page (`src/pages/case manager/ProgramManagement.jsx`)
+- **Create Program button** (header) - Protected by `create_program`
 
 ## Usage Examples
 

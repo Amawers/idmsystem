@@ -70,6 +70,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import PermissionGuard from "@/components/PermissionGuard";
 
 /**
  * Service Delivery Table Component
@@ -278,10 +279,12 @@ export default function ServiceDeliveryTable() {
                 <RefreshCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
                 Refresh
               </Button>
-              <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
-                <Plus className="mr-2 h-4 w-4" />
-                Log Session
-              </Button>
+              <PermissionGuard permission="create_service_delivery">
+                <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Log Session
+                </Button>
+              </PermissionGuard>
             </div>
           </div>
         </CardHeader>
@@ -422,18 +425,22 @@ export default function ServiceDeliveryTable() {
                               <Eye className="mr-2 h-4 w-4" />
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEdit(delivery)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit Log
-                            </DropdownMenuItem>
+                            <PermissionGuard permission="edit_service_delivery">
+                              <DropdownMenuItem onClick={() => handleEdit(delivery)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                Edit Log
+                              </DropdownMenuItem>
+                            </PermissionGuard>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              className="text-red-600"
-                              onClick={() => handleDeleteConfirm(delivery)}
-                            >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete Log
-                            </DropdownMenuItem>
+                            <PermissionGuard permission="delete_service_delivery">
+                              <DropdownMenuItem 
+                                className="text-red-600"
+                                onClick={() => handleDeleteConfirm(delivery)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete Log
+                              </DropdownMenuItem>
+                            </PermissionGuard>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

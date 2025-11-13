@@ -38,6 +38,7 @@ import {
 import { Search, MoreHorizontal, Plus, Trash2, Edit, AlertCircle, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import PermissionGuard from "@/components/PermissionGuard";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -310,10 +311,12 @@ export default function EnrollmentTable() {
                 <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              <Button onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
-                <Plus className="mr-2 h-4 w-4" />
-                New Enrollment
-              </Button>
+              <PermissionGuard permission="create_enrollment">
+                <Button onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Enrollment
+                </Button>
+              </PermissionGuard>
             </div>
           </div>
         </CardHeader>
@@ -465,18 +468,22 @@ export default function EnrollmentTable() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuItem onClick={() => handleUpdate(enrollment)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                Update Progress
-                              </DropdownMenuItem>
+                              <PermissionGuard permission="edit_enrollment">
+                                <DropdownMenuItem onClick={() => handleUpdate(enrollment)}>
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Update Progress
+                                </DropdownMenuItem>
+                              </PermissionGuard>
                               <DropdownMenuSeparator />
-                              <DropdownMenuItem 
-                                onClick={() => handleDeleteClick(enrollment)}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete Enrollment
-                              </DropdownMenuItem>
+                              <PermissionGuard permission="delete_enrollment">
+                                <DropdownMenuItem 
+                                  onClick={() => handleDeleteClick(enrollment)}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete Enrollment
+                                </DropdownMenuItem>
+                              </PermissionGuard>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>

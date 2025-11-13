@@ -56,6 +56,7 @@ import { toast } from "sonner";
 import ProgramDetailsDialog from "./ProgramDetailsDialog";
 import CreateProgramDialog from "./CreateProgramDialog";
 import ViewEnrollmentsDialog from "./ViewEnrollmentsDialog";
+import PermissionGuard from "@/components/PermissionGuard";
 
 const statusColors = {
   active: "bg-green-500",
@@ -367,22 +368,26 @@ export default function ProgramCatalog() {
                             <Eye className="mr-2 h-4 w-4" />
                             View Details
                           </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleEdit(program)}>
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit Program
-                          </DropdownMenuItem>
+                          <PermissionGuard permission="edit_program">
+                            <DropdownMenuItem onClick={() => handleEdit(program)}>
+                              <Edit className="mr-2 h-4 w-4" />
+                              Edit Program
+                            </DropdownMenuItem>
+                          </PermissionGuard>
                           <DropdownMenuItem onClick={() => handleViewEnrollmentsDialog(program)}>
                             <Users className="mr-2 h-4 w-4" />
                             View Enrollments
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem 
-                            className="text-red-600"
-                            onClick={() => handleDeleteClick(program)}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete Program
-                          </DropdownMenuItem>
+                          <PermissionGuard permission="delete_program">
+                            <DropdownMenuItem 
+                              className="text-red-600"
+                              onClick={() => handleDeleteClick(program)}
+                            >
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete Program
+                            </DropdownMenuItem>
+                          </PermissionGuard>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>

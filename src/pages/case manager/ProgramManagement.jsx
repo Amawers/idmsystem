@@ -22,6 +22,7 @@ import EnrollmentTable from "@/components/programs/EnrollmentTable";
 import ServiceDeliveryTable from "@/components/programs/ServiceDeliveryTable";
 import PartnersTable from "@/components/programs/PartnersTable";
 import CreateProgramDialog from "@/components/programs/CreateProgramDialog";
+import PermissionGuard from "@/components/PermissionGuard";
 
 /**
  * Program Management Page Component
@@ -52,10 +53,12 @@ export default function ProgramManagement() {
           </p>
         </div>
         {activeTab === "programs" && (
-          <Button onClick={() => setCreateDialogOpen(true)}>
-            <Plus className="mr-2 h-4 w-4" />
-            Create Program
-          </Button>
+          <PermissionGuard permission="create_program">
+            <Button onClick={() => setCreateDialogOpen(true)}>
+              <Plus className="mr-2 h-4 w-4" />
+              Create Program
+            </Button>
+          </PermissionGuard>
         )}
       </div>
 

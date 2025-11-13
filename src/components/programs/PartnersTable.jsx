@@ -50,6 +50,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, MoreHorizontal, Plus, Building2, Phone, Mail, AlertCircle, Loader2, FileText, RefreshCw, Edit, Eye, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import PermissionGuard from "@/components/PermissionGuard";
 
 /**
  * Partners Table Component
@@ -377,15 +378,17 @@ export default function PartnersTable() {
                 <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              <Button size="sm" onClick={() => {
-                resetForm();
-                setIsAddDialogOpen(true);
-              }}
-              className="cursor-pointer"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Add Partner
-              </Button>
+              <PermissionGuard permission="create_partner">
+                <Button size="sm" onClick={() => {
+                  resetForm();
+                  setIsAddDialogOpen(true);
+                }}
+                className="cursor-pointer"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Partner
+                </Button>
+              </PermissionGuard>
             </div>
           </div>
         </CardHeader>
@@ -486,16 +489,20 @@ export default function PartnersTable() {
                             <DropdownMenuItem onClick={() => handleViewDetails(partner)}>
                               View Details
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleEditPartner(partner)}>
-                              Edit Partner
-                            </DropdownMenuItem>
+                            <PermissionGuard permission="edit_partner">
+                              <DropdownMenuItem onClick={() => handleEditPartner(partner)}>
+                                Edit Partner
+                              </DropdownMenuItem>
+                            </PermissionGuard>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-red-600"
-                              onClick={() => handleDeletePartner(partner)}
-                            >
-                              Delete Partner
-                            </DropdownMenuItem>
+                            <PermissionGuard permission="delete_partner">
+                              <DropdownMenuItem
+                                className="text-red-600"
+                                onClick={() => handleDeletePartner(partner)}
+                              >
+                                Delete Partner
+                              </DropdownMenuItem>
+                            </PermissionGuard>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>

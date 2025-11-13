@@ -57,25 +57,41 @@ export function useUserPermissions() {
 		if (role === "head") {
 			// Grant all permissions to heads (view_cases and export_cases are accessible to all users)
 			setPermissions([
+				// Case Management
 				"create_case",
 				"edit_case",
 				"delete_case",
+				// Program Management
+				"create_program",
+				"edit_program",
+				"delete_program",
+				"create_enrollment",
+				"edit_enrollment",
+				"delete_enrollment",
+				"create_service_delivery",
+				"edit_service_delivery",
+				"delete_service_delivery",
+				"create_partner",
+				"edit_partner",
+				"delete_partner",
+				// User Management
 				"view_users",
 				"create_user",
 				"edit_user",
 				"delete_user",
 				"manage_roles",
+				// System & Security
 				"view_audit_logs",
 				"manage_permissions",
 				"view_dashboard",
 				"system_settings",
+				// Reports & Analytics
 				"view_reports",
 				"create_reports",
 				"export_reports",
+				// Resource Management
 				"view_resources",
 				"allocate_resources",
-				"view_programs",
-				"manage_programs",
 			]);
 			setLoading(false);
 			return;

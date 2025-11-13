@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import ProgramCatalog from "@/components/programs/ProgramCatalog";
 import CreateProgramDialog from "@/components/programs/CreateProgramDialog";
+import PermissionGuard from "@/components/PermissionGuard";
 
 /**
  * Program Catalog Page Component
@@ -39,10 +40,12 @@ export default function ProgramCatalogPage() {
             Manage intervention programs and services
           </p>
         </div>
-        <Button onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
-          <Plus className="mr-2 h-4 w-4" />
-          Create Program
-        </Button>
+        <PermissionGuard permission="create_program">
+          <Button onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
+            <Plus className="mr-2 h-4 w-4" />
+            Create Program
+          </Button>
+        </PermissionGuard>
       </div>
 
       {/* Catalog Component */}
