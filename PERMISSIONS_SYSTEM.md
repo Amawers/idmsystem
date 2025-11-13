@@ -71,6 +71,14 @@ The IDM System implements a robust, granular permissions system that allows head
 - `edit_partner` - Update partner information
 - `delete_partner` - Remove partner organizations
 
+### Resource Management
+- `create_resource_request` - Submit new resource requests
+- `update_inventory_stock` - **HEAD ONLY** - Update stock levels and track usage
+- `create_inventory_item` - **HEAD ONLY** - Add new items to inventory
+- `approve_resource_request` - **HEAD ONLY** - Approve pending resource requests
+- `reject_resource_request` - **HEAD ONLY** - Reject resource requests
+- `manage_staff_assignment` - **HEAD ONLY** - Assign staff to service delivery tasks
+
 ### User Management
 - `view_users` - View user accounts
 - `create_user` - Create new user accounts
@@ -124,6 +132,17 @@ The IDM System implements a robust, granular permissions system that allows head
 
 ### Program Management Main Page (`src/pages/case manager/ProgramManagement.jsx`)
 - **Create Program button** (header) - Protected by `create_program`
+
+### Resource Management
+#### Resource Allocation (`src/components/resources/ResourceAllocation.jsx`)
+- **Submit Resource Request button** - Protected by `create_resource_request`
+
+#### Requests Table (`src/components/resources/RequestsTable.jsx`)
+- **Approve button** - Protected by `approve_resource_request`
+- **Reject button** - Protected by `reject_resource_request`
+
+#### Resource Inventory (`src/components/resources/ResourceInventory.jsx`)
+- **Update Stock button** - Protected by `update_inventory_stock`
 
 ## Usage Examples
 
@@ -251,6 +270,29 @@ Components check permissions via:
 UI elements shown/hidden accordingly
 ```
 
+## HEAD-ONLY Permissions
+
+Some permissions are exclusively reserved for heads and **cannot be assigned to case managers** through the Role Permissions interface. These are critical administrative functions that require executive authority:
+
+### Resource Management HEAD-ONLY Permissions:
+- `update_inventory_stock` - Only heads can update stock levels
+- `create_inventory_item` - Only heads can add new inventory items
+- `approve_resource_request` - Only heads can approve resource requests
+- `reject_resource_request` - Only heads can reject resource requests  
+- `manage_staff_assignment` - Only heads can manage staff deployments
+
+**Implementation Details:**
+- These permissions are automatically granted to all head users
+- In the Role Permissions page, these permissions are:
+  - Disabled (cannot be toggled) for case managers
+  - Marked with a "Head Only" badge
+  - Shown with reduced opacity to indicate unavailability
+- Attempting to assign these to case managers will show an error toast
+- These permissions are marked as "HEAD ONLY" in their descriptions in the database
+
+**Why HEAD-ONLY?**
+These permissions control critical approval workflows, inventory item creation, stock management, and resource allocation decisions that should remain under executive supervision to maintain accountability and proper authorization chains.
+
 ## Security Notes
 
 - **Row Level Security (RLS)** is enabled on all permission tables
@@ -263,6 +305,7 @@ UI elements shown/hidden accordingly
   - Timestamp
 - Permissions are checked on the client-side for UI control
 - **Backend validation should also be implemented** for API endpoints
+- **HEAD-ONLY permissions** cannot be assigned to case managers even by heads
 
 ## Best Practices
 

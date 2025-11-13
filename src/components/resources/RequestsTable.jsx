@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, XCircle, Eye } from "lucide-react";
+import PermissionGuard from "@/components/PermissionGuard";
 
 /**
  * Requests Table Component
@@ -88,20 +89,24 @@ export default function RequestsTable({
                   <div className="flex justify-end gap-2">
                     {showApprovalActions && request.status === "submitted" && (
                       <>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onUpdateStatus(request.id, "head_approved", "Approved")}
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => onUpdateStatus(request.id, "rejected", "Rejected")}
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </Button>
+                        <PermissionGuard permission="approve_resource_request">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onUpdateStatus(request.id, "head_approved", "Approved")}
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                        </PermissionGuard>
+                        <PermissionGuard permission="reject_resource_request">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => onUpdateStatus(request.id, "rejected", "Rejected")}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </PermissionGuard>
                       </>
                     )}
                     <Button size="sm" variant="outline">

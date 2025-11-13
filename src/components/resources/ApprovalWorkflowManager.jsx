@@ -54,6 +54,7 @@ import {
 import { useResourceStore } from "@/store/useResourceStore";
 import { useAuthStore } from "@/store/authStore";
 import RequestSubmissionDialog from "./RequestSubmissionDialog";
+import PermissionGuard from "@/components/PermissionGuard";
 
 /**
  * Status Badge Component
@@ -430,15 +431,17 @@ export default function ApprovalWorkflowManager() {
         </div>
         
         <div className="flex gap-2">
-          <Button
-            variant="default"
-            size="sm"
-            onClick={() => setShowNewRequestDialog(true)}
-            className="cursor-pointer"
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            New Request
-          </Button>
+          <PermissionGuard permission="create_resource_request">
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => setShowNewRequestDialog(true)}
+              className="cursor-pointer"
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              New Request
+            </Button>
+          </PermissionGuard>
           <Button
             variant="outline"
             size="sm"

@@ -158,6 +158,15 @@ export default function RolePermissions() {
 	});
 
 	// ================= PERMISSION HELPERS =================
+	// HEAD-ONLY permissions that cannot be assigned to case managers
+	const HEAD_ONLY_PERMISSIONS = [
+		'update_inventory_stock',
+		'create_inventory_item',
+		'approve_resource_request',
+		'reject_resource_request',
+		'manage_staff_assignment'
+	];
+
 	// Group permissions by category
 	const groupedPermissions = permissions.reduce((acc, perm) => {
 		if (!acc[perm.category]) {
@@ -166,6 +175,21 @@ export default function RolePermissions() {
 		acc[perm.category].push(perm);
 		return acc;
 	}, {});
+
+	// Check if a permission can be assigned to the selected user
+	const canAssignPermission = (permissionName) => {
+		if (!selectedUser) return false;
+		
+		// If user is a head, they already have all permissions by default
+		if (selectedUser.role === 'head') return false;
+		
+		// Case managers cannot be assigned HEAD-ONLY permissions
+		if (selectedUser.role === 'case_manager' && HEAD_ONLY_PERMISSIONS.includes(permissionName)) {
+			return false;
+		}
+		
+		return true;
+	};
 
 	// Check if a permission is currently enabled for the selected user
 	const isPermissionEnabled = (permissionId) => {
@@ -183,8 +207,14 @@ export default function RolePermissions() {
 	};
 
 	// Toggle permission (staged)
-	const togglePermission = (permissionId, currentState) => {
+	const togglePermission = (permissionId, permissionName, currentState) => {
 		if (!selectedUser) return;
+		
+		// Prevent toggling HEAD-ONLY permissions for case managers
+		if (!canAssignPermission(permissionName)) {
+			toast.error("This permission can only be assigned to heads");
+			return;
+		}
 
 		const key = `${selectedUser.id}_${permissionId}`;
 		const newState = !currentState;
@@ -454,15 +484,20 @@ export default function RolePermissions() {
 																	pendingChanges[
 																		`${selectedUser.id}_${perm.id}`
 																	] !== undefined;
+																const isHeadOnly = HEAD_ONLY_PERMISSIONS.includes(perm.name);
+																const canAssign = canAssignPermission(perm.name);
+																const isDisabled = !canAssign || selectedUser?.role === 'head';
 
 																return (
-																	<TableRow key={perm.id}>
+																	<TableRow key={perm.id} className={isHeadOnly && selectedUser?.role === 'case_manager' ? 'opacity-50' : ''}>
 																		<TableCell>
 																			<Checkbox
 																				checked={isEnabled}
+																				disabled={isDisabled}
 																				onCheckedChange={() =>
 																					togglePermission(
 																						perm.id,
+																						perm.name,
 																						isEnabled
 																					)
 																				}
@@ -470,12 +505,26 @@ export default function RolePermissions() {
 																		</TableCell>
 																		<TableCell className="font-medium">
 																			{perm.display_name}
+																			{isHeadOnly && selectedUser?.role === 'case_manager' && (
+																				<Badge variant="secondary" className="ml-2 text-xs">
+																					<Shield className="h-3 w-3 mr-1" />
+																					Head Only
+																				</Badge>
+																			)}
 																		</TableCell>
 																		<TableCell className="text-sm text-muted-foreground">
 																			{perm.description}
 																		</TableCell>
 																		<TableCell className="text-right">
-																			{isChanged ? (
+																			{selectedUser?.role === 'head' ? (
+																				<Badge
+																					variant="outline"
+																					className="border-blue-500 text-blue-600"
+																				>
+																					<Shield className="h-3 w-3 mr-1" />
+																					Default
+																				</Badge>
+																			) : isChanged ? (
 																				<Badge
 																					variant="outline"
 																					className="border-orange-500 text-orange-600"

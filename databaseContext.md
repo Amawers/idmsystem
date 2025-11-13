@@ -473,6 +473,20 @@ INSERT INTO permissions (name, display_name, description, category) VALUES
   ('delete_partner', 'Delete Partner', 'Allows removing partner organizations', 'Program Management')
 ON CONFLICT (name) DO NOTHING;
 
+-- Resource Management Permissions (Added: 2025-11-13)
+-- Note: update_inventory_stock, create_inventory_item, approve_resource_request, reject_resource_request, and manage_staff_assignment are HEAD-ONLY permissions
+INSERT INTO permissions (name, display_name, description, category) VALUES
+  -- Resource Request Permissions (case managers can create requests)
+  ('create_resource_request', 'Create Resource Request', 'Allows submitting new resource requests', 'Resource Management'),
+  
+  -- HEAD-ONLY Permissions (approval, rejection, staff management, inventory management - cannot be assigned to case managers)
+  ('update_inventory_stock', 'Update Inventory Stock', 'HEAD ONLY - Allows updating stock levels', 'Resource Management'),
+  ('create_inventory_item', 'Create Inventory Item', 'HEAD ONLY - Allows adding new inventory items', 'Resource Management'),
+  ('approve_resource_request', 'Approve Resource Request', 'HEAD ONLY - Allows approving resource requests', 'Resource Management'),
+  ('reject_resource_request', 'Reject Resource Request', 'HEAD ONLY - Allows rejecting resource requests', 'Resource Management'),
+  ('manage_staff_assignment', 'Manage Staff Assignment', 'HEAD ONLY - Allows managing staff deployments and assignments', 'Resource Management')
+ON CONFLICT (name) DO NOTHING;
+
 create table public.profile (
   id uuid not null,
   full_name text null,

@@ -22,6 +22,7 @@ import InventoryTable from "./InventoryTable";
 import InventoryAlerts from "./InventoryAlerts";
 import InventoryByCategory from "./InventoryByCategory";
 import StockUpdateDialog from "./StockUpdateDialog";
+import PermissionGuard from "@/components/PermissionGuard";
 
 /**
  * Resource Inventory Dashboard Component
@@ -113,10 +114,12 @@ export default function ResourceInventory() {
             Monitor stock levels, track usage, and manage resources
           </p>
         </div>
-        <Button onClick={() => setShowStockUpdateDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Update Stock
-        </Button>
+        <PermissionGuard permission="update_inventory_stock">
+          <Button onClick={() => setShowStockUpdateDialog(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Update Stock
+          </Button>
+        </PermissionGuard>
       </div>
 
       {/* Key Metrics */}

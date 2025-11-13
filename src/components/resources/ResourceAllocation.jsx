@@ -23,6 +23,7 @@ import RequestsTable from "./RequestsTable";
 import AllocationOverview from "./AllocationOverview";
 import BudgetUtilizationCard from "./BudgetUtilizationCard";
 import PendingApprovalsCard from "./PendingApprovalsCard";
+import PermissionGuard from "@/components/PermissionGuard";
 
 /**
  * Resource Allocation Component
@@ -123,10 +124,12 @@ export default function ResourceAllocation() {
             Submit requests, track approvals, and manage disbursements
           </p>
         </div>
-        <Button onClick={() => setShowSubmitDialog(true)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Submit Resource Request
-        </Button>
+        <PermissionGuard permission="create_resource_request">
+          <Button onClick={() => setShowSubmitDialog(true)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Submit Resource Request
+          </Button>
+        </PermissionGuard>
       </div>
 
       {/* Key Metrics */}

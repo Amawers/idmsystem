@@ -74,6 +74,13 @@ export function useUserPermissions() {
 				"create_partner",
 				"edit_partner",
 				"delete_partner",
+				// Resource Management
+				"create_resource_request",
+				"update_inventory_stock",
+				"create_inventory_item",
+				"approve_resource_request",
+				"reject_resource_request",
+				"manage_staff_assignment",
 				// User Management
 				"view_users",
 				"create_user",
