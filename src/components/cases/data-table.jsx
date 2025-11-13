@@ -45,6 +45,9 @@ import { Edit, ChevronLeft, ChevronRight } from "lucide-react";
 import { z } from "zod";
 import { formatDistanceToNow } from "date-fns";
 
+// Permission Guard
+import { PermissionGuard } from "@/components/PermissionGuard";
+
 // UI components from shadcn
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -263,21 +266,25 @@ const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
-					<DropdownMenuItem onClick={(e) => {
-						e.stopPropagation();
-						handleEditClick(row.original, "CASE");
-					}}>Edit</DropdownMenuItem>
+					<PermissionGuard permission="edit_case">
+						<DropdownMenuItem onClick={(e) => {
+							e.stopPropagation();
+							handleEditClick(row.original, "CASE");
+						}}>Edit</DropdownMenuItem>
+					</PermissionGuard>
 					<DropdownMenuItem onClick={(e) => {
 						e.stopPropagation();
 						handleEnrollClick(row.original, "CASE");
 					}}>Enroll Program</DropdownMenuItem>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive" onClick={(e) => {
-						e.stopPropagation();
-						handleDeleteClick(row.original, "CASE");
-					}}>
-						Delete
-					</DropdownMenuItem>
+					<PermissionGuard permission="delete_case">
+						<DropdownMenuItem variant="destructive" onClick={(e) => {
+							e.stopPropagation();
+							handleDeleteClick(row.original, "CASE");
+						}}>
+							Delete
+						</DropdownMenuItem>
+					</PermissionGuard>
 				</DropdownMenuContent>
 			</DropdownMenu>
 		),
@@ -411,21 +418,25 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) =
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
-					<DropdownMenuItem onClick={(e) => {
-						e.stopPropagation();
-						handleEditClick(row.original, "CICLCAR");
-					}}>Edit</DropdownMenuItem>
+					<PermissionGuard permission="edit_case">
+						<DropdownMenuItem onClick={(e) => {
+							e.stopPropagation();
+							handleEditClick(row.original, "CICLCAR");
+						}}>Edit</DropdownMenuItem>
+					</PermissionGuard>
 					<DropdownMenuItem onClick={(e) => {
 						e.stopPropagation();
 						handleEnrollClick(row.original, "CICLCAR");
 					}}>Enroll Program</DropdownMenuItem>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive" onClick={(e) => {
-						e.stopPropagation();
-						handleDeleteClick(row.original, "CICLCAR");
-					}}>
-						Delete
-					</DropdownMenuItem>
+					<PermissionGuard permission="delete_case">
+						<DropdownMenuItem variant="destructive" onClick={(e) => {
+							e.stopPropagation();
+							handleDeleteClick(row.original, "CICLCAR");
+						}}>
+							Delete
+						</DropdownMenuItem>
+					</PermissionGuard>
 				</DropdownMenuContent>
 			</DropdownMenu>
 		),
@@ -578,21 +589,25 @@ const farColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) => [
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
-					<DropdownMenuItem onClick={(e) => {
-						e.stopPropagation();
-						handleEditClick(row.original, "FAR");
-					}}>Edit</DropdownMenuItem>
+					<PermissionGuard permission="edit_case">
+						<DropdownMenuItem onClick={(e) => {
+							e.stopPropagation();
+							handleEditClick(row.original, "FAR");
+						}}>Edit</DropdownMenuItem>
+					</PermissionGuard>
 					<DropdownMenuItem onClick={(e) => {
 						e.stopPropagation();
 						handleEnrollClick(row.original, "FAR");
 					}}>Enroll Program</DropdownMenuItem>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive" onClick={(e) => {
-						e.stopPropagation();
-						handleDeleteClick(row.original, "FAR");
-					}}>
-						Delete
-					</DropdownMenuItem>
+					<PermissionGuard permission="delete_case">
+						<DropdownMenuItem variant="destructive" onClick={(e) => {
+							e.stopPropagation();
+							handleDeleteClick(row.original, "FAR");
+						}}>
+							Delete
+						</DropdownMenuItem>
+					</PermissionGuard>
 				</DropdownMenuContent>
 			</DropdownMenu>
 		),
@@ -728,17 +743,21 @@ const facColumns = (handleEditClick, handleDeleteClick) => [
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
-					<DropdownMenuItem onClick={(e) => {
-						e.stopPropagation();
-						handleEditClick(row.original, "FAC");
-					}}>Edit</DropdownMenuItem>
+					<PermissionGuard permission="edit_case">
+						<DropdownMenuItem onClick={(e) => {
+							e.stopPropagation();
+							handleEditClick(row.original, "FAC");
+						}}>Edit</DropdownMenuItem>
+					</PermissionGuard>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive" onClick={(e) => {
-						e.stopPropagation();
-						handleDeleteClick(row.original, "FAC");
-					}}>
-						Delete
-					</DropdownMenuItem>
+					<PermissionGuard permission="delete_case">
+						<DropdownMenuItem variant="destructive" onClick={(e) => {
+							e.stopPropagation();
+							handleDeleteClick(row.original, "FAC");
+						}}>
+							Delete
+						</DropdownMenuItem>
+					</PermissionGuard>
 				</DropdownMenuContent>
 			</DropdownMenu>
 		),
@@ -873,17 +892,21 @@ const ivacColumns = (handleEditClick, handleDeleteClick) => [
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
-					<DropdownMenuItem onClick={(e) => {
-						e.stopPropagation();
-						handleEditClick(row.original, "IVAC");
-					}}>Edit</DropdownMenuItem>
+					<PermissionGuard permission="edit_case">
+						<DropdownMenuItem onClick={(e) => {
+							e.stopPropagation();
+							handleEditClick(row.original, "IVAC");
+						}}>Edit</DropdownMenuItem>
+					</PermissionGuard>
 					<DropdownMenuSeparator />
-					<DropdownMenuItem variant="destructive" onClick={(e) => {
-						e.stopPropagation();
-						handleDeleteClick(row.original, "IVAC");
-					}}>
-						Delete
-					</DropdownMenuItem>
+					<PermissionGuard permission="delete_case">
+						<DropdownMenuItem variant="destructive" onClick={(e) => {
+							e.stopPropagation();
+							handleDeleteClick(row.original, "IVAC");
+						}}>
+							Delete
+						</DropdownMenuItem>
+					</PermissionGuard>
 				</DropdownMenuContent>
 			</DropdownMenu>
 		),
@@ -1443,17 +1466,19 @@ export function DataTable({
 							</DropdownMenu>
 
 							{/* INTAKE SHEET BUTTON*/}
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => setOpenIntakeSheet(true)}
-								className="cursor-pointer"
-							>
-								<IconPlus />
-								<span className="hidden lg:inline">
-									INTAKE SHEET
-								</span>
-							</Button>
+							<PermissionGuard permission="create_case">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => setOpenIntakeSheet(true)}
+									className="cursor-pointer"
+								>
+									<IconPlus />
+									<span className="hidden lg:inline">
+										INTAKE SHEET
+									</span>
+								</Button>
+							</PermissionGuard>
 
 							<IntakeSheetCaseCreate
 								open={openIntakeSheet}
@@ -1544,17 +1569,19 @@ export function DataTable({
 							</DropdownMenu>
 
 							{/* INTAKE CICL/CAR BUTTON*/}
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => setOpenIntakeSheet(true)}
-								className="cursor-pointer"
-							>
-								<IconPlus />
-								<span className="hidden lg:inline">
-									INTAKE CICL/CAR
-								</span>
-							</Button>
+							<PermissionGuard permission="create_case">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => setOpenIntakeSheet(true)}
+									className="cursor-pointer"
+								>
+									<IconPlus />
+									<span className="hidden lg:inline">
+										INTAKE CICL/CAR
+									</span>
+								</Button>
+							</PermissionGuard>
 
 							<IntakeSheetCICLCARCreate
 								open={openIntakeSheet}
@@ -1645,17 +1672,19 @@ export function DataTable({
 							</DropdownMenu>
 
 							{/* INTAKE FAR BUTTON*/}
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => setOpenIntakeSheet(true)}
-								className="cursor-pointer"
-							>
-								<IconPlus />
-								<span className="hidden lg:inline">
-									INTAKE FAR
-								</span>
-							</Button>
+							<PermissionGuard permission="create_case">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => setOpenIntakeSheet(true)}
+									className="cursor-pointer"
+								>
+									<IconPlus />
+									<span className="hidden lg:inline">
+										INTAKE FAR
+									</span>
+								</Button>
+							</PermissionGuard>
 
 							<IntakeSheetFAR
 								open={openIntakeSheet}
@@ -1746,17 +1775,19 @@ export function DataTable({
 							</DropdownMenu>
 
 							{/* INTAKE FAC BUTTON */}
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => setOpenIntakeSheet(true)}
-								className="cursor-pointer"
-							>
-								<IconPlus />
-								<span className="hidden lg:inline">
-									INTAKE FAC
-								</span>
-							</Button>
+							<PermissionGuard permission="create_case">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => setOpenIntakeSheet(true)}
+									className="cursor-pointer"
+								>
+									<IconPlus />
+									<span className="hidden lg:inline">
+										INTAKE FAC
+									</span>
+								</Button>
+							</PermissionGuard>
 
 							{/* FAC Create Modal */}
 							<IntakeSheetFAC
@@ -1848,17 +1879,19 @@ export function DataTable({
 							</DropdownMenu>
 
 							{/* INTAKE IVAC BUTTON */}
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => setOpenIntakeSheet(true)}
-								className="cursor-pointer"
-							>
-								<IconPlus />
-								<span className="hidden lg:inline">
-									INTAKE IVAC
-								</span>
-							</Button>
+							<PermissionGuard permission="create_case">
+								<Button
+									variant="outline"
+									size="sm"
+									onClick={() => setOpenIntakeSheet(true)}
+									className="cursor-pointer"
+								>
+									<IconPlus />
+									<span className="hidden lg:inline">
+										INTAKE IVAC
+									</span>
+								</Button>
+							</PermissionGuard>
 
 							{/* IVAC Create Modal */}
 							<IntakeSheetIVAC
