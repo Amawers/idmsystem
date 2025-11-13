@@ -45,6 +45,7 @@ import {
 	Unlock,
 	Search,
 	UserCog,
+	RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -63,6 +64,7 @@ export default function RolePermissions() {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [pendingChanges, setPendingChanges] = useState({});
 	const [saving, setSaving] = useState(false);
+	const [refreshing, setRefreshing] = useState(false);
 
 	// ================= LOAD DATA FROM DATABASE =================
 	useEffect(() => {
@@ -324,6 +326,24 @@ export default function RolePermissions() {
 		toast.info("Changes discarded");
 	};
 
+	// Refresh all data
+	const handleRefresh = async () => {
+		setRefreshing(true);
+		try {
+			await Promise.all([
+				loadPermissions(),
+				loadUsers(),
+				loadUserPermissions()
+			]);
+			toast.success("Data refreshed successfully");
+		} catch (error) {
+			console.error("Error refreshing data:", error);
+			toast.error("Failed to refresh data");
+		} finally {
+			setRefreshing(false);
+		}
+	};
+
 	// ================= CATEGORY STYLING =================
 	const getCategoryInfo = (category) => {
 		const info = {
@@ -352,6 +372,15 @@ export default function RolePermissions() {
 						Configure individual permissions for each user
 					</p>
 				</div>
+				<Button
+					variant="outline"
+					size="sm"
+					onClick={handleRefresh}
+					disabled={refreshing}
+				>
+					<RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+					Refresh
+				</Button>
 			</div>
 
 			{/* ================= MAIN CONTENT ================= */}
