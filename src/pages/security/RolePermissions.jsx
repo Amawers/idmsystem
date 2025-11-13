@@ -24,6 +24,7 @@ import {
 	CardHeader,
 	CardTitle,
 } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -48,6 +49,7 @@ import {
 	RefreshCw,
 } from "lucide-react";
 import { toast } from "sonner";
+import HiddenCasesManager from "./HiddenCasesManager";
 
 export default function RolePermissions() {
 	// ================= STATE MANAGEMENT =================
@@ -385,6 +387,14 @@ export default function RolePermissions() {
 
 			{/* ================= MAIN CONTENT ================= */}
 			<div className="px-4 lg:px-6 space-y-4">
+				<Tabs defaultValue="permissions" className="space-y-4">
+					<TabsList>
+						<TabsTrigger value="permissions">User Permissions</TabsTrigger>
+						<TabsTrigger value="hidden-cases">Hidden Cases</TabsTrigger>
+					</TabsList>
+
+					{/* User Permissions Tab */}
+					<TabsContent value="permissions" className="space-y-4">
 				<div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 					{/* ================= USER LIST (LEFT PANEL) ================= */}
 					<Card className="lg:col-span-1">
@@ -607,6 +617,13 @@ export default function RolePermissions() {
 						</CardContent>
 					</Card>
 				</div>
+					</TabsContent>
+
+					{/* Hidden Cases Tab */}
+					<TabsContent value="hidden-cases">
+						<HiddenCasesManager />
+					</TabsContent>
+				</Tabs>
 			</div>
 		</>
 	);

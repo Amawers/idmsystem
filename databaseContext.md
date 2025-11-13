@@ -183,6 +183,24 @@ create table public.ciclcar_family_background (
   constraint ciclcar_family_background_fkey foreign KEY (ciclcar_case_id) references ciclcar_case (id) on delete CASCADE
 ) TABLESPACE pg_default;
 
+create table public.hidden_cases (
+  id uuid not null default gen_random_uuid (),
+  case_id uuid not null,
+  hidden_from_user_id uuid not null,
+  hidden_by uuid not null,
+  reason text null,
+  hidden_at timestamp with time zone not null default now(),
+  constraint hidden_cases_pkey primary key (id),
+  constraint hidden_cases_case_id_fkey foreign key (case_id) references public.case (id) on delete cascade,
+  constraint hidden_cases_hidden_from_user_id_fkey foreign key (hidden_from_user_id) references auth.users (id) on delete cascade,
+  constraint hidden_cases_hidden_by_fkey foreign key (hidden_by) references auth.users (id) on delete cascade,
+  constraint hidden_cases_unique_case_user unique (case_id, hidden_from_user_id)
+) tablespace pg_default;
+
+create index if not exists idx_hidden_cases_case_id on public.hidden_cases using btree (case_id) tablespace pg_default;
+create index if not exists idx_hidden_cases_hidden_from_user_id on public.hidden_cases using btree (hidden_from_user_id) tablespace pg_default;
+create index if not exists idx_hidden_cases_hidden_by on public.hidden_cases using btree (hidden_by) tablespace pg_default;
+
 create table public.fac_case (
   id uuid not null default gen_random_uuid (),
   created_at timestamp with time zone null default now(),
