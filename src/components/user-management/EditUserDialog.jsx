@@ -69,6 +69,7 @@ import {
 import { toast } from "sonner";
 import { useUserManagementStore } from "@/store/useUserManagementStore";
 import { Loader2 } from "lucide-react";
+import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 import { Badge } from "@/components/ui/badge";
 
 // Validation schema
@@ -115,6 +116,44 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }) {
 			toast.success("User updated successfully", {
 				description: `${user.email}'s account has been updated`,
 			});
+
+			// Create audit log for user update
+			const oldRole = user.role;
+			const oldStatus = user.status;
+			const roleChanged = oldRole !== data.role;
+			const statusChanged = oldStatus !== data.status;
+
+			if (roleChanged) {
+				await createAuditLog({
+					actionType: AUDIT_ACTIONS.UPDATE_ROLE,
+					actionCategory: AUDIT_CATEGORIES.USER,
+					description: `Changed ${user.email}'s role from ${oldRole} to ${data.role}`,
+					resourceType: 'user',
+					resourceId: user.id,
+					metadata: {
+						email: user.email,
+						oldRole,
+						newRole: data.role
+					},
+					severity: 'critical'
+				});
+			}
+
+			if (statusChanged) {
+				await createAuditLog({
+					actionType: AUDIT_ACTIONS.UPDATE_USER,
+					actionCategory: AUDIT_CATEGORIES.USER,
+					description: `Changed ${user.email}'s status from ${oldStatus} to ${data.status}`,
+					resourceType: 'user',
+					resourceId: user.id,
+					metadata: {
+						email: user.email,
+						oldStatus,
+						newStatus: data.status
+					},
+					severity: data.status === 'banned' ? 'critical' : 'info'
+				});
+			}
 
 			onOpenChange(false);
 			onSuccess?.();

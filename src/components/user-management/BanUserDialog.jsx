@@ -48,6 +48,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useUserManagementStore } from "@/store/useUserManagementStore";
 import { AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
+import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 import { Badge } from "@/components/ui/badge";
 
 export function BanUserDialog({ open, onOpenChange, user, action = "ban", onSuccess }) {
@@ -64,10 +65,40 @@ export function BanUserDialog({ open, onOpenChange, user, action = "ban", onSucc
 				toast.success("User banned successfully", {
 					description: `${user.email} can no longer log in`,
 				});
+
+				// Create audit log for user ban
+				await createAuditLog({
+					actionType: AUDIT_ACTIONS.BAN_USER,
+					actionCategory: AUDIT_CATEGORIES.USER,
+					description: `Banned user account ${user.email}`,
+					resourceType: 'user',
+					resourceId: user.id,
+					metadata: {
+						email: user.email,
+						role: user.role,
+						fullName: user.full_name
+					},
+					severity: 'critical'
+				});
 			} else {
 				await unbanUser(user.id);
 				toast.success("User unbanned successfully", {
 					description: `${user.email} can now log in again`,
+				});
+
+				// Create audit log for user unban
+				await createAuditLog({
+					actionType: AUDIT_ACTIONS.UNBAN_USER,
+					actionCategory: AUDIT_CATEGORIES.USER,
+					description: `Unbanned user account ${user.email}`,
+					resourceType: 'user',
+					resourceId: user.id,
+					metadata: {
+						email: user.email,
+						role: user.role,
+						fullName: user.full_name
+					},
+					severity: 'info'
 				});
 			}
 
