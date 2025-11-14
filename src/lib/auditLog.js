@@ -197,11 +197,6 @@ export const AUDIT_ACTIONS = {
 	DELETE_PARTNER: "delete_partner",
 	VIEW_PARTNER: "view_partner",
 	EXPORT_PARTNERS: "export_partners",
-
-	// System
-	SYSTEM_ERROR: "system_error",
-	EXPORT_DATA: "export_data",
-	IMPORT_DATA: "import_data",
 };
 
 /**
@@ -214,8 +209,6 @@ export const AUDIT_CATEGORIES = {
 	PERMISSION: "permission",
 	PROGRAM: "program",
 	PARTNER: "partner",
-	SYSTEM: "system",
-	REPORT: "report",
 };
 
 /**
