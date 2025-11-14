@@ -8,6 +8,7 @@
  */
 
 import supabase from "../../config/supabase";
+import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "./auditLog";
 
 /**
  * Helper: Safely pick first non-empty value from object using multiple possible keys
@@ -157,6 +158,22 @@ export async function submitFARCase(finalData) {
         const caseId = inserted?.id;
         console.log("✅ FAR case created successfully:", caseId);
         
+        // Create audit log for FAR case creation
+        await createAuditLog({
+            actionType: AUDIT_ACTIONS.CREATE_CASE,
+            actionCategory: AUDIT_CATEGORIES.CASE,
+            description: `Created new FAR (Family Assistance Record) case for ${payload.requestor_full_name || 'N/A'}`,
+            resourceType: 'far_case',
+            resourceId: caseId,
+            metadata: {
+                caseType: 'FAR',
+                requestorName: payload.requestor_full_name,
+                assistanceType: payload.type_of_assistance,
+                location: payload.barangay
+            },
+            severity: 'info'
+        });
+        
         return { caseId, error: null };
     } catch (err) {
         console.error("❌ Unexpected error in submitFARCase:", err);
@@ -189,6 +206,22 @@ export async function updateFARCase(caseId, finalData) {
         }
 
         console.log("✅ FAR case updated successfully:", data);
+        
+        // Create audit log for FAR case update
+        await createAuditLog({
+            actionType: AUDIT_ACTIONS.UPDATE_CASE,
+            actionCategory: AUDIT_CATEGORIES.CASE,
+            description: `Updated FAR (Family Assistance Record) case for ${payload.requestor_full_name || 'N/A'}`,
+            resourceType: 'far_case',
+            resourceId: caseId,
+            metadata: {
+                caseType: 'FAR',
+                requestorName: payload.requestor_full_name,
+                assistanceType: payload.type_of_assistance
+            },
+            severity: 'info'
+        });
+        
         return { success: true, error: null };
     } catch (err) {
         console.error("❌ Unexpected error in updateFARCase:", err);

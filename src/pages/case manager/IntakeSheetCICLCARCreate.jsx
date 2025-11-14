@@ -18,6 +18,7 @@ import { ReferralForm } from "@/components/intake sheet CICLCAR/ReferralForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import supabase from "@/../config/supabase";
 import { toast } from "sonner";
+import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 
 // Helper utilities to make field mapping robust
 const pick = (obj, ...keys) => {
@@ -174,6 +175,22 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 				console.error("❌ Case insertion error:", caseErr);
 				throw caseErr;
 			}
+
+			// Create audit log for case creation
+			await createAuditLog({
+				actionType: AUDIT_ACTIONS.CREATE_CASE,
+				actionCategory: AUDIT_CATEGORIES.CASE,
+				description: `Created new CICL-CAR case for ${casePayload.child_in_conflict_with_law || 'N/A'}`,
+				resourceType: 'ciclcar_case',
+				resourceId: caseRow.id,
+				metadata: {
+					caseType: 'CICL-CAR',
+					childName: casePayload.child_in_conflict_with_law,
+					dateOfBirth: casePayload.date_of_birth,
+					violationType: casePayload.nature_of_violation
+				},
+				severity: 'info'
+			});
 
 			// 2) Insert family members (if any)
 			if (caseRow?.id && familyRows.length > 0) {

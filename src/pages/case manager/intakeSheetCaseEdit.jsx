@@ -20,6 +20,7 @@ import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { toast } from "sonner";
 import supabase from "@/../config/supabase";
 import { buildCasePayload } from "@/lib/caseSubmission";
+import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 
 const tabOrder = [
     "identifying-data",
@@ -247,6 +248,21 @@ export default function IntakeSheetCaseEdit({ open, onOpenChange, row, onSuccess
                 .update(payload)
                 .eq("id", row.id);
             if (updateErr) throw updateErr;
+
+            // Create audit log for case update
+            await createAuditLog({
+                actionType: AUDIT_ACTIONS.UPDATE_CASE,
+                actionCategory: AUDIT_CATEGORIES.CASE,
+                description: `Updated case for ${payload.identifying_name || payload.identifying2_name || 'N/A'}`,
+                resourceType: 'case',
+                resourceId: row.id,
+                metadata: {
+                    caseType: payload.identifying_case_type || payload.identifying2_case_type,
+                    clientName: payload.identifying_name || payload.identifying2_name,
+                    status: payload.status
+                },
+                severity: 'info'
+            });
 
             // Refresh family members
             const members1 = Array.isArray(all?.FamilyData?.members) ? all.FamilyData.members : [];

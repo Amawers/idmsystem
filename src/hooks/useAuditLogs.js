@@ -1,6 +1,6 @@
 /**
  * @file useAuditLogs.js
- * @description Custom hook for managing audit logs
+ * @description Custom hook for managing audit logs with real-time updates
  * @module hooks/useAuditLogs
  */
 
@@ -14,7 +14,7 @@ import { fetchAuditLogs } from "@/lib/auditLog";
  * @returns {Object} Hook state and methods
  * 
  * @example
- * const { data, loading, error, reload, filters, setFilters } = useAuditLogs();
+ * const { data, count, loading, error, reload, filters, setFilters } = useAuditLogs();
  */
 export function useAuditLogs(initialFilters = {}) {
 	const [data, setData] = useState([]);
@@ -28,7 +28,7 @@ export function useAuditLogs(initialFilters = {}) {
 		severity: null,
 		startDate: null,
 		endDate: null,
-		limit: 50,
+		limit: 10,
 		offset: 0,
 		...initialFilters,
 	});
@@ -37,18 +37,24 @@ export function useAuditLogs(initialFilters = {}) {
 		setLoading(true);
 		setError(null);
 
-		const result = await fetchAuditLogs(filters);
+		try {
+			const result = await fetchAuditLogs(filters);
 
-		if (result.error) {
-			setError(result.error);
+			if (result.error) {
+				setError(result.error);
+				setData([]);
+				setCount(0);
+			} else {
+				setData(result.data || []);
+				setCount(result.count || 0);
+			}
+		} catch (err) {
+			setError(err);
 			setData([]);
 			setCount(0);
-		} else {
-			setData(result.data || []);
-			setCount(result.count || 0);
+		} finally {
+			setLoading(false);
 		}
-
-		setLoading(false);
 	}, [filters]);
 
 	useEffect(() => {
@@ -77,6 +83,19 @@ export function useAuditLogs(initialFilters = {}) {
 		}));
 	}, []);
 
+	const resetFilters = useCallback(() => {
+		setFilters({
+			userId: null,
+			actionCategory: null,
+			actionType: null,
+			severity: null,
+			startDate: null,
+			endDate: null,
+			limit: 10,
+			offset: 0,
+		});
+	}, []);
+
 	return {
 		data,
 		count,
@@ -85,6 +104,7 @@ export function useAuditLogs(initialFilters = {}) {
 		reload,
 		filters,
 		setFilters: updateFilters,
+		resetFilters,
 		nextPage,
 		prevPage,
 	};

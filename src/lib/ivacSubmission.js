@@ -8,6 +8,7 @@
  */
 
 import supabase from "@/../config/supabase";
+import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "./auditLog";
 
 /**
  * Validate IVAC form data
@@ -101,6 +102,23 @@ export async function submitIVACCase(formData) {
     }
 
     console.log("✅ IVAC case created successfully:", data.id);
+    
+    // Create audit log for IVAC case creation
+    await createAuditLog({
+      actionType: AUDIT_ACTIONS.CREATE_CASE,
+      actionCategory: AUDIT_CATEGORIES.CASE,
+      description: `Created new IVAC (Incidence on VAC) case for ${insertData.name_of_vac || 'N/A'}`,
+      resourceType: 'ivac_cases',
+      resourceId: data.id,
+      metadata: {
+        caseType: 'IVAC',
+        vacName: insertData.name_of_vac,
+        reportDate: insertData.date,
+        recordsCount: insertData.records?.length || 0
+      },
+      severity: 'info'
+    });
+    
     return { caseId: data.id, error: null };
   } catch (err) {
     console.error("❌ Unexpected error in submitIVACCase:", err);
@@ -170,6 +188,22 @@ export async function updateIVACCase(caseId, formData) {
     }
 
     console.log("✅ IVAC case updated successfully:", caseId);
+    
+    // Create audit log for IVAC case update
+    await createAuditLog({
+      actionType: AUDIT_ACTIONS.UPDATE_CASE,
+      actionCategory: AUDIT_CATEGORIES.CASE,
+      description: `Updated IVAC (Incidence on VAC) case`,
+      resourceType: 'ivac_cases',
+      resourceId: caseId,
+      metadata: {
+        caseType: 'IVAC',
+        status: updateData.status,
+        recordsCount: updateData.records?.length || 0
+      },
+      severity: 'info'
+    });
+    
     return { success: true, error: null };
   } catch (err) {
     console.error("❌ Unexpected error in updateIVACCase:", err);

@@ -13,6 +13,9 @@
  */
 
 import supabase from "../../config/supabase";
+import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "./auditLog";
+import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "./auditLog";
+import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "./auditLog";
 
 /**
  * Maps intake form store data to fac_case table schema
@@ -150,6 +153,22 @@ export async function submitFacCase(formData) {
     const facCaseId = insertedCase?.id;
     console.log("✅ Created fac_case:", facCaseId);
 
+    // Create audit log for FAC case creation
+    await createAuditLog({
+      actionType: AUDIT_ACTIONS.CREATE_CASE,
+      actionCategory: AUDIT_CATEGORIES.CASE,
+      description: `Created new FAC (Family Assistance Card) case for ${casePayload.head_first_name || ''} ${casePayload.head_last_name || 'N/A'}`,
+      resourceType: 'fac_case',
+      resourceId: facCaseId,
+      metadata: {
+        caseType: 'FAC',
+        headOfFamily: `${casePayload.head_first_name || ''} ${casePayload.head_last_name || ''}`.trim(),
+        location: casePayload.location_barangay,
+        familyMembersCount: formData.familyInformation?.members?.length || 0
+      },
+      severity: 'info'
+    });
+
     // Insert family members if any
     const familyMembers = formData.familyInformation?.members || [];
     if (familyMembers.length > 0) {
@@ -206,6 +225,21 @@ export async function updateFacCase(facCaseId, formData) {
     }
 
     console.log("✅ Updated fac_case:", facCaseId);
+
+    // Create audit log for FAC case update
+    await createAuditLog({
+      actionType: AUDIT_ACTIONS.UPDATE_CASE,
+      actionCategory: AUDIT_CATEGORIES.CASE,
+      description: `Updated FAC (Family Assistance Card) case for ${casePayload.head_first_name || ''} ${casePayload.head_last_name || 'N/A'}`,
+      resourceType: 'fac_case',
+      resourceId: facCaseId,
+      metadata: {
+        caseType: 'FAC',
+        headOfFamily: `${casePayload.head_first_name || ''} ${casePayload.head_last_name || ''}`.trim(),
+        location: casePayload.location_barangay
+      },
+      severity: 'info'
+    });
 
     // Handle family members: delete existing and insert new ones
     // This is a simple strategy - delete all and re-insert
