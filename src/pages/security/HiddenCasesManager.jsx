@@ -67,6 +67,12 @@ export default function HiddenCasesManager() {
 		return caseData?.identifying_name || "Unknown Case";
 	};
 
+	// Helper function to check if a case is already hidden from a user
+	const isCaseHiddenFromUser = (caseId, userId) => {
+		if (!userId) return false;
+		return hiddenCases.some(hc => hc.case_id === caseId && hc.hidden_from_user_id === userId);
+	};
+
 	// Load cases and users
 	useEffect(() => {
 		loadCases();
@@ -388,12 +394,20 @@ export default function HiddenCasesManager() {
 											No cases found matching your search
 										</div>
 									) : (
-										filteredCasesForSelection.map((c) => (
-											<SelectItem key={c.id} value={c.id}>
-												<span className="font-medium">[{c.table_type}]</span> {c.identifying_name || "Unnamed Case"}
-												{c.case_manager && <span className="text-muted-foreground"> • CM: {c.case_manager}</span>}
-											</SelectItem>
-										))
+										filteredCasesForSelection.map((c) => {
+											const isHidden = isCaseHiddenFromUser(c.id, selectedUser);
+											return (
+												<SelectItem 
+													key={c.id} 
+													value={c.id}
+													disabled={isHidden}
+												>
+													<span className="font-medium">[{c.table_type}]</span> {c.identifying_name || "Unnamed Case"}
+													{c.case_manager && <span className="text-muted-foreground"> • CM: {c.case_manager}</span>}
+													{isHidden && <span className="ml-2 text-xs text-orange-600">• Already Hidden</span>}
+												</SelectItem>
+											);
+										})
 									)}
 								</SelectContent>
 							</Select>
