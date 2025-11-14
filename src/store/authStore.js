@@ -10,6 +10,7 @@ export const useAuthStore = create((set) => ({
 	avatar_url: null, // store url for the profile picture
 	role: null, // stores the role fetched from 'profiles' table
 	loading: true, // used to show loading states while checking auth
+	authListener: null, // stores the auth state change listener
 
 	// ===============================
 	// SET USER & ROLE (helper)
@@ -146,6 +147,73 @@ export const useAuthStore = create((set) => ({
 		} else {
 			// 6. No active session → clear auth state
 			set({ user: null, avatar_url: null, role: null, loading: false });
+		}
+
+		// 7. Set up auth state change listener for session refresh and logout
+		const { data: { subscription } } = supabase.auth.onAuthStateChange(
+			async (event, session) => {
+				console.log("Auth state changed:", event);
+
+				if (event === "SIGNED_OUT" || event === "USER_DELETED") {
+					// User signed out or deleted
+					set({ user: null, avatar_url: null, role: null, loading: false });
+				} else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+					// User signed in or token refreshed - update user state
+					if (session?.user) {
+						// Fetch fresh profile data
+						const { data: profile, error: profileError } = await supabase
+							.from("profile")
+							.select("role, avatar_url, status")
+							.eq("id", session.user.id)
+							.maybeSingle();
+
+						if (profileError) {
+							console.error("Profile fetch error:", profileError);
+							return;
+						}
+
+						// Check if user is banned or inactive
+						if (profile?.status === "banned" || profile?.status === "inactive") {
+							await supabase.auth.signOut();
+							set({ user: null, avatar_url: null, role: null, loading: false });
+							return;
+						}
+
+						// Get fresh signed URL for avatar
+						let avatarSignedUrl = null;
+						if (profile?.avatar_url) {
+							const { data: signedData, error: urlError } =
+								await supabase.storage
+									.from("profile_pictures")
+									.createSignedUrl(profile.avatar_url, 60 * 60);
+
+							if (!urlError) avatarSignedUrl = signedData?.signedUrl;
+						}
+
+						// Update state with fresh data
+						set({
+							user: session.user,
+							avatar_url: avatarSignedUrl,
+							role: profile?.role || "case_manager",
+							loading: false,
+						});
+					}
+				}
+			}
+		);
+
+		// Store the subscription so we can clean it up later
+		set({ authListener: subscription });
+	},
+
+	// ===============================
+	// CLEANUP FUNCTION
+	// ===============================
+	cleanup: () => {
+		const { authListener } = useAuthStore.getState();
+		if (authListener) {
+			authListener.unsubscribe();
+			set({ authListener: null });
 		}
 	},
 
