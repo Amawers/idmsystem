@@ -6,6 +6,7 @@
 -- Drop RLS policies
 DROP POLICY IF EXISTS "Heads can unhide cases" ON public.hidden_cases;
 DROP POLICY IF EXISTS "Heads can hide cases" ON public.hidden_cases;
+DROP POLICY IF EXISTS "Case managers can view their hidden cases" ON public.hidden_cases;
 DROP POLICY IF EXISTS "Heads can view all hidden cases" ON public.hidden_cases;
 
 -- Drop indexes

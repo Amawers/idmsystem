@@ -35,35 +35,81 @@ export function useHiddenCases() {
 	 * Load all hidden cases (for heads)
 	 */
 	const loadHiddenCases = useCallback(async () => {
-		if (!user || role !== 'head') {
+		if (!user) {
 			setLoading(false);
 			return;
 		}
 
 		try {
 			setLoading(true);
-			const { data, error } = await supabase
-				.from("hidden_cases")
-				.select(`
+			
+			// Different queries for heads vs case managers
+			let data, error;
+			
+			if (role === 'head') {
+				// Heads need full details including user info for the management UI
+				const result = await supabase.from("hidden_cases").select(`
 					id,
 					case_id,
 					table_type,
 					hidden_from_user_id,
 					hidden_by,
 					reason,
-					hidden_at,
-					hidden_from_user:hidden_from_user_id (
-						email,
-						full_name
-					)
+					hidden_at
+				`).order("hidden_at", { ascending: false });
+				
+				data = result.data;
+				error = result.error;
+				
+				// Manually fetch user details for each hidden case
+				if (data && data.length > 0) {
+					const userIds = [...new Set(data.map(hc => hc.hidden_from_user_id))];
+					const { data: users } = await supabase
+						.from("profile")
+						.select("id, email, full_name")
+						.in("id", userIds);
+					
+					// Map user details back to hidden cases
+					if (users) {
+						data = data.map(hc => ({
+							...hc,
+							hidden_from_user: users.find(u => u.id === hc.hidden_from_user_id)
+						}));
+					}
+				}
+			} else if (role === 'case_manager') {
+				// Case managers only need case IDs for filtering
+				const result = await supabase.from("hidden_cases").select(`
+					id,
+					case_id,
+					table_type,
+					hidden_from_user_id,
+					hidden_by,
+					reason,
+					hidden_at
 				`)
+				.eq('hidden_from_user_id', user.id)
 				.order("hidden_at", { ascending: false });
+				
+				data = result.data;
+				error = result.error;
+			}
 
 			if (error) throw error;
+			
+			console.log('[useHiddenCases] Loaded hidden cases:', {
+				role,
+				userId: user.id,
+				count: data?.length || 0,
+				cases: data
+			});
+			
 			setHiddenCases(data || []);
 		} catch (err) {
 			console.error("Error loading hidden cases:", err);
-			toast.error("Failed to load hidden cases");
+			if (role === 'head') {
+				toast.error("Failed to load hidden cases");
+			}
 		} finally {
 			setLoading(false);
 		}
@@ -172,19 +218,44 @@ export function useHiddenCases() {
 	 * @returns {Array} Filtered array
 	 */
 	const filterVisibleCases = useCallback((cases) => {
+		console.log('[filterVisibleCases] Called with:', {
+			role,
+			userId: user?.id,
+			casesCount: cases.length,
+			hiddenCasesCount: hiddenCases.length
+		});
+
 		// Heads see all cases
 		if (role === 'head') {
+			console.log('[filterVisibleCases] User is head, showing all cases');
 			return cases;
 		}
 
 		// Case managers see only non-hidden cases
 		if (role === 'case_manager' && user) {
-			const hiddenCaseIds = getHiddenCasesForUser(user.id);
-			return cases.filter(c => !hiddenCaseIds.includes(c.id));
+			// Inline the filtering logic to avoid dependency issues
+			const hiddenCaseIds = hiddenCases
+				.filter(hc => hc.hidden_from_user_id === user.id)
+				.map(hc => hc.case_id);
+			
+			console.log('[filterVisibleCases] Case manager filtering:', {
+				hiddenCaseIds,
+				hiddenCount: hiddenCaseIds.length
+			});
+
+			const filtered = cases.filter(c => !hiddenCaseIds.includes(c.id));
+			console.log('[filterVisibleCases] Filtered result:', {
+				originalCount: cases.length,
+				filteredCount: filtered.length,
+				removedCount: cases.length - filtered.length
+			});
+			
+			return filtered;
 		}
 
+		console.log('[filterVisibleCases] No filtering applied, returning all cases');
 		return cases;
-	}, [role, user, getHiddenCasesForUser]);
+	}, [role, user, hiddenCases]);
 
 	return {
 		hiddenCases,

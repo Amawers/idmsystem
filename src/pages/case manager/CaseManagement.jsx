@@ -20,6 +20,7 @@ import { useCiclcarCases } from "@/hooks/useCiclcarCases";
 import { useFarCases } from "@/hooks/useFarCases";
 import { useFacCases } from "@/hooks/useFacCases";
 import { useIvacCases } from "@/hooks/useIvacCases";
+import { useHiddenCases } from "@/hooks/useHiddenCases";
 
 export default function CaseManagement() {
 	// Track whether the user is currently at (or past) the DataTable section
@@ -58,6 +59,16 @@ export default function CaseManagement() {
 		reload: reloadIvac,
 		deleteIvacCase,
 	} = useIvacCases();
+
+	// Filter hidden cases for case managers
+	const { filterVisibleCases } = useHiddenCases();
+
+	// Apply filtering to all case data
+	const filteredCaseRows = React.useMemo(() => filterVisibleCases(caseRows || []), [caseRows, filterVisibleCases]);
+	const filteredCiclcarRows = React.useMemo(() => filterVisibleCases(ciclcarRows || []), [ciclcarRows, filterVisibleCases]);
+	const filteredFarRows = React.useMemo(() => filterVisibleCases(farRows || []), [farRows, filterVisibleCases]);
+	const filteredFacRows = React.useMemo(() => filterVisibleCases(facRows || []), [facRows, filterVisibleCases]);
+	const filteredIvacRows = React.useMemo(() => filterVisibleCases(ivacRows || []), [ivacRows, filterVisibleCases]);
 
 	// Effect: watch scroll position and update "atTable" state
 	useEffect(() => {
@@ -144,11 +155,11 @@ export default function CaseManagement() {
 						) : null}
 
 						<DataTable
-							caseData={casesLoading ? [] : caseRows}
-							ciclcarData={ciclcarLoading ? [] : ciclcarRows}
-							farData={farLoading ? [] : farRows}
-							facData={facLoading ? [] : facRows}
-							ivacData={ivacLoading ? [] : ivacRows}
+							caseData={casesLoading ? [] : filteredCaseRows}
+							ciclcarData={ciclcarLoading ? [] : filteredCiclcarRows}
+							farData={farLoading ? [] : filteredFarRows}
+							facData={facLoading ? [] : filteredFacRows}
+							ivacData={ivacLoading ? [] : filteredIvacRows}
 							reloadCases={reload}
 							reloadCiclcar={reloadCiclcar}
 							reloadFar={reloadFar}

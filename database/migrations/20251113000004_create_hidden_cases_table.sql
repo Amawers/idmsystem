@@ -41,6 +41,19 @@ CREATE POLICY "Heads can view all hidden cases"
     )
   );
 
+-- Policy: Case managers can view cases hidden from them (needed for filtering)
+CREATE POLICY "Case managers can view their hidden cases"
+  ON public.hidden_cases
+  FOR SELECT
+  USING (
+    hidden_from_user_id = auth.uid()
+    AND EXISTS (
+      SELECT 1 FROM public.profile
+      WHERE profile.id = auth.uid()
+      AND profile.role = 'case_manager'
+    )
+  );
+
 -- Policy: Heads can insert hidden case records
 CREATE POLICY "Heads can hide cases"
   ON public.hidden_cases
