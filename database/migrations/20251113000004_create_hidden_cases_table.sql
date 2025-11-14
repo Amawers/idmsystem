@@ -7,16 +7,18 @@
 CREATE TABLE IF NOT EXISTS public.hidden_cases (
   id UUID NOT NULL DEFAULT gen_random_uuid(),
   case_id UUID NOT NULL,
+  table_type TEXT NOT NULL, -- 'Cases', 'CICL/CAR', or 'Incidence on VAC'
   hidden_from_user_id UUID NOT NULL,
   hidden_by UUID NOT NULL,
   reason TEXT,
   hidden_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   
   CONSTRAINT hidden_cases_pkey PRIMARY KEY (id),
-  CONSTRAINT hidden_cases_case_id_fkey FOREIGN KEY (case_id) REFERENCES public.case (id) ON DELETE CASCADE,
+  -- Removed foreign key constraint for case_id since it can reference multiple tables
   CONSTRAINT hidden_cases_hidden_from_user_id_fkey FOREIGN KEY (hidden_from_user_id) REFERENCES auth.users (id) ON DELETE CASCADE,
   CONSTRAINT hidden_cases_hidden_by_fkey FOREIGN KEY (hidden_by) REFERENCES auth.users (id) ON DELETE CASCADE,
-  CONSTRAINT hidden_cases_unique_case_user UNIQUE (case_id, hidden_from_user_id)
+  CONSTRAINT hidden_cases_unique_case_user UNIQUE (case_id, hidden_from_user_id),
+  CONSTRAINT hidden_cases_table_type_check CHECK (table_type IN ('Cases', 'CICL/CAR', 'Incidence on VAC'))
 );
 
 -- Create index for faster lookups

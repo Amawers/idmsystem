@@ -61,6 +61,12 @@ export default function HiddenCasesManager() {
 	const [caseSearchTerm, setCaseSearchTerm] = useState("");
 	const [caseTypeFilter, setCaseTypeFilter] = useState("all");
 
+	// Helper function to get case name from the cases array
+	const getCaseName = (caseId, tableType) => {
+		const caseData = cases.find(c => c.id === caseId && c.table_type === tableType);
+		return caseData?.identifying_name || "Unknown Case";
+	};
+
 	// Load cases and users
 	useEffect(() => {
 		loadCases();
@@ -69,20 +75,20 @@ export default function HiddenCasesManager() {
 
 	const loadCases = async () => {
 		try {
-			// Load from all three case tables
+			// Load from all three case tables with their specific field names
 			const [casesResult, ciclCarResult, farResult] = await Promise.all([
 				supabase
 					.from("case")
 					.select("id, identifying_name, identifying_case_type, case_manager")
 					.order("identifying_name", { ascending: true }),
 				supabase
-					.from("cicl_car")
-					.select("id, identifying_name, identifying_case_type, case_manager")
-					.order("identifying_name", { ascending: true }),
+					.from("ciclcar_case")
+					.select("id, profile_name, case_manager")
+					.order("profile_name", { ascending: true }),
 				supabase
-					.from("far")
-					.select("id, identifying_name, identifying_case_type, case_manager")
-					.order("identifying_name", { ascending: true }),
+					.from("far_case")
+					.select("id, receiving_member, case_manager")
+					.order("receiving_member", { ascending: true }),
 			]);
 
 			// Check for errors
@@ -90,11 +96,25 @@ export default function HiddenCasesManager() {
 			if (ciclCarResult.error) throw ciclCarResult.error;
 			if (farResult.error) throw farResult.error;
 
-			// Combine and add table_type property
+			// Combine and normalize field names with table_type property
 			const allCases = [
-				...(casesResult.data || []).map(c => ({ ...c, table_type: "Cases" })),
-				...(ciclCarResult.data || []).map(c => ({ ...c, table_type: "CICL/CAR" })),
-				...(farResult.data || []).map(c => ({ ...c, table_type: "Incidence on VAC" })),
+				...(casesResult.data || []).map(c => ({ 
+					...c, 
+					table_type: "Cases",
+					// Keep original field name
+				})),
+				...(ciclCarResult.data || []).map(c => ({ 
+					...c, 
+					table_type: "CICL/CAR",
+					identifying_name: c.profile_name, // Map to common field
+					identifying_case_type: "CICL/CAR", // Default type
+				})),
+				...(farResult.data || []).map(c => ({ 
+					...c, 
+					table_type: "Incidence on VAC",
+					identifying_name: c.receiving_member, // Map to common field
+					identifying_case_type: "FAR", // Default type
+				})),
 			];
 
 			// Sort by name
@@ -133,8 +153,15 @@ export default function HiddenCasesManager() {
 			return;
 		}
 
+		// Find the selected case to get its table_type
+		const caseData = cases.find(c => c.id === selectedCase);
+		if (!caseData) {
+			toast.error("Selected case not found");
+			return;
+		}
+
 		setSubmitting(true);
-		const success = await hideCase(selectedCase, selectedUser, hideReason);
+		const success = await hideCase(selectedCase, selectedUser, caseData.table_type, hideReason);
 		setSubmitting(false);
 
 		if (success) {
@@ -154,14 +181,15 @@ export default function HiddenCasesManager() {
 	// Filter hidden cases by search term
 	const filteredHiddenCases = hiddenCases.filter(hc => {
 		const searchLower = searchTerm.toLowerCase();
-		const caseName = hc.case?.identifying_name || "";
+		const caseName = getCaseName(hc.case_id, hc.table_type);
 		const userEmail = hc.hidden_from_user?.email || "";
 		const userName = hc.hidden_from_user?.full_name || "";
 		
 		return (
 			caseName.toLowerCase().includes(searchLower) ||
 			userEmail.toLowerCase().includes(searchLower) ||
-			userName.toLowerCase().includes(searchLower)
+			userName.toLowerCase().includes(searchLower) ||
+			hc.table_type.toLowerCase().includes(searchLower)
 		);
 	});
 
@@ -261,11 +289,11 @@ export default function HiddenCasesManager() {
 									{filteredHiddenCases.map((hc) => (
 										<TableRow key={hc.id}>
 											<TableCell className="font-medium">
-												{hc.case?.identifying_name || "Unknown"}
+												{getCaseName(hc.case_id, hc.table_type)}
 											</TableCell>
 											<TableCell>
 												<Badge variant="outline">
-													{hc.case?.identifying_case_type || "N/A"}
+													{hc.table_type}
 												</Badge>
 											</TableCell>
 											<TableCell>

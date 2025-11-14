@@ -47,14 +47,11 @@ export function useHiddenCases() {
 				.select(`
 					id,
 					case_id,
+					table_type,
 					hidden_from_user_id,
 					hidden_by,
 					reason,
 					hidden_at,
-					case:case_id (
-						identifying_name,
-						identifying_case_type
-					),
 					hidden_from_user:hidden_from_user_id (
 						email,
 						full_name
@@ -80,9 +77,10 @@ export function useHiddenCases() {
 	 * Hide a case from a specific user
 	 * @param {string} caseId - Case ID to hide
 	 * @param {string} userId - User ID to hide from
+	 * @param {string} tableType - Table type ('Cases', 'CICL/CAR', or 'Incidence on VAC')
 	 * @param {string} reason - Optional reason for hiding
 	 */
-	const hideCase = async (caseId, userId, reason = "") => {
+	const hideCase = async (caseId, userId, tableType, reason = "") => {
 		if (role !== 'head') {
 			toast.error("Only heads can hide cases");
 			return false;
@@ -93,6 +91,7 @@ export function useHiddenCases() {
 				.from("hidden_cases")
 				.insert({
 					case_id: caseId,
+					table_type: tableType,
 					hidden_from_user_id: userId,
 					hidden_by: user.id,
 					reason: reason
