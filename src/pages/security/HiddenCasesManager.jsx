@@ -32,6 +32,16 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import {
+	AlertDialog,
+	AlertDialogAction,
+	AlertDialogCancel,
+	AlertDialogContent,
+	AlertDialogDescription,
+	AlertDialogFooter,
+	AlertDialogHeader,
+	AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
 	Select,
 	SelectContent,
 	SelectItem,
@@ -56,6 +66,10 @@ export default function HiddenCasesManager() {
 	const [selectedUser, setSelectedUser] = useState("");
 	const [hideReason, setHideReason] = useState("");
 	const [submitting, setSubmitting] = useState(false);
+	
+	// Unhide confirmation dialog state
+	const [showUnhideDialog, setShowUnhideDialog] = useState(false);
+	const [caseToUnhide, setCaseToUnhide] = useState(null);
 	
 	// Search and filter state for case selection
 	const [caseSearchTerm, setCaseSearchTerm] = useState("");
@@ -178,10 +192,20 @@ export default function HiddenCasesManager() {
 		}
 	};
 
-	const handleUnhideCase = async (hiddenCaseId) => {
-		if (confirm("Are you sure you want to unhide this case?")) {
-			await unhideCase(hiddenCaseId);
-		}
+	const handleUnhideCase = async (hiddenCaseRecord) => {
+		setCaseToUnhide(hiddenCaseRecord);
+		setShowUnhideDialog(true);
+	};
+
+	const confirmUnhideCase = async () => {
+		if (!caseToUnhide) return;
+		
+		setSubmitting(true);
+		await unhideCase(caseToUnhide.id);
+		setSubmitting(false);
+		
+		setShowUnhideDialog(false);
+		setCaseToUnhide(null);
 	};
 
 	// Filter hidden cases by search term
@@ -324,7 +348,7 @@ export default function HiddenCasesManager() {
 												<Button
 													variant="ghost"
 													size="sm"
-													onClick={() => handleUnhideCase(hc.id)}
+													onClick={() => handleUnhideCase(hc)}
 												>
 													<Eye className="mr-2 h-4 w-4" />
 													Unhide
@@ -459,6 +483,92 @@ export default function HiddenCasesManager() {
 					</DialogFooter>
 				</DialogContent>
 			</Dialog>
+
+			{/* Unhide Case Confirmation Dialog */}
+			<AlertDialog open={showUnhideDialog} onOpenChange={setShowUnhideDialog}>
+				<AlertDialogContent className="max-w-lg">
+					<AlertDialogHeader>
+						<div className="flex items-center gap-3">
+							<div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
+								<Eye className="h-6 w-6 text-blue-600" />
+							</div>
+							<div>
+								<AlertDialogTitle>Unhide Case</AlertDialogTitle>
+								<AlertDialogDescription className="mt-1">
+									This will make the case visible to the case manager again
+								</AlertDialogDescription>
+							</div>
+						</div>
+					</AlertDialogHeader>
+
+					{caseToUnhide && (
+						<div className="space-y-3 py-4">
+							<div className="rounded-lg bg-muted p-4 space-y-2">
+								<div className="flex items-start justify-between">
+									<div className="space-y-1">
+										<p className="text-sm font-medium">Case</p>
+										<p className="text-sm text-muted-foreground">
+											{getCaseName(caseToUnhide.case_id, caseToUnhide.table_type)}
+										</p>
+										<Badge variant="outline" className="text-xs">
+											{caseToUnhide.table_type}
+										</Badge>
+									</div>
+								</div>
+
+								<div className="pt-2 border-t">
+									<p className="text-sm font-medium">Currently Hidden From</p>
+									<p className="text-sm text-muted-foreground">
+										{caseToUnhide.hidden_from_user?.full_name || "Unknown User"}
+									</p>
+									<p className="text-xs text-muted-foreground">
+										{caseToUnhide.hidden_from_user?.email}
+									</p>
+								</div>
+
+								{caseToUnhide.reason && (
+									<div className="pt-2 border-t">
+										<p className="text-sm font-medium">Reason</p>
+										<p className="text-sm text-muted-foreground italic">
+											"{caseToUnhide.reason}"
+										</p>
+									</div>
+								)}
+
+								<div className="pt-2 border-t">
+									<p className="text-xs text-muted-foreground">
+										Hidden on {new Date(caseToUnhide.hidden_at).toLocaleDateString('en-US', {
+											year: 'numeric',
+											month: 'long',
+											day: 'numeric',
+											hour: '2-digit',
+											minute: '2-digit'
+										})}
+									</p>
+								</div>
+							</div>
+
+							<div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
+								<Eye className="h-4 w-4 text-blue-600 mt-0.5" />
+								<p className="text-sm text-blue-900">
+									After unhiding, this case will appear in the case manager's view immediately.
+								</p>
+							</div>
+						</div>
+					)}
+
+					<AlertDialogFooter>
+						<AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
+						<AlertDialogAction 
+							onClick={confirmUnhideCase}
+							disabled={submitting}
+							className="bg-blue-600 hover:bg-blue-700"
+						>
+							{submitting ? "Unhiding..." : "Unhide Case"}
+						</AlertDialogAction>
+					</AlertDialogFooter>
+				</AlertDialogContent>
+			</AlertDialog>
 		</div>
 	);
 }
