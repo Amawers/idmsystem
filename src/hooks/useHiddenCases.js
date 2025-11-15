@@ -97,13 +97,6 @@ export function useHiddenCases() {
 
 			if (error) throw error;
 			
-			console.log('[useHiddenCases] Loaded hidden cases:', {
-				role,
-				userId: user.id,
-				count: data?.length || 0,
-				cases: data
-			});
-			
 			setHiddenCases(data || []);
 		} catch (err) {
 			console.error("Error loading hidden cases:", err);
@@ -218,12 +211,6 @@ export function useHiddenCases() {
 	 * @returns {Array} Filtered array
 	 */
 	const filterVisibleCases = useCallback((cases) => {
-		console.log('[filterVisibleCases] Called with:', {
-			role,
-			userId: user?.id,
-			casesCount: cases.length,
-			hiddenCasesCount: hiddenCases.length
-		});
 
 		// Heads see all cases
 		if (role === 'head') {
@@ -236,18 +223,8 @@ export function useHiddenCases() {
 			const hiddenCaseIds = hiddenCases
 				.filter(hc => hc.hidden_from_user_id === user.id)
 				.map(hc => hc.case_id);
-			
-			console.log('[filterVisibleCases] Case manager filtering:', {
-				hiddenCaseIds,
-				hiddenCount: hiddenCaseIds.length
-			});
 
 			const filtered = cases.filter(c => !hiddenCaseIds.includes(c.id));
-			console.log('[filterVisibleCases] Filtered result:', {
-				originalCount: cases.length,
-				filteredCount: filtered.length,
-				removedCount: cases.length - filtered.length
-			});
 			
 			return filtered;
 		}
