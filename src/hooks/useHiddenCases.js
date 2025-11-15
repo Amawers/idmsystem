@@ -227,7 +227,6 @@ export function useHiddenCases() {
 
 		// Heads see all cases
 		if (role === 'head') {
-			console.log('[filterVisibleCases] User is head, showing all cases');
 			return cases;
 		}
 
