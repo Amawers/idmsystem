@@ -44,7 +44,6 @@ export function useIvacCases() {
                 throw fetchError;
             }
 
-            console.log("✅ Fetched IVAC cases:", ivacCases?.length || 0);
             setData(ivacCases || []);
         } catch (err) {
             console.error("❌ Error fetching IVAC cases:", err);

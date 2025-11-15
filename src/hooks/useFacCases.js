@@ -71,7 +71,6 @@ export function useFacCases() {
                 family_member_count: facCase.family_members?.[0]?.count || 0,
             })) || [];
 
-            console.log("✅ Fetched FAC cases:", transformedData.length);
             setData(transformedData);
         } catch (err) {
             console.error("❌ Error fetching FAC cases:", err);

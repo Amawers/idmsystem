@@ -44,7 +44,6 @@ export function useFarCases() {
                 throw fetchError;
             }
 
-            console.log("✅ Fetched FAR cases:", farCases?.length || 0);
             setData(farCases || []);
         } catch (err) {
             console.error("❌ Error fetching FAR cases:", err);
