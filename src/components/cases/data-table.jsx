@@ -30,15 +30,17 @@ import * as React from "react";
 import {
 	IconChevronDown,
 	IconCircleCheckFilled,
+	IconAlertTriangle,
 	IconClipboardText,
 	IconCheckbox,
 	IconDotsVertical,
 	IconLayoutColumns,
+	IconCloudUpload,
 	IconLoader,
 	IconPlus,
 	IconRefresh,
 } from "@tabler/icons-react";
-import { Edit, ChevronLeft, ChevronRight } from "lucide-react";
+import { Edit, ChevronLeft, ChevronRight, WifiOff } from "lucide-react";
 
 // Other utilities
 // import { toast } from "sonner";
@@ -1057,6 +1059,10 @@ export function DataTable({
 	deleteFarCase,
 	deleteFacCase,
 	deleteIvacCase,
+	initialTab = "CASE",
+	onTabChange,
+	ciclcarSync,
+	isOnline = true,
 }) {
 	// State to control Intake Sheet modal visibility (open/close)
 	const [openIntakeSheet, setOpenIntakeSheet] = useState(false);
@@ -1094,8 +1100,17 @@ export function DataTable({
 	const [openIvacEditSheet, setOpenIvacEditSheet] = useState(false);
 	const [editingIvacRecord, setEditingIvacRecord] = useState(null);
 
-	// Tracks which tab is currently active (default: "CASE")
-	const [activeTab, setActiveTab] = useState("CASE");
+	// Tracks which tab is currently active
+	const [activeTab, setActiveTab] = useState(initialTab);
+
+	const handleTabValueChange = (value) => {
+		setActiveTab(value);
+		onTabChange?.(value);
+	};
+
+	React.useEffect(() => {
+		setActiveTab(initialTab);
+	}, [initialTab]);
 
 	// Case manager filter state for each tab
 	const [caseCaseManager, setCaseCaseManager] = useState("all");
@@ -1103,6 +1118,11 @@ export function DataTable({
 	const [farCaseManager, setFarCaseManager] = useState("all");
 	const [facCaseManager, setFacCaseManager] = useState("all");
 	const [ivacCaseManager, setIvacCaseManager] = useState("all");
+
+	const ciclcarPending = ciclcarSync?.pendingCount ?? 0;
+	const ciclcarSyncing = ciclcarSync?.syncing ?? false;
+	const ciclcarSyncStatus = ciclcarSync?.syncStatus ?? null;
+	const ciclcarOnSync = ciclcarSync?.onSync;
 
 	// Fetch case managers
 	const { caseManagers, loading: caseManagersLoading } = useCaseManagers();
@@ -1336,8 +1356,7 @@ export function DataTable({
 	return (
 		<Tabs
 			value={activeTab}
-			defaultValue="CASE"
-			onValueChange={setActiveTab}
+			onValueChange={handleTabValueChange}
 			className="w-full flex-col justify-start gap-6"
 		>
 			<div className="flex items-center justify-between px-4 lg:px-6">
@@ -1349,7 +1368,7 @@ export function DataTable({
          // *MOBILE SCREEN
          // ==============
          */}
-				<Select value={activeTab} onValueChange={setActiveTab}>
+				<Select value={activeTab} onValueChange={handleTabValueChange}>
 					<SelectTrigger
 						className="flex w-fit @4xl/main:hidden"
 						size="sm"
@@ -1393,6 +1412,12 @@ export function DataTable({
          // ==============
          */}
 				<div className="flex items-center gap-2">
+					{!isOnline && (
+						<Badge variant="destructive" className="gap-1 text-[11px]">
+							<WifiOff className="h-3 w-3" />
+							Offline
+						</Badge>
+					)}
 					{/* CASES SECTION */}
 					{activeTab === "CASE" && (
 						<>
@@ -1532,6 +1557,20 @@ export function DataTable({
 								</span>
 							</Button>
 
+							{/* Sync Button */}
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => ciclcarOnSync?.()}
+								disabled={!isOnline || ciclcarSyncing || ciclcarPending === 0}
+								className="cursor-pointer"
+							>
+								<IconCloudUpload className={ciclcarSyncing ? "animate-spin" : ""} />
+								<span className="hidden lg:inline">
+									{ciclcarSyncing ? "SYNCING..." : "SYNC"}
+								</span>
+							</Button>
+
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -1596,6 +1635,29 @@ export function DataTable({
 								row={editingCiclcarRecord}
 								onSuccess={reloadCiclcar}
 							/>
+
+							{(ciclcarSyncing || ciclcarPending > 0 || ciclcarSyncStatus) && (
+								<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+									{ciclcarSyncing ? (
+										<>
+											<IconLoader className="h-3 w-3 animate-spin" />
+											<span>{ciclcarSyncStatus || "Syncing queued changes..."}</span>
+										</>
+									) : ciclcarPending > 0 ? (
+										<>
+											<IconAlertTriangle className="h-3 w-3 text-amber-500" />
+											<span className="text-amber-600">
+												{ciclcarPending} pending change{ciclcarPending === 1 ? "" : "s"} waiting for sync
+											</span>
+										</>
+									) : (
+										<>
+											<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
+											<span className="text-emerald-600">{ciclcarSyncStatus}</span>
+										</>
+									)}
+								</div>
+							)}
 						</>
 					)}
 

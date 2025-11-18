@@ -1,39 +1,64 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import supabase from "@/../config/supabase";
+import {
+    ciclcarLiveQuery,
+    getPendingOperationCount,
+    loadRemoteSnapshotIntoCache,
+    markLocalDelete,
+    syncCiclcarQueue,
+} from "@/services/ciclcarOfflineService";
 
-function mapCiclcarRow(row) {
-    const id = row?.id ?? row?.case_id ?? row?.case_code ?? row?.uuid ?? null;
-
-    return {
-        ...row,
-        id,
-    };
-}
+const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
 
 export function useCiclcarCases() {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [pendingCount, setPendingCount] = useState(0);
+    const [syncing, setSyncing] = useState(false);
+    const [syncStatus, setSyncStatus] = useState(null);
+
+    const hydratePendingCount = useCallback(async () => {
+        const count = await getPendingOperationCount();
+        setPendingCount(count);
+    }, []);
+
+    useEffect(() => {
+        const subscription = ciclcarLiveQuery().subscribe({
+            next: (rows) => {
+                setData((rows ?? []).map((row) => ({
+                    ...row,
+                    id: row?.id ?? row?.case_id ?? row?.case_code ?? row?.uuid ?? row?.localId,
+                })));
+                setLoading(false);
+            },
+            error: (err) => {
+                setError(err);
+                setLoading(false);
+            },
+        });
+
+        hydratePendingCount();
+
+        return () => subscription.unsubscribe();
+    }, [hydratePendingCount]);
 
     const load = useCallback(async () => {
-        setLoading(true);
         setError(null);
 
         try {
-            const { data: rows, error: fetchError } = await supabase
-                .from("ciclcar_case")
-                .select("*")
-                .order("updated_at", { ascending: false });
-
-            if (fetchError) throw fetchError;
-
-            setData((rows ?? []).map(mapCiclcarRow));
+            if (!isBrowserOnline()) {
+                return { success: true, offline: true };
+            }
+            await loadRemoteSnapshotIntoCache();
+            await hydratePendingCount();
+            return { success: true };
         } catch (err) {
             setError(err);
+            return { success: false, error: err };
         } finally {
-            setLoading(false);
+            // keep local data rendered; no loading toggle
         }
-    }, []);
+    }, [hydratePendingCount]);
 
     useEffect(() => {
         load();
@@ -41,21 +66,37 @@ export function useCiclcarCases() {
 
     const deleteCiclcarCase = useCallback(async (caseId) => {
         try {
-            const { error: err } = await supabase
-                .from("ciclcar_case")
-                .delete()
-                .eq("id", caseId);
-
-            if (err) throw err;
-            
-            // Reload the data after successful deletion
-            await load();
-            return { success: true };
+            const result = await markLocalDelete({ targetId: caseId });
+            await hydratePendingCount();
+            return { success: result.success !== false };
         } catch (e) {
             console.error("Error deleting CICL/CAR case:", e);
             return { success: false, error: e };
         }
-    }, [load]);
+    }, [hydratePendingCount]);
+
+    const runSync = useCallback(async () => {
+        setSyncing(true);
+        setSyncStatus("Preparing sync…");
+        try {
+            const result = await syncCiclcarQueue(({ current, synced }) => {
+                if (!current) return;
+                const label = current.operationType ? current.operationType.toUpperCase() : "";
+                setSyncStatus(`Syncing ${label} (${synced + 1})`);
+            });
+            await load();
+            await hydratePendingCount();
+            setSyncStatus("All changes synced");
+            return result;
+        } catch (err) {
+            console.error("CICL/CAR sync failed:", err);
+            setSyncStatus(err.message ?? "Sync failed");
+            throw err;
+        } finally {
+            setTimeout(() => setSyncStatus(null), 2000);
+            setSyncing(false);
+        }
+    }, [hydratePendingCount, load]);
 
     return useMemo(
         () => ({
@@ -64,7 +105,11 @@ export function useCiclcarCases() {
             error,
             reload: load,
             deleteCiclcarCase,
+            pendingCount,
+            syncing,
+            syncStatus,
+            runSync,
         }),
-        [data, loading, error, load, deleteCiclcarCase],
+        [data, loading, error, load, deleteCiclcarCase, pendingCount, syncing, syncStatus, runSync],
     );
 }

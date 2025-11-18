@@ -18,7 +18,9 @@ import { ReferralForm } from "@/components/intake sheet CICLCAR/ReferralForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import supabase from "@/../config/supabase";
 import { toast } from "sonner";
-import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
+import { createOrUpdateLocalCase } from "@/services/ciclcarOfflineService";
+
+const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
 
 // Helper utilities to make field mapping robust
 const pick = (obj, ...keys) => {
@@ -170,31 +172,34 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row, onSuccess }
             });
 
             // Fetch and prefill family background and services from related tables
-            const fetchRelatedData = async () => {
+            const applyFamilyData = async () => {
                 try {
-                    // Fetch family background
-                    const { data: familyData, error: familyError } = await supabase
+                    if (Array.isArray(row.family_background) && row.family_background.length) {
+                        setSectionField("familyBackground", "members", row.family_background);
+                        return;
+                    }
+
+                    if (!isBrowserOnline() || !row.id) return;
+
+                    const { data, error } = await supabase
                         .from("ciclcar_family_background")
                         .select("*")
                         .eq("ciclcar_case_id", row.id);
-
-                    if (familyError) {
-                        console.error("Error fetching family background:", familyError);
-                    } else {
-                        const familyMembers = (familyData || []).map((member) => ({
-                            name: member.name || "",
-                            relationship: member.relationship || "",
-                            age: member.age || "",
-                            sex: member.sex || "",
-                            status: member.status || "",
-                            contactNumber: member.contact_number || "",
-                            educationalAttainment: member.educational_attainment || "",
-                            employment: member.employment || "",
-                        }));
-                        // Store under nested key to match form expectations
-                        setSectionField("familyBackground", "members", familyMembers);
-                        console.log("✅ Loaded family background:", familyMembers);
+                    if (error) {
+                        console.error("Error fetching family background:", error);
+                        return;
                     }
+                    const fallbackMembers = (data || []).map((member) => ({
+                        name: member.name || "",
+                        relationship: member.relationship || "",
+                        age: member.age || "",
+                        sex: member.sex || "",
+                        status: member.status || "",
+                        contactNumber: member.contact_number || "",
+                        educationalAttainment: member.educational_attainment || "",
+                        employment: member.employment || "",
+                    }));
+                    setSectionField("familyBackground", "members", fallbackMembers);
                 } catch (error) {
                     console.error("Error fetching related data:", error);
                 } finally {
@@ -202,7 +207,7 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row, onSuccess }
                 }
             };
 
-            fetchRelatedData();
+            applyFamilyData();
         }
     }, [open, row, setSectionField]);
 
@@ -298,96 +303,13 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row, onSuccess }
 
             console.log("💾 Final case payload:", casePayload);
 
-            let caseRow;
-            
-            if (isEditing) {
-                // 1) Update existing base case
-                const { data, error: caseErr } = await supabase
-                    .from("ciclcar_case")
-                    .update(casePayload)
-                    .eq("id", row.id)
-                    .select()
-                    .single();
-
-                if (caseErr) {
-                    console.error("❌ Case update error:", caseErr);
-                    throw caseErr;
-                }
-                caseRow = data;
-                console.log("✅ Updated case record:", caseRow);
-
-                // Create audit log for case update
-                await createAuditLog({
-                    actionType: AUDIT_ACTIONS.UPDATE_CASE,
-                    actionCategory: AUDIT_CATEGORIES.CASE,
-                    description: `Updated CICL-CAR case for ${casePayload.child_in_conflict_with_law || 'N/A'}`,
-                    resourceType: 'ciclcar_case',
-                    resourceId: row.id,
-                    metadata: {
-                        caseType: 'CICL-CAR',
-                        childName: casePayload.child_in_conflict_with_law,
-                        violationType: casePayload.nature_of_violation
-                    },
-                    severity: 'info'
-                });
-
-                // 2) Delete existing family members, then re-insert
-                await supabase.from("ciclcar_family_background").delete().eq("ciclcar_case_id", row.id);
-            } else {
-                // 1) Insert new base case
-                const { data, error: caseErr } = await supabase
-                    .from("ciclcar_case")
-                    .insert([casePayload])
-                    .select()
-                    .single();
-
-                if (caseErr) {
-                    console.error("❌ Case insertion error:", caseErr);
-                    throw caseErr;
-                }
-                caseRow = data;
-                console.log("✅ Created new case record:", caseRow);
-
-                // Create audit log for case creation
-                await createAuditLog({
-                    actionType: AUDIT_ACTIONS.CREATE_CASE,
-                    actionCategory: AUDIT_CATEGORIES.CASE,
-                    description: `Created new CICL-CAR case for ${casePayload.child_in_conflict_with_law || 'N/A'}`,
-                    resourceType: 'ciclcar_case',
-                    resourceId: caseRow.id,
-                    metadata: {
-                        caseType: 'CICL-CAR',
-                        childName: casePayload.child_in_conflict_with_law,
-                        dateOfBirth: casePayload.date_of_birth,
-                        violationType: casePayload.nature_of_violation
-                    },
-                    severity: 'info'
-                });
-            }
-
-            // 3) Insert family members (if any)
-            if (caseRow?.id && familyRows.length > 0) {
-                const familyPayload = familyRows
-                    .map((m) => ({
-                        ciclcar_case_id: caseRow.id,
-                        name: m?.name ?? null,
-                        relationship: m?.relationship ?? null,
-                        age: m?.age ?? null,
-                        sex: m?.sex ?? null,
-                        status: m?.status ?? null,
-                        contact_number: m?.contactNumber ?? null,
-                        educational_attainment: m?.educationalAttainment ?? null,
-                        employment: m?.employment ?? null,
-                    }))
-                    .filter(Boolean);
-
-                if (familyPayload.length > 0) {
-                    const { error: famErr } = await supabase
-                        .from("ciclcar_family_background")
-                        .insert(familyPayload);
-                    if (famErr) throw famErr;
-                }
-            }
+            await createOrUpdateLocalCase({
+                casePayload,
+                familyMembers: familyRows,
+                targetId: row?.id ?? null,
+                localId: row?.localId ?? null,
+                mode: isEditing ? "update" : "create",
+            });
 
             // Done - close modal and clean up
             resetAll();
@@ -398,11 +320,11 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row, onSuccess }
                 await onSuccess();
             }
             
-            // Show success toast after refresh completes
-            toast.success(isEditing ? "Case Updated" : "Case Created", {
-                description: isEditing 
-                    ? "CICL/CAR case has been successfully updated." 
-                    : "CICL/CAR case has been successfully created.",
+            const online = isBrowserOnline();
+            toast.success(isEditing ? "Changes Saved" : "Case Saved", {
+                description: online
+                    ? "Sync queued. Remote data will update shortly."
+                    : "Changes stored locally and will sync once reconnected.",
             });
         } catch (err) {
             console.error("Failed to create/update CICL/CAR record:", err);

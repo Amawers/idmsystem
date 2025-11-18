@@ -5,7 +5,7 @@
  */
 
 import { DataTable } from "@/components/cases/data-table";
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import {
 	Card,
@@ -21,6 +21,7 @@ import { useFarCases } from "@/hooks/useFarCases";
 import { useFacCases } from "@/hooks/useFacCases";
 import { useIvacCases } from "@/hooks/useIvacCases";
 import { useHiddenCases } from "@/hooks/useHiddenCases";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 export default function CaseManagement() {
 	// Track whether the user is currently at (or past) the DataTable section
@@ -37,6 +38,10 @@ export default function CaseManagement() {
 		error: ciclcarError,
 		reload: reloadCiclcar,
 		deleteCiclcarCase,
+		pendingCount: ciclcarPendingCount,
+		syncing: ciclcarSyncing,
+		syncStatus: ciclcarSyncStatus,
+		runSync: runCiclcarSync,
 	} = useCiclcarCases();
 	const {
 		data: farRows,
@@ -62,6 +67,51 @@ export default function CaseManagement() {
 
 	// Filter hidden cases for case managers
 	const { filterVisibleCases } = useHiddenCases();
+	const isOnline = useNetworkStatus();
+	const [initialTab, setInitialTab] = useState("CASE");
+	const [autoSyncAfterReload, setAutoSyncAfterReload] = useState(false);
+	const hasBootstrappedTab = useRef(false);
+	const previousOnline = useRef(isOnline);
+
+	const persistActiveTab = useCallback((tabValue) => {
+		if (typeof window === "undefined") return;
+		sessionStorage.setItem("caseManagement.activeTab", tabValue);
+	}, []);
+
+	useEffect(() => {
+		if (hasBootstrappedTab.current) return;
+		hasBootstrappedTab.current = true;
+		if (typeof window === "undefined") return;
+		const forced = sessionStorage.getItem("caseManagement.forceCiclcarSync") === "true";
+		const storedTab = sessionStorage.getItem("caseManagement.activeTab");
+		setInitialTab(forced ? "CICLCAR" : storedTab || "CASE");
+		setAutoSyncAfterReload(forced);
+		sessionStorage.removeItem("caseManagement.forceCiclcarSync");
+	}, []);
+
+	useEffect(() => {
+		if (typeof window === "undefined") return;
+		sessionStorage.setItem("caseManagement.activeTab", initialTab);
+	}, [initialTab]);
+
+	useEffect(() => {
+		if (!previousOnline.current && isOnline) {
+			if (typeof window !== "undefined") {
+				sessionStorage.setItem("caseManagement.activeTab", "CICLCAR");
+				sessionStorage.setItem("caseManagement.forceCiclcarSync", "true");
+				window.location.reload();
+			}
+		}
+		previousOnline.current = isOnline;
+	}, [isOnline, ciclcarPendingCount]);
+
+	useEffect(() => {
+		if (!autoSyncAfterReload) return;
+		if (!isOnline) return;
+		runCiclcarSync()
+			.catch((err) => console.error("Auto sync failed:", err))
+			.finally(() => setAutoSyncAfterReload(false));
+	}, [autoSyncAfterReload, isOnline, runCiclcarSync]);
 
 	// Apply filtering to all case data
 	const filteredCaseRows = React.useMemo(() => filterVisibleCases(caseRows || []), [caseRows, filterVisibleCases]);
@@ -170,6 +220,15 @@ export default function CaseManagement() {
 							deleteFarCase={deleteFarCase}
 							deleteFacCase={deleteFacCase}
 							deleteIvacCase={deleteIvacCase}
+							initialTab={initialTab}
+							onTabChange={persistActiveTab}
+							ciclcarSync={{
+								pendingCount: ciclcarPendingCount,
+								syncing: ciclcarSyncing,
+								syncStatus: ciclcarSyncStatus,
+								onSync: runCiclcarSync,
+							}}
+							isOnline={isOnline}
 						/>
 					</CardContent>
 				</Card>

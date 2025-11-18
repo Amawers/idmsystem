@@ -16,9 +16,10 @@ import { ComplainantForm } from "@/components/intake sheet CICLCAR/ComplainantFo
 import { RemarksForm } from "@/components/intake sheet CICLCAR/RemarksForm";
 import { ReferralForm } from "@/components/intake sheet CICLCAR/ReferralForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
-import supabase from "@/../config/supabase";
 import { toast } from "sonner";
-import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
+import { createOrUpdateLocalCase, getCaseManagersOfflineFirst } from "@/services/ciclcarOfflineService";
+
+const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
 
 // Helper utilities to make field mapping robust
 const pick = (obj, ...keys) => {
@@ -78,41 +79,18 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 	const [loadingCaseManagers, setLoadingCaseManagers] = useState(false);
 
 	// Fetch case managers
-	const fetchCaseManagers = async () => {
-		try {
-			setLoadingCaseManagers(true);
-			
-			// Try with status filter first
-			let { data, error: fetchError } = await supabase
-				.from('profile')
-				.select('id, full_name, email, role')
-				.eq('role', 'case_manager')
-				.eq('status', 'active')
-				.order('full_name', { ascending: true });
-
-			// If no results or error, try without status filter
-			if (!data || data.length === 0 || fetchError) {
-				const retry = await supabase
-					.from('profile')
-					.select('id, full_name, email, role')
-					.eq('role', 'case_manager')
-					.order('full_name', { ascending: true });
-				
-				data = retry.data;
-				fetchError = retry.error;
+	 const fetchCaseManagers = async () => {
+			try {
+				setLoadingCaseManagers(true);
+				const { data } = await getCaseManagersOfflineFirst();
+				setCaseManagers(data || []);
+			} catch (err) {
+				console.error("Error fetching case managers:", err);
+				setCaseManagers([]);
+			} finally {
+				setLoadingCaseManagers(false);
 			}
-
-			if (fetchError) throw fetchError;
-
-			console.log('Case managers loaded:', data);
-			setCaseManagers(data || []);
-		} catch (err) {
-			console.error("Error fetching case managers:", err);
-			setCaseManagers([]);
-		} finally {
-			setLoadingCaseManagers(false);
-		}
-	};
+		};
 
 	// Create CICL/CAR case and related rows
 	const handleCreate = async () => {
@@ -205,69 +183,22 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 
 			console.log("💾 Final case payload:", casePayload);
 
-			// 1) Insert base case
-			const { data: caseRow, error: caseErr } = await supabase
-				.from("ciclcar_case")
-				.insert([casePayload])
-				.select()
-				.single();
-
-			if (caseErr) {
-				console.error("❌ Case insertion error:", caseErr);
-				throw caseErr;
-			}
-
-			// Create audit log for case creation
-			await createAuditLog({
-				actionType: AUDIT_ACTIONS.CREATE_CASE,
-				actionCategory: AUDIT_CATEGORIES.CASE,
-				description: `Created new CICL-CAR case for ${casePayload.child_in_conflict_with_law || 'N/A'}`,
-				resourceType: 'ciclcar_case',
-				resourceId: caseRow.id,
-				metadata: {
-					caseType: 'CICL-CAR',
-					childName: casePayload.child_in_conflict_with_law,
-					dateOfBirth: casePayload.date_of_birth,
-					violationType: casePayload.nature_of_violation
-				},
-				severity: 'info'
+			await createOrUpdateLocalCase({
+				casePayload,
+				familyMembers: familyRows,
+				mode: "create",
 			});
-
-			// 2) Insert family members (if any)
-			if (caseRow?.id && familyRows.length > 0) {
-				const familyPayload = familyRows
-					.map((m) => ({
-						ciclcar_case_id: caseRow.id,
-						name: m?.name ?? null,
-						relationship: m?.relationship ?? null,
-						age: m?.age ?? null,
-						sex: m?.sex ?? null,
-						status: m?.status ?? null,
-						contact_number: m?.contactNumber ?? null,
-						educational_attainment: m?.educationalAttainment ?? null,
-						employment: m?.employment ?? null,
-					}))
-					.filter(Boolean);
-
-				if (familyPayload.length > 0) {
-					const { error: famErr } = await supabase
-						.from("ciclcar_family_background")
-						.insert(familyPayload);
-					if (famErr) throw famErr;
-				}
-			}
 
 			// Done - close modal and clean up
 			resetAll();
 			setOpen(false);
 			
-			// Show success toast
-			toast.success("Case Created", {
-				description: "CICL/CAR case has been successfully created.",
+			const online = isBrowserOnline();
+			toast.success(online ? "Case Saved" : "Case Saved Offline", {
+				description: online
+					? "CICL/CAR case was stored and will sync shortly."
+					: "Changes were stored locally and will sync once you're reconnected.",
 			});
-			
-			// Refresh case managers list
-			fetchCaseManagers();
 			
 			// Call onSuccess callback to refresh the table data (don't await - let it run async)
 			if (onSuccess) {
