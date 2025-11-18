@@ -220,15 +220,15 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 			resetAll();
 			setOpen(false);
 			
-			// Call onSuccess callback to refresh the table data
-			if (onSuccess) {
-				await onSuccess();
-			}
-			
-			// Show success toast after refresh completes
+			// Show success toast
 			toast.success("Case Created", {
 				description: "CICL/CAR case has been successfully created.",
 			});
+			
+			// Call onSuccess callback to refresh the table data (don't await - let it run async)
+			if (onSuccess) {
+				onSuccess();
+			}
 		} catch (err) {
 			console.error("Failed to create CICL/CAR record:", err);
 			

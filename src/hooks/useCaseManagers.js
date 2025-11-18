@@ -32,15 +32,30 @@ export function useCaseManagers() {
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
+      // Try with status filter first
+      let { data, error: fetchError } = await supabase
         .from('profile')
         .select('id, full_name, email, role')
         .eq('role', 'case_manager')
         .eq('status', 'active')
         .order('full_name', { ascending: true });
 
+      // If no results or error, try without status filter
+      if (!data || data.length === 0 || fetchError) {
+        console.log('Retrying without status filter...');
+        const retry = await supabase
+          .from('profile')
+          .select('id, full_name, email, role')
+          .eq('role', 'case_manager')
+          .order('full_name', { ascending: true });
+        
+        data = retry.data;
+        fetchError = retry.error;
+      }
+
       if (fetchError) throw fetchError;
 
+      console.log('Case managers loaded:', data);
       setCaseManagers(data || []);
     } catch (err) {
       console.error("Error fetching case managers:", err);
