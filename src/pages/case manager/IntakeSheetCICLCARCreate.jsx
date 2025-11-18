@@ -72,6 +72,47 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 	const [completedTabs, setCompletedTabs] = useState(new Set());
 	const { getAllData, resetAll } = useIntakeFormStore();
 	const [isSaving, setIsSaving] = useState(false);
+	
+	// State for case managers
+	const [caseManagers, setCaseManagers] = useState([]);
+	const [loadingCaseManagers, setLoadingCaseManagers] = useState(false);
+
+	// Fetch case managers
+	const fetchCaseManagers = async () => {
+		try {
+			setLoadingCaseManagers(true);
+			
+			// Try with status filter first
+			let { data, error: fetchError } = await supabase
+				.from('profile')
+				.select('id, full_name, email, role')
+				.eq('role', 'case_manager')
+				.eq('status', 'active')
+				.order('full_name', { ascending: true });
+
+			// If no results or error, try without status filter
+			if (!data || data.length === 0 || fetchError) {
+				const retry = await supabase
+					.from('profile')
+					.select('id, full_name, email, role')
+					.eq('role', 'case_manager')
+					.order('full_name', { ascending: true });
+				
+				data = retry.data;
+				fetchError = retry.error;
+			}
+
+			if (fetchError) throw fetchError;
+
+			console.log('Case managers loaded:', data);
+			setCaseManagers(data || []);
+		} catch (err) {
+			console.error("Error fetching case managers:", err);
+			setCaseManagers([]);
+		} finally {
+			setLoadingCaseManagers(false);
+		}
+	};
 
 	// Create CICL/CAR case and related rows
 	const handleCreate = async () => {
@@ -225,6 +266,9 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 				description: "CICL/CAR case has been successfully created.",
 			});
 			
+			// Refresh case managers list
+			fetchCaseManagers();
+			
 			// Call onSuccess callback to refresh the table data (don't await - let it run async)
 			if (onSuccess) {
 				onSuccess();
@@ -283,6 +327,7 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 	useEffect(() => {
 		if (open) {
 			resetAll();
+			fetchCaseManagers();
 		}
 	}, [open, resetAll]);
 
@@ -387,6 +432,8 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 							goBack={goBack}
 							isSaving={isSaving}
 							isEditing={false}
+							caseManagers={caseManagers}
+							loadingCaseManagers={loadingCaseManagers}
 						/>
 					</TabsContent>
 				</Tabs>

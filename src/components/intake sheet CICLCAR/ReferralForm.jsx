@@ -45,9 +45,11 @@ const schema = z.object({
     referralReason: z.string().min(2, "Required"),
 });
 
-export function ReferralForm({ sectionKey, goNext, goBack, isSaving, isEditing = false }) {
-    // Fetch case managers from database
-    const { caseManagers, loading: loadingCaseManagers } = useCaseManagers();
+export function ReferralForm({ sectionKey, goNext, goBack, isSaving, isEditing = false, caseManagers, loadingCaseManagers }) {
+    // Use passed props instead of hook if available, otherwise fall back to hook
+    const hookData = useCaseManagers();
+    const finalCaseManagers = caseManagers !== undefined ? caseManagers : hookData.caseManagers;
+    const finalLoadingCaseManagers = loadingCaseManagers !== undefined ? loadingCaseManagers : hookData.loading;
 
     const statuses = [
         {
@@ -310,21 +312,21 @@ export function ReferralForm({ sectionKey, goNext, goBack, isSaving, isEditing =
                                     onValueChange={(val) =>
                                         updateCaseDetailField("caseManager", val)
                                     }
-                                    disabled={loadingCaseManagers}
+                                    disabled={finalLoadingCaseManagers}
                                 >
                                     <SelectTrigger
                                         className="w-full"
                                         id="caseManager"
                                     >
-                                        <SelectValue placeholder={loadingCaseManagers ? "Loading..." : "Select case manager"} />
+                                        <SelectValue placeholder={finalLoadingCaseManagers ? "Loading..." : "Select case manager"} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {caseManagers.length === 0 ? (
+                                        {finalCaseManagers.length === 0 ? (
                                             <SelectItem value="no-managers" disabled>
                                                 No case managers available
                                             </SelectItem>
                                         ) : (
-                                            caseManagers.map((manager) => (
+                                            finalCaseManagers.map((manager) => (
                                                 <SelectItem
                                                     key={manager.id}
                                                     value={manager.full_name}
