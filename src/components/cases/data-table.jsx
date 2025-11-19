@@ -296,7 +296,7 @@ const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick
 // =================================
 //* CICLCAR Table COLUMN DEFINITIONS
 // =================================
-const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) => [
+const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, getPrefetchedEnrollments) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -349,10 +349,12 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) =
 		header: "Programs",
 		cell: ({ row }) => {
 			const caseId = row.original["case ID"] ?? row.original.id;
+			const prefetchedEnrollments = getPrefetchedEnrollments?.(caseId);
 			return (
 				<ProgramEnrollmentBadge 
 					caseId={caseId} 
 					caseType="CICLCAR"
+					prefetchedEnrollments={prefetchedEnrollments}
 					onEnrollClick={() => handleEnrollClick(row.original, "CICLCAR")}
 				/>
 			);
@@ -1062,6 +1064,8 @@ export function DataTable({
 	initialTab = "CASE",
 	onTabChange,
 	ciclcarSync,
+	ciclcarProgramEnrollments = {},
+	ciclcarProgramEnrollmentsLoading = false,
 	isOnline = true,
 }) {
 	// State to control Intake Sheet modal visibility (open/close)
@@ -1123,6 +1127,14 @@ export function DataTable({
 	const ciclcarSyncing = ciclcarSync?.syncing ?? false;
 	const ciclcarSyncStatus = ciclcarSync?.syncStatus ?? null;
 	const ciclcarOnSync = ciclcarSync?.onSync;
+	const getCiclcarPrefetchedEnrollments = React.useCallback(
+		(caseId) => {
+			if (!caseId) return undefined;
+			if (ciclcarProgramEnrollmentsLoading) return null;
+			return ciclcarProgramEnrollments?.[caseId] ?? [];
+		},
+		[ciclcarProgramEnrollments, ciclcarProgramEnrollmentsLoading],
+	);
 
 	// Fetch case managers
 	const { caseManagers, loading: caseManagersLoading } = useCaseManagers();
@@ -1300,7 +1312,12 @@ export function DataTable({
 	// Table instance for CICLCAR tab with its own data and column definitions
 	const ciclcarTable = useDataTable({
 		initialData: ciclcarCaseManager === "all" ? ciclcarData : ciclcarData.filter(row => row.case_manager === ciclcarCaseManager),
-		columns: ciclcarColumns(handleEnrollClick, handleEditCiclcarRow, handleDeleteClick),
+		columns: ciclcarColumns(
+			handleEnrollClick,
+			handleEditCiclcarRow,
+			handleDeleteClick,
+			getCiclcarPrefetchedEnrollments,
+		),
 		onRowClick: handleEditCiclcarRow, // Add click handler for CICL/CAR rows
 	});
 

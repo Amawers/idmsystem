@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
     ciclcarLiveQuery,
     getPendingOperationCount,
@@ -6,6 +6,7 @@ import {
     deleteCiclcarCaseNow,
     syncCiclcarQueue,
 } from "@/services/ciclcarOfflineService";
+import supabase from "@/../config/supabase";
 
 const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
 const forceCiclcarTabReload = () => {
@@ -23,6 +24,9 @@ export function useCiclcarCases() {
     const [pendingCount, setPendingCount] = useState(0);
     const [syncing, setSyncing] = useState(false);
     const [syncStatus, setSyncStatus] = useState(null);
+    const [programEnrollments, setProgramEnrollments] = useState({});
+    const [programEnrollmentsLoading, setProgramEnrollmentsLoading] = useState(true);
+    const enrollmentCaseIdSignatureRef = useRef("");
 
     const hydratePendingCount = useCallback(async () => {
         const count = await getPendingOperationCount();
@@ -51,6 +55,7 @@ export function useCiclcarCases() {
 
     const load = useCallback(async () => {
         setError(null);
+        enrollmentCaseIdSignatureRef.current = "";
 
         try {
             if (!isBrowserOnline()) {
@@ -70,6 +75,89 @@ export function useCiclcarCases() {
     useEffect(() => {
         load();
     }, [load]);
+
+    useEffect(() => {
+        const currentRows = data ?? [];
+        const caseIds = Array.from(
+            new Set(
+                currentRows
+                    .map((row) => row?.id)
+                    .filter((caseId) => typeof caseId !== "undefined" && caseId !== null),
+            ),
+        );
+
+        if (caseIds.length === 0) {
+            enrollmentCaseIdSignatureRef.current = "";
+            setProgramEnrollments({});
+            setProgramEnrollmentsLoading(false);
+            return;
+        }
+
+        const signature = caseIds.join("|");
+        if (signature === enrollmentCaseIdSignatureRef.current) {
+            return;
+        }
+
+        let isActive = true;
+        enrollmentCaseIdSignatureRef.current = signature;
+        setProgramEnrollmentsLoading(true);
+
+        const loadEnrollments = async () => {
+            if (!isBrowserOnline()) {
+                if (!isActive) return;
+                setProgramEnrollments({});
+                setProgramEnrollmentsLoading(false);
+                return;
+            }
+
+            try {
+                const { data: rows, error } = await supabase
+                    .from("program_enrollments")
+                    .select(`
+                        *,
+                        program:programs(
+                            id,
+                            program_name,
+                            program_type,
+                            duration_weeks,
+                            coordinator,
+                            location,
+                            schedule
+                        )
+                    `)
+                    .in("case_id", caseIds)
+                    .eq("status", "active")
+                    .order("enrollment_date", { ascending: false });
+
+                if (error) throw error;
+                if (!isActive) return;
+
+                const grouped = (rows ?? []).reduce((acc, enrollment) => {
+                    const key = enrollment.case_id;
+                    if (!key) return acc;
+                    if (!acc[key]) acc[key] = [];
+                    acc[key].push(enrollment);
+                    return acc;
+                }, {});
+
+                setProgramEnrollments(grouped);
+            } catch (err) {
+                if (!isActive) return;
+                console.error("Error fetching CICL/CAR program enrollments:", err);
+                setProgramEnrollments({});
+            } finally {
+                if (isActive) {
+                    setProgramEnrollmentsLoading(false);
+                }
+            }
+        };
+
+        loadEnrollments();
+
+        return () => {
+            isActive = false;
+        };
+    }, [data]);
 
     const deleteCiclcarCase = useCallback(async (caseId) => {
         try {
@@ -119,7 +207,21 @@ export function useCiclcarCases() {
             syncing,
             syncStatus,
             runSync,
+            programEnrollments,
+            programEnrollmentsLoading,
         }),
-        [data, loading, error, load, deleteCiclcarCase, pendingCount, syncing, syncStatus, runSync],
+        [
+            data,
+            loading,
+            error,
+            load,
+            deleteCiclcarCase,
+            pendingCount,
+            syncing,
+            syncStatus,
+            runSync,
+            programEnrollments,
+            programEnrollmentsLoading,
+        ],
     );
 }

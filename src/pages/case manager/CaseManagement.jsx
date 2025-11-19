@@ -44,6 +44,8 @@ export default function CaseManagement() {
 		syncing: ciclcarSyncing,
 		syncStatus: ciclcarSyncStatus,
 		runSync: runCiclcarSync,
+		programEnrollments: ciclcarProgramEnrollments,
+		programEnrollmentsLoading: ciclcarProgramEnrollmentsLoading,
 	} = useCiclcarCases();
 	const {
 		data: farRows,
@@ -235,6 +237,8 @@ export default function CaseManagement() {
 								syncStatus: ciclcarSyncStatus,
 								onSync: runCiclcarSync,
 							}}
+							ciclcarProgramEnrollments={ciclcarProgramEnrollments}
+							ciclcarProgramEnrollmentsLoading={ciclcarProgramEnrollmentsLoading}
 							isOnline={isOnline}
 						/>
 					</CardContent>

@@ -14,10 +14,11 @@
  * @param {string} props.caseId - Case ID to fetch enrollments for
  * @param {string} props.caseType - Case type (CASE, CICLCAR, etc.)
  * @param {Function} props.onEnrollClick - Callback when enrollment action is clicked
+ * @param {Array|undefined|null} props.prefetchedEnrollments - Optional preloaded enrollments (null while loading)
  * @returns {JSX.Element} Program enrollment badge
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import {
   Popover,
@@ -29,18 +30,12 @@ import { cn } from "@/lib/utils";
 import supabase from "@/../config/supabase";
 import { Skeleton } from "@/components/ui/skeleton";
 
-export default function ProgramEnrollmentBadge({ caseId, caseType, onEnrollClick }) {
+export default function ProgramEnrollmentBadge({ caseId, caseType, onEnrollClick, prefetchedEnrollments }) {
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
 
-  useEffect(() => {
-    if (caseId) {
-      fetchEnrollments();
-    }
-  }, [caseId]);
-
-  const fetchEnrollments = async () => {
+  const fetchEnrollments = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -71,7 +66,25 @@ export default function ProgramEnrollmentBadge({ caseId, caseType, onEnrollClick
     } finally {
       setLoading(false);
     }
-  };
+  }, [caseId]);
+
+  const shouldUsePrefetch = typeof prefetchedEnrollments !== "undefined";
+
+  useEffect(() => {
+    if (!caseId) return;
+
+    if (shouldUsePrefetch) {
+      if (prefetchedEnrollments === null) {
+        setLoading(true);
+        return;
+      }
+      setEnrollments(prefetchedEnrollments || []);
+      setLoading(false);
+      return;
+    }
+
+    fetchEnrollments();
+  }, [caseId, fetchEnrollments, prefetchedEnrollments, shouldUsePrefetch]);
 
   // Loading state
   if (loading) {
@@ -84,6 +97,7 @@ export default function ProgramEnrollmentBadge({ caseId, caseType, onEnrollClick
       <Badge 
         variant="outline" 
         className="text-muted-foreground border-dashed cursor-pointer hover:bg-muted hover:text-foreground transition-colors"
+        data-case-type={caseType}
         onClick={(e) => {
           e.stopPropagation(); // Prevent row click handler
           if (onEnrollClick) onEnrollClick();
@@ -104,6 +118,7 @@ export default function ProgramEnrollmentBadge({ caseId, caseType, onEnrollClick
             "cursor-pointer gap-1.5 bg-green-600 hover:bg-green-700 border-green-700",
             "transition-colors duration-200"
           )}
+          data-case-type={caseType}
           onClick={(e) => {
             e.stopPropagation(); // Prevent row click handler
           }}
