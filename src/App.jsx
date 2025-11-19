@@ -7,8 +7,9 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import { Toaster } from "@/components/ui/sonner";
 import UnauthorizedPage from "@/pages/UnauthorizedPage";
-import {SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "./components/site-header";
+import { Loader2 } from "lucide-react";
 import Case from "./pages/Case";
 import TestFileGenerator from "./pages/TestFileGenerator";
 import CaseDashboard from "./pages/case manager/CaseDashboard";
@@ -61,6 +62,24 @@ function Layout({ children }) {
   );
 }
 
+function AppLoadingOverlay() {
+  return (
+    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-background/80 backdrop-blur-sm" role="status" aria-live="polite">
+      <div className="flex max-w-sm flex-col items-center gap-4 rounded-2xl border bg-background p-8 text-center shadow-xl">
+        <div className="rounded-full bg-muted p-4">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+        <div className="space-y-1">
+          <p className="text-base font-medium">Refreshing workspace</p>
+          <p className="text-sm text-muted-foreground">
+            We're fetching your latest session and data. This only takes a moment.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const { init, loading } = useAuthStore();
 
@@ -69,8 +88,8 @@ export default function App() {
     init();
   }, [init]);
 
-  // Show loading indicator while checking auth session
-  if (loading) return <div>Loading...</div>;
+  // Show loading overlay while checking auth session
+  if (loading) return <AppLoadingOverlay />;
 
   return (
     <BrowserRouter>

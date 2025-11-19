@@ -24,6 +24,7 @@ const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLi
 const forceCiclcarTabReload = () => {
     if (typeof window === "undefined") return;
     sessionStorage.setItem("caseManagement.activeTab", "CICLCAR");
+    sessionStorage.setItem("caseManagement.forceTabAfterReload", "CICLCAR");
     sessionStorage.setItem("caseManagement.forceCiclcarSync", "true");
     window.location.reload();
 };

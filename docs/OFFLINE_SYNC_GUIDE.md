@@ -64,10 +64,12 @@ case_managers: "id, full_name"
 ## Case Management + UI Enhancements
 - Session storage keys:
   - `caseManagement.activeTab`: last viewed tab (restored on reload).
+  - `caseManagement.forceTabAfterReload`: set right before we intentionally hard-reload so the landing tab matches the button that initiated the refresh (works for every tab, not just CICL/CAR).
   - `caseManagement.forceCiclcarSync`: flag set before forcing a full reload so the post-reload bootstrap reopens CICL/CAR and kicks off sync automatically.
 - On any offline → online transition, `CaseManagement.jsx` writes the flags above and triggers `window.location.reload()`.
 - CICL/CAR deletes initiated while online call the same reload helper after Supabase confirms the removal, so the refreshed page lands on the CICL/CAR tab with an immediate sync (offline deletes stay queued as before).
 - After reload, the `autoSyncAfterReload` flag triggers `runCiclcarSync()` automatically once the app confirms it is online.
+- Every tab's refresh button now performs a full-page reload (persisting the selected tab via the key above) and shows a compact "Reloading full view…" status row so users immediately understand why the tables temporarily freeze.
 - `data-table.jsx` now receives `isOnline` and `ciclcarSync` props to show:
   - Offline badge (red).
   - Manual Sync button (disabled offline / when queue empty).

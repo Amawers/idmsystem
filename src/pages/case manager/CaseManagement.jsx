@@ -23,6 +23,8 @@ import { useIvacCases } from "@/hooks/useIvacCases";
 import { useHiddenCases } from "@/hooks/useHiddenCases";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
+const FORCED_TAB_AFTER_RELOAD_KEY = "caseManagement.forceTabAfterReload";
+
 export default function CaseManagement() {
 	// Track whether the user is currently at (or past) the DataTable section
 	const [atTable, setAtTable] = useState(false);
@@ -82,11 +84,16 @@ export default function CaseManagement() {
 		if (hasBootstrappedTab.current) return;
 		hasBootstrappedTab.current = true;
 		if (typeof window === "undefined") return;
-		const forced = sessionStorage.getItem("caseManagement.forceCiclcarSync") === "true";
+		const forcedTab = sessionStorage.getItem(FORCED_TAB_AFTER_RELOAD_KEY);
+		const forcedSync = sessionStorage.getItem("caseManagement.forceCiclcarSync") === "true";
 		const storedTab = sessionStorage.getItem("caseManagement.activeTab");
-		setInitialTab(forced ? "CICLCAR" : storedTab || "CASE");
-		setAutoSyncAfterReload(forced);
+		const nextTab = forcedTab || (forcedSync ? "CICLCAR" : storedTab || "CASE");
+		setInitialTab(nextTab);
+		setAutoSyncAfterReload(forcedSync);
 		sessionStorage.removeItem("caseManagement.forceCiclcarSync");
+		if (forcedTab) {
+			sessionStorage.removeItem(FORCED_TAB_AFTER_RELOAD_KEY);
+		}
 	}, []);
 
 	useEffect(() => {

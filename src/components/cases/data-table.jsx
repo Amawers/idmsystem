@@ -1236,42 +1236,47 @@ export function DataTable({
 		setOpenEnrollDialog(true);
 	}
 
-	// Handle refresh - reload data for active tab or all tabs
-	async function handleRefresh() {
+	// Handle refresh - full page reload that returns to the active tab for consistency across datasets
+	const handleRefresh = React.useCallback(async () => {
+		if (isRefreshing) return;
 		setIsRefreshing(true);
+
+		if (typeof window !== "undefined") {
+			sessionStorage.setItem("caseManagement.activeTab", activeTab);
+			sessionStorage.setItem("caseManagement.forceTabAfterReload", activeTab);
+			window.location.reload();
+			return;
+		}
+
+		// Fallback for non-browser environments (keeps previous reload behavior)
 		try {
 			const promises = [];
-			
-			// Refresh based on active tab for efficiency, or all if needed
 			switch (activeTab) {
 				case "CASE":
-					promises.push(reloadCases());
+					promises.push(reloadCases?.());
 					break;
 				case "CICLCAR":
-					promises.push(reloadCiclcar());
+					promises.push(reloadCiclcar?.());
 					break;
 				case "FAR":
-					promises.push(reloadFar());
+					promises.push(reloadFar?.());
 					break;
 				case "FAC":
-					promises.push(reloadFac());
+					promises.push(reloadFac?.());
 					break;
 				case "IVAC":
-					promises.push(reloadIvac());
+					promises.push(reloadIvac?.());
 					break;
 				default:
-					// Optionally refresh all tabs
 					promises.push(
-						reloadCases(),
-						reloadCiclcar(),
-						reloadFar(),
-						reloadFac(),
-						reloadIvac()
+						reloadCases?.(),
+						reloadCiclcar?.(),
+						reloadFar?.(),
+						reloadFac?.(),
+						reloadIvac?.(),
 					);
 			}
-
-			await Promise.all(promises);
-			
+			await Promise.all(promises.filter(Boolean));
 			toast.success("Refreshed", {
 				description: `${activeTab} data has been refreshed successfully.`,
 			});
@@ -1283,7 +1288,7 @@ export function DataTable({
 		} finally {
 			setIsRefreshing(false);
 		}
-	}
+	}, [activeTab, isRefreshing, reloadCases, reloadCiclcar, reloadFar, reloadFac, reloadIvac]);
 
 	// Initialize CASE table with dynamic columns (handler referenced above)
 	const caseTable = useDataTable({
@@ -1351,10 +1356,30 @@ export function DataTable({
 		}
 		window.addEventListener("keydown", handleKeyPress);
 		return () => window.removeEventListener("keydown", handleKeyPress);
-	}, [activeTab, isRefreshing]); // Dependencies to ensure fresh closure
+	}, [handleRefresh]); // Dependencies to ensure fresh closure
 
 	return (
-		<Tabs
+		<>
+			{isRefreshing && (
+				<div className="fixed inset-0 z-[999] flex items-center justify-center bg-background/80 backdrop-blur-sm">
+					<div
+						className="flex max-w-sm flex-col items-center gap-4 rounded-2xl border bg-background p-8 text-center shadow-xl"
+						role="status"
+						aria-live="polite"
+					>
+						<div className="rounded-full bg-muted p-4">
+							<IconRefresh className="h-6 w-6 animate-spin text-primary" />
+						</div>
+						<div className="space-y-1">
+							<p className="text-base font-medium">Refreshing data</p>
+							<p className="text-sm text-muted-foreground">
+								Hang tight while we reload the latest records for the {activeTab} tab.
+							</p>
+						</div>
+					</div>
+				</div>
+			)}
+			<Tabs
 			value={activeTab}
 			onValueChange={handleTabValueChange}
 			className="w-full flex-col justify-start gap-6"
@@ -2091,5 +2116,6 @@ export function DataTable({
 				</AlertDialogContent>
 			</AlertDialog>
 		</Tabs>
+		</>
 	);
 }
