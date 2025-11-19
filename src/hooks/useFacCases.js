@@ -6,8 +6,23 @@
  * @date 2025-10-28
  */
 
-import { useState, useEffect, useCallback } from "react";
-import supabase from "../../config/supabase";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+    facLiveQuery,
+    getFacPendingOperationCount,
+    loadFacRemoteSnapshotIntoCache,
+    deleteFacCaseNow,
+    syncFacQueue,
+} from "@/services/facOfflineService";
+
+const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+const forceFacTabReload = () => {
+    if (typeof window === "undefined") return;
+    sessionStorage.setItem("caseManagement.activeTab", "FAC");
+    sessionStorage.setItem("caseManagement.forceTabAfterReload", "FAC");
+    sessionStorage.setItem("caseManagement.forceFacSync", "true");
+    window.location.reload();
+};
 
 /**
  * useFacCases - Custom hook to fetch FAC cases from Supabase
@@ -42,72 +57,112 @@ export function useFacCases() {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [pendingCount, setPendingCount] = useState(0);
+    const [syncing, setSyncing] = useState(false);
+    const [syncStatus, setSyncStatus] = useState(null);
 
-    /**
-     * Fetch FAC cases from Supabase with family member count
-     * Orders by created_at descending (newest first)
-     */
-    const fetchFacCases = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            // Fetch all FAC cases with basic info
-            const { data: facCases, error: fetchError } = await supabase
-                .from("fac_case")
-                .select(`
-                    *,
-                    family_members:fac_family_member(count)
-                `)
-                .order("created_at", { ascending: false });
-
-            if (fetchError) {
-                throw fetchError;
-            }
-
-            // Transform data to include family member count
-            const transformedData = facCases?.map(facCase => ({
-                ...facCase,
-                family_member_count: facCase.family_members?.[0]?.count || 0,
-            })) || [];
-
-            setData(transformedData);
-        } catch (err) {
-            console.error("❌ Error fetching FAC cases:", err);
-            setError(err);
-        } finally {
-            setLoading(false);
-        }
+    const hydratePendingCount = useCallback(async () => {
+        const count = await getFacPendingOperationCount();
+        setPendingCount(count);
     }, []);
 
-    // Fetch data on mount
     useEffect(() => {
-        fetchFacCases();
-    }, [fetchFacCases]);
+        const subscription = facLiveQuery().subscribe({
+            next: (rows) => {
+                setData((rows ?? []).map((row) => ({
+                    ...row,
+                    id: row?.id ?? row?.case_id ?? row?.localId,
+                    family_member_count: Array.isArray(row?.family_members)
+                        ? row.family_members.length
+                        : row.family_member_count ?? 0,
+                })));
+                setLoading(false);
+                hydratePendingCount().catch(() => {
+                    // best-effort; ignore Dexie count failures here
+                });
+            },
+            error: (err) => {
+                setError(err);
+                setLoading(false);
+            },
+        });
 
-    // Reload function for manual refresh
-    const reload = useCallback(() => {
-        fetchFacCases();
-    }, [fetchFacCases]);
+        hydratePendingCount();
 
-    // Delete FAC case
+        return () => subscription.unsubscribe();
+    }, [hydratePendingCount]);
+
+    const load = useCallback(async () => {
+        setError(null);
+        try {
+            if (!isBrowserOnline()) {
+                await hydratePendingCount();
+                return { success: true, offline: true };
+            }
+            await loadFacRemoteSnapshotIntoCache();
+            await hydratePendingCount();
+            return { success: true };
+        } catch (err) {
+            setError(err);
+            return { success: false, error: err };
+        } finally {
+            // keep optimistic local view; no loading toggle here
+        }
+    }, [hydratePendingCount]);
+
+    useEffect(() => {
+        load();
+    }, [load]);
+
     const deleteFacCase = useCallback(async (caseId) => {
         try {
-            const { error: err } = await supabase
-                .from("fac_case")
-                .delete()
-                .eq("id", caseId);
-
-            if (err) throw err;
-            
-            // Reload the data after successful deletion
-            await fetchFacCases();
-            return { success: true };
+            const result = await deleteFacCaseNow({ targetId: caseId });
+            await hydratePendingCount();
+            if (result?.success && result?.queued === false && isBrowserOnline()) {
+                setTimeout(forceFacTabReload, 0);
+            }
+            return { success: result?.success !== false, queued: result?.queued };
         } catch (e) {
-            console.error("❌ Error deleting FAC case:", e);
+            console.error("Error deleting FAC case:", e);
             return { success: false, error: e };
         }
-    }, [fetchFacCases]);
+    }, [hydratePendingCount]);
 
-    return { data, loading, error, reload, deleteFacCase };
+    const runSync = useCallback(async () => {
+        setSyncing(true);
+        setSyncStatus("Preparing sync…");
+        try {
+            const result = await syncFacQueue(({ current, synced }) => {
+                if (!current) return;
+                const label = current.operationType ? current.operationType.toUpperCase() : "";
+                setSyncStatus(`Syncing ${label} (${synced + 1})`);
+            });
+            await load();
+            await hydratePendingCount();
+            setSyncStatus("All changes synced");
+            return result;
+        } catch (err) {
+            console.error("FAC sync failed:", err);
+            setSyncStatus(err.message ?? "Sync failed");
+            throw err;
+        } finally {
+            setTimeout(() => setSyncStatus(null), 2000);
+            setSyncing(false);
+        }
+    }, [hydratePendingCount, load]);
+
+    return useMemo(
+        () => ({
+            data,
+            loading,
+            error,
+            reload: load,
+            deleteFacCase,
+            pendingCount,
+            syncing,
+            syncStatus,
+            runSync,
+        }),
+        [data, loading, error, load, deleteFacCase, pendingCount, syncing, syncStatus, runSync],
+    );
 }

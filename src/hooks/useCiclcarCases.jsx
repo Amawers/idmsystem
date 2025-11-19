@@ -41,6 +41,9 @@ export function useCiclcarCases() {
                     id: row?.id ?? row?.case_id ?? row?.case_code ?? row?.uuid ?? row?.localId,
                 })));
                 setLoading(false);
+                hydratePendingCount().catch(() => {
+                    // queue count refresh best-effort
+                });
             },
             error: (err) => {
                 setError(err);
@@ -59,6 +62,7 @@ export function useCiclcarCases() {
 
         try {
             if (!isBrowserOnline()) {
+                await hydratePendingCount();
                 return { success: true, offline: true };
             }
             await loadRemoteSnapshotIntoCache();

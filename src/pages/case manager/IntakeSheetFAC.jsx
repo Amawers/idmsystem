@@ -14,7 +14,8 @@ import { FamilyInformationForm } from "@/components/intake sheet FAC/FamilyInfor
 import { VulnerableMembersForm } from "@/components/intake sheet FAC/VulnerableMembersForm";
 import { FinalDetailsForm } from "@/components/intake sheet FAC/FinalDetailsForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
-import { submitFacCase, updateFacCase, fetchFacCase, mapDbToFormData } from "@/lib/facSubmission";
+import { buildFacCasePayload, mapDbToFormData } from "@/lib/facSubmission";
+import { createOrUpdateLocalFacCase, getFacCaseById, getFacCaseByLocalId } from "@/services/facOfflineService";
 import { toast } from "sonner";
 
 const tabOrder = [
@@ -25,11 +26,31 @@ const tabOrder = [
   "final-details",
 ];
 
+const normalizeFamilyMembersForPrefill = (members = []) =>
+  members.map((member) => ({
+    family_member_name: member.family_member_name ?? member.familyMember ?? "",
+    relation_to_head: member.relation_to_head ?? member.relationToHead ?? "",
+    birthdate: member.birthdate ?? "",
+    age: member.age ?? "",
+    sex: member.sex ?? "",
+    educational_attainment: member.educational_attainment ?? member.educationalAttainment ?? "",
+    occupation: member.occupation ?? "",
+    remarks: member.remarks ?? "",
+  }));
+
+const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+const forceFacTabReload = () => {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem("caseManagement.activeTab", "FAC");
+  sessionStorage.setItem("caseManagement.forceTabAfterReload", "FAC");
+  sessionStorage.setItem("caseManagement.forceFacSync", "true");
+  window.location.reload();
+};
+
 export default function IntakeSheetFAC({ open, setOpen, editingRecord = null, onSuccess }) {
   const [currentTabIndex, setCurrentTabIndex] = useState(0);
   const [completedTabs, setCompletedTabs] = useState(new Set());
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const { getAllData, resetAll } = useIntakeFormStore();
 
   const isEditMode = !!editingRecord;
@@ -43,37 +64,38 @@ export default function IntakeSheetFAC({ open, setOpen, editingRecord = null, on
       if (!editingRecord) {
         console.log("🆕 Opening in CREATE mode - clearing form");
         resetAll();
-        setIsLoading(false);
         return;
       }
 
       // If opening for edit mode, load the data
       console.log("✏️ Opening in EDIT mode - loading data for:", editingRecord.id);
-      setIsLoading(true);
       try {
-        const { data, error } = await fetchFacCase(editingRecord.id);
-        
-        if (error) {
-          console.error("❌ Error loading FAC case:", error);
-          toast.error("Failed to load case data", {
-            description: error.message || "Please try again.",
-          });
-          setIsLoading(false);
-          return;
+        let sourceRecord = editingRecord;
+        if (!sourceRecord?.family_members?.length) {
+          const localFallback = sourceRecord?.localId != null
+            ? await getFacCaseByLocalId(sourceRecord.localId)
+            : null;
+          if (localFallback) {
+            sourceRecord = localFallback;
+          } else if (sourceRecord?.id) {
+            const remoteCached = await getFacCaseById(sourceRecord.id);
+            if (remoteCached) {
+              sourceRecord = remoteCached;
+            }
+          }
         }
 
-        if (data && data.case) {
-          const formData = mapDbToFormData(data.case, data.members);
+        if (sourceRecord) {
+          const normalizedMembers = normalizeFamilyMembersForPrefill(sourceRecord.family_members || []);
+          const formData = mapDbToFormData(sourceRecord, normalizedMembers);
           console.log("📥 Pre-filling form with:", formData);
           useIntakeFormStore.setState({ data: formData });
         }
-        setIsLoading(false);
       } catch (err) {
         console.error("❌ Unexpected error:", err);
         toast.error("Error loading case", {
-          description: "An unexpected error occurred.",
+          description: err.message || "An unexpected error occurred.",
         });
-        setIsLoading(false);
       }
     }
 
@@ -86,43 +108,36 @@ export default function IntakeSheetFAC({ open, setOpen, editingRecord = null, on
     const formData = getAllData();
 
     try {
-      if (isEditMode) {
-        // Update existing record
-        const { success, error } = await updateFacCase(editingRecord.id, formData);
-        
-        if (error || !success) {
-          toast.error("Failed to update FAC", {
-            description: error?.message || "Please try again.",
-          });
-          setIsSubmitting(false);
-          return;
-        }
+      const casePayload = buildFacCasePayload(formData);
+      const familyMembers = formData.familyInformation?.members || [];
+      await createOrUpdateLocalFacCase({
+        casePayload,
+        familyMembers,
+        targetId: editingRecord?.id ?? null,
+        localId: editingRecord?.localId ?? null,
+        mode: isEditMode ? "update" : "create",
+      });
 
-        toast.success("FAC updated successfully!");
-      } else {
-        // Create new record
-        const { facCaseId, error } = await submitFacCase(formData);
-        
-        if (error) {
-          toast.error("Failed to create FAC", {
-            description: error.message || "Please try again.",
-          });
-          setIsSubmitting(false);
-          return;
-        }
+      const online = isBrowserOnline();
+      toast.success(isEditMode ? "FAC saved" : "FAC created", {
+        description: online
+          ? "Sync queued and will push shortly."
+          : "Stored locally. Sync once you're back online.",
+      });
 
-        toast.success("FAC created successfully!", {
-          description: `Case ID: ${facCaseId}`,
-        });
-      }
-
-      // Success - close modal and refresh data
       resetAll();
       setOpen(false);
       if (onSuccess) onSuccess();
+
+      if (online) {
+        setTimeout(forceFacTabReload, 0);
+      }
     } catch (err) {
       console.error("❌ Unexpected error:", err);
-      toast.error("An unexpected error occurred");
+      toast.error(isEditMode ? "Failed to update FAC" : "Failed to create FAC", {
+        description: err.message || "Please try again.",
+      });
+    } finally {
       setIsSubmitting(false);
     }
   };

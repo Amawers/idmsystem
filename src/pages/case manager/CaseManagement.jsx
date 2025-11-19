@@ -60,6 +60,10 @@ export default function CaseManagement() {
 		error: facError,
 		reload: reloadFac,
 		deleteFacCase,
+		pendingCount: facPendingCount,
+		syncing: facSyncing,
+		syncStatus: facSyncStatus,
+		runSync: runFacSync,
 	} = useFacCases();
 	const {
 		data: ivacRows,
@@ -73,9 +77,10 @@ export default function CaseManagement() {
 	const { filterVisibleCases } = useHiddenCases();
 	const isOnline = useNetworkStatus();
 	const [initialTab, setInitialTab] = useState("CASE");
-	const [autoSyncAfterReload, setAutoSyncAfterReload] = useState(false);
+	const [autoSyncAfterReloadTab, setAutoSyncAfterReloadTab] = useState(null);
 	const hasBootstrappedTab = useRef(false);
 	const previousOnline = useRef(isOnline);
+	const autoSyncTriggeredRef = useRef({ CICLCAR: false, FAC: false });
 
 	const persistActiveTab = useCallback((tabValue) => {
 		if (typeof window === "undefined") return;
@@ -87,12 +92,19 @@ export default function CaseManagement() {
 		hasBootstrappedTab.current = true;
 		if (typeof window === "undefined") return;
 		const forcedTab = sessionStorage.getItem(FORCED_TAB_AFTER_RELOAD_KEY);
-		const forcedSync = sessionStorage.getItem("caseManagement.forceCiclcarSync") === "true";
+		const forcedCiclcarSync = sessionStorage.getItem("caseManagement.forceCiclcarSync") === "true";
+		const forcedFacSync = sessionStorage.getItem("caseManagement.forceFacSync") === "true";
 		const storedTab = sessionStorage.getItem("caseManagement.activeTab");
-		const nextTab = forcedTab || (forcedSync ? "CICLCAR" : storedTab || "CASE");
+		const nextTab = forcedTab
+			|| (forcedCiclcarSync ? "CICLCAR" : forcedFacSync ? "FAC" : storedTab || "CASE");
 		setInitialTab(nextTab);
-		setAutoSyncAfterReload(forcedSync);
+		if (forcedCiclcarSync) {
+			setAutoSyncAfterReloadTab("CICLCAR");
+		} else if (forcedFacSync) {
+			setAutoSyncAfterReloadTab("FAC");
+		}
 		sessionStorage.removeItem("caseManagement.forceCiclcarSync");
+		sessionStorage.removeItem("caseManagement.forceFacSync");
 		if (forcedTab) {
 			sessionStorage.removeItem(FORCED_TAB_AFTER_RELOAD_KEY);
 		}
@@ -106,21 +118,72 @@ export default function CaseManagement() {
 	useEffect(() => {
 		if (!previousOnline.current && isOnline) {
 			if (typeof window !== "undefined") {
-				sessionStorage.setItem("caseManagement.activeTab", "CICLCAR");
-				sessionStorage.setItem("caseManagement.forceCiclcarSync", "true");
-				window.location.reload();
+				if (ciclcarPendingCount > 0) {
+					sessionStorage.setItem("caseManagement.activeTab", "CICLCAR");
+					sessionStorage.setItem("caseManagement.forceCiclcarSync", "true");
+					window.location.reload();
+					previousOnline.current = isOnline;
+					return;
+				}
+				if (facPendingCount > 0) {
+					sessionStorage.setItem("caseManagement.activeTab", "FAC");
+					sessionStorage.setItem("caseManagement.forceFacSync", "true");
+					window.location.reload();
+					previousOnline.current = isOnline;
+					return;
+				}
 			}
 		}
 		previousOnline.current = isOnline;
-	}, [isOnline, ciclcarPendingCount]);
+	}, [isOnline, ciclcarPendingCount, facPendingCount]);
 
 	useEffect(() => {
-		if (!autoSyncAfterReload) return;
+		if (!autoSyncAfterReloadTab) return;
 		if (!isOnline) return;
-		runCiclcarSync()
+		const runSync = autoSyncAfterReloadTab === "CICLCAR"
+			? runCiclcarSync
+			: autoSyncAfterReloadTab === "FAC"
+			? runFacSync
+			: null;
+		if (!runSync) return;
+		runSync()
 			.catch((err) => console.error("Auto sync failed:", err))
-			.finally(() => setAutoSyncAfterReload(false));
-	}, [autoSyncAfterReload, isOnline, runCiclcarSync]);
+			.finally(() => setAutoSyncAfterReloadTab(null));
+	}, [autoSyncAfterReloadTab, isOnline, runCiclcarSync, runFacSync]);
+
+	useEffect(() => {
+		if (!isOnline) {
+			autoSyncTriggeredRef.current = { CICLCAR: false, FAC: false };
+			return;
+		}
+		if (autoSyncAfterReloadTab) return;
+		const triggers = autoSyncTriggeredRef.current;
+		if (ciclcarPendingCount > 0 && !ciclcarSyncing && !triggers.CICLCAR) {
+			triggers.CICLCAR = true;
+			runCiclcarSync()
+				.catch((err) => console.error("Auto CICL/CAR sync failed:", err))
+				.finally(() => {
+					triggers.CICLCAR = false;
+				});
+		}
+		if (facPendingCount > 0 && !facSyncing && !triggers.FAC) {
+			triggers.FAC = true;
+			runFacSync()
+				.catch((err) => console.error("Auto FAC sync failed:", err))
+				.finally(() => {
+					triggers.FAC = false;
+				});
+		}
+	}, [
+		isOnline,
+		autoSyncAfterReloadTab,
+		runCiclcarSync,
+		runFacSync,
+		ciclcarPendingCount,
+		facPendingCount,
+		ciclcarSyncing,
+		facSyncing,
+	]);
 
 	// Apply filtering to all case data
 	const filteredCaseRows = React.useMemo(() => filterVisibleCases(caseRows || []), [caseRows, filterVisibleCases]);
@@ -236,6 +299,12 @@ export default function CaseManagement() {
 								syncing: ciclcarSyncing,
 								syncStatus: ciclcarSyncStatus,
 								onSync: runCiclcarSync,
+							}}
+							facSync={{
+								pendingCount: facPendingCount,
+								syncing: facSyncing,
+								syncStatus: facSyncStatus,
+								onSync: runFacSync,
 							}}
 							ciclcarProgramEnrollments={ciclcarProgramEnrollments}
 							ciclcarProgramEnrollmentsLoading={ciclcarProgramEnrollmentsLoading}

@@ -20,4 +20,12 @@ offlineCaseDb.version(2).stores({
     case_managers: "id, full_name",
 });
 
+offlineCaseDb.version(3).stores({
+    ciclcar_cases: "++localId, id, updated_at, case_manager, hasPendingWrites",
+    ciclcar_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    case_managers: "id, full_name",
+    fac_cases: "++localId, id, updated_at, head_first_name, head_last_name, hasPendingWrites",
+    fac_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+});
+
 export default offlineCaseDb;

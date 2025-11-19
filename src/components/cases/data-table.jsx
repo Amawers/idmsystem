@@ -1064,6 +1064,7 @@ export function DataTable({
 	initialTab = "CASE",
 	onTabChange,
 	ciclcarSync,
+	facSync,
 	ciclcarProgramEnrollments = {},
 	ciclcarProgramEnrollmentsLoading = false,
 	isOnline = true,
@@ -1127,6 +1128,10 @@ export function DataTable({
 	const ciclcarSyncing = ciclcarSync?.syncing ?? false;
 	const ciclcarSyncStatus = ciclcarSync?.syncStatus ?? null;
 	const ciclcarOnSync = ciclcarSync?.onSync;
+	const facPending = facSync?.pendingCount ?? 0;
+	const facSyncing = facSync?.syncing ?? false;
+	const facSyncStatus = facSync?.syncStatus ?? null;
+	const facOnSync = facSync?.onSync;
 	const getCiclcarPrefetchedEnrollments = React.useCallback(
 		(caseId) => {
 			if (!caseId) return undefined;
@@ -1842,6 +1847,20 @@ export function DataTable({
 								</span>
 							</Button>
 
+							{/* Sync Button */}
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => facOnSync?.()}
+								disabled={!isOnline || facSyncing || facPending === 0}
+								className="cursor-pointer"
+							>
+								<IconCloudUpload className={facSyncing ? "animate-spin" : ""} />
+								<span className="hidden lg:inline">
+									{facSyncing ? "SYNCING..." : "SYNC"}
+								</span>
+							</Button>
+
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -1907,6 +1926,29 @@ export function DataTable({
 								editingRecord={editingFacRecord}
 								onSuccess={reloadFac}
 							/>
+
+							{(facSyncing || facPending > 0 || facSyncStatus) && (
+								<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+									{facSyncing ? (
+										<>
+											<IconLoader className="h-3 w-3 animate-spin" />
+											<span>{facSyncStatus || "Syncing queued changes..."}</span>
+										</>
+									) : facPending > 0 ? (
+										<>
+											<IconAlertTriangle className="h-3 w-3 text-amber-500" />
+											<span className="text-amber-600">
+												{facPending} pending change{facPending === 1 ? "" : "s"} waiting for sync
+											</span>
+										</>
+									) : (
+										<>
+											<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
+											<span className="text-emerald-600">{facSyncStatus}</span>
+										</>
+									)}
+								</div>
+							)}
 						</>
 					)}
 
