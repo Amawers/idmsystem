@@ -88,6 +88,7 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row, onSuccess }
     const { getAllData, resetAll, setSectionField } = useIntakeFormStore();
     const [isSaving, setIsSaving] = useState(false);
     const [prefillLoading, setPrefillLoading] = useState(false);
+    const isEditing = Boolean(row?.id ?? row?.localId);
 
     // Prefill form data when editing an existing record
     useEffect(() => {

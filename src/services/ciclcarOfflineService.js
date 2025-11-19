@@ -17,6 +17,40 @@ const LOCAL_META_FIELDS = [
 
 const nowTs = () => Date.now();
 
+async function removeDuplicateServerRows() {
+    const rows = await CASE_TABLE.orderBy("localId").toArray();
+    const seen = new Map();
+    const duplicates = [];
+    for (const row of rows) {
+        if (!row?.id || row?.localId == null) continue;
+        if (seen.has(row.id)) {
+            duplicates.push(row.localId);
+            continue;
+        }
+        seen.set(row.id, row.localId);
+    }
+    if (duplicates.length) {
+        await CASE_TABLE.bulkDelete(duplicates);
+    }
+}
+
+let localIdSetupPromise;
+function ensureLocalIdField() {
+    if (!localIdSetupPromise) {
+        localIdSetupPromise = (async () => {
+            await CASE_TABLE.toCollection().modify((value, ref, key) => {
+                if (value.localId == null) {
+                    value.localId = key;
+                }
+            });
+            await removeDuplicateServerRows();
+        })();
+    }
+    return localIdSetupPromise;
+}
+
+const localIdReady = ensureLocalIdField();
+
 const toUiFamilyMember = (member = {}) => ({
     name: member?.name ?? "",
     relationship: member?.relationship ?? "",
@@ -41,6 +75,8 @@ const toSupabaseFamilyMember = (member = {}) => ({
 
 export const ciclcarLiveQuery = () =>
     liveQuery(async () => {
+        await localIdReady;
+        await removeDuplicateServerRows();
         const rows = await CASE_TABLE.orderBy("localId").reverse().toArray();
         return rows.map((row) => ({ ...row }));
     });
@@ -98,6 +134,7 @@ function buildLocalRecord(base, overrides = {}) {
 }
 
 export async function upsertLocalFromSupabase(rows = [], familyMap = new Map()) {
+    await localIdReady;
     await offlineCaseDb.transaction("rw", CASE_TABLE, async () => {
         const remoteIds = new Set();
         for (const row of rows) {
@@ -109,12 +146,18 @@ export async function upsertLocalFromSupabase(rows = [], familyMap = new Map()) 
             }
             const record = buildLocalRecord(row, {
                 family_background: (familyMap.get(row.id) ?? []).map(toUiFamilyMember),
-                localId: existing?.localId,
             });
             if (existing?.localId) {
-                await CASE_TABLE.update(existing.localId, record);
+                await CASE_TABLE.update(existing.localId, {
+                    ...record,
+                    localId: existing.localId,
+                });
             } else {
-                await CASE_TABLE.add(record);
+                const newLocalId = await CASE_TABLE.add(record);
+                await CASE_TABLE.update(newLocalId, {
+                    ...record,
+                    localId: newLocalId,
+                });
             }
         }
         const stale = await CASE_TABLE.filter((rec) => !rec.hasPendingWrites && rec.id && !remoteIds.has(rec.id)).toArray();
@@ -145,6 +188,7 @@ export async function loadRemoteSnapshotIntoCache() {
     }
 
     await upsertLocalFromSupabase(cases ?? [], familyMap);
+    await removeDuplicateServerRows();
     return cases?.length ?? 0;
 }
 
@@ -156,6 +200,7 @@ export async function createOrUpdateLocalCase({
     mode = "create",
 }) {
     if (!casePayload) throw new Error("Missing case payload");
+    await localIdReady;
     return offlineCaseDb.transaction("rw", CASE_TABLE, QUEUE_TABLE, async () => {
         let record = null;
         if (localId) {
@@ -185,9 +230,16 @@ export async function createOrUpdateLocalCase({
 
         let resolvedLocalId = localId;
         if (resolvedLocalId) {
-            await CASE_TABLE.update(resolvedLocalId, baseRecord);
+            await CASE_TABLE.update(resolvedLocalId, {
+                ...baseRecord,
+                localId: resolvedLocalId,
+            });
         } else {
             resolvedLocalId = await CASE_TABLE.add(baseRecord);
+            await CASE_TABLE.update(resolvedLocalId, {
+                ...baseRecord,
+                localId: resolvedLocalId,
+            });
         }
 
         await QUEUE_TABLE.add({
@@ -206,6 +258,7 @@ export async function createOrUpdateLocalCase({
 }
 
 export async function markLocalDelete({ targetId = null, localId = null }) {
+    await localIdReady;
     return offlineCaseDb.transaction("rw", CASE_TABLE, QUEUE_TABLE, async () => {
         let record = null;
         if (localId) {
@@ -250,6 +303,7 @@ async function syncFamilyMembers(caseId, familyMembers = []) {
 }
 
 export async function syncCiclcarQueue(statusCb) {
+    await localIdReady;
     const operations = await QUEUE_TABLE.orderBy("queueId").toArray();
     if (!operations.length) return { synced: 0 };
     let synced = 0;
@@ -331,5 +385,6 @@ export async function syncCiclcarQueue(statusCb) {
         }
     }
 
+    await removeDuplicateServerRows();
     return { synced };
 }
