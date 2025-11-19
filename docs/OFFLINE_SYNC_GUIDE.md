@@ -21,12 +21,12 @@ This document captures the full hybrid online/offline flow implemented for the C
 ## Dexie Schema (`offlineCaseDb.js`)
 ```js
 ciclcar_cases: "++localId, id, updated_at, case_manager, hasPendingWrites"
-ciclcar_queue: "++queueId, operationType, createdAt"
+ciclcar_queue: "++queueId, targetLocalId, targetId, operationType, createdAt"
 case_managers: "id, full_name"
 ```
 - `localId` is Dexie’s primary key for local records (useful before Supabase assigns `id`). Every row now stores this value explicitly (including a boot-time backfill) so one Supabase `id` can never map to multiple local rows.
 - `hasPendingWrites`, `pendingAction`, `syncError`, `lastLocalChange` help the UI show local-only changes and retry failures.
-- Queue rows keep `{ operationType: "create" | "update" | "delete", targetLocalId, targetId, payload, createdAt }`.
+- Queue rows keep `{ operationType: "create" | "update" | "delete", targetLocalId, targetId, payload, createdAt }`, and the store now indexes both `targetLocalId` and `targetId` so fast-path deletes can prune stale operations without schema errors.
 
 ## Offline Service Highlights (`ciclcarOfflineService.js`)
 - **Case snapshot**: `loadRemoteSnapshotIntoCache()` pulls `ciclcar_case` + `ciclcar_family_background`, merges families per case, and upserts them into Dexie (skipping records with local pending writes).
@@ -46,8 +46,18 @@ case_managers: "id, full_name"
 3. The hook exposes `pendingCount`, `syncing`, `syncStatus`, and `runSync()` so UI layers can show queue state and trigger sync manually.
 4. `useNetworkStatus` drives all connectivity-aware logic.
 
+## Online vs Offline Actions
+| Action | Online Behavior | Offline Behavior |
+| --- | --- | --- |
+| **Create / Update** | `createOrUpdateLocalCase` writes to Dexie, then attempts Supabase immediately. On success we stamp `caseManagement.*` flags, hard reload, and auto-sync on the CICL/CAR tab so timestamps/IDs match the server instantly. | Dexie row is marked pending and the queue stores the payload; UI shows pending badges until manual sync succeeds. |
+| **Delete** | `deleteCiclcarCaseNow` deletes from Supabase in real time, prunes Dexie + queue entries, and then triggers the same reload/auto-sync flow as create/update. | Falls back to `markLocalDelete`, keeping the record locally with `pendingAction = delete` until a later sync removes it. |
+| **Manual Sync** | Available but not required (there are no pending operations after a successful online mutation). | Required to push queued operations; progress + errors appear in the sync status message. |
+
+> Tip: the forced reload only happens when `navigator.onLine` is true and Supabase confirms the change. If the page is already reloading for another reason (e.g., reconnect), the sync flags simply piggy-back on that flow.
+
 ## Intake Modal Behavior
 - Both create and edit modals call `createOrUpdateLocalCase` instead of touching Supabase directly.
+- When the user is online and successfully creates or updates a CICL/CAR record, the modal sets the same `sessionStorage` flags used for reconnect recovery (`caseManagement.activeTab = "CICLCAR"`, `caseManagement.forceCiclcarSync = "true"`) and forces a hard reload so Case Management reopens on CICL/CAR and auto-syncs immediately. Offline saves keep the modal flow unchanged and wait for manual sync later.
 - Case manager dropdowns call `getCaseManagersOfflineFirst`; the network call only happens if there is no cached data.
 - Success toasts adapt their wording depending on `navigator.onLine` so users know if data is still pending sync.
 
@@ -56,6 +66,7 @@ case_managers: "id, full_name"
   - `caseManagement.activeTab`: last viewed tab (restored on reload).
   - `caseManagement.forceCiclcarSync`: flag set before forcing a full reload so the post-reload bootstrap reopens CICL/CAR and kicks off sync automatically.
 - On any offline → online transition, `CaseManagement.jsx` writes the flags above and triggers `window.location.reload()`.
+- CICL/CAR deletes initiated while online call the same reload helper after Supabase confirms the removal, so the refreshed page lands on the CICL/CAR tab with an immediate sync (offline deletes stay queued as before).
 - After reload, the `autoSyncAfterReload` flag triggers `runCiclcarSync()` automatically once the app confirms it is online.
 - `data-table.jsx` now receives `isOnline` and `ciclcarSync` props to show:
   - Offline badge (red).
@@ -78,6 +89,10 @@ case_managers: "id, full_name"
 - **Auto reload loop**: happens only if `navigator.onLine` flaps rapidly. Consider debouncing or gating by `pendingCount` if needed.
 - **Case manager dropdown empty**: run `cacheCaseManagers(await fetchCaseManagersFromSupabase())` in console once while online; subsequent sessions will reuse the cache.
 - **Duplicate rows still appear**: Make sure the page fully reloaded after connectivity returned so the dedupe hook can run. If duplicates persist, clear the `idms_case_management` IndexedDB database (Application tab → IndexedDB) and reload to force a clean resync.
+
+## Dexie Migration Notes
+- Version **1** introduced the base schema. Version **2** adds `targetLocalId` and `targetId` indices to `ciclcar_queue`; Dexie applies this automatically on next load, but if the browser still holds an older IndexedDB snapshot you may need to close all tabs or run `indexedDB.deleteDatabase('idms_case_management')` once.
+- Because migrations run client-side, include this file in any future schema change and bump the version number sequentially. Always keep earlier `version(n).stores(...)` definitions so returning users can upgrade from any historical release.
 
 ## Next Steps
 - Extract reusable utilities (queue processor, status badge) to share across modules.

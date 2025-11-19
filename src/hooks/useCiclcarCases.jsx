@@ -3,11 +3,17 @@ import {
     ciclcarLiveQuery,
     getPendingOperationCount,
     loadRemoteSnapshotIntoCache,
-    markLocalDelete,
+    deleteCiclcarCaseNow,
     syncCiclcarQueue,
 } from "@/services/ciclcarOfflineService";
 
 const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+const forceCiclcarTabReload = () => {
+    if (typeof window === "undefined") return;
+    sessionStorage.setItem("caseManagement.activeTab", "CICLCAR");
+    sessionStorage.setItem("caseManagement.forceCiclcarSync", "true");
+    window.location.reload();
+};
 
 export function useCiclcarCases() {
     const [data, setData] = useState([]);
@@ -66,9 +72,12 @@ export function useCiclcarCases() {
 
     const deleteCiclcarCase = useCallback(async (caseId) => {
         try {
-            const result = await markLocalDelete({ targetId: caseId });
+            const result = await deleteCiclcarCaseNow({ targetId: caseId });
             await hydratePendingCount();
-            return { success: result.success !== false };
+            if (result?.success && result?.queued === false && isBrowserOnline()) {
+                setTimeout(forceCiclcarTabReload, 0);
+            }
+            return { success: result?.success !== false, queued: result?.queued };
         } catch (e) {
             console.error("Error deleting CICL/CAR case:", e);
             return { success: false, error: e };

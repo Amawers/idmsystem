@@ -16,6 +16,7 @@ const LOCAL_META_FIELDS = [
 ];
 
 const nowTs = () => Date.now();
+const browserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
 
 async function removeDuplicateServerRows() {
     const rows = await CASE_TABLE.orderBy("localId").toArray();
@@ -283,6 +284,42 @@ export async function markLocalDelete({ targetId = null, localId = null }) {
         });
         return { success: true };
     });
+}
+
+export async function deleteCiclcarCaseNow({ targetId = null, localId = null }) {
+    await localIdReady;
+    const isOnline = browserOnline();
+    let record = null;
+    if (localId != null) {
+        record = await CASE_TABLE.get(localId);
+    } else if (targetId != null) {
+        record = await CASE_TABLE.where("id").equals(targetId).first();
+    }
+
+    const resolvedLocalId = record?.localId ?? localId ?? null;
+    const resolvedTargetId = record?.id ?? targetId ?? null;
+
+    if (isOnline && resolvedTargetId) {
+        const { error } = await supabase
+            .from(CASE_TABLE_NAME)
+            .delete()
+            .eq("id", resolvedTargetId);
+        if (!error) {
+            await offlineCaseDb.transaction("rw", CASE_TABLE, QUEUE_TABLE, async () => {
+                if (resolvedLocalId != null) {
+                    await CASE_TABLE.delete(resolvedLocalId);
+                }
+                const pendingOps = await QUEUE_TABLE.where("targetLocalId").equals(resolvedLocalId).toArray();
+                if (pendingOps.length) {
+                    await QUEUE_TABLE.bulkDelete(pendingOps.map((op) => op.queueId));
+                }
+            });
+            return { success: true, queued: false };
+        }
+    }
+
+    const fallback = await markLocalDelete({ targetId: resolvedTargetId, localId: resolvedLocalId });
+    return { success: fallback.success !== false, queued: true };
 }
 
 async function syncFamilyMembers(caseId, familyMembers = []) {

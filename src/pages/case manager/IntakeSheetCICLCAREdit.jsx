@@ -21,6 +21,12 @@ import { toast } from "sonner";
 import { createOrUpdateLocalCase } from "@/services/ciclcarOfflineService";
 
 const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+const forceCiclcarTabReload = () => {
+    if (typeof window === "undefined") return;
+    sessionStorage.setItem("caseManagement.activeTab", "CICLCAR");
+    sessionStorage.setItem("caseManagement.forceCiclcarSync", "true");
+    window.location.reload();
+};
 
 // Helper utilities to make field mapping robust
 const pick = (obj, ...keys) => {
@@ -316,9 +322,13 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row, onSuccess }
             resetAll();
             setOpen(false);
             
-            // Call onSuccess callback to reload data in parent component
+            // Fire-and-forget parent reload so we can immediately trigger page refresh when needed
             if (onSuccess) {
-                await onSuccess();
+                try {
+                    onSuccess();
+                } catch (callbackError) {
+                    console.error("CICL/CAR edit onSuccess callback failed:", callbackError);
+                }
             }
             
             const online = isBrowserOnline();
@@ -327,6 +337,11 @@ export default function IntakeSheetCICLCAREdit({ open, setOpen, row, onSuccess }
                     ? "Sync queued. Remote data will update shortly."
                     : "Changes stored locally and will sync once reconnected.",
             });
+
+            if (online) {
+                setTimeout(forceCiclcarTabReload, 0);
+            }
+
         } catch (err) {
             console.error("Failed to create/update CICL/CAR record:", err);
             toast.error(isEditing ? "Update Failed" : "Creation Failed", {
