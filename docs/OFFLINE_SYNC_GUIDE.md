@@ -24,7 +24,7 @@ ciclcar_cases: "++localId, id, updated_at, case_manager, hasPendingWrites"
 ciclcar_queue: "++queueId, operationType, createdAt"
 case_managers: "id, full_name"
 ```
-- `localId` is Dexie’s primary key for local records (useful before Supabase assigns `id`).
+- `localId` is Dexie’s primary key for local records (useful before Supabase assigns `id`). Every row now stores this value explicitly (including a boot-time backfill) so one Supabase `id` can never map to multiple local rows.
 - `hasPendingWrites`, `pendingAction`, `syncError`, `lastLocalChange` help the UI show local-only changes and retry failures.
 - Queue rows keep `{ operationType: "create" | "update" | "delete", targetLocalId, targetId, payload, createdAt }`.
 
@@ -38,6 +38,7 @@ case_managers: "id, full_name"
   - `update`: update Supabase row (must have `id`), replace family rows, then clear pending flags locally.
   - `delete`: delete from Supabase if `id` exists, remove record locally.
   - Errors mark the local record with `syncError` and stop syncing (preserves order).
+- **Duplicate protection**: a shared `ensureLocalIdField()` runs once per boot, backfills missing `localId`s, and prunes duplicates that share the same Supabase `id`. The same dedupe helper also executes after each remote snapshot load, after every queue sync, and before each liveQuery emission so hard reloads or crash recovery never surface duplicate rows.
 
 ## React Data Flow
 1. `useCiclcarCases` subscribes to `ciclcarLiveQuery()`; any Dexie change re-renders CICL/CAR tables instantly.
@@ -76,6 +77,7 @@ case_managers: "id, full_name"
 - **Family data missing**: Confirm `family_background` arrays are present in Dexie; if not, verify `loadRemoteSnapshotIntoCache` is mapping sub rows correctly.
 - **Auto reload loop**: happens only if `navigator.onLine` flaps rapidly. Consider debouncing or gating by `pendingCount` if needed.
 - **Case manager dropdown empty**: run `cacheCaseManagers(await fetchCaseManagersFromSupabase())` in console once while online; subsequent sessions will reuse the cache.
+- **Duplicate rows still appear**: Make sure the page fully reloaded after connectivity returned so the dedupe hook can run. If duplicates persist, clear the `idms_case_management` IndexedDB database (Application tab → IndexedDB) and reload to force a clean resync.
 
 ## Next Steps
 - Extract reusable utilities (queue processor, status badge) to share across modules.
