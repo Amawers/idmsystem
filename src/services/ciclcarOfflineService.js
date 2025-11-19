@@ -339,89 +339,102 @@ async function syncFamilyMembers(caseId, familyMembers = []) {
     }
 }
 
-export async function syncCiclcarQueue(statusCb) {
-    await localIdReady;
-    const operations = await QUEUE_TABLE.orderBy("queueId").toArray();
-    if (!operations.length) return { synced: 0 };
-    let synced = 0;
+let ciclcarSyncInFlight = null;
 
-    for (const op of operations) {
-        try {
-            if (typeof statusCb === "function") {
-                statusCb({ current: op, synced });
-            }
-            if (op.operationType === "create") {
-                const { data, error } = await supabase
-                    .from(CASE_TABLE_NAME)
-                    .insert([sanitizeCasePayload(op.payload?.case ?? {})])
-                    .select()
-                    .single();
-                if (error) throw error;
-                if (op.payload?.family_background?.length) {
-                    await syncFamilyMembers(data.id, op.payload.family_background);
-                }
-                await offlineCaseDb.transaction("rw", CASE_TABLE, QUEUE_TABLE, async () => {
-                    await CASE_TABLE.update(op.targetLocalId, {
-                        ...op.payload.case,
-                        id: data.id,
-                        created_at: data.created_at,
-                        updated_at: data.updated_at,
-                        family_background: op.payload.family_background ?? [],
-                        hasPendingWrites: false,
-                        pendingAction: null,
-                        syncError: null,
-                        lastLocalChange: null,
-                    });
-                    await QUEUE_TABLE.delete(op.queueId);
-                });
-            } else if (op.operationType === "update") {
-                if (!op.targetId) {
-                    throw new Error("Cannot update case without Supabase id");
-                }
-                const { data, error } = await supabase
-                    .from(CASE_TABLE_NAME)
-                    .update(sanitizeCasePayload(op.payload?.case ?? {}))
-                    .eq("id", op.targetId)
-                    .select()
-                    .single();
-                if (error) throw error;
-                await syncFamilyMembers(op.targetId, op.payload?.family_background ?? []);
-                await offlineCaseDb.transaction("rw", CASE_TABLE, QUEUE_TABLE, async () => {
-                    await CASE_TABLE.update(op.targetLocalId, {
-                        ...op.payload.case,
-                        id: data.id,
-                        created_at: data.created_at,
-                        updated_at: data.updated_at,
-                        family_background: op.payload.family_background ?? [],
-                        hasPendingWrites: false,
-                        pendingAction: null,
-                        syncError: null,
-                        lastLocalChange: null,
-                    });
-                    await QUEUE_TABLE.delete(op.queueId);
-                });
-            } else if (op.operationType === "delete") {
-                if (op.targetId) {
-                    const { error } = await supabase
-                        .from(CASE_TABLE_NAME)
-                        .delete()
-                        .eq("id", op.targetId);
-                    if (error) throw error;
-                }
-                await offlineCaseDb.transaction("rw", CASE_TABLE, QUEUE_TABLE, async () => {
-                    await CASE_TABLE.delete(op.targetLocalId);
-                    await QUEUE_TABLE.delete(op.queueId);
-                });
-            }
-            synced += 1;
-        } catch (error) {
-            await CASE_TABLE.update(op.targetLocalId, {
-                syncError: error.message,
-            });
-            return { synced, error };
-        }
+export function syncCiclcarQueue(statusCb) {
+    if (ciclcarSyncInFlight) {
+        return ciclcarSyncInFlight;
     }
 
-    await removeDuplicateServerRows();
-    return { synced };
+    ciclcarSyncInFlight = (async () => {
+        await localIdReady;
+        const operations = await QUEUE_TABLE.orderBy("queueId").toArray();
+        if (!operations.length) return { synced: 0 };
+        let synced = 0;
+
+        for (const op of operations) {
+            try {
+                if (typeof statusCb === "function") {
+                    statusCb({ current: op, synced });
+                }
+                if (op.operationType === "create") {
+                    const { data, error } = await supabase
+                        .from(CASE_TABLE_NAME)
+                        .insert([sanitizeCasePayload(op.payload?.case ?? {})])
+                        .select()
+                        .single();
+                    if (error) throw error;
+                    if (op.payload?.family_background?.length) {
+                        await syncFamilyMembers(data.id, op.payload.family_background);
+                    }
+                    await offlineCaseDb.transaction("rw", CASE_TABLE, QUEUE_TABLE, async () => {
+                        await CASE_TABLE.update(op.targetLocalId, {
+                            ...op.payload.case,
+                            id: data.id,
+                            created_at: data.created_at,
+                            updated_at: data.updated_at,
+                            family_background: op.payload.family_background ?? [],
+                            hasPendingWrites: false,
+                            pendingAction: null,
+                            syncError: null,
+                            lastLocalChange: null,
+                        });
+                        await QUEUE_TABLE.delete(op.queueId);
+                    });
+                } else if (op.operationType === "update") {
+                    if (!op.targetId) {
+                        throw new Error("Cannot update case without Supabase id");
+                    }
+                    const { data, error } = await supabase
+                        .from(CASE_TABLE_NAME)
+                        .update(sanitizeCasePayload(op.payload?.case ?? {}))
+                        .eq("id", op.targetId)
+                        .select()
+                        .single();
+                    if (error) throw error;
+                    await syncFamilyMembers(op.targetId, op.payload?.family_background ?? []);
+                    await offlineCaseDb.transaction("rw", CASE_TABLE, QUEUE_TABLE, async () => {
+                        await CASE_TABLE.update(op.targetLocalId, {
+                            ...op.payload.case,
+                            id: data.id,
+                            created_at: data.created_at,
+                            updated_at: data.updated_at,
+                            family_background: op.payload.family_background ?? [],
+                            hasPendingWrites: false,
+                            pendingAction: null,
+                            syncError: null,
+                            lastLocalChange: null,
+                        });
+                        await QUEUE_TABLE.delete(op.queueId);
+                    });
+                } else if (op.operationType === "delete") {
+                    if (op.targetId) {
+                        const { error } = await supabase
+                            .from(CASE_TABLE_NAME)
+                            .delete()
+                            .eq("id", op.targetId);
+                        if (error) throw error;
+                    }
+                    await offlineCaseDb.transaction("rw", CASE_TABLE, QUEUE_TABLE, async () => {
+                        await CASE_TABLE.delete(op.targetLocalId);
+                        await QUEUE_TABLE.delete(op.queueId);
+                    });
+                }
+                synced += 1;
+            } catch (error) {
+                await CASE_TABLE.update(op.targetLocalId, {
+                    syncError: error.message,
+                });
+                return { synced, error };
+            }
+        }
+
+        await removeDuplicateServerRows();
+        return { synced };
+    })()
+        .finally(() => {
+            ciclcarSyncInFlight = null;
+        });
+
+    return ciclcarSyncInFlight;
 }
