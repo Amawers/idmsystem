@@ -42,7 +42,7 @@ const schema = z.object({
     ),
 });
 
-export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submitLabel, onSuccess, setOpen, isEditMode }) {
+export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submitLabel, onSuccess, setOpen, isEditMode, submitDisabled = false, useOfflineSubmit = false }) {
   const { data, setSectionField } = useIntakeFormStore();
 
   const form = useForm({
@@ -167,6 +167,12 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
 
     // In edit mode, always use goNext (which will trigger handleUpdate on last tab)
     if (isEditMode) {
+      goNext();
+      return;
+    }
+
+    // If using offline submit (from IntakeSheetCaseCreate), just call goNext which will handle submission
+    if (useOfflineSubmit) {
       goNext();
       return;
     }
@@ -300,8 +306,8 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
               Back
             </Button>
             <div className="flex gap-2">
-              <Button type="submit" disabled={submitting} className="cursor-pointer">
-                {submitting ? "Saving..." : (submitLabel || (isSecond ? "Submit All" : "Next"))}
+              <Button type="submit" disabled={submitting || submitDisabled} className="cursor-pointer">
+                {submitting || submitDisabled ? "Saving..." : (submitLabel || (isSecond ? "Submit All" : "Next"))}
               </Button>
             </div>
           </div>

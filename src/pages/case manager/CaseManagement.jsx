@@ -15,7 +15,7 @@ import {
 	CardTitle,
 } from "@/components/ui/card";
 import { ArrowUp, ArrowDown } from "lucide-react";
-import { useCases } from "@/hooks/useCases";
+import { useCasesOffline } from "@/hooks/useCasesOffline";
 import { useCiclcarCases } from "@/hooks/useCiclcarCases";
 import { useFarCases } from "@/hooks/useFarCases";
 import { useFacCases } from "@/hooks/useFacCases";
@@ -32,8 +32,18 @@ export default function CaseManagement() {
 	// Reference to the DataTable container for scrolling
 	const dataTableRef = useRef(null);
 
-	// Load dynamic CASE rows from Supabase
-	const { data: caseRows, loading: casesLoading, error: casesError, reload, deleteCase } = useCases();
+	// Load dynamic CASE rows from Supabase with offline support
+	const { 
+		data: caseRows, 
+		loading: casesLoading, 
+		error: casesError, 
+		reload, 
+		deleteCase,
+		pendingCount: casePendingCount,
+		syncing: caseSyncing,
+		syncStatus: caseSyncStatus,
+		runSync: runCaseSync,
+	} = useCasesOffline();
 	const {
 		data: ciclcarRows,
 		loading: ciclcarLoading,
@@ -88,7 +98,7 @@ export default function CaseManagement() {
 	const [autoSyncAfterReloadTab, setAutoSyncAfterReloadTab] = useState(null);
 	const hasBootstrappedTab = useRef(false);
 	const previousOnline = useRef(isOnline);
-	const autoSyncTriggeredRef = useRef({ CICLCAR: false, FAC: false, FAR: false, IVAC: false });
+	const autoSyncTriggeredRef = useRef({ CASE: false, CICLCAR: false, FAC: false, FAR: false, IVAC: false });
 
 	const persistActiveTab = useCallback((tabValue) => {
 		if (typeof window === "undefined") return;
@@ -100,13 +110,16 @@ export default function CaseManagement() {
 		hasBootstrappedTab.current = true;
 		if (typeof window === "undefined") return;
 		const forcedTab = sessionStorage.getItem(FORCED_TAB_AFTER_RELOAD_KEY);
+		const forcedCaseSync = sessionStorage.getItem("caseManagement.forceCaseSync") === "true";
 		const forcedCiclcarSync = sessionStorage.getItem("caseManagement.forceCiclcarSync") === "true";
 		const forcedFacSync = sessionStorage.getItem("caseManagement.forceFacSync") === "true";
 		const forcedFarSync = sessionStorage.getItem("caseManagement.forceFarSync") === "true";
 		const forcedIvacSync = sessionStorage.getItem("caseManagement.forceIvacSync") === "true";
 		const storedTab = sessionStorage.getItem("caseManagement.activeTab");
 		const nextTab = forcedTab
-			|| (forcedCiclcarSync
+			|| (forcedCaseSync
+				? "CASE"
+				: forcedCiclcarSync
 				? "CICLCAR"
 				: forcedFacSync
 				? "FAC"
@@ -116,7 +129,9 @@ export default function CaseManagement() {
 				? "IVAC"
 				: storedTab || "CASE");
 		setInitialTab(nextTab);
-		if (forcedCiclcarSync) {
+		if (forcedCaseSync) {
+			setAutoSyncAfterReloadTab("CASE");
+		} else if (forcedCiclcarSync) {
 			setAutoSyncAfterReloadTab("CICLCAR");
 		} else if (forcedFacSync) {
 			setAutoSyncAfterReloadTab("FAC");
@@ -125,6 +140,7 @@ export default function CaseManagement() {
 		} else if (forcedIvacSync) {
 			setAutoSyncAfterReloadTab("IVAC");
 		}
+		sessionStorage.removeItem("caseManagement.forceCaseSync");
 		sessionStorage.removeItem("caseManagement.forceCiclcarSync");
 		sessionStorage.removeItem("caseManagement.forceFacSync");
 		sessionStorage.removeItem("caseManagement.forceFarSync");
@@ -142,6 +158,13 @@ export default function CaseManagement() {
 	useEffect(() => {
 		if (!previousOnline.current && isOnline) {
 			if (typeof window !== "undefined") {
+				if (casePendingCount > 0) {
+					sessionStorage.setItem("caseManagement.activeTab", "CASE");
+					sessionStorage.setItem("caseManagement.forceCaseSync", "true");
+					window.location.reload();
+					previousOnline.current = isOnline;
+					return;
+				}
 				if (ciclcarPendingCount > 0) {
 					sessionStorage.setItem("caseManagement.activeTab", "CICLCAR");
 					sessionStorage.setItem("caseManagement.forceCiclcarSync", "true");
@@ -173,12 +196,14 @@ export default function CaseManagement() {
 			}
 		}
 		previousOnline.current = isOnline;
-		}, [isOnline, ciclcarPendingCount, facPendingCount, farPendingCount, ivacPendingCount]);
+		}, [isOnline, casePendingCount, ciclcarPendingCount, facPendingCount, farPendingCount, ivacPendingCount]);
 
 	useEffect(() => {
 		if (!autoSyncAfterReloadTab) return;
 		if (!isOnline) return;
-		const runSync = autoSyncAfterReloadTab === "CICLCAR"
+		const runSync = autoSyncAfterReloadTab === "CASE"
+			? runCaseSync
+			: autoSyncAfterReloadTab === "CICLCAR"
 			? runCiclcarSync
 			: autoSyncAfterReloadTab === "FAC"
 			? runFacSync
@@ -191,15 +216,23 @@ export default function CaseManagement() {
 		runSync()
 			.catch((err) => console.error("Auto sync failed:", err))
 			.finally(() => setAutoSyncAfterReloadTab(null));
-	}, [autoSyncAfterReloadTab, isOnline, runCiclcarSync, runFacSync, runFarSync, runIvacSync]);
+	}, [autoSyncAfterReloadTab, isOnline, runCaseSync, runCiclcarSync, runFacSync, runFarSync, runIvacSync]);
 
 	useEffect(() => {
 		if (!isOnline) {
-			autoSyncTriggeredRef.current = { CICLCAR: false, FAC: false, FAR: false, IVAC: false };
+			autoSyncTriggeredRef.current = { CASE: false, CICLCAR: false, FAC: false, FAR: false, IVAC: false };
 			return;
 		}
 		if (autoSyncAfterReloadTab) return;
 		const triggers = autoSyncTriggeredRef.current;
+		if (casePendingCount > 0 && !caseSyncing && !triggers.CASE) {
+			triggers.CASE = true;
+			runCaseSync()
+				.catch((err) => console.error("Auto CASE sync failed:", err))
+				.finally(() => {
+					triggers.CASE = false;
+				});
+		}
 		if (ciclcarPendingCount > 0 && !ciclcarSyncing && !triggers.CICLCAR) {
 			triggers.CICLCAR = true;
 			runCiclcarSync()
@@ -227,14 +260,17 @@ export default function CaseManagement() {
 	}, [
 		isOnline,
 		autoSyncAfterReloadTab,
+		runCaseSync,
 		runCiclcarSync,
 		runFacSync,
 		runFarSync,
 		runIvacSync,
+		casePendingCount,
 		ciclcarPendingCount,
 		facPendingCount,
 		farPendingCount,
 		ivacPendingCount,
+		caseSyncing,
 		ciclcarSyncing,
 		facSyncing,
 		farSyncing,
@@ -350,6 +386,12 @@ export default function CaseManagement() {
 							deleteIvacCase={deleteIvacCase}
 							initialTab={initialTab}
 							onTabChange={persistActiveTab}
+							caseSync={{
+								pendingCount: casePendingCount,
+								syncing: caseSyncing,
+								syncStatus: caseSyncStatus,
+								onSync: runCaseSync,
+							}}
 							ciclcarSync={{
 								pendingCount: ciclcarPendingCount,
 								syncing: ciclcarSyncing,

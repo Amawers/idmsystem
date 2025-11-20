@@ -1063,6 +1063,7 @@ export function DataTable({
 	deleteIvacCase,
 	initialTab = "CASE",
 	onTabChange,
+	caseSync,
 	ciclcarSync,
 	facSync,
 	farSync,
@@ -1126,6 +1127,10 @@ export function DataTable({
 	const [facCaseManager, setFacCaseManager] = useState("all");
 	const [ivacCaseManager, setIvacCaseManager] = useState("all");
 
+	const casePending = caseSync?.pendingCount ?? 0;
+	const caseSyncing = caseSync?.syncing ?? false;
+	const caseSyncStatus = caseSync?.syncStatus ?? null;
+	const caseOnSync = caseSync?.onSync;
 	const ciclcarPending = ciclcarSync?.pendingCount ?? 0;
 	const ciclcarSyncing = ciclcarSync?.syncing ?? false;
 	const ciclcarSyncStatus = ciclcarSync?.syncStatus ?? null;
@@ -1511,6 +1516,20 @@ export function DataTable({
 								</span>
 							</Button>
 
+							{/* Sync Button */}
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => caseOnSync?.()}
+								disabled={!isOnline || caseSyncing || casePending === 0}
+								className="cursor-pointer"
+							>
+								<IconCloudUpload className={caseSyncing ? "animate-spin" : ""} />
+								<span className="hidden lg:inline">
+									{caseSyncing ? "SYNCING..." : "SYNC"}
+								</span>
+							</Button>
+
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -1575,6 +1594,29 @@ export function DataTable({
 								row={editingRecord}
 								onSuccess={reloadCases}
 							/>
+
+							{(caseSyncing || casePending > 0 || caseSyncStatus) && (
+								<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+									{caseSyncing ? (
+										<>
+											<IconLoader className="h-3 w-3 animate-spin" />
+											<span>{caseSyncStatus || "Syncing queued changes..."}</span>
+										</>
+									) : casePending > 0 ? (
+										<>
+											<IconAlertTriangle className="h-3 w-3 text-amber-500" />
+											<span className="text-amber-600">
+												{casePending} pending change{casePending === 1 ? "" : "s"} waiting for sync
+											</span>
+										</>
+									) : (
+										<>
+											<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
+											<span className="text-emerald-600">{caseSyncStatus}</span>
+										</>
+									)}
+								</div>
+							)}
 						</>
 					)}
 

@@ -18,9 +18,16 @@ import { AssessmentForm } from "@/components/intake sheet/AssessmentForm";
 import { RecommendationForm } from "@/components/intake sheet/RecommendationForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { toast } from "sonner";
-import supabase from "@/../config/supabase";
-import { buildCasePayload } from "@/lib/caseSubmission";
-import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
+import { createOrUpdateLocalCase } from "@/services/caseOfflineService";
+
+const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+const forceCaseTabReload = () => {
+    if (typeof window === "undefined") return;
+    sessionStorage.setItem("caseManagement.activeTab", "CASE");
+    sessionStorage.setItem("caseManagement.forceTabAfterReload", "CASE");
+    sessionStorage.setItem("caseManagement.forceCaseSync", "true");
+    window.location.reload();
+};
 
 const tabOrder = [
     "identifying-data",
@@ -230,100 +237,187 @@ export default function IntakeSheetCaseEdit({ open, onOpenChange, row, onSuccess
         }
     }, [row]);
 
-    // Update existing record in Supabase
+    // Helper function to safely extract value from data
+    const pick = (obj, ...keys) => {
+        for (const k of keys) {
+            const v = obj?.[k];
+            if (v !== undefined && v !== null && v !== "") return v;
+        }
+        return null;
+    };
+
+    // Helper function to normalize dates
+    const normalizeDate = (v) => {
+        if (!v) return null;
+        const d = v instanceof Date ? v : new Date(v);
+        if (Number.isNaN(d.getTime())) return null;
+        return d.toISOString().slice(0, 10);
+    };
+
+    // Update existing record using offline service
     const handleUpdate = async () => {
         if (!row?.id) return;
         try {
             setSaving(true);
             const all = useIntakeFormStore.getState().getAllData();
 
-            // Merge both variants' payloads
-            const p1 = buildCasePayload(all, false);
-            const p2 = buildCasePayload(all, true);
-            const payload = { ...p1, ...p2 };
+            console.log("🔍 Full intake data for update:", all);
 
-            // Update main case row
-            const { error: updateErr } = await supabase
-                .from("case")
-                .update(payload)
-                .eq("id", row.id);
-            if (updateErr) throw updateErr;
+            // Extract all form sections
+            const identifying = all.IdentifyingData || {};
+            const familyData = all.FamilyData || {};
+            const perpetrator = all.PerpetratorInfo || {};
+            const problem = all.PresentingProblem || {};
+            const background = all.BackgroundInfo || {};
+            const community = all.CommunityInfo || {};
+            const assessment = all.Assessment || {};
+            const recommendation = all.Recommendation || {};
+            const caseDetails = all.caseDetails || {};
 
-            // Create audit log for case update
-            await createAuditLog({
-                actionType: AUDIT_ACTIONS.UPDATE_CASE,
-                actionCategory: AUDIT_CATEGORIES.CASE,
-                description: `Updated case for ${payload.identifying_name || payload.identifying2_name || 'N/A'}`,
-                resourceType: 'case',
-                resourceId: row.id,
-                metadata: {
-                    caseType: payload.identifying_case_type || payload.identifying2_case_type,
-                    clientName: payload.identifying_name || payload.identifying2_name,
-                    status: payload.status
-                },
-                severity: 'info'
-            });
+            // Part 2 data
+            const identifying2 = all.IdentifyingData2 || {};
+            const familyData2 = all.FamilyData2 || {};
+            const victim2 = all.VictimInfo2 || {};
+            const problem2 = all.PresentingProblem2 || {};
+            const background2 = all.BackgroundInfo2 || {};
+            const community2 = all.CommunityInfo2 || {};
+            const assessment2 = all.Assessment2 || {};
+            const recommendation2 = all.Recommendation2 || {};
 
-            // Refresh family members
-            const members1 = Array.isArray(all?.FamilyData?.members) ? all.FamilyData.members : [];
-            const members2 = Array.isArray(all?.FamilyData2?.members) ? all.FamilyData2.members : [];
+            // Extract family members
+            const members1 = Array.isArray(familyData?.members) ? familyData.members : [];
+            const members2 = Array.isArray(familyData2?.members) ? familyData2.members : [];
 
-            // Replace all existing rows for this case
-            const { error: delErr } = await supabase
-                .from("case_family_member")
-                .delete()
-                .eq("case_id", row.id);
-            if (delErr) throw delErr;
-
-            const fmRows = [];
-            // Persist Part 1 members using natural sequence starting at 1
-            members1.forEach((m, idx) => {
-                fmRows.push({
-                    case_id: row.id,
+            // Merge with proper group_no offset
+            const familyMembers = [
+                ...members1.map((m, idx) => ({
+                    ...m,
                     group_no: idx + 1,
-                    name: m.name || null,
-                    age: m.age || null,
-                    relation: m.relation || null,
-                    status: m.status || null,
-                    education: m.education || null,
-                    occupation: m.occupation || null,
-                    income: m.income || null,
-                });
-            });
-            // Persist Part 2 members with a stable offset to distinguish in future edits
-            members2.forEach((m, idx) => {
-                fmRows.push({
-                    case_id: row.id,
+                })),
+                ...members2.map((m, idx) => ({
+                    ...m,
                     group_no: PART2_GROUP_BASE + idx + 1,
-                    name: m.name || null,
-                    age: m.age || null,
-                    relation: m.relation || null,
-                    status: m.status || null,
-                    education: m.education || null,
-                    occupation: m.occupation || null,
-                    income: m.income || null,
-                });
+                })),
+            ];
+
+            // Build case payload
+            const casePayload = {
+                case_manager: pick(caseDetails, "caseManager", "case_manager") ?? null,
+                status: pick(caseDetails, "status") ?? null,
+                priority: pick(caseDetails, "priority") ?? null,
+
+                // Identifying data
+                identifying_name: pick(identifying, "name", "fullName") ?? null,
+                identifying_referral_source: pick(identifying, "referralSource", "referral_source") ?? null,
+                identifying_alias: pick(identifying, "alias") ?? null,
+                identifying_age: pick(identifying, "age") ?? null,
+                identifying_status: pick(identifying, "civilStatus", "status") ?? null,
+                identifying_occupation: pick(identifying, "occupation") ?? null,
+                identifying_income: pick(identifying, "income") ?? null,
+                identifying_sex: pick(identifying, "sex") ?? null,
+                identifying_address: pick(identifying, "address") ?? null,
+                identifying_case_type: pick(identifying, "caseType", "case_type") ?? null,
+                identifying_religion: pick(identifying, "religion") ?? null,
+                identifying_educational_attainment: pick(identifying, "educationalAttainment", "educational_attainment") ?? null,
+                identifying_contact_person: pick(identifying, "contactPerson", "contact_person") ?? null,
+                identifying_birth_place: pick(identifying, "birthPlace", "birth_place") ?? null,
+                identifying_respondent_name: pick(identifying, "respondentName", "respondent_name") ?? null,
+                identifying_birthday: normalizeDate(pick(identifying, "birthday", "birth_date")) ?? null,
+                identifying_intake_date: normalizeDate(pick(identifying, "intakeDate", "intake_date")) ?? null,
+
+                // Perpetrator data
+                perpetrator_name: pick(perpetrator, "name") ?? null,
+                perpetrator_age: pick(perpetrator, "age") ?? null,
+                perpetrator_alias: pick(perpetrator, "alias") ?? null,
+                perpetrator_sex: pick(perpetrator, "sex") ?? null,
+                perpetrator_address: pick(perpetrator, "address") ?? null,
+                perpetrator_victim_relation: pick(perpetrator, "victimRelation", "victim_relation") ?? null,
+                perpetrator_offence_type: pick(perpetrator, "offenceType", "offence_type") ?? null,
+                perpetrator_commission_datetime: normalizeDate(pick(perpetrator, "commissionDatetime", "commission_datetime")) ?? null,
+
+                // Problems/Assessment/Recommendation
+                presenting_problem: pick(problem, "problem", "presentingProblem") ?? null,
+                background_info: pick(background, "backgroundInfo", "background") ?? null,
+                community_info: pick(community, "communityInfo", "community") ?? null,
+                assessment: pick(assessment, "assessment") ?? null,
+                recommendation: pick(recommendation, "recommendation") ?? null,
+
+                // Part 2 - Identifying data
+                identifying2_intake_date: normalizeDate(pick(identifying2, "intakeDate", "intake_date")) ?? null,
+                identifying2_name: pick(identifying2, "name", "fullName") ?? null,
+                identifying2_referral_source: pick(identifying2, "referralSource", "referral_source") ?? null,
+                identifying2_alias: pick(identifying2, "alias") ?? null,
+                identifying2_age: pick(identifying2, "age") ?? null,
+                identifying2_status: pick(identifying2, "civilStatus", "status") ?? null,
+                identifying2_occupation: pick(identifying2, "occupation") ?? null,
+                identifying2_income: pick(identifying2, "income") ?? null,
+                identifying2_sex: pick(identifying2, "sex") ?? null,
+                identifying2_address: pick(identifying2, "address") ?? null,
+                identifying2_case_type: pick(identifying2, "caseType", "case_type") ?? null,
+                identifying2_religion: pick(identifying2, "religion") ?? null,
+                identifying2_educational_attainment: pick(identifying2, "educationalAttainment", "educational_attainment") ?? null,
+                identifying2_contact_person: pick(identifying2, "contactPerson", "contact_person") ?? null,
+                identifying2_birth_place: pick(identifying2, "birthPlace", "birth_place") ?? null,
+                identifying2_respondent_name: pick(identifying2, "respondentName", "respondent_name") ?? null,
+                identifying2_birthday: normalizeDate(pick(identifying2, "birthday", "birth_date")) ?? null,
+
+                // Part 2 - Victim data
+                victim2_name: pick(victim2, "name") ?? null,
+                victim2_age: pick(victim2, "age") ?? null,
+                victim2_alias: pick(victim2, "alias") ?? null,
+                victim2_sex: pick(victim2, "sex") ?? null,
+                victim2_address: pick(victim2, "address") ?? null,
+                victim2_victim_relation: pick(victim2, "victimRelation", "victim_relation") ?? null,
+                victim2_offence_type: pick(victim2, "offenceType", "offence_type") ?? null,
+                victim2_commission_datetime: normalizeDate(pick(victim2, "commissionDatetime", "commission_datetime")) ?? null,
+
+                // Part 2 - Problems/Assessment/Recommendation
+                presenting_problem2: pick(problem2, "problem", "presentingProblem") ?? null,
+                background_info2: pick(background2, "backgroundInfo", "background") ?? null,
+                community_info2: pick(community2, "communityInfo", "community") ?? null,
+                assessment2: pick(assessment2, "assessment") ?? null,
+                recommendation2: pick(recommendation2, "recommendation") ?? null,
+            };
+
+            console.log("💾 Final update payload:", casePayload);
+            console.log("👨‍👩‍👧‍👦 Family members:", familyMembers);
+
+            await createOrUpdateLocalCase({
+                casePayload,
+                familyMembers,
+                targetId: row.id,
+                localId: row.localId,
+                mode: "update",
             });
 
-            if (fmRows.length > 0) {
-                const { error: insErr } = await supabase
-                    .from("case_family_member")
-                    .insert(fmRows);
-                if (insErr) throw insErr;
-            }
-
-            toast.success("Case updated successfully");
-            
-            // Trigger refresh callback if provided
-            if (onSuccess) {
-                await onSuccess();
-            }
-            
-            // Close the modal
+            // Done - close modal and clean up
+            resetAll();
             onOpenChange(false);
+            
+            // Fire-and-forget parent reload so we can immediately trigger page refresh when needed
+            if (onSuccess) {
+                try {
+                    onSuccess();
+                } catch (callbackError) {
+                    console.error("Case update onSuccess callback failed:", callbackError);
+                }
+            }
+            
+            const online = isBrowserOnline();
+            toast.success(online ? "Case Updated" : "Case Updated Offline", {
+                description: online
+                    ? "Case was updated and will sync shortly."
+                    : "Changes were stored locally and will sync once you're reconnected.",
+            });
+
+            if (online) {
+                setTimeout(forceCaseTabReload, 0);
+            }
         } catch (e) {
-            console.error(e);
-            toast.error("Failed to update case", { description: e.message });
+            console.error("Failed to update case record:", e);
+            toast.error("Update Failed", {
+                description: e.message || "An error occurred while updating the case. Please try again.",
+            });
         } finally {
             setSaving(false);
         }
