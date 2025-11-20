@@ -15,7 +15,7 @@ import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "./auditLog";
  * @param {Object} formData - Form data to validate
  * @returns {Object} - {valid: boolean, errors: Array}
  */
-function validateIVACData(formData) {
+export function validateIVACData(formData) {
   const errors = [];
   
   if (!formData.incidenceOnVAC) {
@@ -48,6 +48,28 @@ function validateIVACData(formData) {
   return { valid: errors.length === 0, errors };
 }
 
+export function buildIVACCasePayload(formData = {}) {
+  const ivacData = formData.incidenceOnVAC || {};
+  const clonedRecords = Array.isArray(ivacData.records)
+    ? ivacData.records.map((record) => ({ ...record }))
+    : [];
+  const caseManagers = Array.isArray(ivacData.caseManagers)
+    ? [...ivacData.caseManagers]
+    : Array.isArray(ivacData.case_managers)
+    ? [...ivacData.case_managers]
+    : [];
+
+  return {
+    province: ivacData.province || "Misamis Oriental",
+    municipality: ivacData.municipality || "Villanueva",
+    records: clonedRecords,
+    case_managers: caseManagers,
+    status: ivacData.status || "Active",
+    reporting_period: ivacData.reportingPeriod || ivacData.reporting_period || null,
+    notes: ivacData.notes || null,
+  };
+}
+
 /**
  * Submit a new IVAC case to Supabase
  * @param {Object} formData - Complete form data from useIntakeFormStore
@@ -65,18 +87,7 @@ export async function submitIVACCase(formData) {
       return { caseId: null, error };
     }
 
-    const ivacData = formData.incidenceOnVAC || {};
-
-    // Prepare the data for insertion
-    const insertData = {
-      province: ivacData.province || "Misamis Oriental",
-      municipality: ivacData.municipality || "Villanueva",
-      records: ivacData.records || [],
-      case_managers: ivacData.caseManagers || [],
-      status: ivacData.status || "Active",
-      reporting_period: ivacData.reportingPeriod || null,
-      notes: ivacData.notes || null,
-    };
+    const insertData = buildIVACCasePayload(formData);
 
     console.log("📤 Submitting IVAC case:", {
       ...insertData,
@@ -150,18 +161,7 @@ export async function updateIVACCase(caseId, formData) {
       return { success: false, error };
     }
 
-    const ivacData = formData.incidenceOnVAC || {};
-
-    // Prepare the data for update
-    const updateData = {
-      province: ivacData.province || "Misamis Oriental",
-      municipality: ivacData.municipality || "Villanueva",
-      records: ivacData.records || [],
-      case_managers: ivacData.caseManagers || [],
-      status: ivacData.status || "Active",
-      reporting_period: ivacData.reportingPeriod || null,
-      notes: ivacData.notes || null,
-    };
+    const updateData = buildIVACCasePayload(formData);
 
     console.log("📤 Updating IVAC case:", caseId, {
       ...updateData,

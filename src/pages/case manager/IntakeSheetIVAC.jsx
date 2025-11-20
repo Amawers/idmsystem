@@ -18,9 +18,19 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { IncidenceVACForm } from "@/components/intake sheet IVAC/IncidenceVACForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
-import { submitIVACCase, updateIVACCase } from "@/lib/ivacSubmission";
+import { buildIVACCasePayload, validateIVACData } from "@/lib/ivacSubmission";
+import { createOrUpdateLocalIvacCase, getIvacCaseById, getIvacCaseByLocalId } from "@/services/ivacOfflineService";
 import { toast } from "sonner";
 import { IconCircleCheck, IconAlertCircle } from "@tabler/icons-react";
+
+const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+const forceIvacTabReload = () => {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem("caseManagement.activeTab", "IVAC");
+  sessionStorage.setItem("caseManagement.forceTabAfterReload", "IVAC");
+  sessionStorage.setItem("caseManagement.forceIvacSync", "true");
+  window.location.reload();
+};
 
 export default function IntakeSheetIVAC({ open, setOpen, onSuccess, editingRecord }) {
   const { getAllData, resetAll, setSectionField } = useIntakeFormStore();
@@ -31,27 +41,55 @@ export default function IntakeSheetIVAC({ open, setOpen, onSuccess, editingRecor
    * Pre-fill form with editing record data
    */
   useEffect(() => {
-    if (open && editingRecord) {
-      console.log("🔄 Pre-filling IVAC form with:", editingRecord);
-      
-      // Map database fields to form fields
-      const formData = {
-        province: editingRecord.province || "Misamis Oriental",
-        municipality: editingRecord.municipality || "Villanueva",
-        records: editingRecord.records || [],
-        caseManagers: editingRecord.case_managers || [],
-        status: editingRecord.status || "",
-        // Store caseDetails separately
-        caseDetails: {
-          caseManagers: editingRecord.case_managers || [],
-          status: editingRecord.status || "",
-        },
-      };
+    let isActive = true;
+    async function hydrateForm() {
+      if (!open) return;
 
-      // Pre-fill the form store
-      setSectionField("incidenceOnVAC", formData);
+      if (!editingRecord) {
+        resetAll();
+        return;
+      }
+
+      console.log("🔄 Pre-filling IVAC form with:", editingRecord);
+      try {
+        let sourceRecord = editingRecord;
+        if (editingRecord?.localId != null) {
+          const local = await getIvacCaseByLocalId(editingRecord.localId);
+          if (local) sourceRecord = local;
+        } else if (editingRecord?.id) {
+          const cached = await getIvacCaseById(editingRecord.id);
+          if (cached) sourceRecord = cached;
+        }
+
+        if (!isActive) return;
+
+        const formData = {
+          province: sourceRecord?.province || "Misamis Oriental",
+          municipality: sourceRecord?.municipality || "Villanueva",
+          records: sourceRecord?.records || [],
+          caseManagers: sourceRecord?.case_managers || [],
+          status: sourceRecord?.status || "",
+          caseDetails: {
+            caseManagers: sourceRecord?.case_managers || [],
+            status: sourceRecord?.status || "",
+          },
+        };
+
+        setSectionField("incidenceOnVAC", formData);
+      } catch (err) {
+        if (!isActive) return;
+        console.error("❌ Failed to load IVAC case:", err);
+        toast.error("Error loading Incidence on VAC record", {
+          description: err.message || "An unexpected error occurred.",
+        });
+      }
     }
-  }, [open, editingRecord, setSectionField]);
+
+    hydrateForm();
+    return () => {
+      isActive = false;
+    };
+  }, [open, editingRecord, resetAll, setSectionField]);
 
   /**
    * Handle IVAC case creation or update
@@ -64,47 +102,40 @@ export default function IntakeSheetIVAC({ open, setOpen, onSuccess, editingRecor
 
       console.log("🔍 Full IVAC intake data:", allData);
 
-      if (isEditMode) {
-        // Update existing record
-        const { error } = await updateIVACCase(editingRecord.id, allData);
-
-        if (error) {
-          console.error("❌ Failed to update IVAC case:", error);
-          toast.error("Failed to update Incidence on VAC record", {
-            description: error.message || "An unexpected error occurred. Please try again.",
-          });
-          return;
-        }
-
-        console.log("✅ IVAC case updated successfully:", editingRecord.id);
-        toast.success("Incidence on VAC record updated successfully!", {
-          description: `Case ID: ${editingRecord.id}`,
+      const validation = validateIVACData(allData);
+      if (!validation.valid) {
+        toast.error("IVAC form incomplete", {
+          description: validation.errors.join(", "),
         });
-      } else {
-        // Create new record
-        const { caseId, error } = await submitIVACCase(allData);
-
-        if (error) {
-          console.error("❌ Failed to create IVAC case:", error);
-          toast.error("Failed to create Incidence on VAC record", {
-            description: error.message || "An unexpected error occurred. Please try again.",
-          });
-          return;
-        }
-
-        console.log("✅ IVAC case created successfully:", caseId);
-        toast.success("Incidence on VAC record created successfully!", {
-          description: `Case ID: ${caseId}`,
-        });
+        return;
       }
 
-      // Reset form and close dialog
+      const casePayload = buildIVACCasePayload(allData);
+      await createOrUpdateLocalIvacCase({
+        casePayload,
+        targetId: editingRecord?.id ?? null,
+        localId: editingRecord?.localId ?? null,
+        mode: isEditMode ? "update" : "create",
+      });
+
+      const online = isBrowserOnline();
+      toast.success(
+        isEditMode ? "Incidence on VAC saved" : "Incidence on VAC queued",
+        {
+          description: online
+            ? "Sync queued and will push shortly."
+            : "Stored locally. Sync once you're online.",
+        },
+      );
+
       resetAll();
       setOpen(false);
-      
-      // Trigger reload of IVAC data if callback provided
       if (onSuccess) {
         onSuccess();
+      }
+
+      if (online) {
+        setTimeout(forceIvacTabReload, 0);
       }
     } catch (err) {
       console.error("❌ Unexpected error:", err);

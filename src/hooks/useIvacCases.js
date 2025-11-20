@@ -6,8 +6,23 @@
  * @date 2025-10-29
  */
 
-import { useState, useEffect, useCallback } from "react";
-import supabase from "../../config/supabase";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+    ivacLiveQuery,
+    getIvacPendingOperationCount,
+    loadIvacRemoteSnapshotIntoCache,
+    deleteIvacCaseNow,
+    syncIvacQueue,
+} from "@/services/ivacOfflineService";
+
+const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+const forceIvacTabReload = () => {
+    if (typeof window === "undefined") return;
+    sessionStorage.setItem("caseManagement.activeTab", "IVAC");
+    sessionStorage.setItem("caseManagement.forceTabAfterReload", "IVAC");
+    sessionStorage.setItem("caseManagement.forceIvacSync", "true");
+    window.location.reload();
+};
 
 /**
  * useIvacCases - Custom hook to fetch IVAC cases from Supabase
@@ -25,62 +40,107 @@ export function useIvacCases() {
     const [data, setData] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [pendingCount, setPendingCount] = useState(0);
+    const [syncing, setSyncing] = useState(false);
+    const [syncStatus, setSyncStatus] = useState(null);
 
-    /**
-     * Fetch IVAC cases from Supabase
-     * Orders by created_at descending (newest first)
-     */
-    const fetchIvacCases = useCallback(async () => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            const { data: ivacCases, error: fetchError } = await supabase
-                .from("ivac_cases")
-                .select("*")
-                .order("created_at", { ascending: false });
-
-            if (fetchError) {
-                throw fetchError;
-            }
-
-            setData(ivacCases || []);
-        } catch (err) {
-            console.error("❌ Error fetching IVAC cases:", err);
-            setError(err);
-        } finally {
-            setLoading(false);
-        }
+    const hydratePendingCount = useCallback(async () => {
+        const count = await getIvacPendingOperationCount();
+        setPendingCount(count);
     }, []);
 
-    // Fetch data on mount
     useEffect(() => {
-        fetchIvacCases();
-    }, [fetchIvacCases]);
+        const subscription = ivacLiveQuery().subscribe({
+            next: (rows) => {
+                setData((rows ?? []).map((row) => ({
+                    ...row,
+                    id: row?.id ?? row?.case_id ?? row?.localId,
+                })));
+                setLoading(false);
+                hydratePendingCount().catch(() => {
+                    // best-effort; ignore Dexie count failures for UI updates
+                });
+            },
+            error: (err) => {
+                setError(err);
+                setLoading(false);
+            },
+        });
 
-    // Reload function for manual refresh
-    const reload = useCallback(() => {
-        fetchIvacCases();
-    }, [fetchIvacCases]);
+        hydratePendingCount();
 
-    // Delete IVAC case
+        return () => subscription.unsubscribe();
+    }, [hydratePendingCount]);
+
+    const load = useCallback(async () => {
+        setError(null);
+        try {
+            if (!isBrowserOnline()) {
+                await hydratePendingCount();
+                return { success: true, offline: true };
+            }
+            await loadIvacRemoteSnapshotIntoCache();
+            await hydratePendingCount();
+            return { success: true };
+        } catch (err) {
+            setError(err);
+            return { success: false, error: err };
+        }
+    }, [hydratePendingCount]);
+
+    useEffect(() => {
+        load();
+    }, [load]);
+
     const deleteIvacCase = useCallback(async (caseId) => {
         try {
-            const { error: err } = await supabase
-                .from("ivac_cases")
-                .delete()
-                .eq("id", caseId);
-
-            if (err) throw err;
-            
-            // Reload the data after successful deletion
-            await fetchIvacCases();
-            return { success: true };
+            const result = await deleteIvacCaseNow({ targetId: caseId });
+            await hydratePendingCount();
+            if (result?.success && result?.queued === false && isBrowserOnline()) {
+                setTimeout(forceIvacTabReload, 0);
+            }
+            return { success: result?.success !== false, queued: result?.queued };
         } catch (e) {
-            console.error("❌ Error deleting IVAC case:", e);
+            console.error("Error deleting IVAC case:", e);
             return { success: false, error: e };
         }
-    }, [fetchIvacCases]);
+    }, [hydratePendingCount]);
 
-    return { data, loading, error, reload, deleteIvacCase };
+    const runSync = useCallback(async () => {
+        setSyncing(true);
+        setSyncStatus("Preparing sync…");
+        try {
+            const result = await syncIvacQueue(({ current, synced }) => {
+                if (!current) return;
+                const label = current.operationType ? current.operationType.toUpperCase() : "";
+                setSyncStatus(`Syncing ${label} (${synced + 1})`);
+            });
+            await load();
+            await hydratePendingCount();
+            setSyncStatus("All changes synced");
+            return result;
+        } catch (err) {
+            console.error("IVAC sync failed:", err);
+            setSyncStatus(err.message ?? "Sync failed");
+            throw err;
+        } finally {
+            setTimeout(() => setSyncStatus(null), 2000);
+            setSyncing(false);
+        }
+    }, [hydratePendingCount, load]);
+
+    return useMemo(
+        () => ({
+            data,
+            loading,
+            error,
+            reload: load,
+            deleteIvacCase,
+            pendingCount,
+            syncing,
+            syncStatus,
+            runSync,
+        }),
+        [data, loading, error, load, deleteIvacCase, pendingCount, syncing, syncStatus, runSync],
+    );
 }

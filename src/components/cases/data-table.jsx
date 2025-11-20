@@ -1066,6 +1066,7 @@ export function DataTable({
 	ciclcarSync,
 	facSync,
 	farSync,
+	ivacSync,
 	ciclcarProgramEnrollments = {},
 	ciclcarProgramEnrollmentsLoading = false,
 	isOnline = true,
@@ -1137,6 +1138,10 @@ export function DataTable({
 	const farSyncing = farSync?.syncing ?? false;
 	const farSyncStatus = farSync?.syncStatus ?? null;
 	const farOnSync = farSync?.onSync;
+	const ivacPending = ivacSync?.pendingCount ?? 0;
+	const ivacSyncing = ivacSync?.syncing ?? false;
+	const ivacSyncStatus = ivacSync?.syncStatus ?? null;
+	const ivacOnSync = ivacSync?.onSync;
 	const getCiclcarPrefetchedEnrollments = React.useCallback(
 		(caseId) => {
 			if (!caseId) return undefined;
@@ -2030,6 +2035,21 @@ export function DataTable({
 								</span>
 							</Button>
 
+							
+							{/* Sync Button */}
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => ivacOnSync?.()}
+								disabled={!isOnline || ivacSyncing || ivacPending === 0}
+								className="cursor-pointer"
+							>
+								<IconCloudUpload className={ivacSyncing ? "animate-spin" : ""} />
+								<span className="hidden lg:inline">
+									{ivacSyncing ? "SYNCING..." : "SYNC"}
+								</span>
+							</Button>
+
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -2095,6 +2115,29 @@ export function DataTable({
 								editingRecord={editingIvacRecord}
 								onSuccess={reloadIvac}
 							/>
+
+							{(ivacSyncing || ivacPending > 0 || ivacSyncStatus) && (
+								<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+									{ivacSyncing ? (
+										<>
+											<IconLoader className="h-3 w-3 animate-spin" />
+											<span>{ivacSyncStatus || "Syncing queued changes..."}</span>
+										</>
+									) : ivacPending > 0 ? (
+										<>
+											<IconAlertTriangle className="h-3 w-3 text-amber-500" />
+											<span className="text-amber-600">
+												{ivacPending} pending change{ivacPending === 1 ? "" : "s"} waiting for sync
+											</span>
+										</>
+									) : (
+										<>
+											<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
+											<span className="text-emerald-600">{ivacSyncStatus}</span>
+										</>
+									)}
+								</div>
+							)}
 						</>
 					)}
 				</div>

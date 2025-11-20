@@ -75,6 +75,10 @@ export default function CaseManagement() {
 		error: ivacError,
 		reload: reloadIvac,
 		deleteIvacCase,
+		pendingCount: ivacPendingCount,
+		syncing: ivacSyncing,
+		syncStatus: ivacSyncStatus,
+		runSync: runIvacSync,
 	} = useIvacCases();
 
 	// Filter hidden cases for case managers
@@ -84,7 +88,7 @@ export default function CaseManagement() {
 	const [autoSyncAfterReloadTab, setAutoSyncAfterReloadTab] = useState(null);
 	const hasBootstrappedTab = useRef(false);
 	const previousOnline = useRef(isOnline);
-	const autoSyncTriggeredRef = useRef({ CICLCAR: false, FAC: false, FAR: false });
+	const autoSyncTriggeredRef = useRef({ CICLCAR: false, FAC: false, FAR: false, IVAC: false });
 
 	const persistActiveTab = useCallback((tabValue) => {
 		if (typeof window === "undefined") return;
@@ -99,6 +103,7 @@ export default function CaseManagement() {
 		const forcedCiclcarSync = sessionStorage.getItem("caseManagement.forceCiclcarSync") === "true";
 		const forcedFacSync = sessionStorage.getItem("caseManagement.forceFacSync") === "true";
 		const forcedFarSync = sessionStorage.getItem("caseManagement.forceFarSync") === "true";
+		const forcedIvacSync = sessionStorage.getItem("caseManagement.forceIvacSync") === "true";
 		const storedTab = sessionStorage.getItem("caseManagement.activeTab");
 		const nextTab = forcedTab
 			|| (forcedCiclcarSync
@@ -107,6 +112,8 @@ export default function CaseManagement() {
 				? "FAC"
 				: forcedFarSync
 				? "FAR"
+				: forcedIvacSync
+				? "IVAC"
 				: storedTab || "CASE");
 		setInitialTab(nextTab);
 		if (forcedCiclcarSync) {
@@ -115,10 +122,13 @@ export default function CaseManagement() {
 			setAutoSyncAfterReloadTab("FAC");
 		} else if (forcedFarSync) {
 			setAutoSyncAfterReloadTab("FAR");
+		} else if (forcedIvacSync) {
+			setAutoSyncAfterReloadTab("IVAC");
 		}
 		sessionStorage.removeItem("caseManagement.forceCiclcarSync");
 		sessionStorage.removeItem("caseManagement.forceFacSync");
 		sessionStorage.removeItem("caseManagement.forceFarSync");
+		sessionStorage.removeItem("caseManagement.forceIvacSync");
 		if (forcedTab) {
 			sessionStorage.removeItem(FORCED_TAB_AFTER_RELOAD_KEY);
 		}
@@ -153,10 +163,17 @@ export default function CaseManagement() {
 					previousOnline.current = isOnline;
 					return;
 				}
+				if (ivacPendingCount > 0) {
+					sessionStorage.setItem("caseManagement.activeTab", "IVAC");
+					sessionStorage.setItem("caseManagement.forceIvacSync", "true");
+					window.location.reload();
+					previousOnline.current = isOnline;
+					return;
+				}
 			}
 		}
 		previousOnline.current = isOnline;
-		}, [isOnline, ciclcarPendingCount, facPendingCount, farPendingCount]);
+		}, [isOnline, ciclcarPendingCount, facPendingCount, farPendingCount, ivacPendingCount]);
 
 	useEffect(() => {
 		if (!autoSyncAfterReloadTab) return;
@@ -167,16 +184,18 @@ export default function CaseManagement() {
 			? runFacSync
 			: autoSyncAfterReloadTab === "FAR"
 			? runFarSync
+			: autoSyncAfterReloadTab === "IVAC"
+			? runIvacSync
 			: null;
 		if (!runSync) return;
 		runSync()
 			.catch((err) => console.error("Auto sync failed:", err))
 			.finally(() => setAutoSyncAfterReloadTab(null));
-	}, [autoSyncAfterReloadTab, isOnline, runCiclcarSync, runFacSync, runFarSync]);
+	}, [autoSyncAfterReloadTab, isOnline, runCiclcarSync, runFacSync, runFarSync, runIvacSync]);
 
 	useEffect(() => {
 		if (!isOnline) {
-			autoSyncTriggeredRef.current = { CICLCAR: false, FAC: false, FAR: false };
+			autoSyncTriggeredRef.current = { CICLCAR: false, FAC: false, FAR: false, IVAC: false };
 			return;
 		}
 		if (autoSyncAfterReloadTab) return;
@@ -197,12 +216,12 @@ export default function CaseManagement() {
 					triggers.FAC = false;
 				});
 		}
-		if (farPendingCount > 0 && !farSyncing && !triggers.FAR) {
-			triggers.FAR = true;
-			runFarSync()
-				.catch((err) => console.error("Auto FAR sync failed:", err))
+		if (ivacPendingCount > 0 && !ivacSyncing && !triggers.IVAC) {
+			triggers.IVAC = true;
+			runIvacSync()
+				.catch((err) => console.error("Auto IVAC sync failed:", err))
 				.finally(() => {
-					triggers.FAR = false;
+					triggers.IVAC = false;
 				});
 		}
 	}, [
@@ -211,12 +230,15 @@ export default function CaseManagement() {
 		runCiclcarSync,
 		runFacSync,
 		runFarSync,
+		runIvacSync,
 		ciclcarPendingCount,
 		facPendingCount,
 		farPendingCount,
+		ivacPendingCount,
 		ciclcarSyncing,
 		facSyncing,
 		farSyncing,
+		ivacSyncing,
 	]);
 
 	// Apply filtering to all case data
@@ -345,6 +367,12 @@ export default function CaseManagement() {
 								syncing: farSyncing,
 								syncStatus: farSyncStatus,
 								onSync: runFarSync,
+							}}
+							ivacSync={{
+								pendingCount: ivacPendingCount,
+								syncing: ivacSyncing,
+								syncStatus: ivacSyncStatus,
+								onSync: runIvacSync,
 							}}
 							ciclcarProgramEnrollments={ciclcarProgramEnrollments}
 							ciclcarProgramEnrollmentsLoading={ciclcarProgramEnrollmentsLoading}

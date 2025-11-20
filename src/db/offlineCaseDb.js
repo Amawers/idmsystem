@@ -38,4 +38,16 @@ offlineCaseDb.version(4).stores({
     far_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
 });
 
+offlineCaseDb.version(5).stores({
+    ciclcar_cases: "++localId, id, updated_at, case_manager, hasPendingWrites",
+    ciclcar_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    case_managers: "id, full_name",
+    fac_cases: "++localId, id, updated_at, head_first_name, head_last_name, hasPendingWrites",
+    fac_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    far_cases: "++localId, id, date, receiving_member, assistance, hasPendingWrites",
+    far_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    ivac_cases: "++localId, id, updated_at, municipality, province, status, hasPendingWrites",
+    ivac_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+});
+
 export default offlineCaseDb;
