@@ -17,8 +17,18 @@ import {
 } from "@/components/ui/dialog";
 import { FamilyAssistanceForm } from "@/components/intake sheet FAR/FamilyAssistanceForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
-import { submitFARCase, updateFARCase } from "@/lib/farSubmission";
+import { buildFARCasePayload } from "@/lib/farSubmission";
+import { createOrUpdateLocalFarCase, getFarCaseById, getFarCaseByLocalId } from "@/services/farOfflineService";
 import { toast } from "sonner";
+
+const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+const forceFarTabReload = () => {
+  if (typeof window === "undefined") return;
+  sessionStorage.setItem("caseManagement.activeTab", "FAR");
+  sessionStorage.setItem("caseManagement.forceTabAfterReload", "FAR");
+  sessionStorage.setItem("caseManagement.forceFarSync", "true");
+  window.location.reload();
+};
 
 export default function IntakeSheetFAR({ open, setOpen, onSuccess, editingRecord }) {
   const { getAllData, resetAll, setSectionField } = useIntakeFormStore();
@@ -29,36 +39,64 @@ export default function IntakeSheetFAR({ open, setOpen, onSuccess, editingRecord
    * Pre-fill form with editing record data
    */
   useEffect(() => {
-    if (open && editingRecord) {
-      console.log("🔄 Pre-filling FAR form with:", editingRecord);
-      
-      // Map database fields to form fields
-      const formData = {
-        date: editingRecord.date || "",
-        receivingMember: editingRecord.receiving_member || "",
-        emergency: editingRecord.emergency || "",
-        emergencyOther: editingRecord.emergency_other || "",
-        assistance: editingRecord.assistance || "",
-        assistanceOther: editingRecord.assistance_other || "",
-        unit: editingRecord.unit || "",
-        quantity: editingRecord.quantity?.toString() || "",
-        cost: editingRecord.cost?.toString() || "",
-        provider: editingRecord.provider || "",
-        caseManager: editingRecord.case_manager || "",
-        status: editingRecord.status || "",
-        priority: editingRecord.priority || "",
-        // Store caseDetails separately
-        caseDetails: {
-          caseManager: editingRecord.case_manager || "",
-          status: editingRecord.status || "",
-          priority: editingRecord.priority || "",
-        },
-      };
+    let isActive = true;
+    async function hydrateForm() {
+      if (!open) return;
 
-      // Pre-fill the form store
-      setSectionField("familyAssistanceRecord", formData);
+      if (!editingRecord) {
+        resetAll();
+        return;
+      }
+
+      console.log("🔄 Pre-filling FAR form with:", editingRecord);
+      try {
+        let sourceRecord = editingRecord;
+        if (editingRecord?.localId != null) {
+          const local = await getFarCaseByLocalId(editingRecord.localId);
+          if (local) sourceRecord = local;
+        } else if (editingRecord?.id) {
+          const cached = await getFarCaseById(editingRecord.id);
+          if (cached) sourceRecord = cached;
+        }
+
+        if (!isActive) return;
+
+        const formData = {
+          date: sourceRecord?.date || "",
+          receivingMember: sourceRecord?.receiving_member || "",
+          emergency: sourceRecord?.emergency || "",
+          emergencyOther: sourceRecord?.emergency_other || "",
+          assistance: sourceRecord?.assistance || "",
+          assistanceOther: sourceRecord?.assistance_other || "",
+          unit: sourceRecord?.unit || "",
+          quantity: sourceRecord?.quantity?.toString() || "",
+          cost: sourceRecord?.cost?.toString() || "",
+          provider: sourceRecord?.provider || "",
+          caseManager: sourceRecord?.case_manager || "",
+          status: sourceRecord?.status || "",
+          priority: sourceRecord?.priority || "",
+          caseDetails: {
+            caseManager: sourceRecord?.case_manager || "",
+            status: sourceRecord?.status || "",
+            priority: sourceRecord?.priority || "",
+          },
+        };
+
+        setSectionField("familyAssistanceRecord", formData);
+      } catch (err) {
+        if (!isActive) return;
+        console.error("❌ Failed to load FAR case:", err);
+        toast.error("Error loading Family Assistance Record", {
+          description: err.message || "An unexpected error occurred.",
+        });
+      }
     }
-  }, [open, editingRecord, setSectionField]);
+
+    hydrateForm();
+    return () => {
+      isActive = false;
+    };
+  }, [open, editingRecord, resetAll, setSectionField]);
 
   /**
    * Handle FAR case creation or update
@@ -71,47 +109,32 @@ export default function IntakeSheetFAR({ open, setOpen, onSuccess, editingRecord
 
       console.log("🔍 Full FAR intake data:", allData);
 
-      if (isEditMode) {
-        // Update existing record
-        const { error } = await updateFARCase(editingRecord.id, allData);
+      const casePayload = buildFARCasePayload(allData);
+      await createOrUpdateLocalFarCase({
+        casePayload,
+        targetId: editingRecord?.id ?? null,
+        localId: editingRecord?.localId ?? null,
+        mode: isEditMode ? "update" : "create",
+      });
 
-        if (error) {
-          console.error("❌ Failed to update FAR case:", error);
-          toast.error("Failed to update Family Assistance Record", {
-            description: error.message || "An unexpected error occurred. Please try again.",
-          });
-          return;
-        }
+      const online = isBrowserOnline();
+      toast.success(
+        isEditMode ? "Family Assistance Record saved" : "Family Assistance Record queued",
+        {
+          description: online
+            ? "Sync queued and will push shortly."
+            : "Stored locally. Sync once you're online.",
+        },
+      );
 
-        console.log("✅ FAR case updated successfully:", editingRecord.id);
-        toast.success("Family Assistance Record updated successfully!", {
-          description: `Case ID: ${editingRecord.id}`,
-        });
-      } else {
-        // Create new record
-        const { caseId, error } = await submitFARCase(allData);
-
-        if (error) {
-          console.error("❌ Failed to create FAR case:", error);
-          toast.error("Failed to create Family Assistance Record", {
-            description: error.message || "An unexpected error occurred. Please try again.",
-          });
-          return;
-        }
-
-        console.log("✅ FAR case created successfully:", caseId);
-        toast.success("Family Assistance Record created successfully!", {
-          description: `Case ID: ${caseId}`,
-        });
-      }
-
-      // Reset form and close dialog
       resetAll();
       setOpen(false);
-      
-      // Trigger reload of FAR data if callback provided
       if (onSuccess) {
         onSuccess();
+      }
+
+      if (online) {
+        setTimeout(forceFarTabReload, 0);
       }
     } catch (err) {
       console.error("❌ Unexpected error:", err);

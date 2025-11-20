@@ -53,6 +53,10 @@ export default function CaseManagement() {
 		error: farError,
 		reload: reloadFar,
 		deleteFarCase,
+		pendingCount: farPendingCount,
+		syncing: farSyncing,
+		syncStatus: farSyncStatus,
+		runSync: runFarSync,
 	} = useFarCases();
 	const {
 		data: facRows,
@@ -80,7 +84,7 @@ export default function CaseManagement() {
 	const [autoSyncAfterReloadTab, setAutoSyncAfterReloadTab] = useState(null);
 	const hasBootstrappedTab = useRef(false);
 	const previousOnline = useRef(isOnline);
-	const autoSyncTriggeredRef = useRef({ CICLCAR: false, FAC: false });
+	const autoSyncTriggeredRef = useRef({ CICLCAR: false, FAC: false, FAR: false });
 
 	const persistActiveTab = useCallback((tabValue) => {
 		if (typeof window === "undefined") return;
@@ -94,17 +98,27 @@ export default function CaseManagement() {
 		const forcedTab = sessionStorage.getItem(FORCED_TAB_AFTER_RELOAD_KEY);
 		const forcedCiclcarSync = sessionStorage.getItem("caseManagement.forceCiclcarSync") === "true";
 		const forcedFacSync = sessionStorage.getItem("caseManagement.forceFacSync") === "true";
+		const forcedFarSync = sessionStorage.getItem("caseManagement.forceFarSync") === "true";
 		const storedTab = sessionStorage.getItem("caseManagement.activeTab");
 		const nextTab = forcedTab
-			|| (forcedCiclcarSync ? "CICLCAR" : forcedFacSync ? "FAC" : storedTab || "CASE");
+			|| (forcedCiclcarSync
+				? "CICLCAR"
+				: forcedFacSync
+				? "FAC"
+				: forcedFarSync
+				? "FAR"
+				: storedTab || "CASE");
 		setInitialTab(nextTab);
 		if (forcedCiclcarSync) {
 			setAutoSyncAfterReloadTab("CICLCAR");
 		} else if (forcedFacSync) {
 			setAutoSyncAfterReloadTab("FAC");
+		} else if (forcedFarSync) {
+			setAutoSyncAfterReloadTab("FAR");
 		}
 		sessionStorage.removeItem("caseManagement.forceCiclcarSync");
 		sessionStorage.removeItem("caseManagement.forceFacSync");
+		sessionStorage.removeItem("caseManagement.forceFarSync");
 		if (forcedTab) {
 			sessionStorage.removeItem(FORCED_TAB_AFTER_RELOAD_KEY);
 		}
@@ -132,10 +146,17 @@ export default function CaseManagement() {
 					previousOnline.current = isOnline;
 					return;
 				}
+				if (farPendingCount > 0) {
+					sessionStorage.setItem("caseManagement.activeTab", "FAR");
+					sessionStorage.setItem("caseManagement.forceFarSync", "true");
+					window.location.reload();
+					previousOnline.current = isOnline;
+					return;
+				}
 			}
 		}
 		previousOnline.current = isOnline;
-	}, [isOnline, ciclcarPendingCount, facPendingCount]);
+		}, [isOnline, ciclcarPendingCount, facPendingCount, farPendingCount]);
 
 	useEffect(() => {
 		if (!autoSyncAfterReloadTab) return;
@@ -144,16 +165,18 @@ export default function CaseManagement() {
 			? runCiclcarSync
 			: autoSyncAfterReloadTab === "FAC"
 			? runFacSync
+			: autoSyncAfterReloadTab === "FAR"
+			? runFarSync
 			: null;
 		if (!runSync) return;
 		runSync()
 			.catch((err) => console.error("Auto sync failed:", err))
 			.finally(() => setAutoSyncAfterReloadTab(null));
-	}, [autoSyncAfterReloadTab, isOnline, runCiclcarSync, runFacSync]);
+	}, [autoSyncAfterReloadTab, isOnline, runCiclcarSync, runFacSync, runFarSync]);
 
 	useEffect(() => {
 		if (!isOnline) {
-			autoSyncTriggeredRef.current = { CICLCAR: false, FAC: false };
+			autoSyncTriggeredRef.current = { CICLCAR: false, FAC: false, FAR: false };
 			return;
 		}
 		if (autoSyncAfterReloadTab) return;
@@ -174,15 +197,26 @@ export default function CaseManagement() {
 					triggers.FAC = false;
 				});
 		}
+		if (farPendingCount > 0 && !farSyncing && !triggers.FAR) {
+			triggers.FAR = true;
+			runFarSync()
+				.catch((err) => console.error("Auto FAR sync failed:", err))
+				.finally(() => {
+					triggers.FAR = false;
+				});
+		}
 	}, [
 		isOnline,
 		autoSyncAfterReloadTab,
 		runCiclcarSync,
 		runFacSync,
+		runFarSync,
 		ciclcarPendingCount,
 		facPendingCount,
+		farPendingCount,
 		ciclcarSyncing,
 		facSyncing,
+		farSyncing,
 	]);
 
 	// Apply filtering to all case data
@@ -305,6 +339,12 @@ export default function CaseManagement() {
 								syncing: facSyncing,
 								syncStatus: facSyncStatus,
 								onSync: runFacSync,
+							}}
+							farSync={{
+								pendingCount: farPendingCount,
+								syncing: farSyncing,
+								syncStatus: farSyncStatus,
+								onSync: runFarSync,
 							}}
 							ciclcarProgramEnrollments={ciclcarProgramEnrollments}
 							ciclcarProgramEnrollmentsLoading={ciclcarProgramEnrollmentsLoading}

@@ -1065,6 +1065,7 @@ export function DataTable({
 	onTabChange,
 	ciclcarSync,
 	facSync,
+	farSync,
 	ciclcarProgramEnrollments = {},
 	ciclcarProgramEnrollmentsLoading = false,
 	isOnline = true,
@@ -1132,6 +1133,10 @@ export function DataTable({
 	const facSyncing = facSync?.syncing ?? false;
 	const facSyncStatus = facSync?.syncStatus ?? null;
 	const facOnSync = facSync?.onSync;
+	const farPending = farSync?.pendingCount ?? 0;
+	const farSyncing = farSync?.syncing ?? false;
+	const farSyncStatus = farSync?.syncStatus ?? null;
+	const farOnSync = farSync?.onSync;
 	const getCiclcarPrefetchedEnrollments = React.useCallback(
 		(caseId) => {
 			if (!caseId) return undefined;
@@ -1744,6 +1749,20 @@ export function DataTable({
 								</span>
 							</Button>
 
+							{/* Sync Button */}
+							<Button
+								variant="outline"
+								size="sm"
+								onClick={() => farOnSync?.()}
+								disabled={!isOnline || farSyncing || farPending === 0}
+								className="cursor-pointer"
+							>
+								<IconCloudUpload className={farSyncing ? "animate-spin" : ""} />
+								<span className="hidden lg:inline">
+									{farSyncing ? "SYNCING..." : "SYNC"}
+								</span>
+							</Button>
+
 							{/* Customize Columns Dropdown */}
 							<DropdownMenu>
 								<DropdownMenuTrigger asChild>
@@ -1808,6 +1827,29 @@ export function DataTable({
 								onSuccess={reloadFar}
 								editingRecord={editingFarRecord}
 							/>
+
+							{(farSyncing || farPending > 0 || farSyncStatus) && (
+								<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+									{farSyncing ? (
+										<>
+											<IconLoader className="h-3 w-3 animate-spin" />
+											<span>{farSyncStatus || "Syncing queued changes..."}</span>
+										</>
+									) : farPending > 0 ? (
+										<>
+											<IconAlertTriangle className="h-3 w-3 text-amber-500" />
+											<span className="text-amber-600">
+												{farPending} pending change{farPending === 1 ? "" : "s"} waiting for sync
+											</span>
+										</>
+									) : (
+										<>
+											<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
+											<span className="text-emerald-600">{farSyncStatus}</span>
+										</>
+									)}
+								</div>
+							)}
 						</>
 					)}
 
