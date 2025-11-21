@@ -44,7 +44,17 @@ import { cn } from "@/lib/utils";
  * Case Management Dashboard
  */
 function CaseDashboard({ filters }) {
-  const { data, loading, error, refresh } = useDashboard('case', filters);
+  const { 
+    data, 
+    loading, 
+    error, 
+    refresh,
+    refreshFromServer,
+    syncing,
+    syncStatus,
+    fromCache,
+    isOnline,
+  } = useDashboard('case', filters);
 
   if (error) {
     return (
@@ -69,18 +79,44 @@ function CaseDashboard({ filters }) {
           <p className="text-muted-foreground text-[11px]">Overview of all case activities and metrics</p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Offline Badge */}
+          {!isOnline && (
+            <Badge variant="destructive" className="h-7 text-xs">
+              Offline
+            </Badge>
+          )}
+          
+          {/* Cache Indicator */}
+          {fromCache && isOnline && (
+            <Badge variant="secondary" className="h-7 text-xs">
+              Cached
+            </Badge>
+          )}
+          
+          {/* Sync Button */}
           <Button
             variant="outline"
             size="sm"
-            onClick={refresh}
-            disabled={loading}
+            onClick={refreshFromServer}
+            disabled={loading || syncing || !isOnline}
             className="gap-2 h-7 text-xs cursor-pointer"
           >
-            <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
-            Refresh
+            <RefreshCw className={cn("h-3 w-3", (loading || syncing) && "animate-spin")} />
+            {syncing ? "Syncing..." : "Refresh"}
           </Button>
         </div>
       </div>
+
+      {/* Sync Status Message */}
+      {syncStatus && (
+        <div className="px-4 lg:px-6">
+          <Alert className="py-2 border-l-4" variant={fromCache ? "default" : "default"}>
+            <AlertDescription className="text-xs">
+              {syncStatus}
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
 
       {/* Row 1: Metric Cards (Left) + Case Trends Chart (Right) */}
       <div className="grid grid-cols-1 gap-2 px-4 lg:px-6 @3xl/main:grid-cols-2">

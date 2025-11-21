@@ -3,7 +3,54 @@
 
 ## 📌 Project Overview
 
-This project is called **Integrated Digital Management System for Municipal Social Welfare Services of Villanueva**. This system is designed to automate client and case management, enhance resource tracking, support documentation processes, and facilitate real-time data monitoring through an intuitive, secure, and partially offline-capable platform. By addressing the MSWDO’s operational bottlenecks, this system aims to improve service delivery and enable more effective decision-making, benefiting both the staff and the communities they serve.
+This project is called **Integrated Digital Management System for Municipal Social Welfare Services of Villanueva**. This system is designed to automate client and case management, enhance resource tracking, support documentation processes, and facilitate real-time data monitoring through an intuitive, secure, and partially offline-capable platform. By addressing the MSWDO's operational bottlenecks, this system aims to improve service delivery and enable more effective decision-making, benefiting both the staff and the communities they serve.
+
+---
+
+## 📡 Offline Capabilities
+
+The IDMS features robust offline functionality to ensure uninterrupted service delivery even with unreliable internet connectivity.
+
+### Supported Modules
+
+| Module | Offline Support | Auto-Sync | Cache Duration |
+|--------|----------------|-----------|----------------|
+| **Case Management > Management** | ✅ Full CRUD | ✅ Yes | Live |
+| **Case Management > Dashboard** | ✅ View & Metrics | ✅ Yes | 5 minutes |
+| Case Management > CICL/CAR | ✅ Full CRUD | ✅ Yes | Live |
+| Case Management > FAC | ✅ Full CRUD | ✅ Yes | Live |
+| Case Management > FAR | ✅ Full CRUD | ✅ Yes | Live |
+| Case Management > IVAC | ✅ Full CRUD | ✅ Yes | Live |
+
+### How It Works
+
+1. **Data Caching**: When online, all case data and dashboard metrics are automatically cached in IndexedDB
+2. **Offline Access**: When offline, the app serves data from local cache
+3. **Mutation Queue**: Create, update, and delete operations are queued locally when offline
+4. **Auto-Sync**: When connection is restored, the app automatically:
+   - Reloads the page
+   - Syncs queued operations in chronological order
+   - Updates cache with latest data from server
+
+### User Experience
+
+- **Offline Badge**: Red badge appears when network is unavailable
+- **Cached Data Indicator**: Secondary badge shows when viewing cached data
+- **Sync Status**: Real-time status messages inform users of sync progress
+- **Manual Refresh**: Refresh button available to manually sync when online
+
+### Technical Implementation
+
+See detailed documentation in:
+- [`docs/OFFLINE_SYNC_GUIDE.md`](./docs/OFFLINE_SYNC_GUIDE.md) - Case Management offline patterns
+- [`docs/DASHBOARD_OFFLINE_IMPLEMENTATION.md`](./docs/DASHBOARD_OFFLINE_IMPLEMENTATION.md) - Dashboard offline implementation
+
+**Key Technologies:**
+- **Dexie.js**: IndexedDB wrapper for local data storage
+- **Live Queries**: Real-time UI updates from local database
+- **Network Status API**: Detects online/offline transitions
+
+---
 
 # 📚 Code Documentation Standards & Best Practices
 

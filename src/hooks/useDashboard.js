@@ -21,9 +21,14 @@
  * @returns {Object} Dashboard data and controls
  */
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import supabase from "@/../config/supabase";
 import { useAuthStore } from "@/store/authStore";
+import { 
+  getDashboardData, 
+  fetchAndCacheDashboardData,
+  dashboardCacheLiveQuery 
+} from "@/services/dashboardOfflineService";
 
 /**
  * Compute statistics from case data
@@ -158,7 +163,12 @@ function computeTimeTrends(cases, days = 30) {
 }
 
 /**
- * Main dashboard hook
+ * Check if browser is online
+ */
+const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+
+/**
+ * Main dashboard hook with offline support
  * @param {string} dashboardType - Type of dashboard to load
  * @param {Object} filters - Optional filters (dateRange, status, etc.)
  */
@@ -166,86 +176,35 @@ export function useDashboard(dashboardType = 'case', filters = {}) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [fromCache, setFromCache] = useState(false);
   const { role } = useAuthStore();
+  const cacheSubscriptionRef = useRef(null);
 
-  const fetchDashboardData = useCallback(async () => {
+  const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
+    setSyncStatus(null);
 
     try {
       switch (dashboardType) {
         case 'case': {
-          // Fetch all case types using correct table names
-          // Note: Using FAC (Family Assistance Card) instead of FAR (Family Assistance Record)
-          const [caseRes, ciclcarRes, facRes, ivacRes] = await Promise.all([
-            supabase.from("case").select("*").order("updated_at", { ascending: false }),
-            supabase.from("ciclcar_case").select("*").order("updated_at", { ascending: false }),
-            supabase.from("fac_case").select("*").order("created_at", { ascending: false }),
-            supabase.from("ivac_cases").select("*").order("created_at", { ascending: false }),
-          ]);
-
-          if (caseRes.error) throw caseRes.error;
-          if (ciclcarRes.error) throw ciclcarRes.error;
-          if (facRes.error) throw facRes.error;
-          if (ivacRes.error) throw ivacRes.error;
-
-          const allCases = [
-            ...(caseRes.data || []),
-            ...(ciclcarRes.data || []),
-            ...(facRes.data || []),
-            ...(ivacRes.data || []),
-          ];
-
-          // Apply filters
-          let filteredCases = allCases;
-          if (filters.dateRange) {
-            const { start, end } = filters.dateRange;
-            filteredCases = filteredCases.filter(c => {
-              const date = new Date(c.created_at || c.date_filed);
-              return date >= start && date <= end;
-            });
-          }
-          if (filters.status) {
-            filteredCases = filteredCases.filter(c => c.status === filters.status);
-          }
-          if (filters.priority) {
-            filteredCases = filteredCases.filter(c => c.priority === filters.priority);
-          }
-
-          // Compute statistics
-          const stats = computeCaseStats(filteredCases);
-          const timeTrends = computeTimeTrends(filteredCases, 30);
-
-          // Compute previous period for trends
-          const previousPeriodEnd = filters.dateRange?.start || new Date();
-          const periodLength = filters.dateRange 
-            ? (filters.dateRange.end - filters.dateRange.start) / (1000 * 60 * 60 * 24)
-            : 30;
-          const previousPeriodStart = new Date(previousPeriodEnd.getTime() - periodLength * 24 * 60 * 60 * 1000);
+          // Try to get dashboard data (offline-aware)
+          const result = await getDashboardData(dashboardType, filters, forceRefresh);
           
-          const previousCases = allCases.filter(c => {
-            const date = new Date(c.created_at || c.date_filed);
-            return date >= previousPeriodStart && date < previousPeriodEnd;
-          });
-          const previousStats = computeCaseStats(previousCases);
-
-          setData({
-            stats,
-            previousStats,
-            timeTrends,
-            trends: {
-              total: computeTrend(stats.total, previousStats.total),
-              active: computeTrend(stats.active, previousStats.active),
-              closed: computeTrend(stats.closed, previousStats.closed),
-              highPriority: computeTrend(stats.highPriority, previousStats.highPriority),
-            },
-            rawData: {
-              cases: caseRes.data || [],
-              ciclcar: ciclcarRes.data || [],
-              fac: facRes.data || [],
-              ivac: ivacRes.data || [],
-            },
-          });
+          setData(result.data);
+          setFromCache(result.fromCache || false);
+          
+          if (result.fromCache) {
+            setSyncStatus(result.recomputed 
+              ? "Showing cached data (recomputed with filters)" 
+              : "Showing cached data"
+            );
+          } else {
+            setSyncStatus("Data refreshed from server");
+          }
+          
           break;
         }
 
@@ -283,14 +242,71 @@ export function useDashboard(dashboardType = 'case', filters = {}) {
     } catch (err) {
       console.error('Dashboard fetch error:', err);
       setError(err.message || 'Failed to load dashboard data');
+      setSyncStatus("Error loading dashboard data");
     } finally {
       setLoading(false);
     }
   }, [dashboardType, filters, role]);
 
+  /**
+   * Force refresh dashboard data from Supabase
+   */
+  const refreshFromServer = useCallback(async () => {
+    setSyncing(true);
+    setSyncStatus("Refreshing from server...");
+    
+    try {
+      if (!isBrowserOnline()) {
+        setSyncStatus("Cannot refresh while offline");
+        return;
+      }
+      
+      if (dashboardType === 'case') {
+        const fresh = await fetchAndCacheDashboardData(dashboardType, filters);
+        setData(fresh);
+        setFromCache(false);
+        setSyncStatus("Successfully refreshed");
+      } else {
+        // For non-case dashboards, use the existing fetch logic
+        await fetchDashboardData(true);
+      }
+    } catch (err) {
+      console.error("Error refreshing dashboard:", err);
+      setError(err.message || "Failed to refresh dashboard");
+      setSyncStatus("Refresh failed");
+    } finally {
+      setSyncing(false);
+    }
+  }, [dashboardType, filters, fetchDashboardData]);
+
   useEffect(() => {
     fetchDashboardData();
   }, [fetchDashboardData]);
+
+  // Subscribe to cache updates for case dashboard
+  useEffect(() => {
+    if (dashboardType !== 'case') return;
+    
+    const subscription = dashboardCacheLiveQuery(dashboardType).subscribe({
+      next: (cachedData) => {
+        if (cachedData && !loading) {
+          setData(cachedData);
+          setFromCache(true);
+        }
+      },
+      error: (err) => {
+        console.error("Cache subscription error:", err);
+      },
+    });
+    
+    cacheSubscriptionRef.current = subscription;
+    
+    return () => {
+      if (cacheSubscriptionRef.current) {
+        cacheSubscriptionRef.current.unsubscribe();
+      }
+    };
+  }, [dashboardType, loading]);
 
   return useMemo(
     () => ({
@@ -298,7 +314,12 @@ export function useDashboard(dashboardType = 'case', filters = {}) {
       loading,
       error,
       refresh: fetchDashboardData,
+      refreshFromServer,
+      syncing,
+      syncStatus,
+      fromCache,
+      isOnline: isBrowserOnline(),
     }),
-    [data, loading, error, fetchDashboardData]
+    [data, loading, error, fetchDashboardData, refreshFromServer, syncing, syncStatus, fromCache]
   );
 }

@@ -65,4 +65,21 @@ offlineCaseDb.version(6).stores({
     case_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
 });
 
+// Version 7: Add dashboard caching for offline dashboard functionality
+offlineCaseDb.version(7).stores({
+    ciclcar_cases: "++localId, id, updated_at, case_manager, hasPendingWrites",
+    ciclcar_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    case_managers: "id, full_name",
+    fac_cases: "++localId, id, updated_at, head_first_name, head_last_name, hasPendingWrites",
+    fac_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    far_cases: "++localId, id, date, receiving_member, assistance, hasPendingWrites",
+    far_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    ivac_cases: "++localId, id, updated_at, municipality, province, status, hasPendingWrites",
+    ivac_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    case_cases: "++localId, id, updated_at, identifying_name, case_manager, hasPendingWrites",
+    case_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    dashboard_cache: "++id, dashboardType, timestamp, data",
+    dashboard_raw_data: "++id, dashboardType, timestamp, cases, ciclcar, fac, ivac",
+});
+
 export default offlineCaseDb;

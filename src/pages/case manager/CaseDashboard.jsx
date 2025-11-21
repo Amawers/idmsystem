@@ -15,13 +15,17 @@
  * pulling live data from the database and computing metrics on the fly.
  */
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import DynamicDashboard from "@/components/dashboard/DynamicDashboard";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 export default function CaseDashboard() {
   const [filters, setFilters] = useState({});
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
+  const isOnline = useNetworkStatus();
+  const previousOnline = useRef(isOnline);
+  const [autoSyncAfterReload, setAutoSyncAfterReload] = useState(false);
 
   // Handle filter changes
   const handleFilterChange = useCallback((newFilters) => {
@@ -42,6 +46,28 @@ export default function CaseDashboard() {
       filters.datePreset !== 'month' && filters.datePreset,
     ].filter(Boolean).length;
   }, [filters]);
+
+  // Check for forced reload flag on mount
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const forcedSync = sessionStorage.getItem("caseDashboard.forceSync") === "true";
+    if (forcedSync) {
+      setAutoSyncAfterReload(true);
+      sessionStorage.removeItem("caseDashboard.forceSync");
+    }
+  }, []);
+
+  // Handle reconnection: reload page to trigger fresh data fetch
+  useEffect(() => {
+    if (!previousOnline.current && isOnline) {
+      // Coming back online - set flag and reload
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("caseDashboard.forceSync", "true");
+        window.location.reload();
+      }
+    }
+    previousOnline.current = isOnline;
+  }, [isOnline]);
 
   return (
     <div className="flex flex-col gap-1">
