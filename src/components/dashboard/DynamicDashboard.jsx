@@ -79,17 +79,26 @@ function CaseDashboard({ filters }) {
           <p className="text-muted-foreground text-[11px]">Overview of all case activities and metrics</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Offline Badge */}
+          {/* Offline Badge with Status */}
           {!isOnline && (
-            <Badge variant="destructive" className="h-7 text-xs">
+            <Badge variant="destructive" className="h-7 text-xs gap-1.5">
               Offline
+              {fromCache && <span className="opacity-75">• Cached data</span>}
             </Badge>
           )}
           
-          {/* Cache Indicator */}
+          {/* Cache Indicator with Status */}
           {fromCache && isOnline && (
-            <Badge variant="secondary" className="h-7 text-xs">
+            <Badge variant="secondary" className="h-7 text-xs gap-1.5">
               Cached
+              {syncStatus && <span className="opacity-75">• {syncStatus}</span>}
+            </Badge>
+          )}
+          
+          {/* Fresh Data Indicator */}
+          {!fromCache && isOnline && syncStatus && (
+            <Badge variant="outline" className="h-7 text-xs text-green-600 border-green-600">
+              {syncStatus}
             </Badge>
           )}
           
@@ -106,17 +115,6 @@ function CaseDashboard({ filters }) {
           </Button>
         </div>
       </div>
-
-      {/* Sync Status Message */}
-      {syncStatus && (
-        <div className="px-4 lg:px-6">
-          <Alert className="py-2 border-l-4" variant={fromCache ? "default" : "default"}>
-            <AlertDescription className="text-xs">
-              {syncStatus}
-            </AlertDescription>
-          </Alert>
-        </div>
-      )}
 
       {/* Row 1: Metric Cards (Left) + Case Trends Chart (Right) */}
       <div className="grid grid-cols-1 gap-2 px-4 lg:px-6 @3xl/main:grid-cols-2">
