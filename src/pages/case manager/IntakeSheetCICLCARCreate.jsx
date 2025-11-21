@@ -16,8 +16,9 @@ import { ComplainantForm } from "@/components/intake sheet CICLCAR/ComplainantFo
 import { RemarksForm } from "@/components/intake sheet CICLCAR/RemarksForm";
 import { ReferralForm } from "@/components/intake sheet CICLCAR/ReferralForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
+import { useCaseManagerStore } from "@/store/useCaseManagerStore";
 import { toast } from "sonner";
-import { createOrUpdateLocalCase, getCaseManagersOfflineFirst } from "@/services/ciclcarOfflineService";
+import { createOrUpdateLocalCase } from "@/services/ciclcarOfflineService";
 
 const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
 const forceCiclcarTabReload = () => {
@@ -81,23 +82,15 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 	const { getAllData, resetAll } = useIntakeFormStore();
 	const [isSaving, setIsSaving] = useState(false);
 	
-	// State for case managers
-	const [caseManagers, setCaseManagers] = useState([]);
-	const [loadingCaseManagers, setLoadingCaseManagers] = useState(false);
-
-	// Fetch case managers
-	 const fetchCaseManagers = async () => {
-			try {
-				setLoadingCaseManagers(true);
-				const { data } = await getCaseManagersOfflineFirst();
-				setCaseManagers(data || []);
-			} catch (err) {
-				console.error("Error fetching case managers:", err);
-				setCaseManagers([]);
-			} finally {
-				setLoadingCaseManagers(false);
-			}
-		};
+	// Use cached case managers from store
+	const caseManagers = useCaseManagerStore((state) => state.caseManagers);
+	const loadingCaseManagers = useCaseManagerStore((state) => state.loading);
+	const initCaseManagers = useCaseManagerStore((state) => state.init);
+	
+	// Initialize case managers store on mount
+	useEffect(() => {
+		initCaseManagers();
+	}, [initCaseManagers]);
 
 	// Create CICL/CAR case and related rows
 	const handleCreate = async () => {
@@ -274,7 +267,6 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 	useEffect(() => {
 		if (open) {
 			resetAll();
-			fetchCaseManagers();
 		}
 	}, [open, resetAll]);
 

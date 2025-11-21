@@ -98,7 +98,7 @@ import useDataTable from "@/hooks/useDataTable";
 import TableRenderer from "@/components/cases/tables/TableRenderer";
 import EnrollCaseDialog from "@/components/cases/EnrollCaseDialog";
 import ProgramEnrollmentBadge from "@/components/cases/ProgramEnrollmentBadge";
-import { useCaseManagers } from "@/hooks/useCaseManagers";
+import { useCaseManagers } from "@/store/useCaseManagerStore";
 
 // =============================================
 // DATA VALIDATION SCHEMA

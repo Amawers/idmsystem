@@ -36,7 +36,7 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { useServiceDelivery } from "@/hooks/useServiceDelivery";
-import { useCaseManagers } from "@/hooks/useCaseManagers";
+import { useCaseManagers } from "@/store/useCaseManagerStore";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";

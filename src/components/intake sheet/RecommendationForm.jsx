@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
 import { submitCase } from "@/lib/caseSubmission";
 import { Label } from "@/components/ui/label";
-import supabase from "@/../config/supabase";
+import { useCaseManagers } from "@/store/useCaseManagerStore";
 import {
   Select,
   SelectContent,
@@ -52,37 +52,8 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
     },
   });
 
-  // State for case managers from database
-  const [caseManagers, setCaseManagers] = useState([]);
-  const [loadingManagers, setLoadingManagers] = useState(true);
-
-  // Fetch case managers from database
-  useEffect(() => {
-    async function fetchCaseManagers() {
-      try {
-        const { data: profiles, error } = await supabase
-          .from("profile")
-          .select("id, full_name, email")
-          .eq("status", "active")
-          .eq("role", "case manager")
-          .order("full_name", { ascending: true });
-
-        if (error) {
-          console.error("Error fetching case managers:", error);
-          toast.error("Failed to load case managers");
-          return;
-        }
-
-        setCaseManagers(profiles || []);
-      } catch (err) {
-        console.error("Unexpected error fetching case managers:", err);
-      } finally {
-        setLoadingManagers(false);
-      }
-    }
-
-    fetchCaseManagers();
-  }, []);
+  // Use cached case managers from store
+  const { caseManagers, loading: loadingManagers } = useCaseManagers();
 
   const statuses = [
     {
