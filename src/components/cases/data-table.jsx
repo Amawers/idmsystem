@@ -281,6 +281,8 @@ const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick
 					<DropdownMenuSeparator />
 					<PermissionGuard permission="delete_case">
 						<DropdownMenuItem variant="destructive" onClick={(e) => {
+							console.log("[CASE DELETE] Dropdown item clicked, event:", e);
+							console.log("[CASE DELETE] Row data:", row.original);
 							e.stopPropagation();
 							handleDeleteClick(row.original, "CASE");
 						}}>
@@ -1203,7 +1205,8 @@ export function DataTable({
 
 	// Handle delete click - opens confirmation dialog
 	function handleDeleteClick(caseData, caseType) {
-		console.log("Delete requested for:", caseData, "Type:", caseType);
+		console.log("[DELETE CLICK] Delete requested for:", caseData, "Type:", caseType);
+		console.log("[DELETE CLICK] handleDeleteClick function called successfully");
 		setCaseToDelete(caseData);
 		setCaseTypeToDelete(caseType);
 		setDeleteDialogOpen(true);

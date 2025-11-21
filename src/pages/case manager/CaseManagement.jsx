@@ -249,6 +249,14 @@ export default function CaseManagement() {
 					triggers.FAC = false;
 				});
 		}
+		if (farPendingCount > 0 && !farSyncing && !triggers.FAR) {
+			triggers.FAR = true;
+			runFarSync()
+				.catch((err) => console.error("Auto FAR sync failed:", err))
+				.finally(() => {
+					triggers.FAR = false;
+				});
+		}
 		if (ivacPendingCount > 0 && !ivacSyncing && !triggers.IVAC) {
 			triggers.IVAC = true;
 			runIvacSync()
