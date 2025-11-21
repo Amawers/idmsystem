@@ -191,21 +191,6 @@ const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick
 			return <div>{priority}</div>;
 		},
 	},
-	//* PROGRAMS (ENROLLMENT BADGE)
-	{
-		accessorKey: "programs",
-		header: "Programs",
-		cell: ({ row }) => {
-			const caseId = row.original["case ID"] ?? row.original.id;
-			return (
-				<ProgramEnrollmentBadge 
-					caseId={caseId} 
-					caseType="CASE"
-					onEnrollClick={() => handleEnrollClick(row.original, "CASE")}
-				/>
-			);
-		},
-	},
 	//* DATE FILED
 	{
 		accessorKey: "date filed",
@@ -343,23 +328,6 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, g
 			// Render plain text instead of a clickable viewer to avoid unnecessary navigation
 			const priority = row.original["priority"] ?? "None";
 			return <div>{priority}</div>;
-		},
-	},
-	//* PROGRAMS (ENROLLMENT BADGE)
-	{
-		accessorKey: "programs",
-		header: "Programs",
-		cell: ({ row }) => {
-			const caseId = row.original["case ID"] ?? row.original.id;
-			const prefetchedEnrollments = getPrefetchedEnrollments?.(caseId);
-			return (
-				<ProgramEnrollmentBadge 
-					caseId={caseId} 
-					caseType="CICLCAR"
-					prefetchedEnrollments={prefetchedEnrollments}
-					onEnrollClick={() => handleEnrollClick(row.original, "CICLCAR")}
-				/>
-			);
 		},
 	},
 	//* DATE FILED
