@@ -18,7 +18,7 @@ import { useState, useEffect } from "react";
 import supabase from "@/../config/supabase";
 import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 import { useAuthStore } from "@/store/authStore";
-import SAMPLE_SERVICE_DELIVERY from "../../SAMPLE_SERVICE_DELIVERY.json";
+// import SAMPLE_SERVICE_DELIVERY from "../../SAMPLE_SERVICE_DELIVERY.json"; // File not found
 
 /**
  * Hook for managing service delivery logs
@@ -110,9 +110,9 @@ export function useServiceDelivery(options = {}) {
       console.error("Error fetching service delivery from Supabase:", err);
       setError(err.message);
       
-      // Fallback to dummy data
-      console.log("Falling back to dummy data for service delivery");
-      let filteredServices = [...SAMPLE_SERVICE_DELIVERY];
+      // Fallback to empty data
+      console.log("Falling back to empty data for service delivery");
+      let filteredServices = [];
 
       // Apply filters to dummy data
       if (options.enrollmentId) {

@@ -17,7 +17,7 @@ import { useState, useEffect } from "react";
 import supabase from "@/../config/supabase";
 import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 import { useAuthStore } from "@/store/authStore";
-import SAMPLE_PROGRAMS from "../../SAMPLE_PROGRAMS.json";
+// import SAMPLE_PROGRAMS from "../../SAMPLE_PROGRAMS.json"; // File not found
 
 /**
  * Hook for managing programs data
@@ -78,9 +78,9 @@ export function usePrograms(options = {}) {
       console.error("Error fetching programs:", err);
       setError(err.message);
       
-      // Fallback to dummy data if Supabase fails
-      console.log("Falling back to dummy data");
-      let filteredPrograms = [...SAMPLE_PROGRAMS];
+      // Fallback to empty data if Supabase fails
+      console.log("Falling back to empty data");
+      let filteredPrograms = [];
 
       // Apply filters to dummy data
       if (options.status) {

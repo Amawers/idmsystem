@@ -18,7 +18,7 @@ import { useState, useEffect } from "react";
 import supabase from "@/../config/supabase";
 import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 import { useAuthStore } from "@/store/authStore";
-import SAMPLE_ENROLLMENTS from "../../SAMPLE_ENROLLMENTS.json";
+// import SAMPLE_ENROLLMENTS from "../../SAMPLE_ENROLLMENTS.json"; // File not found
 
 /**
  * Hook for managing program enrollments
@@ -97,9 +97,9 @@ export function useEnrollments(options = {}) {
       console.error("Error fetching enrollments from Supabase:", err);
       setError(err.message);
       
-      // Fallback to dummy data
-      console.log("Falling back to dummy data for enrollments");
-      let filteredEnrollments = [...SAMPLE_ENROLLMENTS];
+      // Fallback to empty data
+      console.log("Falling back to empty data for enrollments");
+      let filteredEnrollments = [];
 
       // Apply filters to dummy data
       if (options.status) {

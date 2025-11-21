@@ -32,7 +32,7 @@ import {
   getMOUStatus,
 } from "@/lib/partnerSubmission";
 import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
-import SAMPLE_PARTNERS from "../../SAMPLE_PARTNERS.json";
+// import SAMPLE_PARTNERS from "../../SAMPLE_PARTNERS.json"; // File not found
 
 /**
  * Hook for managing partner organizations
@@ -91,9 +91,9 @@ export function usePartners(options = {}) {
       console.error("Error fetching partners:", err);
       setError(err.message);
       
-      // Fallback to dummy data if Supabase fails
-      console.log("Falling back to dummy data");
-      let filteredPartners = [...SAMPLE_PARTNERS];
+      // Fallback to empty data if Supabase fails
+      console.log("Falling back to empty data");
+      let filteredPartners = [];
 
       // Apply filters to dummy data
       if (options.status) {
