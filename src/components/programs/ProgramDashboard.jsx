@@ -14,6 +14,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { usePrograms } from "@/hooks/usePrograms";
 import { useEnrollments } from "@/hooks/useEnrollments";
+import { useDashboard } from "@/hooks/useDashboard";
 import { 
   Activity,
   DollarSign,
@@ -25,6 +26,8 @@ import {
 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 /**
  * Metric Card Component
@@ -69,14 +72,28 @@ function MetricCard({ title, value, description, icon: Icon, trend }) {
 export default function ProgramDashboard() {
   const { programs, statistics: programStats, loading: programsLoading, fetchPrograms } = usePrograms();
   const { enrollments, statistics: enrollmentStats, loading: enrollmentsLoading, fetchEnrollments } = useEnrollments();
+  
+  // Use offline-aware dashboard hook
+  const {
+    data: dashboardData,
+    loading: dashboardLoading,
+    refreshFromServer,
+    syncing,
+    syncStatus,
+    fromCache,
+    isOnline,
+  } = useDashboard('program', {});
 
-  const loading = programsLoading || enrollmentsLoading;
+  const loading = programsLoading || enrollmentsLoading || dashboardLoading;
 
   /**
    * Handle refresh button click
    * Refreshes both programs and enrollments data
    */
   const handleRefresh = async () => {
+    if (refreshFromServer) {
+      await refreshFromServer();
+    }
     await Promise.all([fetchPrograms(), fetchEnrollments()]);
   };
 
@@ -192,7 +209,7 @@ export default function ProgramDashboard() {
 
   return (
     <div className="space-y-4">
-      {/* Header with Refresh Button */}
+      {/* Header with Refresh Button and Status */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">Program Dashboard</h2>
@@ -200,16 +217,41 @@ export default function ProgramDashboard() {
             Overview of all programs and enrollments
           </p>
         </div>
-        <Button
-          onClick={handleRefresh}
-          disabled={loading}
-          variant="outline"
-          size="sm"
-          className="gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* Offline Badge with Status */}
+          {!isOnline && (
+            <Badge variant="destructive" className="h-7 text-xs gap-1.5">
+              Offline
+              {fromCache && <span className="opacity-75">• Cached data</span>}
+            </Badge>
+          )}
+          
+          {/* Cache Indicator with Status */}
+          {fromCache && isOnline && (
+            <Badge variant="secondary" className="h-7 text-xs gap-1.5">
+              Cached
+              {syncStatus && <span className="opacity-75">• {syncStatus}</span>}
+            </Badge>
+          )}
+          
+          {/* Fresh Data Indicator */}
+          {!fromCache && isOnline && syncStatus && (
+            <Badge variant="outline" className="h-7 text-xs text-green-600 border-green-600">
+              {syncStatus}
+            </Badge>
+          )}
+          
+          <Button
+            onClick={handleRefresh}
+            disabled={loading || syncing || !isOnline}
+            variant="outline"
+            size="sm"
+            className="gap-2"
+          >
+            <RefreshCw className={cn("h-4 w-4", (loading || syncing) && "animate-spin")} />
+            {syncing ? "Syncing..." : "Refresh"}
+          </Button>
+        </div>
       </div>
 
       {/* Key Metrics */}

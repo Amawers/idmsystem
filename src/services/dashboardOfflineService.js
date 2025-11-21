@@ -60,6 +60,86 @@ async function fetchAllCasesFromSupabase() {
 }
 
 /**
+ * Fetch program and enrollment data from Supabase
+ * @returns {Promise<Object>} Object containing programs and enrollments
+ */
+async function fetchProgramDataFromSupabase() {
+    const [programsRes, enrollmentsRes] = await Promise.all([
+        supabase.from("programs").select("*").order("created_at", { ascending: false }),
+        supabase.from("program_enrollments").select("*").order("enrollment_date", { ascending: false }),
+    ]);
+
+    if (programsRes.error) throw programsRes.error;
+    if (enrollmentsRes.error) throw enrollmentsRes.error;
+
+    return {
+        programs: programsRes.data || [],
+        enrollments: enrollmentsRes.data || [],
+    };
+}
+
+/**
+ * Compute program statistics
+ * @param {Array} programs - Array of program objects
+ * @param {Array} enrollments - Array of enrollment objects
+ * @returns {Object} Computed program statistics
+ */
+function computeProgramStats(programs, enrollments) {
+    const total = programs.length;
+    const active = programs.filter(p => p.status === 'active').length;
+    const completed = programs.filter(p => p.status === 'completed').length;
+    const inactive = programs.filter(p => p.status === 'inactive').length;
+    
+    const totalBudget = programs.reduce((sum, p) => sum + (parseFloat(p.budget_allocation) || 0), 0);
+    const totalSpent = programs.reduce((sum, p) => sum + (parseFloat(p.actual_spent) || 0), 0);
+    const totalEnrollment = enrollments.length;
+    const activeEnrollments = enrollments.filter(e => e.status === 'active').length;
+    const completedEnrollments = enrollments.filter(e => e.status === 'completed').length;
+    
+    const programsWithSuccessRate = programs.filter(p => p.success_rate > 0);
+    const averageSuccessRate = programsWithSuccessRate.length > 0
+        ? programsWithSuccessRate.reduce((sum, p) => sum + (parseFloat(p.success_rate) || 0), 0) / programsWithSuccessRate.length
+        : 0;
+
+    return {
+        total,
+        active,
+        completed,
+        inactive,
+        totalBudget,
+        totalSpent,
+        totalEnrollment,
+        activeEnrollments,
+        completedEnrollments,
+        averageSuccessRate,
+    };
+}
+
+/**
+ * Compute complete program dashboard data
+ * @param {Object} rawData - Object with programs and enrollments arrays
+ * @returns {Object} Complete program dashboard data structure
+ */
+function computeProgramDashboardData(rawData) {
+    const programs = rawData.programs || [];
+    const enrollments = rawData.enrollments || [];
+    
+    const stats = computeProgramStats(programs, enrollments);
+    
+    // Group programs by type
+    const programsByType = programs.reduce((acc, program) => {
+        acc[program.program_type] = (acc[program.program_type] || 0) + 1;
+        return acc;
+    }, {});
+    
+    return {
+        stats,
+        programsByType,
+        rawData,
+    };
+}
+
+/**
  * Compute statistics from case data
  * @param {Array} cases - Array of case objects
  * @returns {Object} Computed statistics
@@ -360,16 +440,22 @@ export async function loadRawDataFromCache(dashboardType = 'case') {
  */
 export async function fetchAndCacheDashboardData(dashboardType = 'case', filters = {}) {
     try {
-        // For now, only support 'case' dashboard
-        if (dashboardType !== 'case') {
+        let rawData;
+        let dashboardData;
+        
+        if (dashboardType === 'case') {
+            // Fetch all case data from Supabase
+            rawData = await fetchAllCasesFromSupabase();
+            // Compute dashboard data
+            dashboardData = computeDashboardData(rawData, filters);
+        } else if (dashboardType === 'program') {
+            // Fetch program data from Supabase
+            rawData = await fetchProgramDataFromSupabase();
+            // Compute program dashboard data
+            dashboardData = computeProgramDashboardData(rawData);
+        } else {
             throw new Error(`Dashboard type '${dashboardType}' not supported for offline mode`);
         }
-        
-        // Fetch all case data from Supabase
-        const rawData = await fetchAllCasesFromSupabase();
-        
-        // Compute dashboard data
-        const dashboardData = computeDashboardData(rawData, filters);
         
         // Cache both computed data and raw data
         await saveDashboardToCache(dashboardType, dashboardData);
@@ -402,7 +488,9 @@ export async function getDashboardData(dashboardType = 'case', filters = {}, for
         // If cache miss and we have raw data, recompute
         const rawData = await loadRawDataFromCache(dashboardType);
         if (rawData) {
-            const recomputed = computeDashboardData(rawData, filters);
+            const recomputed = dashboardType === 'program'
+                ? computeProgramDashboardData(rawData)
+                : computeDashboardData(rawData, filters);
             await saveDashboardToCache(dashboardType, recomputed);
             return { data: recomputed, fromCache: true, recomputed: true };
         }

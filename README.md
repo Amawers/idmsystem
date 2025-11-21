@@ -17,6 +17,7 @@ The IDMS features robust offline functionality to ensure uninterrupted service d
 |--------|----------------|-----------|----------------|
 | **Case Management > Management** | ✅ Full CRUD | ✅ Yes | Live |
 | **Case Management > Dashboard** | ✅ View & Metrics | ✅ Yes | 5 minutes |
+| **Program Management > Dashboard** | ✅ View & Metrics | ✅ Yes | 5 minutes |
 | Case Management > CICL/CAR | ✅ Full CRUD | ✅ Yes | Live |
 | Case Management > FAC | ✅ Full CRUD | ✅ Yes | Live |
 | Case Management > FAR | ✅ Full CRUD | ✅ Yes | Live |

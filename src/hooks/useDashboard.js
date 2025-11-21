@@ -181,6 +181,12 @@ export function useDashboard(dashboardType = 'case', filters = {}) {
   const [fromCache, setFromCache] = useState(false);
   const { role } = useAuthStore();
   const cacheSubscriptionRef = useRef(null);
+  const filtersRef = useRef(filters);
+  
+  // Update filters ref when filters change
+  useEffect(() => {
+    filtersRef.current = filters;
+  }, [filters]);
 
   const fetchDashboardData = useCallback(async (forceRefresh = false) => {
     setLoading(true);
@@ -189,16 +195,17 @@ export function useDashboard(dashboardType = 'case', filters = {}) {
 
     try {
       switch (dashboardType) {
-        case 'case': {
+        case 'case':
+        case 'program': {
           // Try to get dashboard data (offline-aware)
-          const result = await getDashboardData(dashboardType, filters, forceRefresh);
+          const result = await getDashboardData(dashboardType, filtersRef.current, forceRefresh);
           
           setData(result.data);
           setFromCache(result.fromCache || false);
           
           if (result.fromCache) {
             setSyncStatus(result.recomputed 
-              ? "Showing cached data (recomputed with filters)" 
+              ? "Showing cached data (recomputed)" 
               : "Showing cached data"
             );
           } else {
@@ -246,7 +253,7 @@ export function useDashboard(dashboardType = 'case', filters = {}) {
     } finally {
       setLoading(false);
     }
-  }, [dashboardType, filters, role]);
+  }, [dashboardType, role]);
 
   /**
    * Force refresh dashboard data from Supabase
@@ -261,14 +268,18 @@ export function useDashboard(dashboardType = 'case', filters = {}) {
         return;
       }
       
-      if (dashboardType === 'case') {
-        const fresh = await fetchAndCacheDashboardData(dashboardType, filters);
+      if (dashboardType === 'case' || dashboardType === 'program') {
+        const fresh = await fetchAndCacheDashboardData(dashboardType, filtersRef.current);
         setData(fresh);
         setFromCache(false);
         setSyncStatus("Successfully refreshed");
       } else {
-        // For non-case dashboards, use the existing fetch logic
-        await fetchDashboardData(true);
+        // For non-supported offline dashboards, refetch directly
+        setLoading(true);
+        setError(null);
+        setSyncStatus("Refreshing...");
+        // Trigger a refresh by changing a state that will cause fetchDashboardData to run
+        setData(null);
       }
     } catch (err) {
       console.error("Error refreshing dashboard:", err);
@@ -277,15 +288,15 @@ export function useDashboard(dashboardType = 'case', filters = {}) {
     } finally {
       setSyncing(false);
     }
-  }, [dashboardType, filters, fetchDashboardData]);
+  }, [dashboardType]);
 
   useEffect(() => {
     fetchDashboardData();
-  }, [fetchDashboardData]);
+  }, [fetchDashboardData, dashboardType, role]);
 
-  // Subscribe to cache updates for case dashboard
+  // Subscribe to cache updates for case and program dashboards
   useEffect(() => {
-    if (dashboardType !== 'case') return;
+    if (dashboardType !== 'case' && dashboardType !== 'program') return;
     
     const subscription = dashboardCacheLiveQuery(dashboardType).subscribe({
       next: (cachedData) => {
@@ -313,13 +324,13 @@ export function useDashboard(dashboardType = 'case', filters = {}) {
       data,
       loading,
       error,
-      refresh: fetchDashboardData,
+      refresh: () => fetchDashboardData(false),
       refreshFromServer,
       syncing,
       syncStatus,
       fromCache,
       isOnline: isBrowserOnline(),
     }),
-    [data, loading, error, fetchDashboardData, refreshFromServer, syncing, syncStatus, fromCache]
+    [data, loading, error, refreshFromServer, syncing, syncStatus, fromCache, fetchDashboardData]
   );
 }
