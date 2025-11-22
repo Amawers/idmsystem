@@ -14,7 +14,7 @@
  * @returns {Object} Enrollments data, loading state, error state, and CRUD functions
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import supabase from "@/../config/supabase";
 import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 import { useAuthStore } from "@/store/authStore";
@@ -29,25 +29,33 @@ import { useAuthStore } from "@/store/authStore";
  * @param {string} options.caseId - Filter by specific case ID
  * @returns {Object} Enrollments data and operations
  */
+const EMPTY_STATS = {
+  total: 0,
+  active: 0,
+  completed: 0,
+  dropped: 0,
+  atRisk: 0,
+  averageAttendance: 0,
+  averageProgress: 0,
+};
+
 export function useEnrollments(options = {}) {
   const [enrollments, setEnrollments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [statistics, setStatistics] = useState({
-    total: 0,
-    active: 0,
-    completed: 0,
-    dropped: 0,
-    atRisk: 0,
-    averageAttendance: 0,
-    averageProgress: 0,
-  });
+  const [statistics, setStatistics] = useState(EMPTY_STATS);
+  const enabled = options.enabled ?? true;
 
   /**
    * Fetch enrollments from Supabase with full details
    * @async
    */
-  const fetchEnrollments = async () => {
+  const fetchEnrollments = useCallback(async () => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       setError(null);
@@ -128,7 +136,7 @@ export function useEnrollments(options = {}) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [enabled, options.caseId, options.caseType, options.programId, options.status]);
 
   /**
    * Calculate enrollment statistics
@@ -415,8 +423,20 @@ export function useEnrollments(options = {}) {
   // Fetch enrollments on mount and when options change
   useEffect(() => {
     fetchEnrollments();
+  }, [fetchEnrollments]);
 
-    // Set up Supabase realtime subscription for enrollment changes
+  useEffect(() => {
+    if (!enabled) {
+      setEnrollments([]);
+      setStatistics(EMPTY_STATS);
+      setLoading(false);
+    } else {
+      setLoading(true);
+    }
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled) return undefined;
     const subscription = supabase
       .channel('enrollments-changes')
       .on(
@@ -436,8 +456,7 @@ export function useEnrollments(options = {}) {
     return () => {
       subscription.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options.status, options.programId, options.caseType, options.caseId]);
+  }, [enabled, fetchEnrollments]);
 
   return {
     enrollments,

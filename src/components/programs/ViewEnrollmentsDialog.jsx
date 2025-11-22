@@ -76,8 +76,10 @@ export default function ViewEnrollmentsDialog({ program, open, onOpenChange }) {
   const [statusFilter, setStatusFilter] = useState('all');
 
   // Fetch enrollments filtered by this program's ID
+  const isEnabled = Boolean(open && program?.id);
   const { enrollments, loading, error } = useEnrollments({
     programId: program?.id,
+    enabled: isEnabled,
   });
 
   // Further filter by status if selected
