@@ -11,7 +11,7 @@
  * - View program details
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePrograms } from "@/hooks/usePrograms";
 import { useNavigate } from "react-router-dom";
 import {
@@ -57,6 +57,13 @@ import ProgramDetailsDialog from "./ProgramDetailsDialog";
 import CreateProgramDialog from "./CreateProgramDialog";
 import ViewEnrollmentsDialog from "./ViewEnrollmentsDialog";
 import PermissionGuard from "@/components/PermissionGuard";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import {
+  PROGRAM_FORCE_SYNC_KEY,
+  PROGRAM_DEFERRED_RELOAD_KEY,
+  scheduleProgramSyncReload,
+  markProgramReloadOnReconnect,
+} from "./programSyncUtils";
 
 const statusColors = {
   active: "bg-green-500",
@@ -101,7 +108,19 @@ export default function ProgramCatalog() {
     programType: typeFilter !== "all" ? typeFilter : undefined,
   };
 
-  const { programs, loading, fetchPrograms, deleteProgram } = usePrograms(filterOptions);
+  const {
+    programs,
+    loading,
+    fetchPrograms,
+    deleteProgram,
+    pendingCount,
+    syncing,
+    syncStatus,
+    runSync,
+    offline,
+  } = usePrograms(filterOptions);
+  const isOnline = useNetworkStatus();
+  const autoSyncRef = useRef(false);
 
   // Filter programs by search term
   const filteredPrograms = (programs || []).filter((program) =>
@@ -155,14 +174,26 @@ export default function ProgramCatalog() {
 
     setIsDeleting(true);
     try {
-      await deleteProgram(programToDelete.id);
-      toast.success("Program Deleted", {
-        description: `${programToDelete.program_name} has been deleted successfully`,
+      const result = await deleteProgram(programToDelete.id, {
+        localId: programToDelete.localId,
       });
-      setDeleteDialogOpen(false);
-      setProgramToDelete(null);
-      // Refresh the programs list
-      await fetchPrograms();
+      if (result?.success) {
+        toast.success(result.queued ? "Deletion Queued" : "Program Deleted", {
+          description: result.queued
+            ? `${programToDelete.program_name} will be removed once the app syncs online.`
+            : `${programToDelete.program_name} has been deleted successfully`,
+        });
+        setDeleteDialogOpen(false);
+        setProgramToDelete(null);
+        if (!result.queued && isOnline) {
+          scheduleProgramSyncReload();
+          return;
+        }
+        markProgramReloadOnReconnect();
+        await fetchPrograms();
+      } else {
+        throw new Error("Failed to delete program");
+      }
     } catch (error) {
       console.error("Error deleting program:", error);
       toast.error("Error", {
@@ -189,6 +220,45 @@ export default function ProgramCatalog() {
     setEnrollmentsDialogOpen(true);
   };
 
+  useEffect(() => {
+    if (!isOnline) {
+      autoSyncRef.current = false;
+      return;
+    }
+    if (pendingCount === 0) {
+      autoSyncRef.current = false;
+      return;
+    }
+    if (!syncing && !autoSyncRef.current) {
+      autoSyncRef.current = true;
+      runSync().catch(() => {
+        autoSyncRef.current = false;
+      });
+    }
+  }, [isOnline, pendingCount, syncing, runSync]);
+
+  useEffect(() => {
+    if (!isOnline) return;
+    if (typeof window === "undefined") return;
+    const shouldReload = window.sessionStorage.getItem(PROGRAM_DEFERRED_RELOAD_KEY) === "true";
+    if (shouldReload) {
+      window.sessionStorage.removeItem(PROGRAM_DEFERRED_RELOAD_KEY);
+      scheduleProgramSyncReload();
+    }
+  }, [isOnline]);
+
+  useEffect(() => {
+    if (!isOnline) return;
+    if (typeof window === "undefined") return;
+    const shouldSync = window.sessionStorage.getItem(PROGRAM_FORCE_SYNC_KEY) === "true";
+    if (shouldSync) {
+      window.sessionStorage.removeItem(PROGRAM_FORCE_SYNC_KEY);
+      runSync().catch(() => {
+        // sync will surface errors via status badge/toast
+      });
+    }
+  }, [isOnline, runSync]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -206,6 +276,47 @@ export default function ProgramCatalog() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {(!isOnline || offline || pendingCount > 0 || syncing || syncStatus) && (
+          <div className="flex flex-wrap items-center gap-3 mb-4">
+            <Badge variant={isOnline ? "outline" : "destructive"}>
+              {isOnline ? "Online" : "Offline"}
+            </Badge>
+            {offline && (
+              <span className="text-sm text-muted-foreground">
+                Showing cached data{isOnline ? " — refresh to sync" : ""}.
+              </span>
+            )}
+            {pendingCount > 0 && (
+              <span className="text-sm text-muted-foreground">
+                {pendingCount} pending change{pendingCount === 1 ? "" : "s"} waiting for sync
+              </span>
+            )}
+            {syncStatus && (
+              <span className="text-sm text-muted-foreground">{syncStatus}</span>
+            )}
+            {(pendingCount > 0 || syncing) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => runSync().catch(() => {})}
+                disabled={!isOnline || syncing || pendingCount === 0}
+                className="cursor-pointer"
+              >
+                {syncing ? (
+                  <>
+                    <span className="mr-2 h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    Syncing…
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Sync Changes
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
+        )}
         {/* Filters */}
         <div className="flex items-center gap-4 mb-4">
           <div className="relative flex-1">
@@ -284,25 +395,18 @@ export default function ProgramCatalog() {
                   // Ensure budget values are numbers
                   const budgetAllocated = parseFloat(program.budget_allocated) || 0;
                   const budgetSpent = parseFloat(program.budget_spent) || 0;
-                  
-                  // Debug: log budget values for troubleshooting
-                  console.log(`Program "${program.program_name}":`, {
-                    raw_budget_allocated: program.budget_allocated,
-                    raw_budget_spent: program.budget_spent,
-                    parsed_budget_allocated: budgetAllocated,
-                    parsed_budget_spent: budgetSpent,
-                    display_allocated: (budgetAllocated / 1000).toFixed(1),
-                    display_spent: (budgetSpent / 1000).toFixed(1)
-                  });
-                  
+                  const rowKey = program.id ?? `local-${program.localId ?? program.program_name}`;
                   return (
-                  <TableRow key={program.id}>
+                    <TableRow key={rowKey}>
                     <TableCell className="font-medium">
                       <div>
                         <div>{program.program_name}</div>
                         <div className="text-xs text-muted-foreground">
                           {program.coordinator}
                         </div>
+                        {program.hasPendingWrites && (
+                          <div className="text-xs text-amber-600">Pending sync</div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -391,7 +495,7 @@ export default function ProgramCatalog() {
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
-                  </TableRow>
+                    </TableRow>
                   );
                 })
               )}

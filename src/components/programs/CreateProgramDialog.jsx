@@ -35,7 +35,9 @@ import {
 } from "@/components/ui/select";
 import { usePrograms } from "@/hooks/usePrograms";
 import { usePartners } from "@/hooks/usePartners";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { toast } from "sonner";
+import { scheduleProgramSyncReload, markProgramReloadOnReconnect } from "./programSyncUtils";
 
 // Program form schema
 const programSchema = z.object({
@@ -101,14 +103,7 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
   
   const { createProgram, updateProgram } = usePrograms();
   const { partners, loading: partnersLoading } = usePartners();
-
-  // Debug: Log partners data
-  useEffect(() => {
-    if (open && !partnersLoading) {
-      console.log('Partners loaded:', partners);
-      console.log('Partners count:', partners?.length || 0);
-    }
-  }, [open, partners, partnersLoading]);
+  const isOnline = useNetworkStatus();
 
   const {
     register,
@@ -181,26 +176,39 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
         partner_ids: selectedPartners,
       };
 
+      let result;
       if (program) {
-        // Update existing program
-        await updateProgram(program.id, programData);
-        toast.success("Success", {
-          description: "Program updated successfully",
+        // Update existing program (works offline by queuing changes when needed)
+        result = await updateProgram(program.id, programData, {
+          localId: program.localId,
+        });
+        toast.success(result?.queued ? "Update Queued" : "Program Updated", {
+          description: result?.queued
+            ? `${program.program_name} will sync once you're back online.`
+            : "Program updated successfully",
         });
       } else {
         // Create new program
-        const createdProgram = await createProgram(programData);
-        toast.success("Program Created", {
-          description: `${createdProgram.program_name} has been created successfully`,
+        result = await createProgram(programData);
+        toast.success(result?.queued ? "Program Saved Offline" : "Program Created", {
+          description: result?.queued
+            ? `${result?.program_name || programData.program_name} will be synced when online.`
+            : `${result?.program_name || programData.program_name} has been created successfully`,
         });
       }
 
       reset();
       onOpenChange(false);
-      
-      // Call onSuccess callback to refresh parent data
+
+      if (!result?.queued && isOnline) {
+        scheduleProgramSyncReload();
+        return;
+      }
+
+      markProgramReloadOnReconnect();
+
       if (onSuccess) {
-        onSuccess();
+        onSuccess(result);
       }
     } catch (error) {
       console.error("Error saving program:", error);

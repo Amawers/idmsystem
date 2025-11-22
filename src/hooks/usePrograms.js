@@ -1,37 +1,59 @@
 /**
  * @file usePrograms.js
- * @description Custom React hook for managing programs data with Supabase integration
+ * @description Offline-capable hook for Program Catalog data with sync queue support
  * @module hooks/usePrograms
- * 
- * Features:
- * - Fetch all programs with filtering and pagination
- * - Real-time program updates via Supabase subscriptions
- * - CRUD operations for program management
- * - Program statistics and analytics
- * - Error handling and loading states
- * 
- * @returns {Object} Programs data, loading state, error state, and CRUD functions
  */
 
-import { useState, useEffect } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import supabase from "@/../config/supabase";
-import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 import { useAuthStore } from "@/store/authStore";
-// import SAMPLE_PROGRAMS from "../../SAMPLE_PROGRAMS.json"; // File not found
+import {
+    programsLiveQuery,
+    getPendingOperationCount,
+    loadRemoteSnapshotIntoCache,
+    createOrUpdateLocalProgram,
+    deleteProgramNow,
+    syncProgramQueue,
+} from "@/services/programOfflineService";
 
-/**
- * Hook for managing programs data
- * @param {Object} options - Configuration options
- * @param {string} options.status - Filter by status (active, inactive, completed)
- * @param {string} options.programType - Filter by program type
- * @param {Array<string>} options.targetBeneficiary - Filter by target beneficiary
- * @returns {Object} Programs data and operations
- */
-export function usePrograms(options = {}) {
-  const [programs, setPrograms] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [statistics, setStatistics] = useState({
+const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+
+const toNumber = (value, fallback = 0) => {
+    if (value === null || value === undefined || value === "") return fallback;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const toInteger = (value, fallback = null) => {
+    if (value === null || value === undefined || value === "") return fallback;
+    const parsed = Number.parseInt(value, 10);
+    return Number.isNaN(parsed) ? fallback : parsed;
+};
+
+function mapProgramRow(row = {}) {
+    return {
+        ...row,
+        id: row.id ?? null,
+        target_beneficiary: Array.isArray(row.target_beneficiary)
+            ? row.target_beneficiary
+            : row.target_beneficiary
+            ? [row.target_beneficiary]
+            : [],
+        partner_ids: Array.isArray(row.partner_ids)
+            ? row.partner_ids
+            : row.partner_ids
+            ? [row.partner_ids]
+            : [],
+        budget_allocated: toNumber(row.budget_allocated, 0),
+        budget_spent: toNumber(row.budget_spent, 0),
+        duration_weeks: toInteger(row.duration_weeks, null),
+        capacity: toInteger(row.capacity, null),
+        current_enrollment: toInteger(row.current_enrollment, 0),
+        success_rate: toNumber(row.success_rate, 0),
+    };
+}
+
+const baseStatistics = {
     total: 0,
     active: 0,
     completed: 0,
@@ -40,348 +62,300 @@ export function usePrograms(options = {}) {
     totalSpent: 0,
     totalEnrollment: 0,
     averageSuccessRate: 0,
-  });
+};
 
-  /**
-   * Fetch programs from Supabase
-   * @async
-   */
-  const fetchPrograms = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Build Supabase query
-      let query = supabase
-        .from('programs')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      // Apply filters
-      if (options.status) {
-        query = query.eq('status', options.status);
-      }
-      if (options.programType) {
-        query = query.eq('program_type', options.programType);
-      }
-      if (options.targetBeneficiary && options.targetBeneficiary.length > 0) {
-        query = query.contains('target_beneficiary', options.targetBeneficiary);
-      }
-
-      const { data, error: fetchError } = await query;
-
-      if (fetchError) throw fetchError;
-
-      setPrograms(data || []);
-      calculateStatistics(data || []);
-    } catch (err) {
-      console.error("Error fetching programs:", err);
-      setError(err.message);
-      
-      // Fallback to empty data if Supabase fails
-      console.log("Falling back to empty data");
-      let filteredPrograms = [];
-
-      // Apply filters to dummy data
-      if (options.status) {
-        filteredPrograms = filteredPrograms.filter(
-          (p) => p.status === options.status
-        );
-      }
-      if (options.programType) {
-        filteredPrograms = filteredPrograms.filter(
-          (p) => p.program_type === options.programType
-        );
-      }
-      if (options.targetBeneficiary && options.targetBeneficiary.length > 0) {
-        filteredPrograms = filteredPrograms.filter((p) =>
-          options.targetBeneficiary.some((beneficiary) =>
-            p.target_beneficiary.includes(beneficiary)
-          )
-        );
-      }
-
-      setPrograms(filteredPrograms);
-      calculateStatistics(filteredPrograms);
-    } finally {
-      setLoading(false);
+function calculateStatistics(programsData = []) {
+    if (!Array.isArray(programsData) || programsData.length === 0) {
+        return { ...baseStatistics };
     }
-  };
 
-  /**
-   * Calculate program statistics
-   * @param {Array} programsData - Array of program objects
-   */
-  const calculateStatistics = (programsData) => {
-    const stats = {
-      total: programsData.length,
-      active: programsData.filter((p) => p.status === "active").length,
-      completed: programsData.filter((p) => p.status === "completed").length,
-      inactive: programsData.filter((p) => p.status === "inactive").length,
-      totalBudget: programsData.reduce((sum, p) => sum + (parseFloat(p.budget_allocated) || 0), 0),
-      totalSpent: programsData.reduce((sum, p) => sum + (parseFloat(p.budget_spent) || 0), 0),
-      totalEnrollment: programsData.reduce((sum, p) => sum + (p.current_enrollment || 0), 0),
-      averageSuccessRate:
-        programsData.length > 0
-          ? programsData.reduce((sum, p) => sum + (p.success_rate || 0), 0) /
-            programsData.length
-          : 0,
+    const total = programsData.length;
+    const active = programsData.filter((p) => (p.status ?? "").toLowerCase() === "active").length;
+    const completed = programsData.filter((p) => (p.status ?? "").toLowerCase() === "completed").length;
+    const inactive = programsData.filter((p) => (p.status ?? "").toLowerCase() === "inactive").length;
+    const totalBudget = programsData.reduce((sum, p) => sum + toNumber(p.budget_allocated, 0), 0);
+    const totalSpent = programsData.reduce((sum, p) => sum + toNumber(p.budget_spent, 0), 0);
+    const totalEnrollment = programsData.reduce((sum, p) => sum + toInteger(p.current_enrollment, 0), 0);
+    const successRates = programsData
+        .map((p) => toNumber(p.success_rate, 0))
+        .filter((rate) => Number.isFinite(rate));
+    const averageSuccessRate = successRates.length
+        ? successRates.reduce((sum, rate) => sum + rate, 0) / successRates.length
+        : 0;
+
+    return {
+        total,
+        active,
+        completed,
+        inactive,
+        totalBudget,
+        totalSpent,
+        totalEnrollment,
+        averageSuccessRate,
     };
-    setStatistics(stats);
-  };
+}
 
-  /**
-   * Create a new program
-   * @async
-   * @param {Object} programData - New program data
-   * @returns {Promise<Object>} Created program
-   */
-  const createProgram = async (programData) => {
-    try {
-      // Get current user for coordinator_id
-      const { user } = useAuthStore.getState();
-      
-      // Prepare program data with proper formatting
-      const formattedData = {
+function normalizeProgramInput(programData = {}, { mode = "create" } = {}) {
+    const payload = {
         ...programData,
-        // Ensure target_beneficiary is an array as per DB schema
-        target_beneficiary: Array.isArray(programData.target_beneficiary) 
-          ? programData.target_beneficiary 
-          : [programData.target_beneficiary],
-        // Set coordinator_id if user exists
-        coordinator_id: user?.id || null,
-        // Ensure budget values are properly formatted as numbers
-        budget_allocated: parseFloat(programData.budget_allocated) || 0,
-        budget_spent: parseFloat(programData.budget_spent) || 0,
-        // Initialize default values
-        current_enrollment: 0,
-        success_rate: 0,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
+    };
 
-      // Insert into Supabase
-      const { data, error } = await supabase
-        .from('programs')
-        .insert([formattedData])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Create audit log entry
-      await createAuditLog({
-        actionType: AUDIT_ACTIONS.CREATE_PROGRAM,
-        actionCategory: AUDIT_CATEGORIES.PROGRAM,
-        description: `Created new program: ${data.program_name}`,
-        resourceType: 'program',
-        resourceId: data.id,
-        metadata: {
-          programName: data.program_name,
-          programType: data.program_type,
-          targetBeneficiary: data.target_beneficiary,
-          budgetAllocated: data.budget_allocated,
-          capacity: data.capacity,
-          coordinator: data.coordinator,
-        },
-        severity: 'info',
-      });
-
-      // Refresh programs list
-      await fetchPrograms();
-
-      return data;
-    } catch (err) {
-      console.error("Error creating program:", err);
-      throw err;
+    if (!Array.isArray(payload.target_beneficiary)) {
+        payload.target_beneficiary = payload.target_beneficiary
+            ? [payload.target_beneficiary]
+            : [];
     }
-  };
 
-  /**
-   * Update an existing program
-   * @async
-   * @param {string} programId - Program ID
-   * @param {Object} updates - Updated program data
-   * @returns {Promise<Object>} Updated program
-   */
-  const updateProgram = async (programId, updates) => {
-    try {
-      // Get the old program data for audit log
-      const oldProgram = programs.find(p => p.id === programId);
-      
-      // Prepare updated data
-      const formattedUpdates = {
-        ...updates,
-        // Ensure target_beneficiary is an array
-        target_beneficiary: Array.isArray(updates.target_beneficiary) 
-          ? updates.target_beneficiary 
-          : [updates.target_beneficiary],
-        // Ensure budget values are properly formatted if they exist
-        ...(updates.budget_allocated !== undefined && {
-          budget_allocated: parseFloat(updates.budget_allocated) || 0
-        }),
-        ...(updates.budget_spent !== undefined && {
-          budget_spent: parseFloat(updates.budget_spent) || 0
-        }),
-        updated_at: new Date().toISOString(),
-      };
-
-      // Update in Supabase
-      const { data, error } = await supabase
-        .from('programs')
-        .update(formattedUpdates)
-        .eq('id', programId)
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      // Create audit log entry
-      await createAuditLog({
-        actionType: AUDIT_ACTIONS.UPDATE_PROGRAM,
-        actionCategory: AUDIT_CATEGORIES.PROGRAM,
-        description: `Updated program: ${data.program_name}`,
-        resourceType: 'program',
-        resourceId: programId,
-        metadata: {
-          programName: data.program_name,
-          changes: Object.keys(updates).reduce((acc, key) => {
-            if (oldProgram && oldProgram[key] !== updates[key]) {
-              acc[key] = { old: oldProgram[key], new: updates[key] };
-            }
-            return acc;
-          }, {}),
-        },
-        severity: 'info',
-      });
-
-      // Refresh programs list
-      await fetchPrograms();
-
-      return data;
-    } catch (err) {
-      console.error("Error updating program:", err);
-      throw err;
+    if (!Array.isArray(payload.partner_ids)) {
+        payload.partner_ids = payload.partner_ids ? [payload.partner_ids] : [];
     }
-  };
 
-  /**
-   * Delete a program
-   * @async
-   * @param {string} programId - Program ID
-   * @returns {Promise<void>}
-   */
-  const deleteProgram = async (programId) => {
-    try {
-      // Get the program data for audit log
-      const programToDelete = programs.find(p => p.id === programId);
-      
-      // Delete from Supabase
-      const { error } = await supabase
-        .from('programs')
-        .delete()
-        .eq('id', programId);
+    if (payload.current_enrollment === undefined || payload.current_enrollment === null) {
+        payload.current_enrollment = 0;
+    }
 
-      if (error) throw error;
+    if (payload.success_rate === undefined || payload.success_rate === null) {
+        payload.success_rate = 0;
+    }
 
-      // Create audit log entry
-      if (programToDelete) {
-        await createAuditLog({
-          actionType: AUDIT_ACTIONS.DELETE_PROGRAM,
-          actionCategory: AUDIT_CATEGORIES.PROGRAM,
-          description: `Deleted program: ${programToDelete.program_name}`,
-          resourceType: 'program',
-          resourceId: programId,
-          metadata: {
-            programName: programToDelete.program_name,
-            programType: programToDelete.program_type,
-          },
-          severity: 'warning',
+    if (mode === "create" && !payload.created_at) {
+        payload.created_at = new Date().toISOString();
+    }
+
+    payload.updated_at = new Date().toISOString();
+
+    return payload;
+}
+
+/**
+ * Hook for Program Catalog with offline queue support
+ * @param {Object} options Filtering options
+ * @returns {Object} Hook API
+ */
+export function usePrograms(options = {}) {
+    const [rows, setRows] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [statistics, setStatistics] = useState(baseStatistics);
+    const [pendingCount, setPendingCount] = useState(0);
+    const [syncing, setSyncing] = useState(false);
+    const [syncStatus, setSyncStatus] = useState(null);
+    const [usingOfflineData, setUsingOfflineData] = useState(!isBrowserOnline());
+
+    const hydratePendingCount = useCallback(async () => {
+        const count = await getPendingOperationCount();
+        setPendingCount(count);
+    }, []);
+
+    useEffect(() => {
+        const subscription = programsLiveQuery().subscribe({
+            next: (data) => {
+                const mapped = Array.isArray(data) ? data.map(mapProgramRow) : [];
+                setRows(mapped);
+                setLoading(false);
+                hydratePendingCount().catch(() => {
+                    // best-effort queue count refresh
+                });
+            },
+            error: (err) => {
+                setError(err);
+                setLoading(false);
+            },
         });
-      }
 
-      // Refresh programs list
-      await fetchPrograms();
-    } catch (err) {
-      console.error("Error deleting program:", err);
-      throw err;
-    }
-  };
+        hydratePendingCount();
 
-  /**
-   * Get program by ID
-   * @param {string} programId - Program ID
-   * @returns {Object|null} Program object or null
-   */
-  const getProgramById = (programId) => {
-    return programs.find((p) => p.id === programId) || null;
-  };
+        return () => subscription.unsubscribe();
+    }, [hydratePendingCount]);
 
-  /**
-   * Refresh success rate for a specific program
-   * Calls the database function to recalculate success rate based on enrollments
-   * @async
-   * @param {string} programId - Program ID
-   * @returns {Promise<number>} Updated success rate
-   */
-  const refreshProgramSuccessRate = async (programId) => {
-    try {
-      // Call the database function to refresh success rate
-      const { data, error } = await supabase
-        .rpc('refresh_program_success_rate', { program_id_param: programId });
+    const load = useCallback(async () => {
+        setError(null);
 
-      if (error) throw error;
+        if (!isBrowserOnline()) {
+            setUsingOfflineData(true);
+            await hydratePendingCount();
+            return { success: true, offline: true };
+        }
 
-      // Refresh programs list to show updated success rate
-      await fetchPrograms();
+        try {
+            await loadRemoteSnapshotIntoCache();
+            await hydratePendingCount();
+            setUsingOfflineData(false);
+            return { success: true };
+        } catch (err) {
+            setError(err);
+            setUsingOfflineData(true);
+            return { success: false, error: err };
+        }
+    }, [hydratePendingCount]);
 
-      return data;
-    } catch (err) {
-      console.error("Error refreshing program success rate:", err);
-      throw err;
-    }
-  };
+    useEffect(() => {
+        load();
+    }, [load]);
 
-  /**
-   * Refresh success rates for all programs
-   * Useful for manual recalculation after bulk enrollment updates
-   * @async
-   * @returns {Promise<void>}
-   */
-  const refreshAllSuccessRates = async () => {
-    try {
-      // Refresh each program's success rate
-      const refreshPromises = programs.map((program) =>
-        supabase.rpc('refresh_program_success_rate', { program_id_param: program.id })
-      );
+    const targetBeneficiaryKey = useMemo(() => {
+        if (!options.targetBeneficiary) return "[]";
+        return JSON.stringify(options.targetBeneficiary);
+    }, [options.targetBeneficiary]);
 
-      await Promise.all(refreshPromises);
+    const filteredPrograms = useMemo(() => {
+        let data = rows;
 
-      // Refresh programs list to show updated success rates
-      await fetchPrograms();
-    } catch (err) {
-      console.error("Error refreshing all program success rates:", err);
-      throw err;
-    }
-  };
+        data = data.filter((program) => (program.pendingAction ?? null) !== "delete");
 
-  // Fetch programs on mount and when options change
-  useEffect(() => {
-    fetchPrograms();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [options.status, options.programType, options.targetBeneficiary]);
+        if (options.status && options.status !== "all") {
+            const statusFilter = String(options.status).toLowerCase();
+            data = data.filter((program) => (program.status ?? "").toLowerCase() === statusFilter);
+        }
 
-  return {
-    programs,
-    loading,
-    error,
-    statistics,
-    fetchPrograms,
-    createProgram,
-    updateProgram,
-    deleteProgram,
-    getProgramById,
-    refreshProgramSuccessRate,
-    refreshAllSuccessRates,
-  };
+        if (options.programType && options.programType !== "all") {
+            const typeFilter = String(options.programType).toLowerCase();
+            data = data.filter((program) => (program.program_type ?? "").toLowerCase() === typeFilter);
+        }
+
+        if (options.targetBeneficiary && options.targetBeneficiary.length) {
+            const filterValues = Array.isArray(options.targetBeneficiary)
+                ? options.targetBeneficiary
+                : [options.targetBeneficiary];
+            data = data.filter((program) => {
+                const beneficiaries = Array.isArray(program.target_beneficiary)
+                    ? program.target_beneficiary
+                    : [];
+                return filterValues.some((value) => beneficiaries.includes(value));
+            });
+        }
+
+        return data;
+    }, [rows, options.status, options.programType, targetBeneficiaryKey]);
+
+    useEffect(() => {
+        setStatistics(calculateStatistics(filteredPrograms));
+    }, [filteredPrograms]);
+
+    const fetchPrograms = useCallback(async () => load(), [load]);
+
+    const createProgram = useCallback(
+        async (programData) => {
+            const { user } = useAuthStore.getState();
+            const payload = normalizeProgramInput(
+                {
+                    ...programData,
+                    coordinator_id: programData.coordinator_id ?? user?.id ?? null,
+                },
+                { mode: "create" },
+            );
+            const online = isBrowserOnline();
+            const result = await createOrUpdateLocalProgram({
+                programPayload: payload,
+                mode: "create",
+            });
+            await hydratePendingCount();
+            const record = result.record ? mapProgramRow(result.record) : mapProgramRow(payload);
+            return {
+                ...record,
+                queued: !online,
+            };
+        },
+        [hydratePendingCount],
+    );
+
+    const updateProgram = useCallback(
+        async (programId, updates, { localId = null } = {}) => {
+            const payload = normalizeProgramInput({ ...updates }, { mode: "update" });
+            const online = isBrowserOnline();
+            const result = await createOrUpdateLocalProgram({
+                programPayload: payload,
+                targetId: programId ?? null,
+                localId,
+                mode: "update",
+            });
+            await hydratePendingCount();
+            const record = result.record ? mapProgramRow(result.record) : mapProgramRow(payload);
+            return {
+                ...record,
+                queued: !online,
+            };
+        },
+        [hydratePendingCount],
+    );
+
+    const deleteProgram = useCallback(
+        async (programId, { localId = null } = {}) => {
+            const result = await deleteProgramNow({
+                targetId: programId ?? null,
+                localId,
+            });
+            await hydratePendingCount();
+            return result;
+        },
+        [hydratePendingCount],
+    );
+
+    const getProgramById = useCallback(
+        (programId) => rows.find((program) => program.id === programId) || null,
+        [rows],
+    );
+
+    const refreshProgramSuccessRate = useCallback(
+        async (programId) => {
+            const { data, error } = await supabase
+                .rpc("refresh_program_success_rate", { program_id_param: programId });
+
+            if (error) throw error;
+            await load();
+            return data;
+        },
+        [load],
+    );
+
+    const refreshAllSuccessRates = useCallback(async () => {
+        const programIds = rows.map((program) => program.id).filter(Boolean);
+        await Promise.all(
+            programIds.map((id) =>
+                supabase.rpc("refresh_program_success_rate", { program_id_param: id }),
+            ),
+        );
+        await load();
+    }, [rows, load]);
+
+    const runSync = useCallback(async () => {
+        setSyncing(true);
+        setSyncStatus("Preparing sync…");
+        try {
+            const result = await syncProgramQueue(({ current, synced }) => {
+                if (!current) return;
+                const label = current.operationType ? current.operationType.toUpperCase() : "";
+                setSyncStatus(`Syncing ${label} (${synced + 1})`);
+            });
+            await load();
+            await hydratePendingCount();
+            setSyncStatus("All changes synced");
+            return result;
+        } catch (err) {
+            setSyncStatus(err?.message ?? "Sync failed");
+            throw err;
+        } finally {
+            setTimeout(() => setSyncStatus(null), 2000);
+            setSyncing(false);
+        }
+    }, [hydratePendingCount, load]);
+
+    return {
+        programs: filteredPrograms,
+        loading,
+        error,
+        statistics,
+        fetchPrograms,
+        createProgram,
+        updateProgram,
+        deleteProgram,
+        getProgramById,
+        refreshProgramSuccessRate,
+        refreshAllSuccessRates,
+        pendingCount,
+        syncing,
+        syncStatus,
+        runSync,
+        offline: usingOfflineData,
+    };
 }
