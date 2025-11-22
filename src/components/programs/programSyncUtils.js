@@ -28,6 +28,17 @@ export function scheduleProgramSyncReload(targetTab = DEFAULT_PROGRAM_TAB) {
     window.location.reload();
 }
 
+export function forceProgramTabReload(targetTab = DEFAULT_PROGRAM_TAB) {
+    if (typeof window === "undefined") return;
+    try {
+        window.sessionStorage.setItem(PROGRAM_ACTIVE_TAB_KEY, targetTab);
+        window.sessionStorage.setItem(PROGRAM_FORCE_TAB_KEY, targetTab);
+    } catch {
+        // Ignore storage issues; reload still proceeds even without tab hints.
+    }
+    window.location.reload();
+}
+
 /**
  * Flag the Program Catalog to reload once connectivity returns.
  * Useful when an operation was queued offline so the UI can refresh immediately on reconnection.

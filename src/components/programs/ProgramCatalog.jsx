@@ -63,6 +63,7 @@ import {
   PROGRAM_DEFERRED_RELOAD_KEY,
   scheduleProgramSyncReload,
   markProgramReloadOnReconnect,
+  forceProgramTabReload,
 } from "./programSyncUtils";
 
 const statusColors = {
@@ -358,7 +359,7 @@ export default function ProgramCatalog() {
 
           <Button
             variant="outline"
-            onClick={() => fetchPrograms()}
+            onClick={() => forceProgramTabReload("programs")}
             disabled={loading}
             title="Refresh programs"
             className="cursor-pointer"
