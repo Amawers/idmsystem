@@ -212,9 +212,9 @@ export default function ProgramDashboard() {
       {/* Header with Refresh Button and Status */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold tracking-tight">Program Dashboard</h2>
+          <h2 className="text-2xl font-bold tracking-tight"></h2>
           <p className="text-muted-foreground">
-            Overview of all programs and enrollments
+            
           </p>
         </div>
         <div className="flex items-center gap-2">
