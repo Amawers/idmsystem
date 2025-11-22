@@ -7,16 +7,22 @@
 /** SessionStorage key used to signal that Program Catalog must auto-sync after reload */
 export const PROGRAM_FORCE_SYNC_KEY = "programCatalog.forceSync";
 export const PROGRAM_DEFERRED_RELOAD_KEY = "programCatalog.deferReload";
+export const PROGRAM_ACTIVE_TAB_KEY = "programManagement.activeTab";
+export const PROGRAM_FORCE_TAB_KEY = "programManagement.forceTabAfterReload";
+
+const DEFAULT_PROGRAM_TAB = "programs";
 
 /**
  * Schedule a Program Catalog reload that will trigger an immediate sync afterwards.
  * Mirrors the Case Management pattern: mark intent in session storage and reload the page.
  */
-export function scheduleProgramSyncReload() {
+export function scheduleProgramSyncReload(targetTab = DEFAULT_PROGRAM_TAB) {
     if (typeof window === "undefined") return;
     try {
         window.sessionStorage.setItem(PROGRAM_FORCE_SYNC_KEY, "true");
-    } catch (error) {
+        window.sessionStorage.setItem(PROGRAM_ACTIVE_TAB_KEY, targetTab);
+        window.sessionStorage.setItem(PROGRAM_FORCE_TAB_KEY, targetTab);
+    } catch {
         // Swallow storage errors silently; reload still proceeds.
     }
     window.location.reload();
@@ -30,7 +36,7 @@ export function markProgramReloadOnReconnect() {
     if (typeof window === "undefined") return;
     try {
         window.sessionStorage.setItem(PROGRAM_DEFERRED_RELOAD_KEY, "true");
-    } catch (error) {
+    } catch {
         // Ignore storage issues; at worst the UI won't auto-reload.
     }
 }

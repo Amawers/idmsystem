@@ -201,7 +201,7 @@ export default function CreateProgramDialog({ open, onOpenChange, program = null
       onOpenChange(false);
 
       if (!result?.queued && isOnline) {
-        scheduleProgramSyncReload();
+        scheduleProgramSyncReload("programs");
         return;
       }
 

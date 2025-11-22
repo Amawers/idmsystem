@@ -186,7 +186,7 @@ export default function ProgramCatalog() {
         setDeleteDialogOpen(false);
         setProgramToDelete(null);
         if (!result.queued && isOnline) {
-          scheduleProgramSyncReload();
+          scheduleProgramSyncReload("programs");
           return;
         }
         markProgramReloadOnReconnect();
@@ -243,7 +243,7 @@ export default function ProgramCatalog() {
     const shouldReload = window.sessionStorage.getItem(PROGRAM_DEFERRED_RELOAD_KEY) === "true";
     if (shouldReload) {
       window.sessionStorage.removeItem(PROGRAM_DEFERRED_RELOAD_KEY);
-      scheduleProgramSyncReload();
+      scheduleProgramSyncReload("programs");
     }
   }, [isOnline]);
 

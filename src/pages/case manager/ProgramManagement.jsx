@@ -12,7 +12,7 @@
  * - Real-time updates via Supabase
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Plus } from "lucide-react";
@@ -23,6 +23,10 @@ import ServiceDeliveryTable from "@/components/programs/ServiceDeliveryTable";
 import PartnersTable from "@/components/programs/PartnersTable";
 import CreateProgramDialog from "@/components/programs/CreateProgramDialog";
 import PermissionGuard from "@/components/PermissionGuard";
+import {
+  PROGRAM_ACTIVE_TAB_KEY,
+  PROGRAM_FORCE_TAB_KEY,
+} from "@/components/programs/programSyncUtils";
 
 /**
  * Program Management Page Component
@@ -33,6 +37,24 @@ export default function ProgramManagement() {
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [catalogKey, setCatalogKey] = useState(0);
   const [dashboardKey, setDashboardKey] = useState(0);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const forcedTab = window.sessionStorage.getItem(PROGRAM_FORCE_TAB_KEY);
+    const storedTab = window.sessionStorage.getItem(PROGRAM_ACTIVE_TAB_KEY);
+    const initialTab = forcedTab || storedTab || "dashboard";
+    setActiveTab(initialTab);
+    if (forcedTab) {
+      window.sessionStorage.removeItem(PROGRAM_FORCE_TAB_KEY);
+    }
+  }, []);
+
+  const handleTabChange = (nextTab) => {
+    setActiveTab(nextTab);
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(PROGRAM_ACTIVE_TAB_KEY, nextTab);
+    }
+  };
 
   const handleProgramCreated = () => {
     // Force components to remount and fetch fresh data
@@ -63,7 +85,7 @@ export default function ProgramManagement() {
       </div>
 
       {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4">
         <TabsList>
           <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
           <TabsTrigger value="programs">Programs</TabsTrigger>

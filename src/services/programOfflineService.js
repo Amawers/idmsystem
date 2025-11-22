@@ -58,6 +58,39 @@ function ensureLocalIdField() {
 
 const localIdReady = ensureLocalIdField();
 
+async function bulkDeleteLocalPrograms(localId, targetId) {
+    const idsToDelete = new Set();
+    if (localId != null) {
+        idsToDelete.add(localId);
+    }
+    if (targetId) {
+        const matching = await PROGRAM_TABLE.where("id").equals(targetId).toArray();
+        for (const row of matching) {
+            if (row?.localId != null) {
+                idsToDelete.add(row.localId);
+            }
+        }
+    }
+    if (idsToDelete.size > 0) {
+        await PROGRAM_TABLE.bulkDelete(Array.from(idsToDelete));
+    }
+}
+
+async function clearQueuedProgramOperations(localId, targetId) {
+    const queueIds = new Set();
+    if (localId != null) {
+        const pendingByLocal = await QUEUE_TABLE.where("targetLocalId").equals(localId).toArray();
+        pendingByLocal.forEach((op) => queueIds.add(op.queueId));
+    }
+    if (targetId) {
+        const pendingByTarget = await QUEUE_TABLE.where("targetId").equals(targetId).toArray();
+        pendingByTarget.forEach((op) => queueIds.add(op.queueId));
+    }
+    if (queueIds.size > 0) {
+        await QUEUE_TABLE.bulkDelete(Array.from(queueIds));
+    }
+}
+
 function toArray(value) {
     if (Array.isArray(value)) return value.filter((item) => item !== null && item !== undefined);
     if (value === null || value === undefined || value === "") return [];
@@ -335,15 +368,8 @@ export async function deleteProgramNow({ targetId = null, localId = null }) {
             .eq("id", resolvedTargetId);
         if (!error) {
             await offlineCaseDb.transaction("rw", PROGRAM_TABLE, QUEUE_TABLE, async () => {
-                if (resolvedLocalId != null) {
-                    await PROGRAM_TABLE.delete(resolvedLocalId);
-                }
-                const pendingOps = await QUEUE_TABLE.where("targetLocalId")
-                    .equals(resolvedLocalId)
-                    .toArray();
-                if (pendingOps.length) {
-                    await QUEUE_TABLE.bulkDelete(pendingOps.map((op) => op.queueId));
-                }
+                await bulkDeleteLocalPrograms(resolvedLocalId, resolvedTargetId);
+                await clearQueuedProgramOperations(resolvedLocalId, resolvedTargetId);
             });
             await createAuditLog({
                 actionType: AUDIT_ACTIONS.DELETE_PROGRAM,
