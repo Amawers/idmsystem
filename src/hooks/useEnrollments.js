@@ -1,34 +1,19 @@
 /**
  * @file useEnrollments.js
- * @description Custom React hook for managing program enrollments with Supabase integration
+ * @description Offline-aware hook for program enrollments
  * @module hooks/useEnrollments
- * 
- * Features:
- * - Fetch enrollments with case and program details
- * - Filter by status, program, case type
- * - Real-time enrollment updates via Supabase subscriptions
- * - CRUD operations for enrollment management
- * - Enrollment statistics and analytics
- * - Robust error handling and fallback to dummy data
- * 
- * @returns {Object} Enrollments data, loading state, error state, and CRUD functions
  */
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import supabase from "@/../config/supabase";
 import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 import { useAuthStore } from "@/store/authStore";
-// import SAMPLE_ENROLLMENTS from "../../SAMPLE_ENROLLMENTS.json"; // File not found
+import {
+  enrollmentsLiveQuery,
+  loadRemoteSnapshotIntoCache,
+  refreshProgramEnrollments,
+} from "@/services/enrollmentOfflineService";
 
-/**
- * Hook for managing program enrollments
- * @param {Object} options - Configuration options
- * @param {string} options.status - Filter by status (active, completed, dropped, at_risk)
- * @param {string} options.programId - Filter by program ID
- * @param {string} options.caseType - Filter by case type (CICL/CAR, VAC, FAC, FAR, IVAC)
- * @param {string} options.caseId - Filter by specific case ID
- * @returns {Object} Enrollments data and operations
- */
 const EMPTY_STATS = {
   total: 0,
   active: 0,
@@ -39,184 +24,160 @@ const EMPTY_STATS = {
   averageProgress: 0,
 };
 
+const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+
 export function useEnrollments(options = {}) {
-  const [enrollments, setEnrollments] = useState([]);
+  const enabled = options.enabled ?? true;
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [statistics, setStatistics] = useState(EMPTY_STATS);
-  const enabled = options.enabled ?? true;
+  const [usingOfflineData, setUsingOfflineData] = useState(!isBrowserOnline());
 
-  /**
-   * Fetch enrollments from Supabase with full details
-   * @async
-   */
   const fetchEnrollments = useCallback(async () => {
     if (!enabled) {
       setLoading(false);
+      return { success: true, skipped: true };
+    }
+    try {
+      setError(null);
+      if (!isBrowserOnline()) {
+        setUsingOfflineData(true);
+        setLoading(false);
+        return { success: true, offline: true };
+      }
+      if (options.programId) {
+        await refreshProgramEnrollments(options.programId);
+      } else {
+        await loadRemoteSnapshotIntoCache();
+      }
+      setUsingOfflineData(false);
+      return { success: true };
+    } catch (err) {
+      console.error("Error refreshing enrollments cache:", err);
+      setError(err.message);
+      setUsingOfflineData(true);
+      return { success: false, error: err };
+    }
+  }, [enabled, options.programId]);
+
+  useEffect(() => {
+    if (!enabled) {
+      setRows([]);
+      setStatistics(EMPTY_STATS);
+      setLoading(false);
+      return undefined;
+    }
+
+    const subscription = enrollmentsLiveQuery().subscribe({
+      next: (data) => {
+        setRows(Array.isArray(data) ? data : []);
+        setLoading(false);
+      },
+      error: (err) => {
+        console.error("Enrollments live query error:", err);
+        setError(err.message ?? "Failed to read cached enrollments");
+        setLoading(false);
+      },
+    });
+
+    return () => subscription.unsubscribe();
+  }, [enabled]);
+
+  useEffect(() => {
+    fetchEnrollments();
+  }, [fetchEnrollments]);
+
+  useEffect(() => {
+    if (!enabled) return undefined;
+    const channel = supabase
+      .channel("program-enrollments-stream")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "program_enrollments" },
+        () => {
+          fetchEnrollments();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [enabled, fetchEnrollments]);
+
+  const filteredEnrollments = useMemo(() => {
+    let data = rows;
+    if (options.programId) {
+      data = data.filter((row) => row.program_id === options.programId);
+    }
+    if (options.status) {
+      data = data.filter((row) => row.status === options.status);
+    }
+    if (options.caseType) {
+      data = data.filter((row) => row.case_type === options.caseType);
+    }
+    if (options.caseId) {
+      data = data.filter((row) => row.case_id === options.caseId);
+    }
+    return data;
+  }, [rows, options.programId, options.status, options.caseType, options.caseId]);
+
+  useEffect(() => {
+    if (!filteredEnrollments.length) {
+      setStatistics(EMPTY_STATS);
       return;
     }
+    const total = filteredEnrollments.length;
+    const sum = (key) =>
+      filteredEnrollments.reduce((acc, item) => acc + (parseFloat(item[key]) || 0), 0);
+    setStatistics({
+      total,
+      active: filteredEnrollments.filter((e) => e.status === "active").length,
+      completed: filteredEnrollments.filter((e) => e.status === "completed").length,
+      dropped: filteredEnrollments.filter((e) => e.status === "dropped").length,
+      atRisk: filteredEnrollments.filter((e) => e.status === "at_risk").length,
+      averageAttendance: sum("attendance_rate") / total,
+      averageProgress: sum("progress_percentage") / total,
+    });
+  }, [filteredEnrollments]);
 
-    try {
-      setLoading(true);
-      setError(null);
-
-      // Build Supabase query with joins to programs and profile
-      let query = supabase
-        .from('program_enrollments')
-        .select(`
-          *,
-          program:programs(
-            id,
-            program_name,
-            program_type,
-            coordinator,
-            status
-          ),
-          assigned_by_user:profile!program_enrollments_assigned_by_fkey(
-            id,
-            full_name,
-            role
-          )
-        `)
-        .order('enrollment_date', { ascending: false })
-        .order('created_at', { ascending: false });
-
-      // Apply filters
-      if (options.status) {
-        query = query.eq('status', options.status);
-      }
-      if (options.programId) {
-        query = query.eq('program_id', options.programId);
-      }
-      if (options.caseType) {
-        query = query.eq('case_type', options.caseType);
-      }
-      if (options.caseId) {
-        query = query.eq('case_id', options.caseId);
-      }
-
-      const { data, error: fetchError } = await query;
-
-      if (fetchError) throw fetchError;
-
-      setEnrollments(data || []);
-      calculateStatistics(data || []);
-    } catch (err) {
-      console.error("Error fetching enrollments from Supabase:", err);
-      setError(err.message);
-      
-      // Fallback to empty data
-      console.log("Falling back to empty data for enrollments");
-      let filteredEnrollments = [];
-
-      // Apply filters to dummy data
-      if (options.status) {
-        filteredEnrollments = filteredEnrollments.filter(
-          (e) => e.status === options.status
-        );
-      }
-      if (options.programId) {
-        filteredEnrollments = filteredEnrollments.filter(
-          (e) => e.program_id === options.programId
-        );
-      }
-      if (options.caseType) {
-        filteredEnrollments = filteredEnrollments.filter(
-          (e) => e.case_type === options.caseType
-        );
-      }
-      if (options.caseId) {
-        filteredEnrollments = filteredEnrollments.filter(
-          (e) => e.case_id === options.caseId
-        );
-      }
-
-      setEnrollments(filteredEnrollments);
-      calculateStatistics(filteredEnrollments);
-    } finally {
-      setLoading(false);
-    }
-  }, [enabled, options.caseId, options.caseType, options.programId, options.status]);
-
-  /**
-   * Calculate enrollment statistics
-   * @param {Array} enrollmentsData - Array of enrollment objects
-   */
-  const calculateStatistics = (enrollmentsData) => {
-    const stats = {
-      total: enrollmentsData.length,
-      active: enrollmentsData.filter((e) => e.status === "active").length,
-      completed: enrollmentsData.filter((e) => e.status === "completed").length,
-      dropped: enrollmentsData.filter((e) => e.status === "dropped").length,
-      atRisk: enrollmentsData.filter((e) => e.status === "at_risk").length,
-      averageAttendance:
-        enrollmentsData.length > 0
-          ? enrollmentsData.reduce((sum, e) => sum + (parseFloat(e.attendance_rate) || 0), 0) /
-            enrollmentsData.length
-          : 0,
-      averageProgress: 0,
-    };
-
-    // Calculate average progress based on percentage
-    const totalProgress = enrollmentsData.reduce(
-      (sum, e) => sum + (parseFloat(e.progress_percentage) || 0),
-      0
-    );
-    stats.averageProgress =
-      enrollmentsData.length > 0 ? totalProgress / enrollmentsData.length : 0;
-
-    setStatistics(stats);
-  };
-
-  /**
-   * Create a new enrollment
-   * @async
-   * @param {Object} enrollmentData - New enrollment data
-   * @returns {Promise<Object>} Created enrollment
-   */
   const createEnrollment = async (enrollmentData) => {
     try {
       const { user } = useAuthStore.getState();
-      
-      // Helper to convert empty strings to null
-      const sanitizeDate = (dateValue) => {
-        if (!dateValue || (typeof dateValue === 'string' && dateValue.trim() === '')) {
-          return null;
-        }
-        return dateValue;
+      const sanitizeDate = (value) => {
+        if (!value || (typeof value === "string" && value.trim() === "")) return null;
+        return value;
       };
-      
-      // Prepare enrollment data with proper formatting
       const formattedData = {
         case_id: enrollmentData.case_id,
         case_number: enrollmentData.case_number,
         case_type: enrollmentData.case_type,
         beneficiary_name: enrollmentData.beneficiary_name,
         program_id: enrollmentData.program_id,
-        enrollment_date: enrollmentData.enrollment_date || new Date().toISOString().split('T')[0],
+        enrollment_date:
+          enrollmentData.enrollment_date || new Date().toISOString().split("T")[0],
         expected_completion_date: sanitizeDate(enrollmentData.expected_completion_date),
-        status: enrollmentData.status || 'active',
+        status: enrollmentData.status || "active",
         progress_percentage: enrollmentData.progress_percentage || 0,
         progress_level: enrollmentData.progress_level || null,
-        sessions_total: parseInt(enrollmentData.sessions_total) || 0,
+        sessions_total: parseInt(enrollmentData.sessions_total, 10) || 0,
         sessions_attended: 0,
         sessions_completed: 0,
         sessions_absent_unexcused: 0,
         sessions_absent_excused: 0,
         attendance_rate: 0,
-        assigned_by: user?.id || null,
-        assigned_by_name: user?.full_name || null,
+        assigned_by: user?.id ?? null,
+        assigned_by_name: user?.full_name ?? null,
         case_worker: enrollmentData.case_worker || null,
         notes: enrollmentData.notes || null,
       };
 
-      console.log('Creating enrollment with data:', formattedData);
-
-      // Insert into Supabase
       const { data, error } = await supabase
-        .from('program_enrollments')
+        .from("program_enrollments")
         .insert([formattedData])
-        .select(`
+        .select(
+          `
           *,
           program:programs(
             id,
@@ -230,17 +191,17 @@ export function useEnrollments(options = {}) {
             full_name,
             role
           )
-        `)
+        `,
+        )
         .single();
 
       if (error) throw error;
 
-      // Create audit log entry
       await createAuditLog({
         actionType: AUDIT_ACTIONS.CREATE_ENROLLMENT,
         actionCategory: AUDIT_CATEGORIES.PROGRAM,
-        description: `Enrolled ${data.beneficiary_name} in program ${data.program?.program_name || 'Unknown'}`,
-        resourceType: 'enrollment',
+        description: `Enrolled ${data.beneficiary_name} in program ${data.program?.program_name || "Unknown"}`,
+        resourceType: "enrollment",
         resourceId: data.id,
         metadata: {
           beneficiaryName: data.beneficiary_name,
@@ -251,11 +212,14 @@ export function useEnrollments(options = {}) {
           programName: data.program?.program_name,
           enrollmentDate: data.enrollment_date,
         },
-        severity: 'info',
+        severity: "info",
       });
 
-      // Refresh enrollments list
-      await fetchEnrollments();
+      if (data?.program_id) {
+        await refreshProgramEnrollments(data.program_id).catch(() => {});
+      } else {
+        await fetchEnrollments();
+      }
 
       return data;
     } catch (err) {
@@ -264,37 +228,25 @@ export function useEnrollments(options = {}) {
     }
   };
 
-  /**
-   * Update an existing enrollment
-   * @async
-   * @param {string} enrollmentId - Enrollment ID
-   * @param {Object} updates - Updated enrollment data
-   * @returns {Promise<Object>} Updated enrollment
-   */
   const updateEnrollment = async (enrollmentId, updates) => {
     try {
-      // Get old enrollment data for audit log
-      const oldEnrollment = enrollments.find(e => e.id === enrollmentId);
-      
-      // Prepare updated data
+      const existing = rows.find((row) => row.id === enrollmentId);
       const formattedUpdates = {
         ...updates,
         updated_at: new Date().toISOString(),
       };
-
-      // Remove undefined values
-      Object.keys(formattedUpdates).forEach(key => {
+      Object.keys(formattedUpdates).forEach((key) => {
         if (formattedUpdates[key] === undefined) {
           delete formattedUpdates[key];
         }
       });
 
-      // Update in Supabase
       const { data, error } = await supabase
-        .from('program_enrollments')
+        .from("program_enrollments")
         .update(formattedUpdates)
-        .eq('id', enrollmentId)
-        .select(`
+        .eq("id", enrollmentId)
+        .select(
+          `
           *,
           program:programs(
             id,
@@ -308,16 +260,16 @@ export function useEnrollments(options = {}) {
             full_name,
             role
           )
-        `)
+        `,
+        )
         .single();
 
       if (error) throw error;
 
-      // Create audit log entry with change details
-      const changes = oldEnrollment
+      const changes = existing
         ? Object.keys(updates).reduce((acc, key) => {
-            if (oldEnrollment[key] !== updates[key]) {
-              acc[key] = { old: oldEnrollment[key], new: updates[key] };
+            if (existing[key] !== updates[key]) {
+              acc[key] = { old: existing[key], new: updates[key] };
             }
             return acc;
           }, {})
@@ -327,7 +279,7 @@ export function useEnrollments(options = {}) {
         actionType: AUDIT_ACTIONS.UPDATE_ENROLLMENT,
         actionCategory: AUDIT_CATEGORIES.PROGRAM,
         description: `Updated enrollment for ${data.beneficiary_name}`,
-        resourceType: 'enrollment',
+        resourceType: "enrollment",
         resourceId: enrollmentId,
         metadata: {
           beneficiaryName: data.beneficiary_name,
@@ -335,11 +287,14 @@ export function useEnrollments(options = {}) {
           programName: data.program?.program_name,
           changes,
         },
-        severity: 'info',
+        severity: "info",
       });
 
-      // Refresh enrollments list
-      await fetchEnrollments();
+      if (data?.program_id) {
+        await refreshProgramEnrollments(data.program_id).catch(() => {});
+      } else {
+        await fetchEnrollments();
+      }
 
       return data;
     } catch (err) {
@@ -348,32 +303,22 @@ export function useEnrollments(options = {}) {
     }
   };
 
-  /**
-   * Delete an enrollment
-   * @async
-   * @param {string} enrollmentId - Enrollment ID
-   * @returns {Promise<void>}
-   */
   const deleteEnrollment = async (enrollmentId) => {
     try {
-      // Get enrollment data for audit log
-      const enrollmentToDelete = enrollments.find(e => e.id === enrollmentId);
-      
-      // Delete from Supabase
+      const enrollmentToDelete = rows.find((row) => row.id === enrollmentId);
       const { error } = await supabase
-        .from('program_enrollments')
+        .from("program_enrollments")
         .delete()
-        .eq('id', enrollmentId);
+        .eq("id", enrollmentId);
 
       if (error) throw error;
 
-      // Create audit log entry
       if (enrollmentToDelete) {
         await createAuditLog({
           actionType: AUDIT_ACTIONS.DELETE_ENROLLMENT,
           actionCategory: AUDIT_CATEGORIES.PROGRAM,
           description: `Deleted enrollment for ${enrollmentToDelete.beneficiary_name}`,
-          resourceType: 'enrollment',
+          resourceType: "enrollment",
           resourceId: enrollmentId,
           metadata: {
             beneficiaryName: enrollmentToDelete.beneficiary_name,
@@ -381,88 +326,33 @@ export function useEnrollments(options = {}) {
             caseNumber: enrollmentToDelete.case_number,
             programId: enrollmentToDelete.program_id,
           },
-          severity: 'warning',
+          severity: "warning",
         });
       }
 
-      // Refresh enrollments list
-      await fetchEnrollments();
+      if (enrollmentToDelete?.program_id) {
+        await refreshProgramEnrollments(enrollmentToDelete.program_id).catch(() => {});
+      } else {
+        await fetchEnrollments();
+      }
     } catch (err) {
       console.error("Error deleting enrollment:", err);
       throw err;
     }
   };
 
-  /**
-   * Get enrollment by ID
-   * @param {string} enrollmentId - Enrollment ID
-   * @returns {Object|null} Enrollment object or null
-   */
-  const getEnrollmentById = (enrollmentId) => {
-    return enrollments.find((e) => e.id === enrollmentId) || null;
-  };
+  const enrollments = filteredEnrollments;
 
-  /**
-   * Get enrollments by case ID
-   * @param {string} caseId - Case ID
-   * @returns {Array} Array of enrollments
-   */
-  const getEnrollmentsByCaseId = (caseId) => {
-    return enrollments.filter((e) => e.case_id === caseId);
-  };
-
-  /**
-   * Get enrollments by program ID
-   * @param {string} programId - Program ID
-   * @returns {Array} Array of enrollments
-   */
-  const getEnrollmentsByProgramId = (programId) => {
-    return enrollments.filter((e) => e.program_id === programId);
-  };
-
-  // Fetch enrollments on mount and when options change
-  useEffect(() => {
-    fetchEnrollments();
-  }, [fetchEnrollments]);
-
-  useEffect(() => {
-    if (!enabled) {
-      setEnrollments([]);
-      setStatistics(EMPTY_STATS);
-      setLoading(false);
-    } else {
-      setLoading(true);
-    }
-  }, [enabled]);
-
-  useEffect(() => {
-    if (!enabled) return undefined;
-    const subscription = supabase
-      .channel('enrollments-changes')
-      .on(
-        'postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'program_enrollments' 
-        },
-        (payload) => {
-          console.log('Enrollment change received:', payload);
-          fetchEnrollments();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [enabled, fetchEnrollments]);
+  const getEnrollmentById = (enrollmentId) => enrollments.find((e) => e.id === enrollmentId) || null;
+  const getEnrollmentsByCaseId = (caseId) => enrollments.filter((e) => e.case_id === caseId);
+  const getEnrollmentsByProgramId = (programId) => enrollments.filter((e) => e.program_id === programId);
 
   return {
     enrollments,
     loading,
     error,
     statistics,
+    offline: usingOfflineData,
     fetchEnrollments,
     createEnrollment,
     updateEnrollment,

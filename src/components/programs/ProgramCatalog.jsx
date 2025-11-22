@@ -65,6 +65,7 @@ import {
   markProgramReloadOnReconnect,
   forceProgramTabReload,
 } from "./programSyncUtils";
+import { loadRemoteSnapshotIntoCache as primeEnrollmentCache } from "@/services/enrollmentOfflineService";
 
 const statusColors = {
   active: "bg-green-500",
@@ -122,6 +123,7 @@ export default function ProgramCatalog() {
   } = usePrograms(filterOptions);
   const isOnline = useNetworkStatus();
   const autoSyncRef = useRef(false);
+  const enrollmentPrefetchRef = useRef(false);
 
   // Filter programs by search term
   const filteredPrograms = (programs || []).filter((program) =>
@@ -237,6 +239,16 @@ export default function ProgramCatalog() {
       });
     }
   }, [isOnline, pendingCount, syncing, runSync]);
+
+  useEffect(() => {
+    if (!isOnline) return;
+    if (enrollmentPrefetchRef.current) return;
+    enrollmentPrefetchRef.current = true;
+    primeEnrollmentCache().catch((err) => {
+      console.error("Failed to prefetch enrollments:", err);
+      enrollmentPrefetchRef.current = false;
+    });
+  }, [isOnline]);
 
   useEffect(() => {
     if (!isOnline) return;

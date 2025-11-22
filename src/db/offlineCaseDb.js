@@ -101,4 +101,24 @@ offlineCaseDb.version(8).stores({
     program_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
 });
 
+// Version 9: Cache program enrollments for offline viewing
+offlineCaseDb.version(9).stores({
+    ciclcar_cases: "++localId, id, updated_at, case_manager, hasPendingWrites",
+    ciclcar_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    case_managers: "id, full_name",
+    fac_cases: "++localId, id, updated_at, head_first_name, head_last_name, hasPendingWrites",
+    fac_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    far_cases: "++localId, id, date, receiving_member, assistance, hasPendingWrites",
+    far_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    ivac_cases: "++localId, id, updated_at, municipality, province, status, hasPendingWrites",
+    ivac_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    case_cases: "++localId, id, updated_at, identifying_name, case_manager, hasPendingWrites",
+    case_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    dashboard_cache: "++id, dashboardType, timestamp, data",
+    dashboard_raw_data: "++id, dashboardType, timestamp, cases, ciclcar, fac, ivac",
+    programs: "++localId, id, updated_at, program_name, status, hasPendingWrites",
+    program_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+    program_enrollments: "++localId, id, program_id, enrollment_date, status, updated_at",
+});
+
 export default offlineCaseDb;
