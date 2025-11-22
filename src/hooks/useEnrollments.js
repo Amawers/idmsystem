@@ -1,6 +1,6 @@
 /**
  * @file useEnrollments.js
- * @description Offline-aware hook for program enrollments
+ * @description Offline-first hook for program enrollments with queue and sync
  * @module hooks/useEnrollments
  */
 
@@ -12,6 +12,11 @@ import {
   enrollmentsLiveQuery,
   loadRemoteSnapshotIntoCache,
   refreshProgramEnrollments,
+  getPendingOperationCount,
+  syncEnrollmentQueue,
+  createOrUpdateLocalEnrollment,
+  deleteEnrollmentNow,
+  markLocalDelete,
 } from "@/services/enrollmentOfflineService";
 
 const EMPTY_STATS = {
@@ -33,6 +38,9 @@ export function useEnrollments(options = {}) {
   const [error, setError] = useState(null);
   const [statistics, setStatistics] = useState(EMPTY_STATS);
   const [usingOfflineData, setUsingOfflineData] = useState(!isBrowserOnline());
+  const [pendingCount, setPendingCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState("");
 
   const fetchEnrollments = useCallback(async () => {
     if (!enabled) {
@@ -61,6 +69,45 @@ export function useEnrollments(options = {}) {
     }
   }, [enabled, options.programId]);
 
+  const updatePendingCount = useCallback(async () => {
+    const count = await getPendingOperationCount();
+    setPendingCount(count);
+  }, []);
+
+  const runSync = useCallback(async () => {
+    if (!isBrowserOnline()) {
+      setSyncStatus("Cannot sync while offline");
+      return { success: false, offline: true };
+    }
+    
+    setSyncing(true);
+    setSyncStatus("Starting sync...");
+    
+    try {
+      const result = await syncEnrollmentQueue((status) => {
+        setSyncStatus(status);
+      });
+      
+      if (result.success) {
+        setSyncStatus(`Successfully synced ${result.synced} operations`);
+        await updatePendingCount();
+        await fetchEnrollments();
+      } else if (result.offline) {
+        setSyncStatus("Cannot sync while offline");
+      } else {
+        setSyncStatus(`Sync failed: ${result.errors?.[0]?.error || "Unknown error"}`);
+      }
+      
+      return result;
+    } catch (err) {
+      console.error("Sync error:", err);
+      setSyncStatus(`Sync error: ${err.message}`);
+      return { success: false, error: err };
+    } finally {
+      setSyncing(false);
+    }
+  }, [fetchEnrollments, updatePendingCount]);
+
   useEffect(() => {
     if (!enabled) {
       setRows([]);
@@ -86,7 +133,8 @@ export function useEnrollments(options = {}) {
 
   useEffect(() => {
     fetchEnrollments();
-  }, [fetchEnrollments]);
+    updatePendingCount();
+  }, [fetchEnrollments, updatePendingCount]);
 
   useEffect(() => {
     if (!enabled) return undefined;
@@ -173,55 +221,70 @@ export function useEnrollments(options = {}) {
         notes: enrollmentData.notes || null,
       };
 
-      const { data, error } = await supabase
-        .from("program_enrollments")
-        .insert([formattedData])
-        .select(
-          `
-          *,
-          program:programs(
-            id,
-            program_name,
-            program_type,
-            coordinator,
-            status
-          ),
-          assigned_by_user:profile!program_enrollments_assigned_by_fkey(
-            id,
-            full_name,
-            role
-          )
-        `,
-        )
-        .single();
+      // Try online-first if connected
+      if (isBrowserOnline()) {
+        try {
+          const { data, error } = await supabase
+            .from("program_enrollments")
+            .insert([formattedData])
+            .select(
+              `
+              *,
+              program:programs(
+                id,
+                program_name,
+                program_type,
+                coordinator,
+                status
+              ),
+              assigned_by_user:profile!program_enrollments_assigned_by_fkey(
+                id,
+                full_name,
+                role
+              )
+            `,
+            )
+            .single();
 
-      if (error) throw error;
+          if (error) throw error;
 
-      await createAuditLog({
-        actionType: AUDIT_ACTIONS.CREATE_ENROLLMENT,
-        actionCategory: AUDIT_CATEGORIES.PROGRAM,
-        description: `Enrolled ${data.beneficiary_name} in program ${data.program?.program_name || "Unknown"}`,
-        resourceType: "enrollment",
-        resourceId: data.id,
-        metadata: {
-          beneficiaryName: data.beneficiary_name,
-          caseId: data.case_id,
-          caseNumber: data.case_number,
-          caseType: data.case_type,
-          programId: data.program_id,
-          programName: data.program?.program_name,
-          enrollmentDate: data.enrollment_date,
-        },
-        severity: "info",
-      });
+          await createAuditLog({
+            actionType: AUDIT_ACTIONS.CREATE_ENROLLMENT,
+            actionCategory: AUDIT_CATEGORIES.PROGRAM,
+            description: `Enrolled ${data.beneficiary_name} in program ${data.program?.program_name || "Unknown"}`,
+            resourceType: "enrollment",
+            resourceId: data.id,
+            metadata: {
+              beneficiaryName: data.beneficiary_name,
+              caseId: data.case_id,
+              caseNumber: data.case_number,
+              caseType: data.case_type,
+              programId: data.program_id,
+              programName: data.program?.program_name,
+              enrollmentDate: data.enrollment_date,
+            },
+            severity: "info",
+          });
 
-      if (data?.program_id) {
-        await refreshProgramEnrollments(data.program_id).catch(() => {});
-      } else {
-        await fetchEnrollments();
+          if (data?.program_id) {
+            await refreshProgramEnrollments(data.program_id).catch(() => {});
+          } else {
+            await fetchEnrollments();
+          }
+
+          return data;
+        } catch (onlineError) {
+          console.warn("Online create failed, falling back to offline:", onlineError);
+          // Fall through to offline mode
+        }
       }
-
-      return data;
+      
+      // Offline mode: queue the operation
+      await createOrUpdateLocalEnrollment(formattedData);
+      await updatePendingCount();
+      setSyncStatus("Enrollment queued for sync");
+      
+      return { success: true, offline: true };
     } catch (err) {
       console.error("Error creating enrollment:", err);
       throw err;
@@ -241,62 +304,77 @@ export function useEnrollments(options = {}) {
         }
       });
 
-      const { data, error } = await supabase
-        .from("program_enrollments")
-        .update(formattedUpdates)
-        .eq("id", enrollmentId)
-        .select(
-          `
-          *,
-          program:programs(
-            id,
-            program_name,
-            program_type,
-            coordinator,
-            status
-          ),
-          assigned_by_user:profile!program_enrollments_assigned_by_fkey(
-            id,
-            full_name,
-            role
-          )
-        `,
-        )
-        .single();
+      // Try online-first if connected
+      if (isBrowserOnline()) {
+        try {
+          const { data, error } = await supabase
+            .from("program_enrollments")
+            .update(formattedUpdates)
+            .eq("id", enrollmentId)
+            .select(
+              `
+              *,
+              program:programs(
+                id,
+                program_name,
+                program_type,
+                coordinator,
+                status
+              ),
+              assigned_by_user:profile!program_enrollments_assigned_by_fkey(
+                id,
+                full_name,
+                role
+              )
+            `,
+            )
+            .single();
 
-      if (error) throw error;
+          if (error) throw error;
 
-      const changes = existing
-        ? Object.keys(updates).reduce((acc, key) => {
-            if (existing[key] !== updates[key]) {
-              acc[key] = { old: existing[key], new: updates[key] };
-            }
-            return acc;
-          }, {})
-        : updates;
+          const changes = existing
+            ? Object.keys(updates).reduce((acc, key) => {
+                if (existing[key] !== updates[key]) {
+                  acc[key] = { old: existing[key], new: updates[key] };
+                }
+                return acc;
+              }, {})
+            : updates;
 
-      await createAuditLog({
-        actionType: AUDIT_ACTIONS.UPDATE_ENROLLMENT,
-        actionCategory: AUDIT_CATEGORIES.PROGRAM,
-        description: `Updated enrollment for ${data.beneficiary_name}`,
-        resourceType: "enrollment",
-        resourceId: enrollmentId,
-        metadata: {
-          beneficiaryName: data.beneficiary_name,
-          caseId: data.case_id,
-          programName: data.program?.program_name,
-          changes,
-        },
-        severity: "info",
-      });
+          await createAuditLog({
+            actionType: AUDIT_ACTIONS.UPDATE_ENROLLMENT,
+            actionCategory: AUDIT_CATEGORIES.PROGRAM,
+            description: `Updated enrollment for ${data.beneficiary_name}`,
+            resourceType: "enrollment",
+            resourceId: enrollmentId,
+            metadata: {
+              beneficiaryName: data.beneficiary_name,
+              caseId: data.case_id,
+              programName: data.program?.program_name,
+              changes,
+            },
+            severity: "info",
+          });
 
-      if (data?.program_id) {
-        await refreshProgramEnrollments(data.program_id).catch(() => {});
-      } else {
-        await fetchEnrollments();
+          if (data?.program_id) {
+            await refreshProgramEnrollments(data.program_id).catch(() => {});
+          } else {
+            await fetchEnrollments();
+          }
+
+          return data;
+        } catch (onlineError) {
+          console.warn("Online update failed, falling back to offline:", onlineError);
+          // Fall through to offline mode
+        }
       }
-
-      return data;
+      
+      // Offline mode: queue the operation
+      await createOrUpdateLocalEnrollment(formattedUpdates, enrollmentId);
+      await updatePendingCount();
+      setSyncStatus("Update queued for sync");
+      
+      return { success: true, offline: true };
     } catch (err) {
       console.error("Error updating enrollment:", err);
       throw err;
@@ -306,35 +384,48 @@ export function useEnrollments(options = {}) {
   const deleteEnrollment = async (enrollmentId) => {
     try {
       const enrollmentToDelete = rows.find((row) => row.id === enrollmentId);
-      const { error } = await supabase
-        .from("program_enrollments")
-        .delete()
-        .eq("id", enrollmentId);
+      
+      // Try online-first if connected
+      if (isBrowserOnline()) {
+        try {
+          await deleteEnrollmentNow(enrollmentId);
+          
+          if (enrollmentToDelete) {
+            await createAuditLog({
+              actionType: AUDIT_ACTIONS.DELETE_ENROLLMENT,
+              actionCategory: AUDIT_CATEGORIES.PROGRAM,
+              description: `Deleted enrollment for ${enrollmentToDelete.beneficiary_name}`,
+              resourceType: "enrollment",
+              resourceId: enrollmentId,
+              metadata: {
+                beneficiaryName: enrollmentToDelete.beneficiary_name,
+                caseId: enrollmentToDelete.case_id,
+                caseNumber: enrollmentToDelete.case_number,
+                programId: enrollmentToDelete.program_id,
+              },
+              severity: "warning",
+            });
+          }
 
-      if (error) throw error;
-
-      if (enrollmentToDelete) {
-        await createAuditLog({
-          actionType: AUDIT_ACTIONS.DELETE_ENROLLMENT,
-          actionCategory: AUDIT_CATEGORIES.PROGRAM,
-          description: `Deleted enrollment for ${enrollmentToDelete.beneficiary_name}`,
-          resourceType: "enrollment",
-          resourceId: enrollmentId,
-          metadata: {
-            beneficiaryName: enrollmentToDelete.beneficiary_name,
-            caseId: enrollmentToDelete.case_id,
-            caseNumber: enrollmentToDelete.case_number,
-            programId: enrollmentToDelete.program_id,
-          },
-          severity: "warning",
-        });
+          if (enrollmentToDelete?.program_id) {
+            await refreshProgramEnrollments(enrollmentToDelete.program_id).catch(() => {});
+          } else {
+            await fetchEnrollments();
+          }
+          
+          return { success: true };
+        } catch (onlineError) {
+          console.warn("Online delete failed, falling back to offline:", onlineError);
+          // Fall through to offline mode
+        }
       }
-
-      if (enrollmentToDelete?.program_id) {
-        await refreshProgramEnrollments(enrollmentToDelete.program_id).catch(() => {});
-      } else {
-        await fetchEnrollments();
-      }
+      
+      // Offline mode: queue the operation
+      await markLocalDelete(enrollmentId);
+      await updatePendingCount();
+      setSyncStatus("Delete queued for sync");
+      
+      return { success: true, offline: true };
     } catch (err) {
       console.error("Error deleting enrollment:", err);
       throw err;
@@ -353,7 +444,11 @@ export function useEnrollments(options = {}) {
     error,
     statistics,
     offline: usingOfflineData,
+    pendingCount,
+    syncing,
+    syncStatus,
     fetchEnrollments,
+    runSync,
     createEnrollment,
     updateEnrollment,
     deleteEnrollment,

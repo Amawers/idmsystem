@@ -14,6 +14,11 @@
 import { useState, useEffect } from "react";
 import { useEnrollments } from "@/hooks/useEnrollments";
 import { usePrograms } from "@/hooks/usePrograms";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import {
+	getCachedCasesByType,
+	getCachedPrograms,
+} from "@/services/enrollmentOfflineService";
 import {
 	Dialog,
 	DialogContent,
@@ -34,8 +39,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, AlertCircle } from "lucide-react";
-import supabase from "@/../config/supabase";
+import { Loader2, AlertCircle, WifiOff } from "lucide-react";
 
 /**
  * Create Enrollment Dialog Component
@@ -51,11 +55,12 @@ export default function CreateEnrollmentDialog({
 	onSuccess,
 }) {
 	const { createEnrollment } = useEnrollments();
-	const { programs } = usePrograms({ status: "active" });
+	const isOnline = useNetworkStatus();
 
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [searchingCase, setSearchingCase] = useState(false);
+	const [cachedPrograms, setCachedPrograms] = useState([]);
 
 	const [formData, setFormData] = useState({
 		case_type: "",
@@ -73,10 +78,17 @@ export default function CreateEnrollmentDialog({
 	const [cases, setCases] = useState([]);
 	const [selectedCase, setSelectedCase] = useState(null);
 
-	// Fetch cases when case type changes
+	// Load programs from cache on dialog open (already pre-fetched by page)
+	useEffect(() => {
+		if (open) {
+			loadPrograms();
+		}
+	}, [open]);
+
+	// Load cases from cache when case type changes (already pre-fetched by page)
 	useEffect(() => {
 		if (formData.case_type && open) {
-			fetchCasesByType(formData.case_type);
+			loadCasesFromCache(formData.case_type);
 		} else {
 			setCases([]);
 			setSelectedCase(null);
@@ -84,101 +96,83 @@ export default function CreateEnrollmentDialog({
 	}, [formData.case_type, open]);
 
 	/**
-	 * Fetch cases by type from appropriate table
+	 * Load programs from cache (pre-fetched by page)
 	 */
-	const fetchCasesByType = async (caseType) => {
+	const loadPrograms = async () => {
+		try {
+			console.log("[Dialog] Loading programs from cache...");
+			const cached = await getCachedPrograms();
+			console.log(`[Dialog] Found ${cached.length} cached programs`);
+			
+			if (cached.length > 0) {
+				setCachedPrograms(cached.filter(p => p.status === "active"));
+			} else if (!isOnline) {
+				console.warn("[Dialog] No cached programs and offline");
+			}
+		} catch (err) {
+			console.error("[Dialog] Error loading programs:", err);
+		}
+	};
+
+	/**
+	 * Load cases from cache (pre-fetched by page)
+	 */
+	const loadCasesFromCache = async (caseType) => {
 		setSearchingCase(true);
 		setError(null);
 
+		console.log(`[Dialog] Loading ${caseType} cases from cache...`);
+
 		try {
-			let query;
-			let tableName;
-			let nameField;
-
-			switch (caseType) {
-				case "CICL/CAR":
-					tableName = "ciclcar_case";
-					nameField = "profile_name";
-					query = supabase
-						.from(tableName)
-						.select("id, profile_name, case_manager, status")
-						.in("status", ["Filed", "Assessed", "In Process", "Resolved"])
-						.order("created_at", { ascending: false });
-					break;
-				case "VAC":
-					tableName = "case";
-					nameField = "identifying_name";
-					query = supabase
-						.from(tableName)
-						.select("id, identifying_name, case_manager, status")
-						.order("created_at", { ascending: false });
-					break;
-				case "FAC":
-					tableName = "fac_case";
-					query = supabase
-						.from(tableName)
-						.select(
-							"id, head_first_name, head_last_name, case_manager, status"
-						)
-						.eq("status", "active")
-						.order("created_at", { ascending: false });
-					break;
-				case "FAR":
-					tableName = "far_case";
-					nameField = "receiving_member";
-					query = supabase
-						.from(tableName)
-						.select(
-							"id, receiving_member, case_manager, status, date"
-						)
-						.order("date", { ascending: false });
-					break;
-				case "IVAC":
-					tableName = "ivac_cases";
-					query = supabase
-						.from(tableName)
-						.select("id, records, status, reporting_period")
-						.eq("status", "Active")
-						.order("created_at", { ascending: false });
-					break;
-				default:
-					setCases([]);
-					return;
-			}
-
-			const { data, error } = await query.limit(100);
-
-			if (error) throw error;
-
-			// Format cases for display
-			const formattedCases = (data || []).map((caseItem) => {
-				let displayName = "";
-
-				if (caseType === "FAC") {
-					displayName = `${caseItem.head_first_name} ${caseItem.head_last_name}`;
-				} else if (caseType === "IVAC") {
-					// For IVAC, show reporting period
-					displayName = `IVAC - ${new Date(
-						caseItem.reporting_period
-					).toLocaleDateString()}`;
+			const cachedData = await getCachedCasesByType(caseType);
+			console.log(`[Dialog] Found ${cachedData.length} cached ${caseType} cases`);
+			
+			if (cachedData.length > 0) {
+				const formatted = formatCasesForDisplay(cachedData, caseType);
+				console.log(`[Dialog] Formatted ${formatted.length} ${caseType} cases for display`);
+				setCases(formatted);
+			} else {
+				// No cached data available
+				if (isOnline) {
+					setError(`No ${caseType} cases found. They may still be loading. Please try again in a moment.`);
 				} else {
-					displayName = caseItem[nameField] || "Unknown";
+					setError(`No cached ${caseType} cases available offline. Please connect to the internet and reload the page.`);
 				}
-
-				return {
-					...caseItem,
-					displayName,
-					case_manager: caseItem.case_manager || "Unassigned",
-				};
-			});
-
-			setCases(formattedCases);
+			}
 		} catch (err) {
-			console.error("Error fetching cases:", err);
+			console.error("[Dialog] Error loading cases from cache:", err);
 			setError(`Failed to load ${caseType} cases: ${err.message}`);
 		} finally {
 			setSearchingCase(false);
 		}
+	};
+
+	/**
+	 * Format cases for display in dropdown
+	 */
+	const formatCasesForDisplay = (data, caseType) => {
+		return (data || []).map((caseItem) => {
+			let displayName = "";
+			let nameField = "";
+
+			if (caseType === "CICL/CAR") {
+				displayName = caseItem.profile_name || "Unknown";
+			} else if (caseType === "VAC") {
+				displayName = caseItem.identifying_name || "Unknown";
+			} else if (caseType === "FAC") {
+				displayName = `${caseItem.head_first_name || ""} ${caseItem.head_last_name || ""}`.trim() || "Unknown";
+			} else if (caseType === "FAR") {
+				displayName = caseItem.receiving_member || "Unknown";
+			} else if (caseType === "IVAC") {
+				displayName = `IVAC - ${caseItem.reporting_period ? new Date(caseItem.reporting_period).toLocaleDateString() : "Unknown"}`;
+			}
+
+			return {
+				...caseItem,
+				displayName,
+				case_manager: caseItem.case_manager || "Unassigned",
+			};
+		});
 	};
 
 	/**
@@ -284,9 +278,9 @@ export default function CreateEnrollmentDialog({
 	const getAvailablePrograms = () => {
 		if (!formData.case_type) return [];
 
-		return programs.filter((program) => {
+		return cachedPrograms.filter((program) => {
 			// Check if program has capacity
-			const hasCapacity = program.current_enrollment < program.capacity;
+			const hasCapacity = (program.current_enrollment || 0) < (program.capacity || 0);
 
 			// Check if program targets this case type
 			const targetsType = program.target_beneficiary?.includes(
@@ -303,9 +297,18 @@ export default function CreateEnrollmentDialog({
 		<Dialog open={open} onOpenChange={onOpenChange}>
 			<DialogContent className="min-w-3xl max-h-[90vh] overflow-y-auto">
 				<DialogHeader>
-					<DialogTitle>Enroll Case in Program</DialogTitle>
+					<DialogTitle className="flex items-center gap-2">
+						Enroll Case in Program
+						{!isOnline && (
+							<span className="inline-flex items-center gap-1 text-sm font-normal text-red-600">
+								<WifiOff className="h-4 w-4" />
+								Offline
+							</span>
+						)}
+					</DialogTitle>
 					<DialogDescription>
 						Select a case and program to create a new enrollment
+						{!isOnline && " (Changes will be synced when back online)"}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -340,8 +343,9 @@ export default function CreateEnrollmentDialog({
 										<SelectItem value="CICL/CAR">
 											CICL/CAR
 										</SelectItem>
-										<SelectItem value="CASE">CASE</SelectItem>
+										<SelectItem value="VAC">VAC</SelectItem>
 										<SelectItem value="FAC">FAC</SelectItem>
+										<SelectItem value="FAR">FAR</SelectItem>
 										<SelectItem value="IVAC">
 											IVAC
 										</SelectItem>
