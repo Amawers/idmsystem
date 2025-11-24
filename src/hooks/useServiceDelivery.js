@@ -14,10 +14,41 @@
  * @returns {Object} Service delivery data, loading state, error state, and CRUD functions
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import supabase from "@/../config/supabase";
 import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 import { useAuthStore } from "@/store/authStore";
+import {
+  servicesLiveQuery,
+  loadRemoteSnapshotIntoCache,
+  getPendingOperationCount,
+  syncServiceDeliveryQueue,
+  createOrUpdateLocalServiceDelivery,
+  deleteServiceDeliveryNow,
+  markLocalDelete,
+  getCachedCasesByType,
+  getCachedPrograms,
+  fetchAndCacheCasesByType,
+  fetchAndCachePrograms,
+} from "@/services/serviceDeliveryOfflineService";
+
+const SERVICE_SELECT = `
+  *,
+  enrollment:program_enrollments(
+    id,
+    case_id,
+    case_number,
+    case_type,
+    beneficiary_name,
+    status
+  ),
+  program:programs(
+    id,
+    program_name,
+    program_type,
+    coordinator
+  )
+`;
 // import SAMPLE_SERVICE_DELIVERY from "../../SAMPLE_SERVICE_DELIVERY.json"; // File not found
 
 /**
@@ -45,6 +76,10 @@ export function useServiceDelivery(options = {}) {
     averageDuration: 0,
     uniqueBeneficiaries: 0,
   });
+  const [usingOfflineData, setUsingOfflineData] = useState(!(typeof navigator === "undefined" ? true : navigator.onLine));
+  const [pendingCount, setPendingCount] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState("");
 
   /**
    * Fetch service delivery records from Supabase with full details
@@ -55,103 +90,60 @@ export function useServiceDelivery(options = {}) {
       setLoading(true);
       setError(null);
 
-      // Build Supabase query with joins to enrollments and programs
-      let query = supabase
-        .from('service_delivery')
-        .select(`
-          *,
-          enrollment:program_enrollments(
-            id,
-            case_id,
-            case_number,
-            case_type,
-            beneficiary_name,
-            status
-          ),
-          program:programs(
-            id,
-            program_name,
-            program_type,
-            coordinator
-          )
-        `)
-        .order('service_date', { ascending: false });
-
-      // Apply filters
-      if (options.enrollmentId) {
-        query = query.eq('enrollment_id', options.enrollmentId);
-      }
-      if (options.programId) {
-        query = query.eq('program_id', options.programId);
-      }
-      if (options.caseId) {
-        query = query.eq('case_id', options.caseId);
-      }
-      if (options.dateFrom) {
-        query = query.gte('service_date', options.dateFrom);
-      }
-      if (options.dateTo) {
-        query = query.lte('service_date', options.dateTo);
-      }
-      if (options.attendance !== undefined) {
-        query = query.eq('attendance', options.attendance);
-      }
-      if (options.attendanceStatus) {
-        query = query.eq('attendance_status', options.attendanceStatus);
+      if (!navigator.onLine) {
+        setUsingOfflineData(true);
+        setLoading(false);
+        return { success: true, offline: true };
       }
 
-      const { data, error: fetchError } = await query;
-
-      if (fetchError) throw fetchError;
-
-      setServices(data || []);
-      calculateStatistics(data || []);
+      // When online load remote snapshot into cache (server -> local)
+      await loadRemoteSnapshotIntoCache();
+      setUsingOfflineData(false);
+      return { success: true };
     } catch (err) {
-      console.error("Error fetching service delivery from Supabase:", err);
+      console.error("Error refreshing service delivery cache:", err);
       setError(err.message);
-      
-      // Fallback to empty data
-      console.log("Falling back to empty data for service delivery");
-      let filteredServices = [];
-
-      // Apply filters to dummy data
-      if (options.enrollmentId) {
-        filteredServices = filteredServices.filter(
-          (s) => s.enrollment_id === options.enrollmentId
-        );
-      }
-      if (options.programId) {
-        filteredServices = filteredServices.filter(
-          (s) => s.program_id === options.programId
-        );
-      }
-      if (options.caseId) {
-        filteredServices = filteredServices.filter(
-          (s) => s.case_id === options.caseId
-        );
-      }
-      if (options.dateFrom) {
-        filteredServices = filteredServices.filter(
-          (s) => s.service_date >= options.dateFrom
-        );
-      }
-      if (options.dateTo) {
-        filteredServices = filteredServices.filter(
-          (s) => s.service_date <= options.dateTo
-        );
-      }
-      if (options.attendanceStatus) {
-        filteredServices = filteredServices.filter(
-          (s) => s.attendance_status === options.attendanceStatus
-        );
-      }
-
-      setServices(filteredServices);
-      calculateStatistics(filteredServices);
+      setUsingOfflineData(true);
+      return { success: false, error: err };
     } finally {
       setLoading(false);
     }
   };
+
+  const updatePendingCount = useCallback(async () => {
+    const count = await getPendingOperationCount();
+    setPendingCount(count);
+  }, []);
+
+  const runSync = useCallback(async () => {
+    if (!navigator.onLine) {
+      setSyncStatus("Cannot sync while offline");
+      return { success: false, offline: true };
+    }
+
+    setSyncing(true);
+    setSyncStatus("Starting sync...");
+
+    try {
+      const result = await syncServiceDeliveryQueue((status) => setSyncStatus(status));
+      if (result.success) {
+        setSyncStatus(`Successfully synced ${result.synced} operations`);
+        await updatePendingCount();
+        await fetchServiceDelivery();
+      } else if (result.offline) {
+        setSyncStatus("Cannot sync while offline");
+      } else {
+        setSyncStatus(`Sync failed: ${result.errors?.[0]?.error || "Unknown error"}`);
+      }
+      return result;
+    } catch (err) {
+      console.error("Sync error:", err);
+      setSyncStatus(`Sync error: ${err.message}`);
+      return { success: false, error: err };
+    } finally {
+      setSyncing(false);
+    }
+  }, [fetchServiceDelivery, updatePendingCount]);
 
   /**
    * Calculate service delivery statistics
@@ -186,8 +178,7 @@ export function useServiceDelivery(options = {}) {
   const createServiceDelivery = async (serviceData) => {
     try {
       const { user } = useAuthStore.getState();
-      
-      // Prepare service delivery data with proper formatting
+
       const formattedData = {
         enrollment_id: serviceData.enrollment_id,
         case_id: serviceData.case_id,
@@ -196,65 +187,59 @@ export function useServiceDelivery(options = {}) {
         program_id: serviceData.program_id,
         program_name: serviceData.program_name,
         program_type: serviceData.program_type,
-        service_date: serviceData.service_date || new Date().toISOString().split('T')[0],
+        service_date: serviceData.service_date || new Date().toISOString().split("T")[0],
         attendance: serviceData.attendance || false,
-        attendance_status: serviceData.attendance_status || 'absent',
+        attendance_status: serviceData.attendance_status || "absent",
         duration_minutes: parseInt(serviceData.duration_minutes) || null,
         progress_notes: serviceData.progress_notes || null,
         milestones_achieved: serviceData.milestones_achieved || [],
         next_steps: serviceData.next_steps || null,
         delivered_by_name: serviceData.delivered_by_name || null,
+        created_by: user?.id ?? null,
       };
 
-      // Insert into Supabase
-      const { data, error } = await supabase
-        .from('service_delivery')
-        .insert([formattedData])
-        .select(`
-          *,
-          enrollment:program_enrollments(
-            id,
-            case_id,
-            case_number,
-            case_type,
-            beneficiary_name,
-            status
-          ),
-          program:programs(
-            id,
-            program_name,
-            program_type,
-            coordinator
-          )
-        `)
-        .single();
+      // Try online-first
+      if (navigator.onLine) {
+        try {
+          const { data, error } = await supabase
+            .from("service_delivery")
+            .insert([formattedData])
+            .select(SERVICE_SELECT)
+            .single();
 
-      if (error) throw error;
+          if (error) throw error;
 
-      // Create audit log entry
-      await createAuditLog({
-        actionType: AUDIT_ACTIONS.CREATE_SERVICE_DELIVERY,
-        actionCategory: AUDIT_CATEGORIES.PROGRAM,
-        description: `Logged service delivery for ${data.beneficiary_name}`,
-        resourceType: 'service_delivery',
-        resourceId: data.id,
-        metadata: {
-          beneficiaryName: data.beneficiary_name,
-          caseId: data.case_id,
-          caseNumber: data.case_number,
-          programName: data.program_name,
-          serviceDate: data.service_date,
-          attendance: data.attendance,
-          attendanceStatus: data.attendance_status,
-          deliveredBy: data.delivered_by_name,
-        },
-        severity: 'info',
-      });
+          await createAuditLog({
+            actionType: AUDIT_ACTIONS.CREATE_SERVICE_DELIVERY,
+            actionCategory: AUDIT_CATEGORIES.PROGRAM,
+            description: `Logged service delivery for ${data.beneficiary_name}`,
+            resourceType: "service_delivery",
+            resourceId: data.id,
+            metadata: {
+              beneficiaryName: data.beneficiary_name,
+              caseId: data.case_id,
+              caseNumber: data.case_number,
+              programName: data.program_name,
+              serviceDate: data.service_date,
+              attendance: data.attendance,
+              attendanceStatus: data.attendance_status,
+              deliveredBy: data.delivered_by_name,
+            },
+            severity: "info",
+          });
 
-      // Refresh service delivery list
-      await fetchServiceDelivery();
+          await fetchServiceDelivery();
+          return data;
+        } catch (onlineErr) {
+          console.warn("Online create failed, falling back to offline:", onlineErr);
+        }
+      }
 
-      return data;
+      // Offline: queue locally
+      await createOrUpdateLocalServiceDelivery(formattedData);
+      await updatePendingCount();
+      setSyncStatus("Service delivery queued for sync");
+      return { success: true, offline: true };
     } catch (err) {
       console.error("Error creating service delivery:", err);
       throw err;
@@ -270,79 +255,33 @@ export function useServiceDelivery(options = {}) {
    */
   const updateServiceDelivery = async (serviceId, updates) => {
     try {
-      // Get old service data for audit log
-      const oldService = services.find(s => s.id === serviceId);
-      
-      // Prepare updated data
-      const formattedUpdates = {
-        ...updates,
-        updated_at: new Date().toISOString(),
-      };
+      const formattedUpdates = { ...updates, updated_at: new Date().toISOString() };
+      Object.keys(formattedUpdates).forEach((k) => { if (formattedUpdates[k] === undefined) delete formattedUpdates[k]; });
 
-      // Remove undefined values
-      Object.keys(formattedUpdates).forEach(key => {
-        if (formattedUpdates[key] === undefined) {
-          delete formattedUpdates[key];
+      if (navigator.onLine) {
+        try {
+          const { data, error } = await supabase.from("service_delivery").update(formattedUpdates).eq("id", serviceId).select(SERVICE_SELECT).single();
+          if (error) throw error;
+          await createAuditLog({
+            actionType: AUDIT_ACTIONS.UPDATE_SERVICE_DELIVERY,
+            actionCategory: AUDIT_CATEGORIES.PROGRAM,
+            description: `Updated service delivery for ${data.beneficiary_name}`,
+            resourceType: "service_delivery",
+            resourceId: serviceId,
+            metadata: { beneficiaryName: data.beneficiary_name, caseId: data.case_id, programName: data.program_name, serviceDate: data.service_date },
+            severity: "info",
+          });
+          await fetchServiceDelivery();
+          return data;
+        } catch (onlineErr) {
+          console.warn("Online update failed, falling back to offline:", onlineErr);
         }
-      });
+      }
 
-      // Update in Supabase
-      const { data, error } = await supabase
-        .from('service_delivery')
-        .update(formattedUpdates)
-        .eq('id', serviceId)
-        .select(`
-          *,
-          enrollment:program_enrollments(
-            id,
-            case_id,
-            case_number,
-            case_type,
-            beneficiary_name,
-            status
-          ),
-          program:programs(
-            id,
-            program_name,
-            program_type,
-            coordinator
-          )
-        `)
-        .single();
-
-      if (error) throw error;
-
-      // Create audit log entry with change details
-      const changes = oldService
-        ? Object.keys(updates).reduce((acc, key) => {
-            if (oldService[key] !== updates[key]) {
-              acc[key] = { old: oldService[key], new: updates[key] };
-            }
-            return acc;
-          }, {})
-        : updates;
-
-      await createAuditLog({
-        actionType: AUDIT_ACTIONS.UPDATE_SERVICE_DELIVERY,
-        actionCategory: AUDIT_CATEGORIES.PROGRAM,
-        description: `Updated service delivery for ${data.beneficiary_name}`,
-        resourceType: 'service_delivery',
-        resourceId: serviceId,
-        metadata: {
-          beneficiaryName: data.beneficiary_name,
-          caseId: data.case_id,
-          programName: data.program_name,
-          serviceDate: data.service_date,
-          deliveredBy: data.delivered_by_name,
-          changes,
-        },
-        severity: 'info',
-      });
-
-      // Refresh service delivery list
-      await fetchServiceDelivery();
-
-      return data;
+      await createOrUpdateLocalServiceDelivery(formattedUpdates, serviceId);
+      await updatePendingCount();
+      setSyncStatus("Update queued for sync");
+      return { success: true, offline: true };
     } catch (err) {
       console.error("Error updating service delivery:", err);
       throw err;
@@ -357,39 +296,33 @@ export function useServiceDelivery(options = {}) {
    */
   const deleteServiceDelivery = async (serviceId) => {
     try {
-      // Get service data for audit log
-      const serviceToDelete = services.find(s => s.id === serviceId);
-      
-      // Delete from Supabase
-      const { error } = await supabase
-        .from('service_delivery')
-        .delete()
-        .eq('id', serviceId);
+      const serviceToDelete = services.find((s) => s.id === serviceId);
 
-      if (error) throw error;
-
-      // Create audit log entry
-      if (serviceToDelete) {
-        await createAuditLog({
-          actionType: AUDIT_ACTIONS.DELETE_SERVICE_DELIVERY,
-          actionCategory: AUDIT_CATEGORIES.PROGRAM,
-          description: `Deleted service delivery for ${serviceToDelete.beneficiary_name}`,
-          resourceType: 'service_delivery',
-          resourceId: serviceId,
-          metadata: {
-            beneficiaryName: serviceToDelete.beneficiary_name,
-            caseId: serviceToDelete.case_id,
-            caseNumber: serviceToDelete.case_number,
-            programName: serviceToDelete.program_name,
-            serviceDate: serviceToDelete.service_date,
-            deliveredBy: serviceToDelete.delivered_by_name,
-          },
-          severity: 'warning',
-        });
+      if (navigator.onLine) {
+        try {
+          await deleteServiceDeliveryNow(serviceId);
+          if (serviceToDelete) {
+            await createAuditLog({
+              actionType: AUDIT_ACTIONS.DELETE_SERVICE_DELIVERY,
+              actionCategory: AUDIT_CATEGORIES.PROGRAM,
+              description: `Deleted service delivery for ${serviceToDelete.beneficiary_name}`,
+              resourceType: "service_delivery",
+              resourceId: serviceId,
+              metadata: { beneficiaryName: serviceToDelete.beneficiary_name, caseId: serviceToDelete.case_id, caseNumber: serviceToDelete.case_number, programName: serviceToDelete.program_name },
+              severity: "warning",
+            });
+          }
+          await fetchServiceDelivery();
+          return { success: true };
+        } catch (onlineErr) {
+          console.warn("Online delete failed, falling back to offline:", onlineErr);
+        }
       }
 
-      // Refresh service delivery list
-      await fetchServiceDelivery();
+      await markLocalDelete(serviceId);
+      await updatePendingCount();
+      setSyncStatus("Delete queued for sync");
+      return { success: true, offline: true };
     } catch (err) {
       console.error("Error deleting service delivery:", err);
       throw err;
@@ -417,22 +350,31 @@ export function useServiceDelivery(options = {}) {
   // Fetch service delivery on mount and when options change
   useEffect(() => {
     fetchServiceDelivery();
+    updatePendingCount();
 
-    // Set up Supabase realtime subscription for service delivery changes
-    const subscription = supabase
-      .channel('service-delivery-changes')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'service_delivery' },
-        (payload) => {
-          console.log('Service delivery change received:', payload);
-          fetchServiceDelivery();
-        }
-      )
+    const subscription = servicesLiveQuery().subscribe({
+      next: (data) => {
+        setServices(Array.isArray(data) ? data : []);
+        setLoading(false);
+      },
+      error: (err) => {
+        console.error("Services live query error:", err);
+        setError(err.message ?? "Failed to read cached services");
+        setLoading(false);
+      },
+    });
+
+    // Supabase realtime subscription to refresh cache when server changes
+    const channel = supabase
+      .channel("service-delivery-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "service_delivery" }, () => {
+        fetchServiceDelivery();
+      })
       .subscribe();
 
     return () => {
       subscription.unsubscribe();
+      channel.unsubscribe();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
@@ -456,5 +398,10 @@ export function useServiceDelivery(options = {}) {
     deleteServiceDelivery,
     getServiceDeliveryById,
     getServiceDeliveryByEnrollmentId,
+    offline: usingOfflineData,
+    pendingCount,
+    syncing,
+    syncStatus,
+    runSync,
   };
 }

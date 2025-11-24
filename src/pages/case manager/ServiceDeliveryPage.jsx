@@ -11,12 +11,49 @@
  */
 
 import ServiceDeliveryTable from "@/components/programs/ServiceDeliveryTable";
+import { useEffect, useRef } from "react";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { fetchAndCacheCasesByType, fetchAndCachePrograms } from "@/services/serviceDeliveryOfflineService";
 
 /**
  * Service Delivery Page Component
  * @returns {JSX.Element} Service delivery page
  */
 export default function ServiceDeliveryPage() {
+  const isOnline = useNetworkStatus();
+  const wasOfflineRef = useRef(!isOnline);
+
+  useEffect(() => {
+    const prefetchData = async () => {
+      if (!isOnline) return;
+      console.log("[ServiceDeliveryPage] Pre-fetching cases and programs...");
+      const caseTypes = ["CICL/CAR", "VAC", "FAC", "FAR", "IVAC"];
+      const promises = caseTypes.map((t) => fetchAndCacheCasesByType(t).catch((e) => console.error(e)));
+      await Promise.all(promises);
+      await fetchAndCachePrograms().catch((e) => console.error(e));
+      console.log("[ServiceDeliveryPage] Pre-fetch complete");
+    };
+
+    prefetchData();
+  }, [isOnline]);
+
+  // Reconnection handling similar to enrollments page
+  useEffect(() => {
+    if (!wasOfflineRef.current && !isOnline) {
+      wasOfflineRef.current = true;
+    } else if (wasOfflineRef.current && isOnline) {
+      sessionStorage.setItem("serviceDelivery.forceSync", "true");
+      window.location.reload();
+    }
+  }, [isOnline]);
+
+  useEffect(() => {
+    const shouldAutoSync = sessionStorage.getItem("serviceDelivery.forceSync");
+    if (shouldAutoSync === "true") {
+      sessionStorage.removeItem("serviceDelivery.forceSync");
+    }
+  }, []);
+
   return (
     <div className="flex-1 space-y-4 p-0 md:px-8">
       {/* Page Header */}

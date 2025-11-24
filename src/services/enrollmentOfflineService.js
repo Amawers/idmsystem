@@ -491,9 +491,44 @@ export async function fetchAndCacheCasesByType(caseType) {
     } else if (caseType === "FAR") {
       await cacheFarCases(data || []);
       console.log(`[Enrollment] Cached ${data?.length || 0} FAR cases`);
+    } else if (caseType === "FAC") {
+      // Cache FAC cases to the existing fac_cases table
+      await offlineCaseDb.transaction("rw", FAC_CASES_TABLE, async () => {
+        await FAC_CASES_TABLE.clear();
+        if (data?.length) {
+          await FAC_CASES_TABLE.bulkPut(data.map(c => ({ ...c, hasPendingWrites: false })));
+        }
+      });
+      console.log(`[Enrollment] Cached ${data?.length || 0} FAC cases`);
+    } else if (caseType === "CICL/CAR") {
+      // Cache CICL/CAR cases to the existing ciclcar_cases table
+      await offlineCaseDb.transaction("rw", CICLCAR_CASES_TABLE, async () => {
+        // Don't clear - preserve any pending writes from ciclcar offline service
+        const existing = await CICLCAR_CASES_TABLE.where("hasPendingWrites").equals(1).toArray();
+        await CICLCAR_CASES_TABLE.clear();
+        if (data?.length) {
+          await CICLCAR_CASES_TABLE.bulkPut(data.map(c => ({ ...c, hasPendingWrites: false })));
+        }
+        // Re-add pending writes
+        for (const pending of existing) {
+          await CICLCAR_CASES_TABLE.put(pending);
+        }
+      });
+      console.log(`[Enrollment] Cached ${data?.length || 0} CICL/CAR cases`);
+    } else if (caseType === "IVAC") {
+      // Cache IVAC cases to the existing ivac_cases table
+      await offlineCaseDb.transaction("rw", IVAC_CASES_TABLE, async () => {
+        const existing = await IVAC_CASES_TABLE.where("hasPendingWrites").equals(1).toArray();
+        await IVAC_CASES_TABLE.clear();
+        if (data?.length) {
+          await IVAC_CASES_TABLE.bulkPut(data.map(c => ({ ...c, hasPendingWrites: false })));
+        }
+        for (const pending of existing) {
+          await IVAC_CASES_TABLE.put(pending);
+        }
+      });
+      console.log(`[Enrollment] Cached ${data?.length || 0} IVAC cases`);
     }
-    // Note: CICL/CAR, FAC, and IVAC data is in their respective tables from other services
-    // We don't cache them again here to avoid duplication
     
     return { success: true, count: data?.length || 0, data: data || [] };
   } catch (err) {

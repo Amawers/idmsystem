@@ -100,6 +100,11 @@ export default function ServiceDeliveryTable() {
     statistics = {},
     deleteServiceDelivery,
     fetchServiceDelivery,
+    pendingCount,
+    runSync,
+    syncing,
+    syncStatus,
+    offline,
   } = useServiceDelivery(filterOptions);
 
   const { programs = [] } = usePrograms({ status: "active" });
@@ -268,7 +273,7 @@ export default function ServiceDeliveryTable() {
                 Track service sessions and attendance records
               </CardDescription>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 items-center">
               <Button 
                 variant="outline" 
                 size="sm"
@@ -279,6 +284,36 @@ export default function ServiceDeliveryTable() {
                 <RefreshCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
                 Refresh
               </Button>
+              {/* Offline sync controls */}
+              <PermissionGuard permission="manage_service_delivery">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={async () => {
+                    try {
+                      setIsRefreshing(true);
+                      if (typeof window !== "undefined" && window.navigator && !window.navigator.onLine) {
+                        toast.error("Cannot sync while offline");
+                        return;
+                      }
+                      if (runSync) await runSync();
+                    } catch (err) {
+                      console.error(err);
+                      toast.error("Sync failed");
+                    } finally {
+                      setIsRefreshing(false);
+                    }
+                  }}
+                >
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Sync
+                </Button>
+                {pendingCount > 0 && (
+                  <Badge variant="secondary" className="ml-2">
+                    {pendingCount} pending
+                  </Badge>
+                )}
+              </PermissionGuard>
               <PermissionGuard permission="create_service_delivery">
                 <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
                   <Plus className="mr-2 h-4 w-4" />
