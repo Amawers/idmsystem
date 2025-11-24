@@ -82,7 +82,6 @@ import { useAuthStore } from "@/store/authStore";
 import { useInventoryOffline, INVENTORY_FORCE_SYNC_KEY } from "@/hooks/useInventoryOffline";
 import useNetworkStatus from "@/hooks/useNetworkStatus";
 import RequestSubmissionDialog from "./RequestSubmissionDialog";
-import PermissionGuard from "@/components/PermissionGuard";
 
 /**
  * Status Badge Component
@@ -956,12 +955,10 @@ export default function StockManagement() {
                   {syncing ? "Syncing..." : "Sync Changes"}
                 </Button>
                 {role === "case_manager" ? (
-                  <PermissionGuard permission="create_resource_request">
-                    <Button onClick={() => setShowRequestDialog(true)} size="sm" className="cursor-pointer">
-                      <PlusCircle className="mr-2 h-4 w-4" />
-                      New Request
-                    </Button>
-                  </PermissionGuard>
+                  <Button onClick={() => setShowRequestDialog(true)} size="sm" className="cursor-pointer">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    New Request
+                  </Button>
                 ) : (
                   <Button onClick={() => setShowAddDialog(true)} size="sm" className="cursor-pointer">
                     <PlusCircle className="mr-2 h-4 w-4" />

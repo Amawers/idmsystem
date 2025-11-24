@@ -311,6 +311,7 @@ export default function ApprovalWorkflowManager() {
   } = useResourceApprovalsOffline();
   const { adjustStock } = useInventoryOffline();
   const { role, user } = useAuthStore();
+  const canSubmitResourceRequest = role === "case_manager";
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -492,7 +493,7 @@ export default function ApprovalWorkflowManager() {
             {syncStatus && <p className="text-[11px] text-muted-foreground">{syncStatus}</p>}
           </div>
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <PermissionGuard permission="create_resource_request">
+            {canSubmitResourceRequest ? (
               <Button
                 variant="default"
                 size="sm"
@@ -502,7 +503,19 @@ export default function ApprovalWorkflowManager() {
                 <Plus className="mr-2 h-4 w-4" />
                 New Request
               </Button>
-            </PermissionGuard>
+            ) : (
+              <PermissionGuard permission="create_resource_request">
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() => setShowNewRequestDialog(true)}
+                  className="cursor-pointer"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  New Request
+                </Button>
+              </PermissionGuard>
+            )}
             <Button
               variant="outline"
               size="sm"
