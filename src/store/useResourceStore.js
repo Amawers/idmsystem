@@ -94,6 +94,12 @@ export const useResourceStore = create((set, get) => ({
 	 */
 	fetchRequests: async (filters = {}) => {
 		set({ loading: true, error: null });
+
+		// Short-circuit when browser is offline to avoid long/hanging network calls
+		if (typeof navigator !== 'undefined' && !navigator.onLine) {
+			set({ loading: false });
+			return;
+		}
 		
 		try {
 			// First, fetch resource requests
@@ -740,6 +746,12 @@ export const useResourceStore = create((set, get) => ({
 	 */
 	fetchTransactions: async (filters = {}) => {
 		set({ loading: true, error: null });
+
+		// Short-circuit when offline to avoid waiting on network requests
+		if (typeof navigator !== 'undefined' && !navigator.onLine) {
+			set({ loading: false });
+			return;
+		}
 		
 		try {
 			let query = supabase
@@ -787,6 +799,12 @@ export const useResourceStore = create((set, get) => ({
 	 */
 	fetchDisbursements: async () => {
 		set({ loading: true, error: null });
+
+		// Avoid remote fetch when offline
+		if (typeof navigator !== 'undefined' && !navigator.onLine) {
+			set({ loading: false });
+			return;
+		}
 		
 		try {
 			const { data, error } = await supabase

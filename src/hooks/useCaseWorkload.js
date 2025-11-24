@@ -1,242 +1,94 @@
 /**
  * @file useCaseWorkload.js
- * @description Custom hook to aggregate case workload data for staff deployment
- * @module hooks/useCaseWorkload
- * 
- * Features:
- * - Fetches and aggregates case counts from all case types (CASE, CICL/CAR, IVAC)
- * - Groups cases by case manager
- * - Calculates workload metrics for staff assignment
- * - Provides real-time data for Resource Allocation > Staff
- * 
- * @returns {Object} Hook state and methods
- * @returns {Array} data - Aggregated case workload by staff member
- * @returns {boolean} loading - Loading state
- * @returns {Error|null} error - Error object if fetch fails
- * @returns {Function} reload - Function to refresh data
+ * @description Offline-aware workload hook backed by Dexie cache.
  */
 
-import { useState, useEffect } from 'react';
-import supabase from '@/../config/supabase';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import useNetworkStatus from "@/hooks/useNetworkStatus";
+import {
+  staffWorkloadLiveQuery,
+  loadStaffWorkloadSnapshot,
+} from "@/services/staffWorkloadOfflineService";
 
-/**
- * Case type definitions for workload calculation
- */
-const CASE_TYPES = {
-  CASE: { table: 'case', label: 'VAC Cases' },
-  CICLCAR: { table: 'ciclcar_case', label: 'CICL/CAR Cases' },
-  FAC: { table: 'fac_case', label: 'FAC Cases' },
-  FAR: { table: 'far_case', label: 'FAR Cases' },
-  IVAC: { table: 'ivac_cases', label: 'IVAC Cases' }
-};
+const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
 
-/**
- * Status priority for workload calculation
- * Higher values = more urgent = higher workload weight
- */
-const STATUS_WEIGHTS = {
-  urgent: 4,
-  high: 3,
-  medium: 2,
-  low: 1,
-  normal: 2,
-  active: 2,
-  pending: 3,
-  closed: 0.5,
-  resolved: 0.5
-};
-
-/**
- * Custom hook to fetch and aggregate case workload data
- */
 export function useCaseWorkload() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [offline, setOffline] = useState(!isBrowserOnline());
+  const [lastSyncedAt, setLastSyncedAt] = useState(null);
+  const [syncStatus, setSyncStatus] = useState(null);
+  const isOnline = useNetworkStatus();
 
-  /**
-   * Fetch case counts by case manager from a specific table
-   * @param {string} tableName - Name of the case table
-   * @returns {Promise<Object>} Case counts grouped by case manager
-   */
-  const fetchCaseCounts = async (tableName) => {
-    try {
-      const { data: cases, error: fetchError } = await supabase
-        .from(tableName)
-        .select('case_manager, status, priority');
-
-      if (fetchError) throw fetchError;
-
-      // Group by case manager and count
-      const countsByManager = {};
-      cases?.forEach(caseItem => {
-        const manager = caseItem.case_manager || 'Unassigned';
-        if (!countsByManager[manager]) {
-          countsByManager[manager] = {
-            total: 0,
-            active: 0,
-            urgent: 0,
-            high: 0,
-            weightedScore: 0
-          };
-        }
-        
-        countsByManager[manager].total++;
-        
-        // Count active cases
-        const status = (caseItem.status || '').toLowerCase();
-        if (['active', 'pending', 'in process', 'filed', 'assessed'].includes(status)) {
-          countsByManager[manager].active++;
-        }
-        
-        // Count by priority
-        const priority = (caseItem.priority || 'normal').toLowerCase();
-        if (priority === 'urgent' || priority === 'critical') {
-          countsByManager[manager].urgent++;
-        }
-        if (priority === 'high') {
-          countsByManager[manager].high++;
-        }
-        
-        // Calculate weighted score
-        const statusWeight = STATUS_WEIGHTS[status] || 2;
-        const priorityWeight = STATUS_WEIGHTS[priority] || 2;
-        countsByManager[manager].weightedScore += (statusWeight + priorityWeight);
-      });
-
-      return countsByManager;
-    } catch (err) {
-      console.error(`Error fetching ${tableName} counts:`, err);
-      return {};
-    }
-  };
-
-  /**
-   * Fetch all case data and aggregate by case manager
-   */
-  const fetchWorkloadData = async () => {
-    setLoading(true);
+  const refresh = useCallback(async () => {
     setError(null);
-
+    setSyncStatus("Refreshing staff workload…");
     try {
-      // First, fetch all users with their roles to identify heads
-      const { data: profiles, error: profileError } = await supabase
-        .from('profile')
-        .select('full_name, role');
-
-      if (profileError) throw profileError;
-
-      // Create a map of full_name to role
-      const roleMap = {};
-      profiles?.forEach(profile => {
-        if (profile.full_name) {
-          roleMap[profile.full_name] = profile.role;
-        }
-      });
-
-      // Fetch counts from all case types
-      const [
-        caseCounts,
-        ciclcarCounts,
-        facCounts,
-        farCounts,
-        ivacCounts
-      ] = await Promise.all([
-        fetchCaseCounts('case'),
-        fetchCaseCounts('ciclcar_case'),
-        fetchCaseCounts('fac_case'),
-        fetchCaseCounts('far_case'),
-        fetchCaseCounts('ivac_cases')
-      ]);
-
-      // Merge all counts by case manager
-      const allManagers = new Set([
-        ...Object.keys(caseCounts),
-        ...Object.keys(ciclcarCounts),
-        ...Object.keys(facCounts),
-        ...Object.keys(farCounts),
-        ...Object.keys(ivacCounts)
-      ]);
-
-      const workloadData = Array.from(allManagers)
-        // Filter out heads based on role
-        .filter(manager => {
-          const role = roleMap[manager];
-          return role !== 'head';
-        })
-        .map(manager => {
-        const caseData = caseCounts[manager] || { total: 0, active: 0, urgent: 0, high: 0, weightedScore: 0 };
-        const ciclcarData = ciclcarCounts[manager] || { total: 0, active: 0, urgent: 0, high: 0, weightedScore: 0 };
-        const facData = facCounts[manager] || { total: 0, active: 0, urgent: 0, high: 0, weightedScore: 0 };
-        const farData = farCounts[manager] || { total: 0, active: 0, urgent: 0, high: 0, weightedScore: 0 };
-        const ivacData = ivacCounts[manager] || { total: 0, active: 0, urgent: 0, high: 0, weightedScore: 0 };
-
-        // Calculate totals
-        const totalCases = caseData.total + ciclcarData.total + facData.total + farData.total + ivacData.total;
-        const activeCases = caseData.active + ciclcarData.active + facData.active + farData.active + ivacData.active;
-        const urgentCases = caseData.urgent + ciclcarData.urgent + facData.urgent + farData.urgent + ivacData.urgent;
-        const highPriorityCases = caseData.high + ciclcarData.high + facData.high + farData.high + ivacData.high;
-        const weightedScore = caseData.weightedScore + ciclcarData.weightedScore + facData.weightedScore + farData.weightedScore + ivacData.weightedScore;
-
-        // Calculate workload percentage (normalized to 100%)
-        // Formula: (weighted score / ideal max workload) * 100
-        // Assume ideal max is 50 weighted points = 100% workload
-        const workloadPercentage = Math.min(100, Math.round((weightedScore / 50) * 100));
-
-        // Determine availability status based on workload
-        let availabilityStatus;
-        if (workloadPercentage >= 90) {
-          availabilityStatus = 'unavailable';
-        } else if (workloadPercentage >= 70) {
-          availabilityStatus = 'busy';
-        } else if (workloadPercentage >= 40) {
-          availabilityStatus = 'partially_available';
-        } else {
-          availabilityStatus = 'available';
-        }
-
-        return {
-          case_manager: manager,
-          staff_name: manager,
-          staff_role: 'Case Manager', // Can be enhanced with actual role lookup
-          total_cases: totalCases,
-          active_cases: activeCases,
-          urgent_cases: urgentCases,
-          high_priority_cases: highPriorityCases,
-          weighted_score: weightedScore,
-          workload_percentage: workloadPercentage,
-          availability_status: availabilityStatus,
-          breakdown: {
-            vac: caseData.total,
-            ciclcar: ciclcarData.total,
-            fac: facData.total,
-            far: farData.total,
-            ivac: ivacData.total
-          }
-        };
-      });
-
-      // Sort by workload (highest first)
-      workloadData.sort((a, b) => b.workload_percentage - a.workload_percentage);
-
-      setData(workloadData);
+      const result = await loadStaffWorkloadSnapshot();
+      setOffline(Boolean(result.offline));
+      if (result.lastSyncedAt) {
+        setLastSyncedAt(result.lastSyncedAt);
+      }
+      setSyncStatus(result.offline ? "Using offline data" : "Staff workload updated");
+      return result;
     } catch (err) {
-      console.error('Error fetching case workload data:', err);
+      console.error("Failed to refresh staff workload snapshot", err);
       setError(err);
+      setOffline(true);
+      setSyncStatus(err?.message ?? "Refresh failed");
+      return { success: false, error: err };
     } finally {
       setLoading(false);
+      setTimeout(() => setSyncStatus(null), 2500);
     }
-  };
-
-  // Initial fetch
-  useEffect(() => {
-    fetchWorkloadData();
   }, []);
+
+  useEffect(() => {
+    const subscription = staffWorkloadLiveQuery().subscribe({
+      next: (rows) => {
+        setData(Array.isArray(rows) ? rows : []);
+        setLoading(false);
+      },
+      error: (err) => {
+        setError(err);
+        setLoading(false);
+      },
+    });
+
+    refresh();
+
+    return () => subscription.unsubscribe();
+  }, [refresh]);
+
+  useEffect(() => {
+    if (!isOnline) {
+      setOffline(true);
+      return;
+    }
+
+    if (offline) {
+      refresh();
+    }
+  }, [isOnline, offline, refresh]);
+
+  const lastSyncedDisplay = useMemo(() => {
+    if (!lastSyncedAt) return null;
+    try {
+      return new Date(lastSyncedAt).toLocaleString();
+    } catch (error) {
+      return lastSyncedAt;
+    }
+  }, [lastSyncedAt]);
 
   return {
     data,
     loading,
     error,
-    reload: fetchWorkloadData
+    reload: refresh,
+    offline,
+    lastSyncedAt,
+    lastSyncedDisplay,
+    syncStatus,
   };
 }

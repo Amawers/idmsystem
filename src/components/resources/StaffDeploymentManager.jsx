@@ -20,7 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Users, Plus, AlertCircle, CheckCircle, RefreshCw } from "lucide-react";
+import { AlertCircle, RefreshCw, WifiOff } from "lucide-react";
 import { useCaseWorkload } from "@/hooks/useCaseWorkload";
 
 function StaffAvailabilityCard({ staff }) {
@@ -103,11 +103,13 @@ export default function StaffDeploymentManager() {
     data: caseWorkloadData, 
     loading: workloadLoading, 
     error: workloadError,
-    reload: reloadWorkload 
+    reload: reloadWorkload,
+    offline: workloadOffline,
+    lastSyncedDisplay,
+    syncStatus,
   } = useCaseWorkload();
 
   const [staffList, setStaffList] = useState([]);
-  const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({
     total: 0,
     available: 0,
@@ -146,16 +148,27 @@ export default function StaffDeploymentManager() {
 
   return (
     <div className="space-y-4">
-      {/* Refresh Button */}
-      <div className="flex justify-end">
+      {/* Sync + Status */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          {workloadOffline && (
+            <Badge variant="secondary" className="text-[10px] font-semibold uppercase">
+              <WifiOff className="mr-1 h-3 w-3" /> Offline Mode
+            </Badge>
+          )}
+          {syncStatus && <span className="text-[11px] text-muted-foreground">{syncStatus}</span>}
+          {lastSyncedDisplay && (
+            <span className="text-[11px]">Last synced {lastSyncedDisplay}</span>
+          )}
+        </div>
         <Button 
           onClick={handleRefresh} 
-          disabled={loading || workloadLoading}
+          disabled={workloadLoading}
           variant="outline"
           size="sm"
           className="cursor-pointer"
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${(loading || workloadLoading) ? 'animate-spin' : ''}`} />
+          <RefreshCw className={`h-4 w-4 mr-2 ${workloadLoading ? 'animate-spin' : ''}`} />
           Refresh Data
         </Button>
       </div>

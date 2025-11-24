@@ -266,10 +266,13 @@ export function useResourceAllocations(options = {}) {
 		error,
 		
 		// Actions
-		refresh: () => {
-			fetchTransactions({ program_id });
-			fetchRequests({ program_id, barangay, dateRange });
-			fetchDisbursements();
+		refresh: async () => {
+			// Return a promise that resolves when all fetchers complete
+			return Promise.all([
+				fetchTransactions({ program_id }),
+				fetchRequests({ program_id, barangay, dateRange }),
+				fetchDisbursements(),
+			]);
 		},
 	};
 }

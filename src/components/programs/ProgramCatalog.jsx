@@ -122,6 +122,16 @@ export default function ProgramCatalog() {
     offline,
   } = usePrograms(filterOptions);
   const isOnline = useNetworkStatus();
+  
+  useEffect(() => {
+    console.log("[ProgramCatalog] network/debug", {
+      isOnline,
+      offline,
+      pendingCount,
+      syncing,
+      syncStatus,
+    });
+  }, [isOnline, offline, pendingCount, syncing, syncStatus]);
   const autoSyncRef = useRef(false);
   const enrollmentPrefetchRef = useRef(false);
 
