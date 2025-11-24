@@ -127,7 +127,9 @@ export function useInventoryOffline() {
       const result = await operation();
       await hydratePendingCount();
       setSyncStatus(statusMessage);
-      triggerForceSyncReload();
+      if (isBrowserOnline()) {
+        triggerForceSyncReload();
+      }
       return result;
     },
     [hydratePendingCount, triggerForceSyncReload],
