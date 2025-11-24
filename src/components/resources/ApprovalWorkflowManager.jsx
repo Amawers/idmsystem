@@ -10,7 +10,7 @@
  * - Bulk approval actions
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +43,8 @@ import {
   ChevronRight,
   RefreshCw,
   Plus,
+  CloudUpload,
+  WifiOff,
 } from "lucide-react";
 import {
   Select,
@@ -51,8 +53,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useResourceStore } from "@/store/useResourceStore";
 import { useAuthStore } from "@/store/authStore";
+import { useResourceApprovalsOffline, APPROVALS_FORCE_SYNC_KEY } from "@/hooks/useResourceApprovalsOffline";
+import { useInventoryOffline } from "@/hooks/useInventoryOffline";
 import RequestSubmissionDialog from "./RequestSubmissionDialog";
 import PermissionGuard from "@/components/PermissionGuard";
 
@@ -94,7 +97,7 @@ function RequestDetailsDialog({ request, open, onOpenChange, onApprove, onReject
   const handleApprove = async () => {
     setActionLoading(true);
     try {
-      await onApprove(request.id, notes);
+      await onApprove(request, notes);
       setNotes("");
       onOpenChange(false);
     } finally {
@@ -109,7 +112,7 @@ function RequestDetailsDialog({ request, open, onOpenChange, onApprove, onReject
     }
     setActionLoading(true);
     try {
-      await onReject(request.id, notes);
+      await onReject(request, notes);
       setNotes("");
       onOpenChange(false);
     } finally {
@@ -183,7 +186,7 @@ function RequestDetailsDialog({ request, open, onOpenChange, onApprove, onReject
               </div>
               <div>
                 <Label className="text-[10px] text-muted-foreground">Total Amount</Label>
-                <p className="text-sm font-bold">₱{request.total_amount?.toLocaleString()}</p>
+                <p className="text-xs font-medium">₱{request.total_amount?.toLocaleString()}</p>
               </div>
             </div>
           </div>
@@ -210,7 +213,15 @@ function RequestDetailsDialog({ request, open, onOpenChange, onApprove, onReject
             <div className="space-y-1">
               <Label className="text-xs">Justification</Label>
               <div className="text-xs p-2 bg-muted/50 rounded min-h-[60px]">
-                {request.justification}
+                {request.justification || "N/A"}
+              </div>
+            </div>
+
+            {/* Additional Notes */}
+            <div className="space-y-1">
+              <Label className="text-xs">Additional Notes</Label>
+              <div className="text-xs p-2 bg-muted/50 rounded min-h-[50px]">
+                {request.additional_notes || "None"}
               </div>
             </div>
 
@@ -283,28 +294,59 @@ export default function ApprovalWorkflowManager() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(8);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [autoSyncPending, setAutoSyncPending] = useState(false);
 
   const {
-    requests: storeRequests,
-    updateRequestStatus,
-    fetchRequests,
+    requests,
+    pendingApprovals,
     submitRequest,
-    updateStock,
+    updateRequestStatus,
+    refreshRequests,
     loading,
-  } = useResourceStore();
+    pendingCount: pendingQueueCount,
+    offline,
+    syncStatus,
+    syncing,
+    runSync,
+  } = useResourceApprovalsOffline();
+  const { adjustStock } = useInventoryOffline();
+  const { role, user } = useAuthStore();
 
-  const { role } = useAuthStore();
-
-  // Fetch requests on component mount
   useEffect(() => {
-    fetchRequests();
-  }, [fetchRequests]);
+    if (typeof window === "undefined") return;
+    const flagged = window.sessionStorage.getItem(APPROVALS_FORCE_SYNC_KEY);
+    if (flagged === "true") {
+      window.sessionStorage.removeItem(APPROVALS_FORCE_SYNC_KEY);
+      setAutoSyncPending(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!autoSyncPending) return;
+    let cancelled = false;
+
+    const syncPendingOps = async () => {
+      try {
+        await runSync();
+      } catch (error) {
+        console.error("Approvals auto-sync failed", error);
+      } finally {
+        if (!cancelled) setAutoSyncPending(false);
+      }
+    };
+
+    syncPendingOps();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [autoSyncPending, runSync]);
 
   // Handle refresh
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await fetchRequests();
+      await refreshRequests();
     } catch (error) {
       console.error("Error refreshing requests:", error);
     } finally {
@@ -313,14 +355,27 @@ export default function ApprovalWorkflowManager() {
   };
 
   // Filter requests based on user role and filter selection
-  const filteredRequests = storeRequests.filter(req => {
-    if (filter === "pending" && req.status !== "submitted") return false;
-    if (filter === "approved" && !["head_approved", "disbursed"].includes(req.status)) return false;
-    if (filter === "rejected" && req.status !== "rejected") return false;
-    return true;
-  });
+  const filteredRequests = useMemo(() => {
+    return requests.filter((req) => {
+      if (filter === "pending" && req.status !== "submitted") return false;
+      if (filter === "approved" && !["head_approved", "disbursed"].includes(req.status)) return false;
+      if (filter === "rejected" && req.status !== "rejected") return false;
+      return true;
+    });
+  }, [filter, requests]);
 
-  const pendingCount = storeRequests.filter(r => r.status === "submitted").length;
+  const pendingFilterCount = useMemo(
+    () => requests.filter((r) => r.status === "submitted").length,
+    [requests],
+  );
+  const approvedCount = useMemo(
+    () => requests.filter((r) => ["head_approved", "disbursed"].includes(r.status)).length,
+    [requests],
+  );
+  const rejectedCount = useMemo(
+    () => requests.filter((r) => r.status === "rejected").length,
+    [requests],
+  );
 
   // Pagination calculations
   const totalFiltered = filteredRequests.length;
@@ -342,36 +397,27 @@ export default function ApprovalWorkflowManager() {
     setShowDetailsDialog(true);
   };
 
-  const handleApprove = async (requestId, notes) => {
+  const handleApprove = async (request, notes) => {
+    if (!request) return;
     try {
-      // Find the request to get item_id and quantity
-      const request = storeRequests.find(r => r.id === requestId);
-      
-      if (!request) {
-        throw new Error("Request not found");
-      }
+      await updateRequestStatus(request.id ?? null, "head_approved", notes, {
+        localId: request.id ? null : request.localId,
+      });
 
-      // Update the request status to head_approved (matching DB constraint)
-      await updateRequestStatus(requestId, "head_approved", notes);
-
-      // If the request has an item_id (linked to inventory), deduct the stock
       if (request.item_id && request.quantity) {
         try {
-          await updateStock(
-            request.item_id,
-            -Math.abs(request.quantity), // Negative to deduct
-            'allocation',
-            `Stock allocated for approved request ${request.request_number}${notes ? ': ' + notes : ''}`
-          );
+          await adjustStock({
+            itemId: request.item_id,
+            quantity: -Math.abs(request.quantity),
+            transactionType: "stock_out",
+            notes: `Stock allocated for approved request ${request.request_number ?? request.local_request_number ?? ""}${notes ? ": " + notes : ""}`.trim(),
+            performedBy: user,
+          });
         } catch (stockError) {
           console.error("Error updating stock:", stockError);
-          // Show warning but don't fail the approval
           alert(`Request approved, but stock deduction failed: ${stockError.message}. Please update inventory manually.`);
         }
       }
-
-      // Refresh the requests list
-      await fetchRequests();
     } catch (error) {
       console.error("Error approving request:", error);
       alert(`Failed to approve request: ${error.message}`);
@@ -379,16 +425,17 @@ export default function ApprovalWorkflowManager() {
     }
   };
 
-  const handleReject = async (requestId, notes) => {
-    await updateRequestStatus(requestId, "rejected", notes);
+  const handleReject = async (request, notes) => {
+    if (!request) return;
+    await updateRequestStatus(request.id ?? null, "rejected", notes, {
+      localId: request.id ? null : request.localId,
+    });
   };
 
   const handleNewRequest = async (requestData) => {
     try {
       await submitRequest(requestData);
       setShowNewRequestDialog(false);
-      // Refresh the list to show the new request
-      await fetchRequests();
     } catch (error) {
       console.error("Error submitting request:", error);
       alert("Failed to submit request: " + error.message);
@@ -398,60 +445,85 @@ export default function ApprovalWorkflowManager() {
   return (
     <div className="space-y-4">
       {/* Filters and Action Buttons */}
-      <div className="flex items-center justify-between">
-        <div className="flex gap-2">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex flex-wrap gap-2">
           <Button
             variant={filter === "all" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("all")}
           >
-            All ({storeRequests.length})
+            All ({requests.length})
           </Button>
           <Button
             variant={filter === "pending" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("pending")}
           >
-            Pending ({pendingCount})
+            Pending ({pendingFilterCount})
           </Button>
           <Button
             variant={filter === "approved" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("approved")}
           >
-            Approved ({storeRequests.filter(r => ["head_approved", "disbursed"].includes(r.status)).length})
+            Approved ({approvedCount})
           </Button>
           <Button
             variant={filter === "rejected" ? "default" : "outline"}
             size="sm"
             onClick={() => setFilter("rejected")}
           >
-            Rejected ({storeRequests.filter(r => r.status === "rejected").length})
+            Rejected ({rejectedCount})
           </Button>
         </div>
-        
-        <div className="flex gap-2">
-          <PermissionGuard permission="create_resource_request">
+
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            {offline && (
+              <Badge variant="secondary" className="text-[10px] font-medium uppercase">
+                <WifiOff className="mr-1 h-3 w-3" /> Offline Mode
+              </Badge>
+            )}
+            {pendingQueueCount > 0 && (
+              <Badge variant="outline" className="text-[10px] font-medium">
+                {pendingQueueCount} pending change{pendingQueueCount !== 1 ? "s" : ""}
+              </Badge>
+            )}
+            {syncStatus && <p className="text-[11px] text-muted-foreground">{syncStatus}</p>}
+          </div>
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <PermissionGuard permission="create_resource_request">
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setShowNewRequestDialog(true)}
+                className="cursor-pointer"
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                New Request
+              </Button>
+            </PermissionGuard>
             <Button
-              variant="default"
+              variant="outline"
               size="sm"
-              onClick={() => setShowNewRequestDialog(true)}
+              onClick={handleRefresh}
+              disabled={isRefreshing || loading}
               className="cursor-pointer"
             >
-              <Plus className="mr-2 h-4 w-4" />
-              New Request
+              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+              Refresh
             </Button>
-          </PermissionGuard>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleRefresh}
-            disabled={isRefreshing || loading}
-            className="cursor-pointer"
-          >
-            <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => runSync().catch((err) => console.error("Approvals sync failed", err))}
+              disabled={pendingQueueCount === 0 || syncing}
+              className="cursor-pointer"
+            >
+              <CloudUpload className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+              {syncing ? "Syncing..." : "Sync Changes"}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -490,8 +562,10 @@ export default function ApprovalWorkflowManager() {
                 </TableRow>
               ) : (
                 pageRequests.map((request) => (
-                  <TableRow key={request.id}>
-                    <TableCell className="font-medium">{request.request_number}</TableCell>
+                  <TableRow key={request.id ?? `local-${request.localId}`}>
+                    <TableCell className="font-medium">
+                      {request.request_number ?? request.local_request_number ?? "Pending Number"}
+                    </TableCell>
                     <TableCell>
                       <div className="max-w-xs truncate">{request.item_description}</div>
                     </TableCell>
