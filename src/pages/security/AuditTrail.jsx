@@ -5,6 +5,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { WifiOff } from "lucide-react";
 import supabase from "@/../config/supabase";
 import { useAuditLogs } from "@/hooks/useAuditLogs";
 import { AUDIT_CATEGORIES, AUDIT_SEVERITY } from "@/lib/auditLog";
@@ -79,8 +80,26 @@ export default function AuditTrail() {
 	// Use audit logs hook
 	const { data, count, loading, error, reload, setFilters } = useAuditLogs(filterState);
 
-	// Real-time subscription for new audit logs
+	// Online state
+	const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+
 	useEffect(() => {
+		const goOnline = () => setIsOnline(true);
+		const goOffline = () => setIsOnline(false);
+
+		window.addEventListener("online", goOnline);
+		window.addEventListener("offline", goOffline);
+
+		return () => {
+			window.removeEventListener("online", goOnline);
+			window.removeEventListener("offline", goOffline);
+		};
+	}, []);
+
+	// Real-time subscription for new audit logs (only when online)
+	useEffect(() => {
+		if (!isOnline) return;
+
 		const channel = supabase
 			.channel("audit_log_changes")
 			.on(
@@ -103,7 +122,7 @@ export default function AuditTrail() {
 		return () => {
 			supabase.removeChannel(channel);
 		};
-	}, [reload]);
+	}, [reload, isOnline]);
 
 	// Handle date range preset changes
 	useEffect(() => {
@@ -294,6 +313,22 @@ export default function AuditTrail() {
 
 	const hasNextPage = currentPage < totalPages;
 	const hasPrevPage = currentPage > 1;
+
+	// If offline, show a focused offline message and hide controls
+	if (!isOnline) {
+		return (
+			<div className="px-4 lg:px-6 py-12 flex items-center justify-center">
+				<div className="max-w-md w-full text-center space-y-4">
+					<div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-muted/20">
+						<WifiOff className="h-10 w-10 text-muted-foreground" />
+					</div>
+					<h2 className="text-lg font-semibold">You’re offline</h2>
+					<p className="text-sm text-muted-foreground">Audit Trail requires an internet connection.</p>
+					<p className="text-sm text-muted-foreground">Viewing will resume automatically when you are back online.</p>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<>

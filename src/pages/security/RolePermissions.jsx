@@ -47,11 +47,27 @@ import {
 	Search,
 	UserCog,
 	RefreshCw,
+	WifiOff,
 } from "lucide-react";
 import { toast } from "sonner";
 import HiddenCasesManager from "./HiddenCasesManager";
 
 export default function RolePermissions() {
+	// Online state
+	const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+
+	useEffect(() => {
+		const goOnline = () => setIsOnline(true);
+		const goOffline = () => setIsOnline(false);
+
+		window.addEventListener("online", goOnline);
+		window.addEventListener("offline", goOffline);
+
+		return () => {
+			window.removeEventListener("online", goOnline);
+			window.removeEventListener("offline", goOffline);
+		};
+	}, []);
 	// ================= STATE MANAGEMENT =================
 	const currentUser = useAuthStore((state) => state.user);
 	
@@ -70,10 +86,11 @@ export default function RolePermissions() {
 
 	// ================= LOAD DATA FROM DATABASE =================
 	useEffect(() => {
+		if (!isOnline) return;
 		loadPermissions();
 		loadUsers();
 		loadUserPermissions();
-	}, []);
+	}, [isOnline]);
 
 	// Fetch all available permissions
 	const loadPermissions = async () => {
@@ -134,23 +151,23 @@ export default function RolePermissions() {
 					)
 				`);
 
-			if (error) throw error;
+				if (error) throw error;
 
-			// Organize by user_id
-			const permsByUser = {};
-			(data || []).forEach((up) => {
-				if (!permsByUser[up.user_id]) {
-					permsByUser[up.user_id] = [];
+				// Organize by user_id
+				const permsByUser = {};
+				(data || []).forEach((up) => {
+					if (!permsByUser[up.user_id]) {
+						permsByUser[up.user_id] = [];
+					}
+					permsByUser[up.user_id].push(up);
+				});
+				setUserPermissions(permsByUser);
+				} catch (err) {
+					console.error("Error loading user permissions:", err);
 				}
-				permsByUser[up.user_id].push(up);
-			});
-			setUserPermissions(permsByUser);
-		} catch (err) {
-			console.error("Error loading user permissions:", err);
-		}
-	};
+			};
 
-	// ================= FILTERING =================
+		// ================= FILTERING =================
 	const filteredUsers = users.filter((user) => {
 		// Only show case managers, not heads
 		if (user.role !== "case_manager") return false;
@@ -360,6 +377,22 @@ export default function RolePermissions() {
 	};
 
 	const hasPendingChanges = Object.keys(pendingChanges).length > 0;
+
+	// If offline, show focused offline message and hide all controls
+	if (!isOnline) {
+		return (
+			<div className="px-4 lg:px-6 py-12 flex items-center justify-center">
+				<div className="max-w-md w-full text-center space-y-4">
+					<div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-muted/20">
+						<WifiOff className="h-10 w-10 text-muted-foreground" />
+					</div>
+					<h2 className="text-lg font-semibold">You’re offline</h2>
+					<p className="text-sm text-muted-foreground">Role Permissions requires an internet connection.</p>
+					<p className="text-sm text-muted-foreground">Viewing and changes will resume when you are back online.</p>
+				</div>
+			</div>
+		);
+	}
 
 	// ================= RENDER =================
 	return (
