@@ -410,7 +410,7 @@ export default function RolePermissions() {
 				<Button
 					variant="outline"
 					size="sm"
-					onClick={handleRefresh}
+					onClick={() => window.location.reload()}
 					disabled={refreshing}
 				>
 					<RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
