@@ -11,7 +11,7 @@
  */
 
 import ServiceDeliveryTable from "@/components/programs/ServiceDeliveryTable";
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { fetchAndCacheCasesByType, fetchAndCachePrograms } from "@/services/serviceDeliveryOfflineService";
 
@@ -22,6 +22,8 @@ import { fetchAndCacheCasesByType, fetchAndCachePrograms } from "@/services/serv
 export default function ServiceDeliveryPage() {
   const isOnline = useNetworkStatus();
   const wasOfflineRef = useRef(!isOnline);
+  const [shouldAutoSync, setShouldAutoSync] = useState(false);
+  const handleAutoSyncHandled = useCallback(() => setShouldAutoSync(false), []);
 
   useEffect(() => {
     const prefetchData = async () => {
@@ -48,9 +50,10 @@ export default function ServiceDeliveryPage() {
   }, [isOnline]);
 
   useEffect(() => {
-    const shouldAutoSync = sessionStorage.getItem("serviceDelivery.forceSync");
-    if (shouldAutoSync === "true") {
+    const flagged = sessionStorage.getItem("serviceDelivery.forceSync");
+    if (flagged === "true") {
       sessionStorage.removeItem("serviceDelivery.forceSync");
+      setShouldAutoSync(true);
     }
   }, []);
 
@@ -65,7 +68,10 @@ export default function ServiceDeliveryPage() {
       </div>
 
       {/* Service Delivery Component */}
-      <ServiceDeliveryTable />
+      <ServiceDeliveryTable
+        autoSync={shouldAutoSync}
+        onAutoSyncHandled={handleAutoSyncHandled}
+      />
     </div>
   );
 }

@@ -35,7 +35,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { useServiceDelivery } from "@/hooks/useServiceDelivery";
 import { useCaseManagers } from "@/store/useCaseManagerStore";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -66,6 +65,7 @@ const updateServiceDeliverySchema = z.object({
  * @param {Function} props.onOpenChange - Dialog state change handler
  * @param {Object} props.serviceDelivery - Service delivery record to edit
  * @param {Function} props.onSuccess - Callback function called after successful update
+ * @param {Function} props.onUpdate - Handler that persists the update (injected from parent hook)
  * @returns {JSX.Element}
  */
 export default function UpdateServiceDeliveryDialog({
@@ -73,11 +73,11 @@ export default function UpdateServiceDeliveryDialog({
   onOpenChange,
   serviceDelivery,
   onSuccess,
+  onUpdate,
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [serviceDate, setServiceDate] = useState(new Date());
 
-  const { updateServiceDelivery } = useServiceDelivery();
   const { caseManagers, loading: caseManagersLoading } = useCaseManagers();
 
   const {
@@ -151,7 +151,11 @@ export default function UpdateServiceDeliveryDialog({
         next_steps: data.next_steps || null,
       };
 
-      await updateServiceDelivery(serviceDelivery.id, updates);
+      if (!onUpdate) {
+        throw new Error("Missing onUpdate handler for service delivery dialog");
+      }
+
+      await onUpdate(serviceDelivery.id, updates);
 
       toast.success("Service delivery updated successfully");
       onOpenChange(false);

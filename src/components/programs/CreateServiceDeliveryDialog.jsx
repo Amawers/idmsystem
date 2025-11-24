@@ -36,7 +36,6 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
-import { useServiceDelivery } from "@/hooks/useServiceDelivery";
 import { useEnrollments } from "@/hooks/useEnrollments";
 import { useCaseManagers } from "@/store/useCaseManagerStore";
 import { CalendarIcon, Loader2 } from "lucide-react";
@@ -67,15 +66,15 @@ const serviceDeliverySchema = z.object({
  * @param {Object} props
  * @param {boolean} props.open - Dialog open state
  * @param {Function} props.onOpenChange - Dialog state change handler
- * @param {Function} props.onSuccess - Callback function called after successful creation
+ * @param {Function} props.onSuccess - Optional callback after successful creation
+ * @param {Function} props.onCreate - Handler that persists the new service delivery (supplied by parent hook)
  * @returns {JSX.Element}
  */
-export default function CreateServiceDeliveryDialog({ open, onOpenChange, onSuccess }) {
+export default function CreateServiceDeliveryDialog({ open, onOpenChange, onSuccess, onCreate }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
   const [serviceDate, setServiceDate] = useState(new Date());
 
-  const { createServiceDelivery } = useServiceDelivery();
   // Hook already uses offline cache via enrollmentsLiveQuery
   const { enrollments = [], loading: enrollmentsLoading } = useEnrollments({ status: "active" });
   const { caseManagers, loading: caseManagersLoading } = useCaseManagers();
@@ -160,7 +159,11 @@ export default function CreateServiceDeliveryDialog({ open, onOpenChange, onSucc
         next_steps: data.next_steps || null,
       };
 
-      await createServiceDelivery(serviceData);
+      if (!onCreate) {
+        throw new Error("Missing onCreate handler for service delivery dialog");
+      }
+
+      await onCreate(serviceData);
 
       toast.success("Service delivery logged successfully");
       reset();

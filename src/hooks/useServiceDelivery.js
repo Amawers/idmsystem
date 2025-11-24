@@ -16,20 +16,18 @@
 
 import { useState, useEffect, useCallback } from "react";
 import supabase from "@/../config/supabase";
-import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
-import { useAuthStore } from "@/store/authStore";
 import {
   servicesLiveQuery,
   loadRemoteSnapshotIntoCache,
   getPendingOperationCount,
   syncServiceDeliveryQueue,
   createOrUpdateLocalServiceDelivery,
-  deleteServiceDeliveryNow,
   markLocalDelete,
   getCachedCasesByType,
   getCachedPrograms,
   fetchAndCacheCasesByType,
   fetchAndCachePrograms,
+  upsertServiceDeliveryRecords,
 } from "@/services/serviceDeliveryOfflineService";
 
 const SERVICE_SELECT = `
@@ -115,6 +113,19 @@ export function useServiceDelivery(options = {}) {
     setPendingCount(count);
   }, []);
 
+  const enqueueAndReloadWhenOnline = useCallback(
+    async (operation) => {
+      await operation();
+      await updatePendingCount();
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("serviceDelivery.forceSync", "true");
+        window.location.reload();
+      }
+      return { success: true, offline: true };
+    },
+    [updatePendingCount],
+  );
+
   const runSync = useCallback(async () => {
     if (!navigator.onLine) {
       setSyncStatus("Cannot sync while offline");
@@ -177,8 +188,6 @@ export function useServiceDelivery(options = {}) {
    */
   const createServiceDelivery = async (serviceData) => {
     try {
-      const { user } = useAuthStore.getState();
-
       const formattedData = {
         enrollment_id: serviceData.enrollment_id,
         case_id: serviceData.case_id,
@@ -195,47 +204,12 @@ export function useServiceDelivery(options = {}) {
         milestones_achieved: serviceData.milestones_achieved || [],
         next_steps: serviceData.next_steps || null,
         delivered_by_name: serviceData.delivered_by_name || null,
-        created_by: user?.id ?? null,
       };
 
-      // Try online-first
       if (navigator.onLine) {
-        try {
-          const { data, error } = await supabase
-            .from("service_delivery")
-            .insert([formattedData])
-            .select(SERVICE_SELECT)
-            .single();
-
-          if (error) throw error;
-
-          await createAuditLog({
-            actionType: AUDIT_ACTIONS.CREATE_SERVICE_DELIVERY,
-            actionCategory: AUDIT_CATEGORIES.PROGRAM,
-            description: `Logged service delivery for ${data.beneficiary_name}`,
-            resourceType: "service_delivery",
-            resourceId: data.id,
-            metadata: {
-              beneficiaryName: data.beneficiary_name,
-              caseId: data.case_id,
-              caseNumber: data.case_number,
-              programName: data.program_name,
-              serviceDate: data.service_date,
-              attendance: data.attendance,
-              attendanceStatus: data.attendance_status,
-              deliveredBy: data.delivered_by_name,
-            },
-            severity: "info",
-          });
-
-          await fetchServiceDelivery();
-          return data;
-        } catch (onlineErr) {
-          console.warn("Online create failed, falling back to offline:", onlineErr);
-        }
+        return enqueueAndReloadWhenOnline(() => createOrUpdateLocalServiceDelivery(formattedData));
       }
 
-      // Offline: queue locally
       await createOrUpdateLocalServiceDelivery(formattedData);
       await updatePendingCount();
       setSyncStatus("Service delivery queued for sync");
@@ -259,23 +233,7 @@ export function useServiceDelivery(options = {}) {
       Object.keys(formattedUpdates).forEach((k) => { if (formattedUpdates[k] === undefined) delete formattedUpdates[k]; });
 
       if (navigator.onLine) {
-        try {
-          const { data, error } = await supabase.from("service_delivery").update(formattedUpdates).eq("id", serviceId).select(SERVICE_SELECT).single();
-          if (error) throw error;
-          await createAuditLog({
-            actionType: AUDIT_ACTIONS.UPDATE_SERVICE_DELIVERY,
-            actionCategory: AUDIT_CATEGORIES.PROGRAM,
-            description: `Updated service delivery for ${data.beneficiary_name}`,
-            resourceType: "service_delivery",
-            resourceId: serviceId,
-            metadata: { beneficiaryName: data.beneficiary_name, caseId: data.case_id, programName: data.program_name, serviceDate: data.service_date },
-            severity: "info",
-          });
-          await fetchServiceDelivery();
-          return data;
-        } catch (onlineErr) {
-          console.warn("Online update failed, falling back to offline:", onlineErr);
-        }
+        return enqueueAndReloadWhenOnline(() => createOrUpdateLocalServiceDelivery(formattedUpdates, serviceId));
       }
 
       await createOrUpdateLocalServiceDelivery(formattedUpdates, serviceId);
@@ -296,27 +254,8 @@ export function useServiceDelivery(options = {}) {
    */
   const deleteServiceDelivery = async (serviceId) => {
     try {
-      const serviceToDelete = services.find((s) => s.id === serviceId);
-
       if (navigator.onLine) {
-        try {
-          await deleteServiceDeliveryNow(serviceId);
-          if (serviceToDelete) {
-            await createAuditLog({
-              actionType: AUDIT_ACTIONS.DELETE_SERVICE_DELIVERY,
-              actionCategory: AUDIT_CATEGORIES.PROGRAM,
-              description: `Deleted service delivery for ${serviceToDelete.beneficiary_name}`,
-              resourceType: "service_delivery",
-              resourceId: serviceId,
-              metadata: { beneficiaryName: serviceToDelete.beneficiary_name, caseId: serviceToDelete.case_id, caseNumber: serviceToDelete.case_number, programName: serviceToDelete.program_name },
-              severity: "warning",
-            });
-          }
-          await fetchServiceDelivery();
-          return { success: true };
-        } catch (onlineErr) {
-          console.warn("Online delete failed, falling back to offline:", onlineErr);
-        }
+        return enqueueAndReloadWhenOnline(() => markLocalDelete(serviceId));
       }
 
       await markLocalDelete(serviceId);

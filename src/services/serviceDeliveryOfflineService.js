@@ -38,6 +38,51 @@ const SERVICE_SELECT = `
 
 const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
 const nowTs = () => Date.now();
+const SERVICE_REMOTE_EXCLUDED_FIELDS = ["created_by"];
+
+function sanitizeServicePayload(payload = {}) {
+  if (!payload || typeof payload !== "object") return {};
+  const sanitized = { ...payload };
+  SERVICE_REMOTE_EXCLUDED_FIELDS.forEach((field) => {
+    if (field in sanitized) delete sanitized[field];
+  });
+  return sanitized;
+}
+
+export async function upsertServiceDeliveryRecords(records = []) {
+  if (!Array.isArray(records) || !records.length) return { success: true, count: 0 };
+
+  await offlineCaseDb.transaction("rw", SERVICE_TABLE, async () => {
+    for (const record of records) {
+      if (!record) continue;
+
+      if (record.id) {
+        const existing = await SERVICE_TABLE.where("id").equals(record.id).first();
+        if (existing) {
+          await SERVICE_TABLE.update(existing.localId, {
+            ...existing,
+            ...record,
+            hasPendingWrites: false,
+            pendingAction: null,
+            syncError: null,
+            lastLocalChange: null,
+          });
+          continue;
+        }
+      }
+
+      await SERVICE_TABLE.add({
+        ...record,
+        hasPendingWrites: false,
+        pendingAction: null,
+        syncError: null,
+        lastLocalChange: null,
+      });
+    }
+  });
+
+  return { success: true, count: records.length };
+}
 
 // Live query for UI subscriptions
 export const servicesLiveQuery = () =>
@@ -103,7 +148,7 @@ export async function refreshProgramServices(programId) {
 // CRUD local operations (queueing)
 export async function createOrUpdateLocalServiceDelivery(payload, serviceId = null) {
   const isUpdate = !!serviceId;
-  const sanitized = { ...payload };
+  const sanitized = sanitizeServicePayload(payload);
 
   await offlineCaseDb.transaction("rw", [SERVICE_TABLE, SERVICE_QUEUE], async () => {
     let localId;
@@ -194,7 +239,8 @@ export async function syncServiceDeliveryQueue(statusCallback = null) {
       if (statusCallback) statusCallback(`Syncing ${op.operationType} (${synced + 1}/${ops.length})...`);
 
       if (op.operationType === "create") {
-        const { data, error } = await supabase.from(SERVICE_TABLE_NAME).insert([op.payload]).select(SERVICE_SELECT).single();
+        const remotePayload = sanitizeServicePayload(op.payload);
+        const { data, error } = await supabase.from(SERVICE_TABLE_NAME).insert([remotePayload]).select(SERVICE_SELECT).single();
         if (error) throw error;
         await offlineCaseDb.transaction("rw", [SERVICE_TABLE, SERVICE_QUEUE], async () => {
           await SERVICE_TABLE.update(op.targetLocalId, { ...data, hasPendingWrites: false, pendingAction: null, syncError: null, lastLocalChange: null });
@@ -202,7 +248,8 @@ export async function syncServiceDeliveryQueue(statusCallback = null) {
         });
       } else if (op.operationType === "update") {
         if (!op.targetId) throw new Error("Cannot update: missing server ID");
-        const { data, error } = await supabase.from(SERVICE_TABLE_NAME).update(op.payload).eq("id", op.targetId).select(SERVICE_SELECT).single();
+        const remotePayload = sanitizeServicePayload(op.payload);
+        const { data, error } = await supabase.from(SERVICE_TABLE_NAME).update(remotePayload).eq("id", op.targetId).select(SERVICE_SELECT).single();
         if (error) throw error;
         await offlineCaseDb.transaction("rw", [SERVICE_TABLE, SERVICE_QUEUE], async () => {
           await SERVICE_TABLE.update(op.targetLocalId, { ...data, hasPendingWrites: false, pendingAction: null, syncError: null, lastLocalChange: null });
@@ -237,4 +284,9 @@ export async function syncServiceDeliveryQueue(statusCallback = null) {
 }
 
 // Expose existing case/program caching helpers
-export { fetchAndCacheCasesByType, getCachedCasesByType, getCachedPrograms, fetchAndCachePrograms };
+export {
+  fetchAndCacheCasesByType,
+  getCachedCasesByType,
+  getCachedPrograms,
+  fetchAndCachePrograms,
+};

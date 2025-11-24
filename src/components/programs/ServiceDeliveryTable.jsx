@@ -11,9 +11,10 @@
  * - Export service logs
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useServiceDelivery } from "@/hooks/useServiceDelivery";
 import { usePrograms } from "@/hooks/usePrograms";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import CreateServiceDeliveryDialog from "./CreateServiceDeliveryDialog";
 import UpdateServiceDeliveryDialog from "./UpdateServiceDeliveryDialog";
 import ViewServiceDeliveryDialog from "./ViewServiceDeliveryDialog";
@@ -71,12 +72,16 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import PermissionGuard from "@/components/PermissionGuard";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 /**
  * Service Delivery Table Component
+ * @param {Object} props - Component props
+ * @param {boolean} [props.autoSync=false] - Trigger a sync when component mounts (used after reconnect reloads)
+ * @param {Function} [props.onAutoSyncHandled] - Callback to clear the auto sync flag once handled
  * @returns {JSX.Element} Service delivery table
  */
-export default function ServiceDeliveryTable() {
+export default function ServiceDeliveryTable({ autoSync = false, onAutoSyncHandled }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [programFilter, setProgramFilter] = useState("all");
   const [attendanceFilter, setAttendanceFilter] = useState("all");
@@ -98,6 +103,8 @@ export default function ServiceDeliveryTable() {
     services = [], 
     loading, 
     statistics = {},
+    createServiceDelivery,
+    updateServiceDelivery,
     deleteServiceDelivery,
     fetchServiceDelivery,
     pendingCount,
@@ -107,7 +114,42 @@ export default function ServiceDeliveryTable() {
     offline,
   } = useServiceDelivery(filterOptions);
 
+  const isOnline = useNetworkStatus();
   const { programs = [] } = usePrograms({ status: "active" });
+  const runSyncRef = useRef(runSync);
+
+  useEffect(() => {
+    runSyncRef.current = runSync;
+  }, [runSync]);
+
+  useEffect(() => {
+    if (!autoSync) return;
+
+    let cancelled = false;
+
+    const syncAfterReload = async () => {
+      if (!isOnline) {
+        onAutoSyncHandled?.();
+        return;
+      }
+      try {
+        await runSyncRef.current?.();
+      } catch (err) {
+        console.error("Automatic service delivery sync failed:", err);
+        toast.error(err?.message || "Automatic sync failed");
+      } finally {
+        if (!cancelled) {
+          onAutoSyncHandled?.();
+        }
+      }
+    };
+
+    syncAfterReload();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [autoSync, isOnline, onAutoSyncHandled]);
 
   /**
    * Handle refresh
@@ -115,6 +157,12 @@ export default function ServiceDeliveryTable() {
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem("serviceDelivery.forceSync", "true");
+        window.location.reload();
+        return;
+      }
+
       await fetchServiceDelivery();
       toast.success("Service delivery list refreshed");
     } catch (error) {
@@ -166,6 +214,20 @@ export default function ServiceDeliveryTable() {
     } catch (error) {
       console.error("Error deleting service delivery:", error);
       toast.error(error.message || "Failed to delete service delivery");
+    }
+  };
+
+  const handleSync = async () => {
+    if (!runSync) return;
+    if (!isOnline) {
+      toast.error("Cannot sync while offline");
+      return;
+    }
+    try {
+      await runSync();
+    } catch (error) {
+      console.error("Service delivery sync failed:", error);
+      toast.error(error?.message || "Sync failed");
     }
   };
 
@@ -267,11 +329,28 @@ export default function ServiceDeliveryTable() {
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Service Delivery Log</CardTitle>
-              <CardDescription>
-                Track service sessions and attendance records
-              </CardDescription>
+            <div className="flex flex-wrap items-center gap-3">
+              <div>
+                <CardTitle>Service Delivery Log</CardTitle>
+                <CardDescription>
+                  Track service sessions and attendance records
+                </CardDescription>
+              </div>
+              {!isOnline && (
+                <Badge variant="destructive" className="h-6">
+                  Offline
+                </Badge>
+              )}
+              {offline && isOnline && (
+                <Badge variant="secondary" className="h-6">
+                  Showing cached data
+                </Badge>
+              )}
+              {pendingCount > 0 && (
+                <Badge variant="outline" className="h-6 border-amber-500 text-amber-700">
+                  {pendingCount} pending
+                </Badge>
+              )}
             </div>
             <div className="flex gap-2 items-center">
               <Button 
@@ -287,32 +366,14 @@ export default function ServiceDeliveryTable() {
               {/* Offline sync controls */}
               <PermissionGuard permission="manage_service_delivery">
                 <Button
-                  variant="ghost"
+                  variant="outline"
                   size="sm"
-                  onClick={async () => {
-                    try {
-                      setIsRefreshing(true);
-                      if (typeof window !== "undefined" && window.navigator && !window.navigator.onLine) {
-                        toast.error("Cannot sync while offline");
-                        return;
-                      }
-                      if (runSync) await runSync();
-                    } catch (err) {
-                      console.error(err);
-                      toast.error("Sync failed");
-                    } finally {
-                      setIsRefreshing(false);
-                    }
-                  }}
+                  onClick={handleSync}
+                  disabled={!isOnline || syncing || pendingCount === 0}
                 >
-                  <RefreshCw className="mr-2 h-4 w-4" />
+                  <RefreshCw className={cn("mr-2 h-4 w-4", syncing && "animate-spin")} />
                   Sync
                 </Button>
-                {pendingCount > 0 && (
-                  <Badge variant="secondary" className="ml-2">
-                    {pendingCount} pending
-                  </Badge>
-                )}
               </PermissionGuard>
               <PermissionGuard permission="create_service_delivery">
                 <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
@@ -322,6 +383,13 @@ export default function ServiceDeliveryTable() {
               </PermissionGuard>
             </div>
           </div>
+          {syncStatus && (
+            <Alert className="mt-3">
+              <AlertDescription className="text-xs">
+                {syncStatus}
+              </AlertDescription>
+            </Alert>
+          )}
         </CardHeader>
         <CardContent>
           {/* Filters */}
@@ -389,8 +457,14 @@ export default function ServiceDeliveryTable() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedDeliveries.map((delivery) => (
-                    <TableRow key={delivery.id}>
+                  paginatedDeliveries.map((delivery, index) => {
+                    const rowKey = delivery.id ?? delivery.localId ?? `local-${index}`;
+                    return (
+                      <TableRow
+                        key={rowKey}
+                        className={cn(delivery.hasPendingWrites && "bg-amber-50/70")}
+                        data-pending={delivery.hasPendingWrites ? "true" : undefined}
+                      >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -403,6 +477,11 @@ export default function ServiceDeliveryTable() {
                           <div className="text-xs text-muted-foreground">
                             {delivery.case_number}
                           </div>
+                          {delivery.hasPendingWrites && (
+                            <Badge variant="outline" className="mt-1 text-[10px] uppercase tracking-wide text-amber-700 border-amber-500">
+                              Pending sync
+                            </Badge>
+                          )}
                         </div>
                       </TableCell>
                       <TableCell>
@@ -480,7 +559,8 @@ export default function ServiceDeliveryTable() {
                         </DropdownMenu>
                       </TableCell>
                     </TableRow>
-                  ))
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -543,7 +623,7 @@ export default function ServiceDeliveryTable() {
       <CreateServiceDeliveryDialog
         open={createDialogOpen}
         onOpenChange={setCreateDialogOpen}
-        onSuccess={handleRefresh}
+        onCreate={createServiceDelivery}
       />
 
       {/* View Service Delivery Dialog */}
@@ -558,7 +638,7 @@ export default function ServiceDeliveryTable() {
         open={updateDialogOpen}
         onOpenChange={setUpdateDialogOpen}
         serviceDelivery={selectedService}
-        onSuccess={handleRefresh}
+        onUpdate={updateServiceDelivery}
       />
 
       {/* Delete Confirmation Dialog */}
