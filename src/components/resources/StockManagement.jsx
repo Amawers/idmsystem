@@ -12,7 +12,7 @@
  * - Transaction history tracking
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,9 +74,13 @@ import {
   ChevronRight,
   Eye,
   Trash2,
+  WifiOff,
+  CloudUpload,
 } from "lucide-react";
 import { useResourceStore } from "@/store/useResourceStore";
 import { useAuthStore } from "@/store/authStore";
+import { useInventoryOffline, INVENTORY_FORCE_SYNC_KEY } from "@/hooks/useInventoryOffline";
+import useNetworkStatus from "@/hooks/useNetworkStatus";
 import RequestSubmissionDialog from "./RequestSubmissionDialog";
 import PermissionGuard from "@/components/PermissionGuard";
 
@@ -105,32 +109,33 @@ function StatusBadge({ status }) {
 /**
  * Stock Adjustment Dialog
  */
-function StockAdjustmentDialog({ item, open, onClose, onSuccess }) {
-  const [type, setType] = useState("stock_in"); // stock_in, stock_out, adjustment
+function StockAdjustmentDialog({ item, open, onClose, onSuccess, onAdjustStock }) {
+  const [type, setType] = useState("stock_in");
   const [quantity, setQuantity] = useState("");
   const [loading, setLoading] = useState(false);
-  const { updateStock } = useResourceStore();
-  const { user } = useAuthStore();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!quantity || parseFloat(quantity) <= 0) return;
+    const numericQuantity = parseFloat(quantity);
+    if (!quantity || Number.isNaN(numericQuantity) || numericQuantity <= 0) return;
 
     setLoading(true);
     try {
-      const adjustedQuantity = type === "stock_out" ? -Math.abs(parseFloat(quantity)) : parseFloat(quantity);
-      
-      await updateStock(item.id, adjustedQuantity, type, "");
-      
+      const delta = type === "stock_out" ? -Math.abs(numericQuantity) : numericQuantity;
+      await onAdjustStock?.({
+        itemId: item?.id ?? null,
+        localId: item?.localId ?? null,
+        quantity: type === "adjustment" ? numericQuantity : delta,
+        transactionType: type,
+      });
+
       onSuccess?.();
       onClose();
-      
-      // Reset form
       setQuantity("");
       setType("stock_in");
     } catch (error) {
       console.error("Error updating stock:", error);
-      alert("Failed to update stock. Please try again.");
+      alert(error?.message ?? "Failed to update stock. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -247,7 +252,7 @@ function ViewItemDetailsDialog({ item, open, onClose }) {
 
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Category</Label>
-              <p className="text-sm font-medium capitalize">{item.category.replace("_", " ")}</p>
+              <p className="text-sm font-medium capitalize">{(item.category || "uncategorized").replace("_", " ")}</p>
             </div>
 
             <div className="space-y-1">
@@ -264,7 +269,7 @@ function ViewItemDetailsDialog({ item, open, onClose }) {
 
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Unit Cost</Label>
-              <p className="text-sm font-medium">₱{item.unit_cost.toLocaleString()}</p>
+              <p className="text-sm font-medium">₱{Number(item.unit_cost ?? 0).toLocaleString()}</p>
             </div>
 
             <div className="space-y-1">
@@ -276,7 +281,7 @@ function ViewItemDetailsDialog({ item, open, onClose }) {
 
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Total Value</Label>
-              <p className="text-sm font-medium">₱{(item.current_stock * item.unit_cost).toLocaleString()}</p>
+              <p className="text-sm font-medium">₱{Number((item.current_stock ?? 0) * (item.unit_cost ?? 0)).toLocaleString()}</p>
             </div>
 
             <div className="space-y-1">
@@ -316,7 +321,7 @@ function ViewItemDetailsDialog({ item, open, onClose }) {
 /**
  * Edit Item Record Dialog
  */
-function EditItemDialog({ item, open, onClose, onSuccess }) {
+function EditItemDialog({ item, open, onClose, onSuccess, onUpdateItem }) {
   const [formData, setFormData] = useState({
     item_name: "",
     category: "supplies",
@@ -327,7 +332,6 @@ function EditItemDialog({ item, open, onClose, onSuccess }) {
     description: "",
   });
   const [loading, setLoading] = useState(false);
-  const { updateInventoryItem } = useResourceStore();
 
   // Initialize form data when item changes
   useEffect(() => {
@@ -349,7 +353,7 @@ function EditItemDialog({ item, open, onClose, onSuccess }) {
     setLoading(true);
 
     try {
-      await updateInventoryItem(item.id, formData);
+      await onUpdateItem?.(item, formData);
       onSuccess?.();
       onClose();
     } catch (error) {
@@ -503,7 +507,7 @@ function EditItemDialog({ item, open, onClose, onSuccess }) {
 /**
  * Add New Item Dialog
  */
-function AddItemDialog({ open, onClose, onSuccess }) {
+function AddItemDialog({ open, onClose, onSuccess, onAddItem }) {
   const [formData, setFormData] = useState({
     item_name: "",
     category: "supplies",
@@ -515,14 +519,13 @@ function AddItemDialog({ open, onClose, onSuccess }) {
     description: "",
   });
   const [loading, setLoading] = useState(false);
-  const { addInventoryItem } = useResourceStore();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
     try {
-      await addInventoryItem(formData);
+      await onAddItem?.(formData);
       onSuccess?.();
       onClose();
       
@@ -702,22 +705,33 @@ export default function StockManagement() {
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
   const {
-    inventoryItems,
-    inventoryStats,
-    fetchInventory,
+    items: inventoryItems,
+    statistics: inventoryStats,
     loading,
-    submitRequest,
-    deleteInventoryItem,
-  } = useResourceStore();
+    refreshInventory,
+    createItem,
+    updateItem,
+    adjustStock,
+    deleteItem,
+    pendingCount,
+    syncing,
+    syncStatus,
+    runSync,
+    offline,
+  } = useInventoryOffline();
+  const submitRequest = useResourceStore((state) => state.submitRequest);
 
-  const { role } = useAuthStore();
+  const { role, user } = useAuthStore();
+  const isOnline = useNetworkStatus();
+  const [autoSyncPending, setAutoSyncPending] = useState(false);
+  const runSyncRef = useRef(runSync);
 
   useEffect(() => {
-    fetchInventory();
-  }, [fetchInventory]);
+    runSyncRef.current = runSync;
+  }, [runSync]);
 
   const handleRefresh = () => {
-    fetchInventory();
+    refreshInventory();
   };
 
   const handleAdjustStock = (item) => {
@@ -736,7 +750,7 @@ export default function StockManagement() {
   };
 
   const handleSuccess = () => {
-    fetchInventory();
+    refreshInventory();
   };
 
   const handleDeleteClick = (item) => {
@@ -748,10 +762,9 @@ export default function StockManagement() {
     if (!selectedItem) return;
 
     try {
-      await deleteInventoryItem(selectedItem.id);
+      await deleteItem({ itemId: selectedItem.id ?? null, localId: selectedItem.localId ?? null });
       setShowDeleteDialog(false);
       setSelectedItem(null);
-      fetchInventory();
     } catch (error) {
       console.error("Failed to delete item:", error);
       alert("Failed to delete item. Please try again.");
@@ -762,7 +775,7 @@ export default function StockManagement() {
     try {
       await submitRequest(requestData);
       setShowRequestDialog(false);
-      fetchInventory();
+      refreshInventory();
     } catch (error) {
       console.error("Failed to submit request:", error);
       // Show error details to help diagnose the issue
@@ -771,8 +784,57 @@ export default function StockManagement() {
     }
   };
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const flagged = window.sessionStorage.getItem(INVENTORY_FORCE_SYNC_KEY);
+    if (flagged === "true") {
+      window.sessionStorage.removeItem(INVENTORY_FORCE_SYNC_KEY);
+      setAutoSyncPending(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!autoSyncPending) return;
+    if (!isOnline) {
+      setAutoSyncPending(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const runAutoSync = async () => {
+      try {
+        await runSyncRef.current?.();
+      } catch (err) {
+        console.error("Auto inventory sync failed", err);
+      } finally {
+        if (!cancelled) setAutoSyncPending(false);
+      }
+    };
+
+    runAutoSync();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [autoSyncPending, isOnline]);
+
+  const handleAddItem = async (values) => {
+    await createItem(values);
+  };
+
+  const handleEditSubmit = async (item, values) => {
+    await updateItem(item.id ?? null, values, { localId: item.localId ?? null });
+  };
+
+  const handleAdjustSubmit = async ({ itemId = null, localId = null, quantity, transactionType }) => {
+    await adjustStock({ itemId, localId, quantity, transactionType, performedBy: user });
+  };
+
+  const sourceItems = Array.isArray(inventoryItems) ? inventoryItems : [];
+
   // Filter items
-  const filteredItems = inventoryItems.filter((item) => {
+  const filteredItems = sourceItems.filter((item) => {
     const matchesSearch =
       item.item_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.category.toLowerCase().includes(searchQuery.toLowerCase());
@@ -804,7 +866,7 @@ export default function StockManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">Total Items</p>
-                <p className="text-xl font-bold">{inventoryStats.totalItems}</p>
+                <p className="text-xl font-bold">{inventoryStats?.totalItems ?? 0}</p>
               </div>
               <Package className="h-8 w-8 text-blue-600 opacity-50" />
             </div>
@@ -816,7 +878,7 @@ export default function StockManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">Total Value</p>
-                <p className="text-xl font-bold">₱{inventoryStats.totalValue.toLocaleString()}</p>
+                <p className="text-xl font-bold">₱{Number(inventoryStats?.totalValue ?? 0).toLocaleString()}</p>
               </div>
               <Package className="h-8 w-8 text-green-600 opacity-50" />
             </div>
@@ -828,7 +890,7 @@ export default function StockManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">Low Stock</p>
-                <p className="text-xl font-bold text-orange-600">{inventoryStats.lowStock}</p>
+                <p className="text-xl font-bold text-orange-600">{inventoryStats?.lowStock ?? 0}</p>
               </div>
               <AlertTriangle className="h-8 w-8 text-orange-600 opacity-50" />
             </div>
@@ -840,7 +902,7 @@ export default function StockManagement() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-xs text-muted-foreground">Critical</p>
-                <p className="text-xl font-bold text-red-600">{inventoryStats.criticalStock}</p>
+                <p className="text-xl font-bold text-red-600">{inventoryStats?.criticalStock ?? 0}</p>
               </div>
               <AlertTriangle className="h-8 w-8 text-red-600 opacity-50" />
             </div>
@@ -851,35 +913,62 @@ export default function StockManagement() {
       {/* Inventory Table */}
       <Card>
         <CardHeader className="py-1">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
             <div>
               <CardTitle className="text-base leading-tight">Stock Inventory</CardTitle>
               <CardDescription className="text-xs leading-snug mt-0">Manage and track inventory stock levels</CardDescription>
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={loading}
-                className="cursor-pointer"
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
-              {role === "case_manager" ? (
-                <PermissionGuard permission="create_resource_request">
-                  <Button onClick={() => setShowRequestDialog(true)} size="sm" className="cursor-pointer">
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    New Request
-                  </Button>
-                </PermissionGuard>
-              ) : (
-                <Button onClick={() => setShowAddDialog(true)} size="sm" className="cursor-pointer">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Item
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-2 flex-wrap justify-end">
+                {offline && (
+                  <Badge variant="secondary" className="text-[10px] font-medium uppercase">
+                    <WifiOff className="mr-1 h-3 w-3" /> Offline Mode
+                  </Badge>
+                )}
+                {pendingCount > 0 && (
+                  <Badge variant="outline" className="text-[10px] font-medium">
+                    {pendingCount} pending change{pendingCount !== 1 ? "s" : ""}
+                  </Badge>
+                )}
+                {syncStatus && (
+                  <p className="text-[11px] text-muted-foreground">{syncStatus}</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  className="cursor-pointer"
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                  Refresh
                 </Button>
-              )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => runSync().catch((err) => console.error("Inventory sync failed", err))}
+                  disabled={pendingCount === 0 || syncing}
+                  className="cursor-pointer"
+                >
+                  <CloudUpload className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
+                  {syncing ? "Syncing..." : "Sync Changes"}
+                </Button>
+                {role === "case_manager" ? (
+                  <PermissionGuard permission="create_resource_request">
+                    <Button onClick={() => setShowRequestDialog(true)} size="sm" className="cursor-pointer">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      New Request
+                    </Button>
+                  </PermissionGuard>
+                ) : (
+                  <Button onClick={() => setShowAddDialog(true)} size="sm" className="cursor-pointer">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Add Item
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </CardHeader>
@@ -955,7 +1044,7 @@ export default function StockManagement() {
                 ) : (
                   pageItems.map((item) => (
                     <TableRow 
-                      key={item.id} 
+                      key={item.id ?? `local-${item.localId}`}
                       className="text-xs cursor-pointer hover:bg-muted/50"
                       onClick={() => handleViewDetails(item)}
                     >
@@ -967,18 +1056,18 @@ export default function StockManagement() {
                           )}
                         </div>
                       </TableCell>
-                      <TableCell className="text-xs capitalize">{item.category.replace("_", " ")}</TableCell>
+                      <TableCell className="text-xs capitalize">{(item.category || "uncategorized").replace("_", " ")}</TableCell>
                       <TableCell className="text-right text-xs">
-                        <span className={item.current_stock <= item.minimum_stock ? "text-orange-600 font-semibold" : ""}>
-                          {item.current_stock} {item.unit_of_measure}
+                        <span className={(item.current_stock ?? 0) <= (item.minimum_stock ?? 0) ? "text-orange-600 font-semibold" : ""}>
+                          {item.current_stock ?? 0} {item.unit_of_measure ?? ""}
                         </span>
                       </TableCell>
                       <TableCell className="text-right text-xs text-muted-foreground">
-                        {item.minimum_stock} {item.unit_of_measure}
+                        {item.minimum_stock ?? 0} {item.unit_of_measure ?? ""}
                       </TableCell>
-                      <TableCell className="text-right text-xs">₱{item.unit_cost.toLocaleString()}</TableCell>
+                      <TableCell className="text-right text-xs">₱{Number(item.unit_cost ?? 0).toLocaleString()}</TableCell>
                       <TableCell className="text-right text-xs font-semibold">
-                        ₱{(item.current_stock * item.unit_cost).toLocaleString()}
+                        ₱{Number((item.current_stock ?? 0) * (item.unit_cost ?? 0)).toLocaleString()}
                       </TableCell>
                       <TableCell>
                         <StatusBadge status={item.status} />
@@ -1126,6 +1215,7 @@ export default function StockManagement() {
               setSelectedItem(null);
             }}
             onSuccess={handleSuccess}
+            onAdjustStock={handleAdjustSubmit}
           />
           
           <EditItemDialog
@@ -1136,6 +1226,7 @@ export default function StockManagement() {
               setSelectedItem(null);
             }}
             onSuccess={handleSuccess}
+            onUpdateItem={handleEditSubmit}
           />
           
           <ViewItemDetailsDialog
@@ -1153,6 +1244,7 @@ export default function StockManagement() {
         open={showAddDialog}
         onClose={() => setShowAddDialog(false)}
         onSuccess={handleSuccess}
+        onAddItem={handleAddItem}
       />
 
       <RequestSubmissionDialog
