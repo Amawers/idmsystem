@@ -9,8 +9,8 @@
  * - Partnership agreements
  */
 
-import { useState, useEffect } from "react";
-import { usePartners } from "@/hooks/usePartners";
+import { useState, useEffect, useRef } from "react";
+import { usePartners, PARTNERS_FORCE_SYNC_KEY } from "@/hooks/usePartners";
 import { ORGANIZATION_TYPES, SERVICE_TYPES } from "@/lib/partnerSubmission";
 import {
   Table,
@@ -49,14 +49,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, MoreHorizontal, Plus, Building2, Phone, Mail, AlertCircle, Loader2, FileText, RefreshCw, Edit, Eye, Trash2, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Plus, Building2, Phone, Mail, AlertCircle, Loader2, RefreshCw, Edit, AlertTriangle, ChevronLeft, ChevronRight, CloudUpload } from "lucide-react";
 import PermissionGuard from "@/components/PermissionGuard";
+import useNetworkStatus from "@/hooks/useNetworkStatus";
 
 /**
  * Partners Table Component
  * @returns {JSX.Element} Partners table
  */
-export default function PartnersTable() {
+export default function PartnersTable({ autoSync = false, onAutoSyncHandled = () => {} }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -83,14 +84,65 @@ export default function PartnersTable() {
     notes: "",
   });
 
-  const { partners, loading, statistics = {}, createPartner, updatePartner, deletePartner, getMOUStatus, fetchPartners } = usePartners();
+  const {
+    partners,
+    loading,
+    statistics = {},
+    createPartner,
+    updatePartner,
+    deletePartner,
+    getMOUStatus,
+    fetchPartners,
+    pendingCount,
+    syncing,
+    syncStatus,
+    runSync,
+    offline,
+  } = usePartners();
+
+  const isOnline = useNetworkStatus();
+  const runSyncRef = useRef(runSync);
+
+  useEffect(() => {
+    runSyncRef.current = runSync;
+  }, [runSync]);
+
+  useEffect(() => {
+    if (!autoSync) return;
+    if (!isOnline) {
+      onAutoSyncHandled?.();
+      return;
+    }
+
+    let cancelled = false;
+
+    const syncAfterReload = async () => {
+      try {
+        await runSyncRef.current?.();
+      } catch (err) {
+        console.error("Automatic partners sync failed", err);
+      } finally {
+        if (!cancelled) {
+          onAutoSyncHandled?.();
+        }
+      }
+    };
+
+    syncAfterReload();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [autoSync, isOnline, onAutoSyncHandled]);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const filteredPartners = (partners || []).filter((partner) =>
-    partner.organization_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    partner.contact_person.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPartners = (partners || []).filter((partner) => {
+    const name = partner.organization_name ? partner.organization_name.toLowerCase() : "";
+    const contact = partner.contact_person ? partner.contact_person.toLowerCase() : "";
+    const query = searchTerm.toLowerCase();
+    return name.includes(query) || contact.includes(query);
+  });
 
   // Pagination calculations
   const totalFiltered = filteredPartners.length;
@@ -217,7 +269,7 @@ export default function PartnersTable() {
       };
 
       // Update partner
-      await updatePartner(selectedPartner.id, updates);
+      await updatePartner(selectedPartner.id, updates, { localId: selectedPartner.localId });
 
       // Success - close dialog and reset
       setIsEditDialogOpen(false);
@@ -273,7 +325,7 @@ export default function PartnersTable() {
 
     setIsDeleting(true);
     try {
-      await deletePartner(selectedPartner.id);
+      await deletePartner(selectedPartner.id, { localId: selectedPartner.localId });
       setIsDeleteDialogOpen(false);
       setSelectedPartner(null);
     } catch (error) {
@@ -288,6 +340,12 @@ export default function PartnersTable() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(PARTNERS_FORCE_SYNC_KEY, "true");
+        window.location.reload();
+        return;
+      }
+
       await fetchPartners();
     } catch (error) {
       console.error("Error refreshing partners:", error);
@@ -366,8 +424,37 @@ export default function PartnersTable() {
               <CardDescription>
                 Manage partner organizations and service providers
               </CardDescription>
+              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                {offline && (
+                  <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">
+                    Offline data
+                  </Badge>
+                )}
+                {pendingCount > 0 && (
+                  <Badge variant="outline" className="border-dashed border-slate-300 text-slate-700">
+                    {pendingCount} pending changes
+                  </Badge>
+                )}
+                {syncStatus && (
+                  <span className="text-muted-foreground">{syncStatus}</span>
+                )}
+              </div>
             </div>
             <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant={pendingCount ? "default" : "outline"}
+                onClick={runSync}
+                disabled={syncing || pendingCount === 0}
+                className="cursor-pointer"
+              >
+                {syncing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <CloudUpload className="mr-2 h-4 w-4" />
+                )}
+                {syncing ? "Syncing" : pendingCount ? `Sync ${pendingCount}` : "Sync"}
+              </Button>
               <Button 
                 size="sm" 
                 variant="outline"
@@ -426,19 +513,34 @@ export default function PartnersTable() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  paginatedPartners.map((partner) => (
-                    <TableRow key={partner.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center gap-2">
-                          <Building2 className="h-4 w-4 text-muted-foreground" />
-                          <div>
-                            <div>{partner.organization_name}</div>
-                            <div className="text-xs text-muted-foreground">
-                              {partner.organization_type}
+                  paginatedPartners.map((partner, idx) => {
+                    const services = Array.isArray(partner.services_offered)
+                      ? partner.services_offered
+                      : [];
+                    const rowKey = partner.id ?? `local-${partner.localId ?? idx}`;
+                    return (
+                      <TableRow
+                        key={rowKey}
+                        className={partner.hasPendingWrites ? "bg-amber-50/60" : undefined}
+                      >
+                        <TableCell className="font-medium">
+                          <div className="flex items-center gap-2">
+                            <Building2 className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span>{partner.organization_name || "Unnamed partner"}</span>
+                                {partner.hasPendingWrites && (
+                                  <Badge variant="outline" className="border-dashed text-amber-700">
+                                    Pending sync
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {partner.organization_type || "N/A"}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </TableCell>
+                        </TableCell>
                       <TableCell>
                         <div>
                           <div className="text-sm">{partner.contact_person}</div>
@@ -452,20 +554,20 @@ export default function PartnersTable() {
                           </div>
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1 max-w-[200px]">
-                          {partner.services_offered.slice(0, 2).map((service, idx) => (
-                            <Badge key={idx} variant="secondary" className="text-xs">
-                              {service}
-                            </Badge>
-                          ))}
-                          {partner.services_offered.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{partner.services_offered.length - 2}
-                            </Badge>
-                          )}
-                        </div>
-                      </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1 max-w-[200px]">
+                            {services.slice(0, 2).map((service, serviceIdx) => (
+                              <Badge key={`${rowKey}-service-${serviceIdx}`} variant="secondary" className="text-xs">
+                                {service}
+                              </Badge>
+                            ))}
+                            {services.length > 2 && (
+                              <Badge variant="outline" className="text-xs">
+                                +{services.length - 2}
+                              </Badge>
+                            )}
+                          </div>
+                        </TableCell>
                       <TableCell>
                         {partner.mou_expiry_date ? (
                           <Badge
@@ -506,8 +608,9 @@ export default function PartnersTable() {
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
-                    </TableRow>
-                  ))
+                      </TableRow>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
