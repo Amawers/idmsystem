@@ -3,6 +3,7 @@ import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useLocation } from "react-router-dom"
 import { useMemo } from "react"
 import { ChevronRight } from "lucide-react"
+import { NotificationBell } from "@/components/notifications/NotificationBell"
 
 // Map each route path to a human-readable page title
 // This allows the header to show a title that matches the current active page
@@ -82,31 +83,37 @@ export function SiteHeader() {
   return (
     <header
       className="
-        flex h-(--header-height) shrink-0 items-center gap-2 border-b
+        flex h-(--header-height) shrink-0 items-center border-b
         transition-[width,height] ease-linear
         group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)
       "
     >
-      <div className="flex w-full items-center gap-1 px-4 lg:gap-2 lg:px-6">
-        {/* Sidebar toggle button (hamburger menu) */}
-        <SidebarTrigger className="-ml-1 cursor-pointer" />
+      <div className="flex w-full items-center justify-between px-4 lg:px-6">
+        <div className="flex items-center gap-1 lg:gap-2">
+          {/* Sidebar toggle button (hamburger menu) */}
+          <SidebarTrigger className="-ml-1 cursor-pointer" />
 
-        {/* Thin vertical separator for better visual grouping */}
-        <Separator
-          orientation="vertical"
-          className="mx-2 data-[orientation=vertical]:h-4"
-        />
+          {/* Thin vertical separator for better visual grouping */}
+          <Separator
+            orientation="vertical"
+            className="mx-2 data-[orientation=vertical]:h-4"
+          />
 
-        {/* Page title that changes dynamically with route */}
-        {parentSection ? (
-          <div className="flex items-center gap-1.5">
-            <span className="text-sm text-muted-foreground">{parentSection}</span>
-            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          {/* Page title that changes dynamically with route */}
+          {parentSection ? (
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm text-muted-foreground">{parentSection}</span>
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+              <h1 className="text-base font-medium">{pageTitle}</h1>
+            </div>
+          ) : (
             <h1 className="text-base font-medium">{pageTitle}</h1>
-          </div>
-        ) : (
-          <h1 className="text-base font-medium">{pageTitle}</h1>
-        )}
+          )}
+        </div>
+
+        <div className="flex items-center gap-2">
+          <NotificationBell />
+        </div>
       </div>
     </header>
   )
