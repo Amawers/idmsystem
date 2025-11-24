@@ -353,7 +353,7 @@ export default function AuditTrail() {
 						<Download className="h-4 w-4 mr-2" />
 						Export CSV
 					</Button>
-					<Button variant="outline" size="sm" onClick={reload} disabled={loading}>
+					<Button variant="outline" size="sm" onClick={() => window.location.reload()} disabled={loading}>
 						<RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
 						Refresh
 					</Button>
