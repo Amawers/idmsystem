@@ -215,17 +215,17 @@ export default function CreateServiceDeliveryDialog({ open, onOpenChange, onSucc
                     onValueChange={handleEnrollmentChange}
                     disabled={enrollmentsLoading}
                   >
-                    <SelectTrigger className="cursor-pointer">
+                    <SelectTrigger className="cursor-pointer w-full">
                       <SelectValue placeholder="Select an enrollment" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="max-w-[400px]">
                       {enrollments.map((enrollment) => (
                         <SelectItem key={enrollment.id} value={enrollment.id}>
-                          <div className="flex flex-col">
-                            <span className="font-medium">
+                          <div className="flex flex-col min-w-0 max-w-full">
+                            <span className="font-medium truncate">
                               {enrollment.beneficiary_name}
                             </span>
-                            <span className="text-xs text-muted-foreground">
+                            <span className="text-xs text-muted-foreground truncate">
                               {enrollment.program?.program_name} • {enrollment.case_number}
                             </span>
                           </div>
