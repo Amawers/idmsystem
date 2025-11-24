@@ -31,6 +31,7 @@ import {
 import { useResourceStore } from "@/store/useResourceStore";
 import { usePrograms } from "@/hooks/usePrograms";
 import supabase from "@/../config/supabase";
+import offlineCaseDb from "@/db/offlineCaseDb";
 
 /**
  * Metric Card Component
@@ -316,12 +317,32 @@ export default function RealTimeInventoryDashboard() {
     loading: inventoryLoading,
   } = useResourceStore();
 
-  const { programs, loading: programsLoading } = usePrograms();
+  const { programs, loading: programsLoading, fetchPrograms } = usePrograms();
 
   // Fetch staff assignments excluding heads
   const fetchStaffAssignments = async () => {
     setStaffLoading(true);
     try {
+      // If offline, load cached case managers and fabricate assignments
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        try {
+          const cachedManagers = await offlineCaseDb.case_managers.toArray();
+          const mockAssignments = (cachedManagers || []).map(cm => ({
+            id: cm.id,
+            staff_id: cm.id,
+            availability_status: 'available',
+            staff_name: cm.full_name,
+            staff_role: cm.role || 'case_manager',
+            profile: cm,
+          }));
+          setStaffAssignments(mockAssignments);
+          setStaffLoading(false);
+          return;
+        } catch (cacheErr) {
+          console.warn('Failed to load cached staff assignments:', cacheErr);
+          // fallthrough to attempt remote fetch behaviour (which will likely fail)
+        }
+      }
       // Try to fetch from staff_assignments table first
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('staff_assignments')
@@ -343,6 +364,19 @@ export default function RealTimeInventoryDashboard() {
           assignment => assignment.profile?.role !== 'head'
         );
         setStaffAssignments(filteredAssignments);
+        // Persist case manager snapshot for offline use
+        try {
+          const caseManagers = filteredAssignments
+            .map(a => a.profile)
+            .filter(Boolean)
+            .map(p => ({ id: p.id, full_name: p.full_name, role: p.role }));
+          if (caseManagers.length > 0) {
+            await offlineCaseDb.case_managers.clear();
+            await offlineCaseDb.case_managers.bulkAdd(caseManagers);
+          }
+        } catch (cacheErr) {
+          console.warn('Failed to cache case managers for offline use:', cacheErr);
+        }
       } else {
         // Fallback: Fetch case managers from profile table and create mock assignments
         const { data: caseManagers, error: profileError } = await supabase
@@ -365,6 +399,17 @@ export default function RealTimeInventoryDashboard() {
         }));
 
         setStaffAssignments(mockAssignments);
+
+        // Persist case managers for offline use
+        try {
+          const caseManagersToCache = (caseManagers || []).map(p => ({ id: p.id, full_name: p.full_name, role: p.role }));
+          if (caseManagersToCache.length > 0) {
+            await offlineCaseDb.case_managers.clear();
+            await offlineCaseDb.case_managers.bulkAdd(caseManagersToCache);
+          }
+        } catch (cacheErr) {
+          console.warn('Failed to cache case managers for offline use:', cacheErr);
+        }
       }
     } catch (error) {
       console.error('Error fetching staff assignments:', error);
@@ -378,6 +423,20 @@ export default function RealTimeInventoryDashboard() {
     fetchInventory();
     fetchStaffAssignments();
   }, [fetchInventory]);
+
+  // Refresh on network reconnect
+  useEffect(() => {
+    const onOnline = () => {
+      fetchInventory();
+      fetchStaffAssignments();
+      // Refresh programs snapshot as well
+      if (typeof fetchPrograms === 'function') fetchPrograms();
+      setLastUpdate(new Date());
+    };
+
+    window.addEventListener('online', onOnline);
+    return () => window.removeEventListener('online', onOnline);
+  }, []);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
