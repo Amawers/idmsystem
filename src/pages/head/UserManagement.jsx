@@ -10,21 +10,9 @@
 // - Filter by status (all/active/inactive/banned)
 // - Sort by various columns
 // - Create new users
-// - Edit existing users
-// - Ban/unban users
-// - Pagination support
-// - Responsive design
+// =============================================
 //
-// Access: Head role only (enforced by ProtectedRoute in App.jsx)
-//
-// Dependencies:
-// - useUserManagementStore: State management for users
-// - CreateUserDialog: Dialog for creating users
-// - EditUserDialog: Dialog for editing users
-// - BanUserDialog: Dialog for banning/unbanning users
-// - shadcn/ui components
-//
-// Example Usage:
+// 
 // ```jsx
 // // In App.jsx
 // <Route
@@ -84,6 +72,7 @@ import {
 	UserCheck,
 	UserX,
 	ShieldAlert,
+	WifiOff,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -105,14 +94,34 @@ export default function UserManagement() {
 	const [editUser, setEditUser] = useState(null);
 	const [banAction, setBanAction] = useState(null);
 
+	// Online state: show offline message when navigator is offline
+	const [isOnline, setIsOnline] = useState(
+		typeof navigator !== "undefined" ? navigator.onLine : true
+	);
+
+	useEffect(() => {
+		const goOnline = () => setIsOnline(true);
+		const goOffline = () => setIsOnline(false);
+
+		window.addEventListener("online", goOnline);
+		window.addEventListener("offline", goOffline);
+
+		return () => {
+			window.removeEventListener("online", goOnline);
+			window.removeEventListener("offline", goOffline);
+		};
+	}, []);
+
 	// Pagination state
 	const [currentPage, setCurrentPage] = useState(1);
 	const itemsPerPage = 3;
 
-	// Fetch users on mount
+	// Fetch users on mount or when coming back online
 	useEffect(() => {
-		fetchUsers();
-	}, [fetchUsers]);
+		if (isOnline) {
+			fetchUsers();
+		}
+	}, [fetchUsers, isOnline]);
 
 	// Show error toast if error occurs
 	useEffect(() => {
@@ -179,6 +188,26 @@ export default function UserManagement() {
 			</Badge>
 		);
 	};
+
+	// If offline, hide all controls and show a clear offline message
+	if (!isOnline) {
+		return (
+			<div className="container mx-auto px-6 py-12 flex items-center justify-center">
+				<div className="max-w-md w-full text-center space-y-4">
+					<div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-muted/20">
+						<WifiOff className="h-10 w-10 text-muted-foreground" />
+					</div>
+					<h2 className="text-lg font-semibold">You’re offline</h2>
+					<p className="text-sm text-muted-foreground">
+						User management requires an internet connection.
+					</p>
+					<p className="text-sm text-muted-foreground">
+						Viewing will resume automatically when you are back online.
+					</p>
+				</div>
+			</div>
+		);
+	}
 
 	return (
 		<div className="container mx-auto px-6 space-y-6">
