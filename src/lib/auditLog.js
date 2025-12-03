@@ -4,7 +4,7 @@
  * @module lib/auditLog
  */
 
-import supabase from "@/../config/supabase";
+import { apiFetch } from "@/lib/httpClient";
 
 /**
  * Creates an audit log entry in the database
@@ -52,47 +52,21 @@ export async function createAuditLog({
 	severity = "info",
 }) {
 	try {
-		// Get current user
-		const {
-			data: { user },
-		} = await supabase.auth.getUser();
-		if (!user) {
-			console.warn("No user found for audit log entry");
-			return null;
-		}
-
-		// Get user profile for role
-		const { data: profile } = await supabase
-			.from("profile")
-			.select("role")
-			.eq("id", user.id)
-			.single();
-
-		// Create audit log entry
-		const { data, error } = await supabase
-			.from("audit_log")
-			.insert({
-				user_id: user.id,
-				user_email: user.email,
-				user_role: profile?.role || null,
-				action_type: actionType,
-				action_category: actionCategory,
-				resource_type: resourceType,
-				resource_id: resourceId,
-				description,
-				metadata,
-				severity,
-				// Note: IP address and user agent would typically be captured server-side
-				// For now, we can add them via Edge Functions or leave null
-			})
-			.select()
-			.single();
-
-		if (error) {
-			console.error("Failed to create audit log:", error);
-			return null;
-		}
-
+		const { data } = await apiFetch(
+			"/audit",
+			{
+				method: "POST",
+				body: {
+					actionType,
+					actionCategory,
+					description,
+					resourceType,
+					resourceId,
+					metadata,
+					severity,
+				},
+			}
+		);
 		return data;
 	} catch (err) {
 		console.error("Error in createAuditLog:", err);
@@ -125,25 +99,33 @@ export async function fetchAuditLogs({
 	offset = 0,
 } = {}) {
 	try {
-		let query = supabase
-			.from("audit_log")
-			.select("*", { count: "exact" })
-			.order("created_at", { ascending: false });
+		const params = new URLSearchParams();
+		if (userId) params.append("userId", userId);
+		if (actionCategory) params.append("actionCategory", actionCategory);
+		if (actionType) params.append("actionType", actionType);
+		if (severity) params.append("severity", severity);
+		if (startDate instanceof Date) {
+			params.append("startDate", startDate.toISOString());
+		} else if (typeof startDate === "string") {
+			params.append("startDate", startDate);
+		}
+		if (endDate instanceof Date) {
+			params.append("endDate", endDate.toISOString());
+		} else if (typeof endDate === "string") {
+			params.append("endDate", endDate);
+		}
+		if (limit !== undefined && limit !== null) params.append("limit", String(limit));
+		if (offset !== undefined && offset !== null) params.append("offset", String(offset));
 
-		// Apply filters
-		if (userId) query = query.eq("user_id", userId);
-		if (actionCategory) query = query.eq("action_category", actionCategory);
-		if (actionType) query = query.eq("action_type", actionType);
-		if (severity) query = query.eq("severity", severity);
-		if (startDate) query = query.gte("created_at", startDate.toISOString());
-		if (endDate) query = query.lte("created_at", endDate.toISOString());
+		const queryString = params.toString();
+		const path = queryString ? `/audit?${queryString}` : "/audit";
+		const result = await apiFetch(path, { method: "GET" });
 
-		// Apply pagination
-		query = query.range(offset, offset + limit - 1);
-
-		const { data, error, count } = await query;
-
-		return { data, error, count };
+		return {
+			data: result.data ?? [],
+			error: null,
+			count: result.meta?.count ?? 0,
+		};
 	} catch (err) {
 		console.error("Error fetching audit logs:", err);
 		return { data: null, error: err, count: 0 };

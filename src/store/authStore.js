@@ -1,294 +1,185 @@
 import { create } from "zustand";
-import supabase from "@/../config/supabase";
+
+import {
+	apiFetch,
+	loginRequest,
+	logoutRequest,
+	getAuthTokens,
+	clearAuthTokens,
+} from "@/lib/httpClient";
 import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
 
-export const useAuthStore = create((set) => ({
-	// ===============================
-	// GLOBAL AUTH STATE
-	// ===============================
-	user: null, // stores the logged-in user object from Supabase
-	avatar_url: null, // store url for the profile picture
-	role: null, // stores the role fetched from 'profiles' table
-	loading: true, // used to show loading states while checking auth
-	authListener: null, // stores the auth state change listener
+async function loadCurrentProfile() {
+	const { data } = await apiFetch("/profiles/me", { method: "GET" });
+	return data;
+}
 
-	// ===============================
-	// SET USER & ROLE (helper)
-	// ===============================
+function ensureActiveProfile(profile) {
+	if (!profile) {
+		return;
+	}
+
+	if (profile.status === "banned") {
+		const error = new Error("Your account has been suspended. Please contact an administrator.");
+		error.code = "ACCOUNT_BANNED";
+		throw error;
+	}
+
+	if (profile.status === "inactive") {
+		const error = new Error("Your account is inactive. Please contact an administrator.");
+		error.code = "ACCOUNT_INACTIVE";
+		throw error;
+	}
+}
+
+async function resolveAvatarUrl(avatarPath) {
+	if (!avatarPath) {
+		return null;
+	}
+
+	try {
+		const { data } = await apiFetch("/storage/signed-url", {
+			method: "POST",
+			body: { filePath: avatarPath },
+		});
+		return data?.signedUrl ?? null;
+	} catch (error) {
+		console.warn("Failed to resolve avatar URL", error);
+		return null;
+	}
+}
+
+async function fetchSessionUser() {
+	const { data } = await apiFetch("/auth/session", { method: "GET" });
+	return data?.user ?? null;
+}
+
+export const useAuthStore = create((set, get) => ({
+	user: null,
+	avatar_url: null,
+	role: null,
+	loading: true,
+
 	setUser: (user, role) => set({ user, role, loading: false }),
 
-	// ===============================
-	// LOGIN FUNCTION
-	// ===============================
 	login: async (email, password) => {
-		// 1. Try logging in with email + password
-		const { data, error } = await supabase.auth.signInWithPassword({
-			email,
-			password,
-		});
-		if (error) throw error; // if credentials are wrong → throw error
+		set({ loading: true });
+		try {
+			const authData = await loginRequest({ email, password });
+			const profile = await loadCurrentProfile();
+			ensureActiveProfile(profile);
 
-		if (data.user) {
-			// 2. Fetch role + avatar + status from profiles table (linked by user_id)
-			const { data: profile, error: profileError } = await supabase
-				.from("profile")
-				.select("role, avatar_url, status")
-				.eq("id", data.user.id)
-				.maybeSingle(); // return 1 row or null
+			const avatarSignedUrl = await resolveAvatarUrl(profile?.avatar_url);
 
-			if (profileError) throw profileError;
-
-			// 3. Check if user is banned
-			if (profile?.status === "banned") {
-				// Log out immediately
-				await supabase.auth.signOut();
-				throw new Error(
-					"Your account has been suspended. Please contact an administrator."
-				);
-			}
-
-			// 4. Check if user is inactive
-			if (profile?.status === "inactive") {
-				// Log out immediately
-				await supabase.auth.signOut();
-				throw new Error(
-					"Your account is inactive. Please contact an administrator."
-				);
-			}
-
-			// 5. Get fresh signed URL for avatar
-			let avatarSignedUrl = null;
-			if (profile?.avatar_url) {
-				const { data: signedData } = await supabase.storage
-					.from("profile_pictures")
-					.createSignedUrl(profile.avatar_url, 60 * 60);
-				avatarSignedUrl = signedData?.signedUrl;
-			}
-
-			// 6. Save user + signed avatar URL + role
 			set({
-				user: data.user,
+				user: authData.user,
 				avatar_url: avatarSignedUrl,
-				role: profile.role,
+				role: profile?.role ?? authData.user?.role ?? null,
 				loading: false,
 			});
 
-			// 7. Log successful login
 			await createAuditLog({
 				actionType: AUDIT_ACTIONS.LOGIN,
 				actionCategory: AUDIT_CATEGORIES.AUTH,
-				description: `User logged in successfully`,
+				description: "User logged in successfully",
 				severity: "info",
 			});
+		} catch (error) {
+			await logoutRequest().catch(() => clearAuthTokens());
+			set({ user: null, avatar_url: null, role: null, loading: false });
+			throw error;
 		}
 	},
 
-	// ===============================
-	// LOGOUT FUNCTION
-	// ===============================
 	logout: async () => {
-		// Log logout before clearing session
-		await createAuditLog({
-			actionType: AUDIT_ACTIONS.LOGOUT,
-			actionCategory: AUDIT_CATEGORIES.AUTH,
-			description: `User logged out`,
-			severity: "info",
-		});
+		try {
+			await createAuditLog({
+				actionType: AUDIT_ACTIONS.LOGOUT,
+				actionCategory: AUDIT_CATEGORIES.AUTH,
+				description: "User logged out",
+				severity: "info",
+			});
+		} catch (error) {
+			console.warn("Failed to create logout audit entry", error);
+		}
 
-		// Ends session in Supabase
-		await supabase.auth.signOut();
-
-		// Reset local state
-		set({ user: null, role: null });
+		await logoutRequest().catch(() => clearAuthTokens());
+		set({ user: null, avatar_url: null, role: null });
 	},
 
-	// ===============================
-	// INIT FUNCTION (runs on app load)
-	// ===============================
 	init: async () => {
-		// 1. Check if there's an active session
-		const { data } = await supabase.auth.getUser();
+		const tokens = getAuthTokens();
+		if (!tokens.accessToken && !tokens.refreshToken) {
+			set({ user: null, avatar_url: null, role: null, loading: false });
+			return;
+		}
 
-		if (data.user) {
-			// 2. Fetch role + avatar + status from profiles
-			const { data: profile, error: profileError } = await supabase
-				.from("profile")
-				.select("role, avatar_url, status")
-				.eq("id", data.user.id)
-				.maybeSingle();
+		try {
+			const [sessionUser, profile] = await Promise.all([
+				fetchSessionUser(),
+				loadCurrentProfile(),
+			]);
 
-			if (profileError) throw profileError;
+			ensureActiveProfile(profile);
+			const avatarSignedUrl = await resolveAvatarUrl(profile?.avatar_url);
 
-			// 3. Check if user is banned or inactive - log them out if so
-			if (profile?.status === "banned" || profile?.status === "inactive") {
-				await supabase.auth.signOut();
-				set({ user: null, avatar_url: null, role: null, loading: false });
-				return;
-			}
-
-			// 4. Get fresh signed URL for avatar
-			let avatarSignedUrl = null;
-			if (profile?.avatar_url) {
-				const { data: signedData, error: urlError } =
-					await supabase.storage
-						.from("profile_pictures")
-						.createSignedUrl(profile.avatar_url, 60 * 60);
-
-				if (!urlError) avatarSignedUrl = signedData?.signedUrl;
-			}
-
-			// 5. Save user + signed avatar URL + role
 			set({
-				user: data.user,
+				user:
+					sessionUser ?? {
+						id: profile?.id ?? null,
+						email: profile?.email ?? null,
+						role: profile?.role ?? null,
+					},
 				avatar_url: avatarSignedUrl,
-				role: profile?.role || "case_manager", // default role if missing
+				role: profile?.role ?? sessionUser?.role ?? null,
 				loading: false,
 			});
-		} else {
-			// 6. No active session → clear auth state
+		} catch (error) {
+			console.error("Auth init error", error);
+			await logoutRequest().catch(() => clearAuthTokens());
 			set({ user: null, avatar_url: null, role: null, loading: false });
 		}
-
-		// 7. Set up auth state change listener for session refresh and logout
-		const { data: { subscription } } = supabase.auth.onAuthStateChange(
-			async (event, session) => {
-				console.log("Auth state changed:", event);
-
-				if (event === "SIGNED_OUT" || event === "USER_DELETED") {
-					// User signed out or deleted
-					set({ user: null, avatar_url: null, role: null, loading: false });
-				} else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
-					// User signed in or token refreshed - update user state
-					if (session?.user) {
-						// Fetch fresh profile data
-						const { data: profile, error: profileError } = await supabase
-							.from("profile")
-							.select("role, avatar_url, status")
-							.eq("id", session.user.id)
-							.maybeSingle();
-
-						if (profileError) {
-							console.error("Profile fetch error:", profileError);
-							return;
-						}
-
-						// Check if user is banned or inactive
-						if (profile?.status === "banned" || profile?.status === "inactive") {
-							await supabase.auth.signOut();
-							set({ user: null, avatar_url: null, role: null, loading: false });
-							return;
-						}
-
-						// Get fresh signed URL for avatar
-						let avatarSignedUrl = null;
-						if (profile?.avatar_url) {
-							const { data: signedData, error: urlError } =
-								await supabase.storage
-									.from("profile_pictures")
-									.createSignedUrl(profile.avatar_url, 60 * 60);
-
-							if (!urlError) avatarSignedUrl = signedData?.signedUrl;
-						}
-
-						// Update state with fresh data
-						set({
-							user: session.user,
-							avatar_url: avatarSignedUrl,
-							role: profile?.role || "case_manager",
-							loading: false,
-						});
-					}
-				}
-			}
-		);
-
-		// Store the subscription so we can clean it up later
-		set({ authListener: subscription });
 	},
 
-	// ===============================
-	// CLEANUP FUNCTION
-	// ===============================
-	cleanup: () => {
-		const { authListener } = useAuthStore.getState();
-		if (authListener) {
-			authListener.unsubscribe();
-			set({ authListener: null });
-		}
-	},
+	cleanup: () => undefined,
 
-	// ===============================
-	// PROFILE PICTURE UPLOAD
-	// ===============================
 	uploadAvatar: async (file) => {
-		const user = useAuthStore.getState().user;
-		if (!user) throw new Error("No user logged in");
+		const currentUser = get().user;
+		if (!currentUser) {
+			throw new Error("No user logged in");
+		}
 
-		const fileExt = file.name.split(".").pop();
-		const filePath = `${user.id}_avatar.${fileExt}`;
+		const formData = new FormData();
+		formData.append("avatar", file);
 
-		// Upload (overwrite existing)
-		const { error: uploadError } = await supabase.storage
-			.from("profile_pictures")
-			.upload(filePath, file, { upsert: true });
-		if (uploadError) throw uploadError;
+		const { data: profile } = await apiFetch("/profiles/me/avatar", {
+			method: "POST",
+			body: formData,
+		});
 
-		// Update avatar path in DB
-		const { error: dbError } = await supabase
-			.from("profile")
-			.update({ avatar_url: filePath })
-			.eq("id", user.id);
-		if (dbError) throw dbError;
-
-		// Fetch fresh signed URL after upload
-		const { data: signedData, error: urlError } = await supabase.storage
-			.from("profile_pictures")
-			.createSignedUrl(filePath, 60 * 60);
-		if (urlError) throw urlError;
-
-		// Update Zustand with fresh URL
-		set({ avatar_url: signedData?.signedUrl });
-
-		return signedData?.signedUrl;
+		const avatarSignedUrl = await resolveAvatarUrl(profile?.avatar_url);
+		set({ avatar_url: avatarSignedUrl });
+		return avatarSignedUrl;
 	},
 
-	// ===============================
-	// UPDATE PASSWORD (with old password check)
-	// ===============================
 	updatePassword: async (oldPassword, newPassword) => {
-		const { user } = useAuthStore.getState();
-		if (!user) throw new Error("No user logged in");
-
-		// Step 1: Re-authenticate with old password
-		const { data: signInData, error: signInError } =
-			await supabase.auth.signInWithPassword({
-				email: user.email,
-				password: oldPassword,
+		try {
+			await apiFetch("/auth/password", {
+				method: "POST",
+				body: { oldPassword, newPassword },
 			});
 
-		if (signInError || !signInData.user) {
-			// old password incorrect
+			await createAuditLog({
+				actionType: AUDIT_ACTIONS.PASSWORD_CHANGE,
+				actionCategory: AUDIT_CATEGORIES.AUTH,
+				description: "User changed their password",
+				severity: "warning",
+			});
+
+			return true;
+		} catch (error) {
+			console.error("Password update error", error);
 			return false;
 		}
-
-		// Step 2: Update to new password
-		const { error: updateError } = await supabase.auth.updateUser({
-			password: newPassword,
-		});
-
-		if (updateError) {
-			console.error("Password update error:", updateError);
-			return false;
-		}
-
-		// Log password change
-		await createAuditLog({
-			actionType: AUDIT_ACTIONS.PASSWORD_CHANGE,
-			actionCategory: AUDIT_CATEGORIES.AUTH,
-			description: `User changed their password`,
-			severity: "warning",
-		});
-
-		return true; // password updated successfully
 	},
 }));
