@@ -7,6 +7,17 @@ This project is called **Integrated Digital Management System for Municipal Soci
 
 ---
 
+## 🖥️ Electron Desktop Build
+
+The React/Vite frontend now boots inside an Electron shell so the platform can run offline-first on Windows, macOS, and Linux without a browser. Use:
+
+- `npm run dev` — starts Vite + Electron for desktop development
+- `npm run build:electron` — packages platform-native installers via `electron-builder`
+
+See [`docs/ELECTRON_DESKTOP_GUIDE.md`](./docs/ELECTRON_DESKTOP_GUIDE.md) for the full workflow, preload bridge usage, and customization notes.
+
+---
+
 ## 📡 Offline Capabilities
 
 The IDMS features robust offline functionality to ensure uninterrupted service delivery even with unreliable internet connectivity.
@@ -32,6 +43,7 @@ The IDMS features robust offline functionality to ensure uninterrupted service d
    - Reloads the page
    - Syncs queued operations in chronological order
    - Updates cache with latest data from server
+5. **Offline Login Cache**: Enabling "Remember me for offline access" on the login screen stores a sanitized session snapshot (valid for 7 days) so the desktop build can reopen without internet access.
 
 ### User Experience
 

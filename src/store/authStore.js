@@ -1,26 +1,67 @@
 import { create } from "zustand";
 import supabase from "@/../config/supabase";
 import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
+import {
+	clearOfflineSession,
+	isOffline,
+	loadOfflineSession,
+	saveOfflineSession,
+} from "@/lib/offlineAuthSession";
 
-export const useAuthStore = create((set) => ({
-	// ===============================
-	// GLOBAL AUTH STATE
-	// ===============================
-	user: null, // stores the logged-in user object from Supabase
-	avatar_url: null, // store url for the profile picture
-	role: null, // stores the role fetched from 'profiles' table
-	loading: true, // used to show loading states while checking auth
-	authListener: null, // stores the auth state change listener
+const sanitizeUserForOffline = (user) => {
+	if (!user) return null;
+	return {
+		id: user.id,
+		email: user.email,
+		app_metadata: user.app_metadata ?? {},
+		user_metadata: user.user_metadata ?? {},
+	};
+};
 
-	// ===============================
-	// SET USER & ROLE (helper)
-	// ===============================
-	setUser: (user, role) => set({ user, role, loading: false }),
+export const useAuthStore = create((set) => {
+	const hydrateFromOfflineSession = () => {
+		const cached = loadOfflineSession();
+		if (!cached?.user) return false;
+
+		set({
+			user: cached.user,
+			avatar_url: cached.avatarSignedUrl ?? null,
+			role: cached.role ?? "case_manager",
+			loading: false,
+			offlineMode: true,
+		});
+		return true;
+	};
+
+	const resetAuthState = () =>
+		set({
+			user: null,
+			avatar_url: null,
+			role: null,
+			loading: false,
+			offlineMode: false,
+		});
+
+	return {
+		// ===============================
+		// GLOBAL AUTH STATE
+		// ===============================
+		user: null, // stores the logged-in user object from Supabase
+		avatar_url: null, // store url for the profile picture
+		role: null, // stores the role fetched from 'profiles' table
+		loading: true, // used to show loading states while checking auth
+		offlineMode: false, // flag when UI relies on cached session
+		authListener: null, // stores the auth state change listener
+
+		// ===============================
+		// SET USER & ROLE (helper)
+		// ===============================
+		setUser: (user, role) => set({ user, role, loading: false, offlineMode: false }),
 
 	// ===============================
 	// LOGIN FUNCTION
 	// ===============================
-	login: async (email, password) => {
+	login: async (email, password, rememberMe = false) => {
 		// 1. Try logging in with email + password
 		const { data, error } = await supabase.auth.signInWithPassword({
 			email,
@@ -71,7 +112,19 @@ export const useAuthStore = create((set) => ({
 				avatar_url: avatarSignedUrl,
 				role: profile.role,
 				loading: false,
+				offlineMode: false,
 			});
+
+			// 6b. Persist offline session if requested
+			if (rememberMe) {
+				saveOfflineSession({
+					user: sanitizeUserForOffline(data.user),
+					role: profile.role,
+					avatarSignedUrl,
+				});
+			} else {
+				clearOfflineSession();
+			}
 
 			// 7. Log successful login
 			await createAuditLog({
@@ -98,8 +151,9 @@ export const useAuthStore = create((set) => ({
 		// Ends session in Supabase
 		await supabase.auth.signOut();
 
-		// Reset local state
-		set({ user: null, role: null });
+		// Clear cached offline access and reset state
+		clearOfflineSession();
+		set({ user: null, avatar_url: null, role: null, offlineMode: false, loading: false });
 	},
 
 	// ===============================
@@ -107,46 +161,62 @@ export const useAuthStore = create((set) => ({
 	// ===============================
 	init: async () => {
 		// 1. Check if there's an active session
-		const { data } = await supabase.auth.getUser();
+		try {
+			const { data } = await supabase.auth.getUser();
 
-		if (data.user) {
-			// 2. Fetch role + avatar + status from profiles
-			const { data: profile, error: profileError } = await supabase
-				.from("profile")
-				.select("role, avatar_url, status")
-				.eq("id", data.user.id)
-				.maybeSingle();
+			if (data.user) {
+				try {
+					// 2. Fetch role + avatar + status from profiles
+					const { data: profile, error: profileError } = await supabase
+						.from("profile")
+						.select("role, avatar_url, status")
+						.eq("id", data.user.id)
+						.maybeSingle();
 
-			if (profileError) throw profileError;
+					if (profileError) throw profileError;
 
-			// 3. Check if user is banned or inactive - log them out if so
-			if (profile?.status === "banned" || profile?.status === "inactive") {
-				await supabase.auth.signOut();
-				set({ user: null, avatar_url: null, role: null, loading: false });
-				return;
+					// 3. Check if user is banned or inactive - log them out if so
+					if (profile?.status === "banned" || profile?.status === "inactive") {
+						await supabase.auth.signOut();
+						clearOfflineSession();
+						resetAuthState();
+						return;
+					}
+
+					// 4. Get fresh signed URL for avatar
+					let avatarSignedUrl = null;
+					if (profile?.avatar_url) {
+						const { data: signedData, error: urlError } =
+							await supabase.storage
+								.from("profile_pictures")
+								.createSignedUrl(profile.avatar_url, 60 * 60);
+
+						if (!urlError) avatarSignedUrl = signedData?.signedUrl;
+					}
+
+					// 5. Save user + signed avatar URL + role
+					set({
+						user: data.user,
+						avatar_url: avatarSignedUrl,
+						role: profile?.role || "case_manager", // default role if missing
+						loading: false,
+						offlineMode: false,
+					});
+				} catch (profileError) {
+					console.error("Profile init failed", profileError);
+					if (isOffline() && hydrateFromOfflineSession()) return;
+					resetAuthState();
+				}
+			} else {
+				// 6. No active session → check offline fallback
+				if (isOffline() && hydrateFromOfflineSession()) return;
+				resetAuthState();
 			}
-
-			// 4. Get fresh signed URL for avatar
-			let avatarSignedUrl = null;
-			if (profile?.avatar_url) {
-				const { data: signedData, error: urlError } =
-					await supabase.storage
-						.from("profile_pictures")
-						.createSignedUrl(profile.avatar_url, 60 * 60);
-
-				if (!urlError) avatarSignedUrl = signedData?.signedUrl;
-			}
-
-			// 5. Save user + signed avatar URL + role
-			set({
-				user: data.user,
-				avatar_url: avatarSignedUrl,
-				role: profile?.role || "case_manager", // default role if missing
-				loading: false,
-			});
-		} else {
-			// 6. No active session → clear auth state
-			set({ user: null, avatar_url: null, role: null, loading: false });
+		} catch (error) {
+			console.error("Supabase init failed", error);
+			if (isOffline() && hydrateFromOfflineSession()) return;
+			resetAuthState();
+			return;
 		}
 
 		// 7. Set up auth state change listener for session refresh and logout
@@ -156,7 +226,8 @@ export const useAuthStore = create((set) => ({
 
 				if (event === "SIGNED_OUT" || event === "USER_DELETED") {
 					// User signed out or deleted
-					set({ user: null, avatar_url: null, role: null, loading: false });
+					clearOfflineSession();
+					set({ user: null, avatar_url: null, role: null, loading: false, offlineMode: false });
 				} else if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
 					// User signed in or token refreshed - update user state
 					if (session?.user) {
@@ -175,7 +246,8 @@ export const useAuthStore = create((set) => ({
 						// Check if user is banned or inactive
 						if (profile?.status === "banned" || profile?.status === "inactive") {
 							await supabase.auth.signOut();
-							set({ user: null, avatar_url: null, role: null, loading: false });
+							clearOfflineSession();
+							set({ user: null, avatar_url: null, role: null, loading: false, offlineMode: false });
 							return;
 						}
 
@@ -191,12 +263,13 @@ export const useAuthStore = create((set) => ({
 						}
 
 						// Update state with fresh data
-						set({
-							user: session.user,
-							avatar_url: avatarSignedUrl,
-							role: profile?.role || "case_manager",
-							loading: false,
-						});
+							set({
+								user: session.user,
+								avatar_url: avatarSignedUrl,
+								role: profile?.role || "case_manager",
+								loading: false,
+								offlineMode: false,
+							});
 					}
 				}
 			}
@@ -291,4 +364,5 @@ export const useAuthStore = create((set) => ({
 
 		return true; // password updated successfully
 	},
-}));
+	};
+});

@@ -15,6 +15,7 @@ export default function Login() {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState(null);
+	const [rememberMe, setRememberMe] = useState(false);
 
 	// ------------------------------
 	// AUTH STORE HOOK
@@ -41,7 +42,7 @@ export default function Login() {
 		e.preventDefault();
 		try {
 			// Attempt to login with entered credentials
-			await login(email, password);
+			await login(email, password, rememberMe);
 
 			// Show green success toast if login works
 			toast.success("Login successful!", {
@@ -88,6 +89,8 @@ export default function Login() {
 					setEmail={setEmail}
 					password={password}
 					setPassword={setPassword}
+					rememberMe={rememberMe}
+					setRememberMe={setRememberMe}
 					error={error}
 				/>
 			</div>
