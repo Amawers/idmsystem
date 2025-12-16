@@ -106,8 +106,8 @@ function CaseDashboard({ filters }) {
           <Button
             variant="outline"
             size="sm"
-            onClick={refreshFromServer}
-            disabled={loading || syncing || !isOnline}
+            onClick={() => window.location.reload()}
+            disabled={loading || syncing}
             className="gap-2 h-7 text-xs cursor-pointer"
           >
             <RefreshCw className={cn("h-3 w-3", (loading || syncing) && "animate-spin")} />
