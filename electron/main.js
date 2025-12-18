@@ -13,6 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isDev = !app.isPackaged;
 const devServerURL = process.env.VITE_DEV_SERVER_URL ?? "http://localhost:5173";
+const iconPath = path.join(__dirname, "..", "src", "assets", "temp_logo.png");
 
 const createMainWindow = () => {
 	const window = new BrowserWindow({
@@ -22,6 +23,7 @@ const createMainWindow = () => {
 		minHeight: 700,
 		show: false,
 		autoHideMenuBar: true,
+		icon: iconPath,
 		backgroundColor: nativeTheme.shouldUseDarkColors ? "#0c0c0c" : "#ffffff",
 		webPreferences: {
 			preload: path.join(__dirname, "preload.cjs"),
