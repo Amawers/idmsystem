@@ -10,9 +10,6 @@ import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
-	CardDescription,
-	CardHeader,
-	CardTitle,
 } from "@/components/ui/card";
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { useCasesOffline } from "@/hooks/useCasesOffline";
@@ -327,13 +324,7 @@ export default function CaseManagement() {
 			{/* ================= DATA TABLE ================= */}
 			<div ref={dataTableRef} className="px-4 lg:px-6">
 				<Card>
-					<CardHeader className="pb-0">
-						<CardTitle className="text-lg">Case Records</CardTitle>
-						<CardDescription>
-							Manage and track all case intake forms and records across different categories
-						</CardDescription>
-					</CardHeader>
-					<CardContent className="pt-0">
+					<CardContent className="pt-4">
 						{/* Optional: simple loading/error states */}
 						{casesError ? (
 							<div className="text-sm text-red-600">

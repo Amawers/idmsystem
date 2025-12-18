@@ -1392,59 +1392,15 @@ export function DataTable({
 			onValueChange={handleTabValueChange}
 			className="w-full flex-col justify-start gap-6"
 		>
-			<div className="flex items-center justify-between px-4 lg:px-6">
-				<Label htmlFor="view-selector" className="sr-only">
-					View
-				</Label>
-				{/*
-         // ==============
-         // *MOBILE SCREEN
-         // ==============
-         */}
-				<Select value={activeTab} onValueChange={handleTabValueChange}>
-					<SelectTrigger
-						className="flex w-fit @4xl/main:hidden"
-						size="sm"
-						id="view-selector"
-					>
-						<SelectValue placeholder="Select a view" />
-					</SelectTrigger>
-					<SelectContent>
-						<SelectItem value="CASE">Cases</SelectItem>
-						<SelectItem value="CICLCAR">CICL/CAR</SelectItem>
-						<SelectItem value="IVAC">Incidence on VAC</SelectItem>
-						<SelectItem value="FAC">
-							Family Assistance Card
-						</SelectItem>
-						<SelectItem value="FAR">
-							Family Assistance Record
-						</SelectItem>
-					</SelectContent>
-				</Select>
-				{/*
-         // ================
-         // * DESKTOP SCREEN
-         // ================
-         */}
-				<div className="hidden items-center gap-2 @4xl/main:flex">
-					<TabsList>
-						<TabsTrigger value="CASE" className="cursor-pointer">Cases</TabsTrigger>
-						<TabsTrigger value="CICLCAR" className="cursor-pointer">CICL/CAR</TabsTrigger>
-						<TabsTrigger value="IVAC" className="cursor-pointer">Incidence on VAC</TabsTrigger>
-						<TabsTrigger value="FAC" className="cursor-pointer">
-							Family Assistance Card
-						</TabsTrigger>
-						<TabsTrigger value="FAR" className="cursor-pointer">
-							Family Assistance Record
-						</TabsTrigger>
-					</TabsList>
-				</div>
-				{/*
-         // ==============
-         // *RIGHT BUTTONS
-         // ==============
-         */}
-				<div className="flex items-center gap-2">
+			<div className="flex flex-col gap-3 px-4 lg:px-6">
+				<div className="flex flex-wrap items-start justify-between gap-3">
+					<div className="space-y-1">
+						<h3 className="text-base font-bold leading-tight">Case Records</h3>
+						<p className="text-xs text-muted-foreground">
+							Manage and track all case intake forms and records across different categories
+						</p>
+					</div>
+					<div className="flex items-center gap-2">
 					{!isOnline && (
 						<Badge variant="destructive" className="gap-1 text-[11px]">
 							<WifiOff className="h-3 w-3" />
@@ -2153,6 +2109,56 @@ export function DataTable({
 							)}
 						</>
 					)}
+					</div>
+				</div>
+
+				<div className="flex flex-wrap items-center justify-between gap-2">
+					<Label htmlFor="view-selector" className="sr-only">
+						View
+					</Label>
+					{/*
+         // ==============
+         // *MOBILE SCREEN
+         // ==============
+         */}
+					<Select value={activeTab} onValueChange={handleTabValueChange}>
+						<SelectTrigger
+							className="flex w-fit @4xl/main:hidden"
+							size="sm"
+							id="view-selector"
+						>
+							<SelectValue placeholder="Select a view" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="CASE">Cases</SelectItem>
+							<SelectItem value="CICLCAR">CICL/CAR</SelectItem>
+							<SelectItem value="IVAC">Incidence on VAC</SelectItem>
+							<SelectItem value="FAC">
+								Family Assistance Card
+							</SelectItem>
+							<SelectItem value="FAR">
+								Family Assistance Record
+							</SelectItem>
+						</SelectContent>
+					</Select>
+					{/*
+         // ================
+         // * DESKTOP SCREEN
+         // ================
+         */}
+					<div className="hidden items-center gap-2 @4xl/main:flex">
+						<TabsList>
+							<TabsTrigger value="CASE" className="cursor-pointer">Cases</TabsTrigger>
+							<TabsTrigger value="CICLCAR" className="cursor-pointer">CICL/CAR</TabsTrigger>
+							<TabsTrigger value="IVAC" className="cursor-pointer">Incidence on VAC</TabsTrigger>
+							<TabsTrigger value="FAC" className="cursor-pointer">
+								Family Assistance Card
+							</TabsTrigger>
+							<TabsTrigger value="FAR" className="cursor-pointer">
+								Family Assistance Record
+							</TabsTrigger>
+						</TabsList>
+					</div>
 				</div>
 			</div>
 			{/*
