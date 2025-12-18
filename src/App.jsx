@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/sidebar/Sidebar";
 import ProtectedRoute from "@/pages/ProtectedRoute";
 import { useAuthStore } from "./store/authStore";
@@ -92,7 +92,7 @@ export default function App() {
   if (loading) return <AppLoadingOverlay />;
 
   return (
-    <BrowserRouter>
+    <HashRouter>
     {/* SidebarProvider wraps everything that uses Sidebar */}
       
       <Routes>
@@ -328,6 +328,6 @@ export default function App() {
       {/* Sonner toast system (global notifications) */}
       <Toaster />
       
-    </BrowserRouter>
+    </HashRouter>
   );
 }
