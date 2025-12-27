@@ -99,6 +99,10 @@ export function useUserPermissions() {
 				// Resource Management
 				"view_resources",
 				"allocate_resources",
+				// Document Management
+				"view_documents",
+				"upload_documents",
+				"delete_documents",
 			]);
 			setLoading(false);
 			return;

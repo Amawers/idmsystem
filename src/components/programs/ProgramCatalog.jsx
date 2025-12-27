@@ -57,6 +57,13 @@ import ProgramDetailsDialog from "./ProgramDetailsDialog";
 import CreateProgramDialog from "./CreateProgramDialog";
 import ViewEnrollmentsDialog from "./ViewEnrollmentsDialog";
 import PermissionGuard from "@/components/PermissionGuard";
+import DocumentManager from "@/components/documents/DocumentManager";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import {
   PROGRAM_FORCE_SYNC_KEY,
@@ -98,6 +105,8 @@ export default function ProgramCatalog() {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [enrollmentsDialogOpen, setEnrollmentsDialogOpen] = useState(false);
+  const [documentsDialogOpen, setDocumentsDialogOpen] = useState(false);
+  const [documentsProgram, setDocumentsProgram] = useState(null);
   const [programToDelete, setProgramToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [page, setPage] = useState(1);
@@ -231,6 +240,11 @@ export default function ProgramCatalog() {
     // Open enrollments dialog for inline viewing
     setSelectedProgram(program);
     setEnrollmentsDialogOpen(true);
+  };
+
+  const handleViewDocuments = (program) => {
+    setDocumentsProgram(program);
+    setDocumentsDialogOpen(true);
   };
 
   useEffect(() => {
@@ -505,6 +519,11 @@ export default function ProgramCatalog() {
                             <Users className="mr-2 h-4 w-4" />
                             View Enrollments
                           </DropdownMenuItem>
+                          <PermissionGuard permission="view_documents">
+                            <DropdownMenuItem onClick={() => handleViewDocuments(program)}>
+                              Documents
+                            </DropdownMenuItem>
+                          </PermissionGuard>
                           <DropdownMenuSeparator />
                           <PermissionGuard permission="delete_program">
                             <DropdownMenuItem 
@@ -597,6 +616,25 @@ export default function ProgramCatalog() {
         open={enrollmentsDialogOpen}
         onOpenChange={setEnrollmentsDialogOpen}
       />
+
+      {/* Program Documents Dialog */}
+      <Dialog open={documentsDialogOpen} onOpenChange={setDocumentsDialogOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Program Documents</DialogTitle>
+          </DialogHeader>
+          <PermissionGuard
+            permission="view_documents"
+            fallback={<div className="text-sm text-muted-foreground">Access denied.</div>}
+          >
+            <DocumentManager
+              relatedType="program"
+              relatedId={documentsProgram?.id ?? null}
+              open={documentsDialogOpen}
+            />
+          </PermissionGuard>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

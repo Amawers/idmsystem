@@ -99,6 +99,13 @@ import TableRenderer from "@/components/cases/tables/TableRenderer";
 import EnrollCaseDialog from "@/components/cases/EnrollCaseDialog";
 import ProgramEnrollmentBadge from "@/components/cases/ProgramEnrollmentBadge";
 import { useCaseManagers } from "@/store/useCaseManagerStore";
+import DocumentManager from "@/components/documents/DocumentManager";
+import {
+	Dialog,
+	DialogContent,
+	DialogHeader,
+	DialogTitle,
+} from "@/components/ui/dialog";
 
 // =============================================
 // DATA VALIDATION SCHEMA
@@ -144,7 +151,7 @@ function formatDateTime(isoString) {
 // =================================
 // Replace previous `const caseColumns = [ ... ]` with the factory below.
 
-const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) => [
+const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, handleDocumentsClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -259,6 +266,12 @@ const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick
 							handleEditClick(row.original, "CASE");
 						}}>Edit</DropdownMenuItem>
 					</PermissionGuard>
+					<PermissionGuard permission="view_documents">
+						<DropdownMenuItem onClick={(e) => {
+							e.stopPropagation();
+							handleDocumentsClick(row.original, "CASE");
+						}}>Documents</DropdownMenuItem>
+					</PermissionGuard>
 					<DropdownMenuItem onClick={(e) => {
 						e.stopPropagation();
 						handleEnrollClick(row.original, "CASE");
@@ -283,7 +296,7 @@ const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick
 // =================================
 //* CICLCAR Table COLUMN DEFINITIONS
 // =================================
-const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, getPrefetchedEnrollments) => [
+const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, getPrefetchedEnrollments, handleDocumentsClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -398,6 +411,12 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, g
 							handleEditClick(row.original, "CICLCAR");
 						}}>Edit</DropdownMenuItem>
 					</PermissionGuard>
+					<PermissionGuard permission="view_documents">
+						<DropdownMenuItem onClick={(e) => {
+							e.stopPropagation();
+							handleDocumentsClick(row.original, "CICLCAR");
+						}}>Documents</DropdownMenuItem>
+					</PermissionGuard>
 					<DropdownMenuItem onClick={(e) => {
 						e.stopPropagation();
 						handleEnrollClick(row.original, "CICLCAR");
@@ -420,7 +439,7 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, g
 // =================================
 //* FAR Table COLUMN DEFINITIONS
 // =================================
-const farColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) => [
+const farColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, handleDocumentsClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -569,6 +588,12 @@ const farColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) => [
 							handleEditClick(row.original, "FAR");
 						}}>Edit</DropdownMenuItem>
 					</PermissionGuard>
+					<PermissionGuard permission="view_documents">
+						<DropdownMenuItem onClick={(e) => {
+							e.stopPropagation();
+							handleDocumentsClick(row.original, "FAR");
+						}}>Documents</DropdownMenuItem>
+					</PermissionGuard>
 					<DropdownMenuItem onClick={(e) => {
 						e.stopPropagation();
 						handleEnrollClick(row.original, "FAR");
@@ -591,7 +616,7 @@ const farColumns = (handleEnrollClick, handleEditClick, handleDeleteClick) => [
 // =================================
 //* FAC Table COLUMN DEFINITIONS
 // =================================
-const facColumns = (handleEditClick, handleDeleteClick) => [
+const facColumns = (handleEditClick, handleDeleteClick, handleDocumentsClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -723,6 +748,12 @@ const facColumns = (handleEditClick, handleDeleteClick) => [
 							handleEditClick(row.original, "FAC");
 						}}>Edit</DropdownMenuItem>
 					</PermissionGuard>
+					<PermissionGuard permission="view_documents">
+						<DropdownMenuItem onClick={(e) => {
+							e.stopPropagation();
+							handleDocumentsClick(row.original, "FAC");
+						}}>Documents</DropdownMenuItem>
+					</PermissionGuard>
 					<DropdownMenuSeparator />
 					<PermissionGuard permission="delete_case">
 						<DropdownMenuItem variant="destructive" onClick={(e) => {
@@ -741,7 +772,7 @@ const facColumns = (handleEditClick, handleDeleteClick) => [
 // =================================
 //* IVAC Table COLUMN DEFINITIONS
 // =================================
-const ivacColumns = (handleEditClick, handleDeleteClick) => [
+const ivacColumns = (handleEditClick, handleDeleteClick, handleDocumentsClick) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -871,6 +902,12 @@ const ivacColumns = (handleEditClick, handleDeleteClick) => [
 							e.stopPropagation();
 							handleEditClick(row.original, "IVAC");
 						}}>Edit</DropdownMenuItem>
+					</PermissionGuard>
+					<PermissionGuard permission="view_documents">
+						<DropdownMenuItem onClick={(e) => {
+							e.stopPropagation();
+							handleDocumentsClick(row.original, "IVAC");
+						}}>Documents</DropdownMenuItem>
 					</PermissionGuard>
 					<DropdownMenuSeparator />
 					<PermissionGuard permission="delete_case">
@@ -1063,6 +1100,14 @@ export function DataTable({
 	const [enrollingCase, setEnrollingCase] = useState(null);
 	const [enrollingCaseType, setEnrollingCaseType] = useState("");
 
+	// Documents dialog state
+	const [documentsDialogOpen, setDocumentsDialogOpen] = useState(false);
+	const [documentsContext, setDocumentsContext] = useState({
+		relatedType: "case",
+		relatedId: null,
+		caseType: "",
+	});
+
 	// Refresh state
 	const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -1239,6 +1284,23 @@ export function DataTable({
 		setOpenEnrollDialog(true);
 	}
 
+	// Handle documents click (opens document manager dialog)
+	function handleDocumentsClick(caseData, caseType) {
+		const relatedId = caseData?.id ?? null;
+		if (!relatedId) {
+			toast.error("Missing case id", {
+				description: "Unable to open documents for this record.",
+			});
+			return;
+		}
+		setDocumentsContext({
+			relatedType: "case",
+			relatedId,
+			caseType,
+		});
+		setDocumentsDialogOpen(true);
+	}
+
 	// Handle refresh - full page reload that returns to the active tab for consistency across datasets
 	const handleRefresh = React.useCallback(async () => {
 		if (isRefreshing) return;
@@ -1297,7 +1359,7 @@ export function DataTable({
 	const caseTable = useDataTable({
 		initialData: caseCaseManager === "all" ? caseData : caseData.filter(row => row.case_manager === caseCaseManager),
 		// CHANGED: pass edit handler so actions column calls this for “Edit”
-		columns: createCaseColumns(handleEnrollClick, handleEditCaseRow, handleDeleteClick),
+		columns: createCaseColumns(handleEnrollClick, handleEditCaseRow, handleDeleteClick, handleDocumentsClick),
 	});
 
 	// Table instance for CICLCAR tab with its own data and column definitions
@@ -1308,6 +1370,7 @@ export function DataTable({
 			handleEditCiclcarRow,
 			handleDeleteClick,
 			getCiclcarPrefetchedEnrollments,
+			handleDocumentsClick,
 		),
 		onRowClick: handleEditCiclcarRow, // Add click handler for CICL/CAR rows
 	});
@@ -1315,14 +1378,14 @@ export function DataTable({
 	// Table instance for FAR tab with its own data and column definitions
 	const farTable = useDataTable({
 		initialData: farCaseManager === "all" ? farData : farData.filter(row => row.case_manager === farCaseManager),
-		columns: farColumns(handleEnrollClick, handleEditFarRow, handleDeleteClick),
+		columns: farColumns(handleEnrollClick, handleEditFarRow, handleDeleteClick, handleDocumentsClick),
 		onRowClick: handleEditFarRow, // Add click handler for FAR rows
 	});
 
 	// Table instance for FAC tab with its own data and column definitions
 	const facTable = useDataTable({
 		initialData: facCaseManager === "all" ? facData : facData.filter(row => row.case_manager === facCaseManager),
-		columns: facColumns(handleEditFacRow, handleDeleteClick),
+		columns: facColumns(handleEditFacRow, handleDeleteClick, handleDocumentsClick),
 		onRowClick: handleEditFacRow, // Add click handler for FAC rows
 	});
 
@@ -1336,7 +1399,7 @@ export function DataTable({
 			// Fallback to single case_manager field
 			return row.case_manager === ivacCaseManager;
 		}),
-		columns: ivacColumns(handleEditIvacRow, handleDeleteClick),
+		columns: ivacColumns(handleEditIvacRow, handleDeleteClick, handleDocumentsClick),
 		onRowClick: handleEditIvacRow, // Add click handler for IVAC rows
 	});
 
@@ -2189,7 +2252,13 @@ export function DataTable({
 				<TableRenderer
 					table={ciclcarTable.table}
 					setData={ciclcarTable.setData}
-					columns={ciclcarColumns(handleEnrollClick, handleEditCiclcarRow)}
+					columns={ciclcarColumns(
+						handleEnrollClick,
+						handleEditCiclcarRow,
+						handleDeleteClick,
+						getCiclcarPrefetchedEnrollments,
+						handleDocumentsClick,
+					)}
 					onRowClick={handleEditCiclcarRow}
 				/>
 				<PaginationControls table={ciclcarTable.table} />
@@ -2206,7 +2275,7 @@ export function DataTable({
 				<TableRenderer
 					table={farTable.table}
 					setData={farTable.setData}
-					columns={farColumns(handleEnrollClick, handleEditFarRow, handleDeleteClick)}
+					columns={farColumns(handleEnrollClick, handleEditFarRow, handleDeleteClick, handleDocumentsClick)}
 					onRowClick={handleEditFarRow}
 				/>
 				<PaginationControls table={farTable.table} />
@@ -2224,7 +2293,7 @@ export function DataTable({
 				<TableRenderer
 					table={ivacTable.table}
 					setData={ivacTable.setData}
-					columns={ivacColumns(handleEditIvacRow, handleDeleteClick)}
+					columns={ivacColumns(handleEditIvacRow, handleDeleteClick, handleDocumentsClick)}
 					onRowClick={handleEditIvacRow}
 				/>
 				<PaginationControls table={ivacTable.table} />
@@ -2241,11 +2310,34 @@ export function DataTable({
 			<TableRenderer
 				table={facTable.table}
 				setData={facTable.setData}
-				columns={facColumns(handleEditFacRow, handleDeleteClick)}
+				columns={facColumns(handleEditFacRow, handleDeleteClick, handleDocumentsClick)}
 				onRowClick={handleEditFacRow}
 			/>
 			<PaginationControls table={facTable.table} />
-		</TabsContent>			{/* Enrollment Dialog */}
+		</TabsContent>
+
+			{/* Documents Dialog */}
+			<Dialog open={documentsDialogOpen} onOpenChange={setDocumentsDialogOpen}>
+				<DialogContent className="max-w-3xl">
+					<DialogHeader>
+						<DialogTitle>Case Documents</DialogTitle>
+					</DialogHeader>
+					<PermissionGuard
+						permission="view_documents"
+						fallback={
+							<div className="text-sm text-muted-foreground">Access denied.</div>
+						}
+					>
+						<DocumentManager
+							relatedType={documentsContext.relatedType}
+							relatedId={documentsContext.relatedId}
+							open={documentsDialogOpen}
+						/>
+					</PermissionGuard>
+				</DialogContent>
+			</Dialog>
+
+			{/* Enrollment Dialog */}
 			<EnrollCaseDialog
 				open={openEnrollDialog}
 				onOpenChange={setOpenEnrollDialog}

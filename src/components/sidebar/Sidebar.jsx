@@ -121,6 +121,7 @@ export default function Sidebar(props) {
         icon: IconLogs,
         items: [
           { path: "/controls/audit", label: "Audit Trail", icon: IconShieldLock },
+          { path: "/controls/documents", label: "Documents", icon: IconFolders },
           { path: "/controls/permissions", label: "Role Permissions", icon: IconKey },
         ]
       },

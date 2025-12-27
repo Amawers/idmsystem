@@ -28,6 +28,7 @@ import ResourcePrograms from "./pages/head/ResourcePrograms";
 import SecurityAudit from "./pages/security/SecurityAudit";
 import AuditTrail from "./pages/security/AuditTrail";
 import RolePermissions from "./pages/security/RolePermissions";
+import DocumentManagement from "./pages/security/DocumentManagement";
 
 // Layout wrapper for all authenticated pages
 // Includes Sidebar + Logout button + main content area
@@ -313,6 +314,18 @@ export default function App() {
             <ProtectedRoute allowedRoles={["head"]}>
               <Layout>
                 <RolePermissions />
+              </Layout>
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected route: Document Management (head only) */}
+        <Route
+          path="/controls/documents"
+          element={
+            <ProtectedRoute allowedRoles={["head"]}>
+              <Layout>
+                <DocumentManagement />
               </Layout>
             </ProtectedRoute>
           }
