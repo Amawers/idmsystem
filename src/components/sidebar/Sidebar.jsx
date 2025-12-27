@@ -37,7 +37,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from "@/components/ui/avatar"
-import { DatePicker } from "@/components/date-picker";
+import { SidebarNotificationCalendar } from "@/components/calendar/SidebarNotificationCalendar";
 
 export default function Sidebar(props) {
   const { user, role, avatar_url } = useAuthStore();
@@ -154,7 +154,7 @@ export default function Sidebar(props) {
       <SidebarContent>
         {/* Dynamic navigation menu (based on role) */}
         <NavMain items={navItems} />
-        <DatePicker />
+        <SidebarNotificationCalendar />
 
       </SidebarContent>
 
