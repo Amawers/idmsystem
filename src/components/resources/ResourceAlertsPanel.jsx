@@ -10,12 +10,12 @@
  * - Action recommendations
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertTriangle, AlertCircle, Bell, CheckCircle, X } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertTriangle, AlertCircle, Bell, CheckCircle } from "lucide-react";
 import supabase from "@/../config/supabase";
 import { useResourceStore } from "@/store/useResourceStore";
 
@@ -86,23 +86,45 @@ export default function ResourceAlertsPanel() {
   const [filter, setFilter] = useState("unresolved");
   const [loading, setLoading] = useState(false);
   const { resolveAlert } = useResourceStore();
+  const pollRef = useRef(null);
+  const [isOnline, setIsOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
 
   useEffect(() => {
-    fetchAlerts();
-    
-    // Set up real-time subscription
-    const channel = supabase
-      .channel('inventory_alerts_changes')
-      .on('postgres_changes', 
-        { event: '*', schema: 'public', table: 'inventory_alerts' },
-        () => fetchAlerts()
-      )
-      .subscribe();
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
 
     return () => {
-      supabase.removeChannel(channel);
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
     };
-  }, [filter]);
+  }, []);
+
+  useEffect(() => {
+    // Initial load + polling (no Supabase realtime)
+    fetchAlerts();
+
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+
+    if (isOnline) {
+      pollRef.current = window.setInterval(() => {
+        fetchAlerts();
+      }, 60_000);
+    }
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter, isOnline]);
 
   const fetchAlerts = async () => {
     setLoading(true);

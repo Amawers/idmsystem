@@ -138,19 +138,15 @@ export function useEnrollments(options = {}) {
 
   useEffect(() => {
     if (!enabled) return undefined;
-    const channel = supabase
-      .channel("program-enrollments-stream")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "program_enrollments" },
-        () => {
-          fetchEnrollments();
-        },
-      )
-      .subscribe();
+    if (!isBrowserOnline()) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      if (!isBrowserOnline()) return;
+      fetchEnrollments();
+    }, 60_000);
 
     return () => {
-      channel.unsubscribe();
+      clearInterval(intervalId);
     };
   }, [enabled, fetchEnrollments]);
 

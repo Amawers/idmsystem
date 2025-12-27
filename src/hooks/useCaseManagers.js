@@ -11,7 +11,7 @@
  * @returns {Object} Case managers data, loading state, and error state
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import supabase from "@/../config/supabase";
 
 /**
@@ -22,6 +22,8 @@ export function useCaseManagers() {
   const [caseManagers, setCaseManagers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const pollRef = useRef(null);
+  const [isOnline, setIsOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
 
   /**
    * Fetch case managers from Supabase profile table
@@ -70,31 +72,39 @@ export function useCaseManagers() {
 
   // Initial fetch
   useEffect(() => {
-    fetchCaseManagers();
+    const goOnline = () => setIsOnline(true);
+    const goOffline = () => setIsOnline(false);
 
-    // Set up real-time subscription for profile changes
-    const channel = supabase
-      .channel('case-managers-changes')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'profile',
-          filter: 'role=eq.case_manager'
-        },
-        () => {
-          // Refetch when case manager profiles change
-          fetchCaseManagers();
-        }
-      )
-      .subscribe();
+    window.addEventListener("online", goOnline);
+    window.addEventListener("offline", goOffline);
 
-    // Cleanup subscription
     return () => {
-      supabase.removeChannel(channel);
+      window.removeEventListener("online", goOnline);
+      window.removeEventListener("offline", goOffline);
     };
   }, []);
+
+  useEffect(() => {
+    fetchCaseManagers();
+
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+
+    if (isOnline) {
+      pollRef.current = window.setInterval(() => {
+        fetchCaseManagers();
+      }, 5 * 60_000);
+    }
+
+    return () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+    };
+  }, [isOnline]);
 
   return {
     caseManagers,

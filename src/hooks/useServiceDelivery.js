@@ -15,7 +15,6 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import supabase from "@/../config/supabase";
 import {
   servicesLiveQuery,
   loadRemoteSnapshotIntoCache,
@@ -23,11 +22,6 @@ import {
   syncServiceDeliveryQueue,
   createOrUpdateLocalServiceDelivery,
   markLocalDelete,
-  getCachedCasesByType,
-  getCachedPrograms,
-  fetchAndCacheCasesByType,
-  fetchAndCachePrograms,
-  upsertServiceDeliveryRecords,
 } from "@/services/serviceDeliveryOfflineService";
 
 const SERVICE_SELECT = `
@@ -293,7 +287,9 @@ export function useServiceDelivery(options = {}) {
 
     const subscription = servicesLiveQuery().subscribe({
       next: (data) => {
-        setServices(Array.isArray(data) ? data : []);
+        const nextServices = Array.isArray(data) ? data : [];
+        setServices(nextServices);
+        calculateStatistics(nextServices);
         setLoading(false);
       },
       error: (err) => {
@@ -303,17 +299,15 @@ export function useServiceDelivery(options = {}) {
       },
     });
 
-    // Supabase realtime subscription to refresh cache when server changes
-    const channel = supabase
-      .channel("service-delivery-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "service_delivery" }, () => {
-        fetchServiceDelivery();
-      })
-      .subscribe();
+    // Poll refresh when online (no Supabase realtime)
+    const intervalId = window.setInterval(() => {
+      if (typeof navigator !== "undefined" && !navigator.onLine) return;
+      fetchServiceDelivery();
+    }, 60_000);
 
     return () => {
       subscription.unsubscribe();
-      channel.unsubscribe();
+      clearInterval(intervalId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [

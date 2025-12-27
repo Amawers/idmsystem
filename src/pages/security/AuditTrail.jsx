@@ -4,9 +4,8 @@
  * @module pages/security/AuditTrail
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { WifiOff } from "lucide-react";
-import supabase from "@/../config/supabase";
 import { useAuditLogs } from "@/hooks/useAuditLogs";
 import { AUDIT_CATEGORIES, AUDIT_SEVERITY } from "@/lib/auditLog";
 import {
@@ -82,6 +81,7 @@ export default function AuditTrail() {
 
 	// Online state
 	const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+	const pollRef = useRef(null);
 
 	useEffect(() => {
 		const goOnline = () => setIsOnline(true);
@@ -96,31 +96,24 @@ export default function AuditTrail() {
 		};
 	}, []);
 
-	// Real-time subscription for new audit logs (only when online)
+	// Poll audit logs while online (no Supabase realtime)
 	useEffect(() => {
-		if (!isOnline) return;
+		if (pollRef.current) {
+			clearInterval(pollRef.current);
+			pollRef.current = null;
+		}
 
-		const channel = supabase
-			.channel("audit_log_changes")
-			.on(
-				"postgres_changes",
-				{
-					event: "INSERT",
-					schema: "public",
-					table: "audit_log",
-				},
-				(payload) => {
-					console.log("New audit log:", payload.new);
-					toast.info("New activity detected", {
-						description: payload.new.description,
-					});
-					reload();
-				}
-			)
-			.subscribe();
+		if (!isOnline) return undefined;
+
+		pollRef.current = window.setInterval(() => {
+			reload();
+		}, 30_000);
 
 		return () => {
-			supabase.removeChannel(channel);
+			if (pollRef.current) {
+				clearInterval(pollRef.current);
+				pollRef.current = null;
+			}
 		};
 	}, [reload, isOnline]);
 
