@@ -6,12 +6,10 @@
 
 import { DataTable } from "@/components/cases/data-table";
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import { Button } from "@/components/ui/button";
 import {
 	Card,
 	CardContent,
 } from "@/components/ui/card";
-import { ArrowUp, ArrowDown } from "lucide-react";
 import { useCasesOffline } from "@/hooks/useCasesOffline";
 import { useCiclcarCases } from "@/hooks/useCiclcarCases";
 import { useFarCases } from "@/hooks/useFarCases";
@@ -23,12 +21,6 @@ import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 const FORCED_TAB_AFTER_RELOAD_KEY = "caseManagement.forceTabAfterReload";
 
 export default function CaseManagement() {
-	// Track whether the user is currently at (or past) the DataTable section
-	const [atTable, setAtTable] = useState(false);
-
-	// Reference to the DataTable container for scrolling
-	const dataTableRef = useRef(null);
-
 	// Load dynamic CASE rows from Supabase with offline support
 	const { 
 		data: caseRows, 
@@ -289,28 +281,6 @@ export default function CaseManagement() {
 	const filteredFacRows = React.useMemo(() => filterVisibleCases(facRows || []), [facRows, filterVisibleCases]);
 	const filteredIvacRows = React.useMemo(() => filterVisibleCases(ivacRows || []), [ivacRows, filterVisibleCases]);
 
-	// Effect: watch scroll position and update "atTable" state
-	useEffect(() => {
-		const handleScroll = () => {
-			if (!dataTableRef.current) return;
-			const rect = dataTableRef.current.getBoundingClientRect();
-			// If DataTable's top is close to the viewport (<= 100px), mark as "at table"
-			setAtTable(rect.top <= 100);
-		};
-		window.addEventListener("scroll", handleScroll);
-		return () => window.removeEventListener("scroll", handleScroll);
-	}, []);
-
-	// Smoothly scroll back to the very top of the page
-	const scrollToTop = () => {
-		window.scrollTo({ top: 0, behavior: "smooth" });
-	};
-
-	// Smoothly scroll down to the DataTable section
-	const scrollToDataTable = () => {
-		dataTableRef.current?.scrollIntoView({ behavior: "smooth" });
-	};
-
 	return (
 		<>
 			{/* ================= HEADER ================= */}
@@ -322,7 +292,7 @@ export default function CaseManagement() {
 			</div>
 
 			{/* ================= DATA TABLE ================= */}
-			<div ref={dataTableRef} className="px-4 lg:px-6">
+			<div className="px-4 lg:px-6">
 				<Card>
 					<CardContent className="pt-4">
 						{/* Optional: simple loading/error states */}
@@ -421,21 +391,6 @@ export default function CaseManagement() {
 						/>
 					</CardContent>
 				</Card>
-			</div>
-
-			{/* ================= FLOATING SCROLL BUTTON ================= */}
-			<div className="fixed bottom-6 right-6 z-10">
-				<Button
-					size="icon"
-					className="rounded-full shadow-lg cursor-pointer"
-					onClick={atTable ? scrollToTop : scrollToDataTable}
-				>
-					{atTable ? (
-						<ArrowUp className="h-5 w-5" />
-					) : (
-						<ArrowDown className="h-5 w-5" />
-					)}
-				</Button>
 			</div>
 		</>
 	);
