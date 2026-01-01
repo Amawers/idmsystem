@@ -27,11 +27,9 @@ import {
 	IconKey,
 	IconPackage,
 	IconCircleCheck,
-	IconUserCheck,
-	IconTarget,
-	IconBell
+	IconUserCheck
 } from "@tabler/icons-react"
-import logo from "@/assets/temp_logo.png"
+import logo from "@/assets/logo.jpg"
 import {
   Avatar,
   AvatarFallback,

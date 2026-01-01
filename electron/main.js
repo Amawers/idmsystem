@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const isDev = !app.isPackaged;
 const devServerURL = process.env.VITE_DEV_SERVER_URL ?? "http://localhost:5173";
-const iconPath = path.join(__dirname, "..", "src", "assets", "temp_logo.png");
+const iconPath = path.join(__dirname, "..", "src", "assets", "logo.jpg");
 
 const createMainWindow = () => {
 	const window = new BrowserWindow({

@@ -11,7 +11,7 @@ import {
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 import { Loader } from "lucide-react";
-import logo from "@/assets/temp_logo.png";
+import logo from "@/assets/logo.jpg";
 
 export function LoginForm({
 	onSubmit,
