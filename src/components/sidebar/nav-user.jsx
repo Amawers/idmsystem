@@ -1,7 +1,6 @@
 import { useState } from "react";
 import {
 	IconLogout,
-	IconNotification,
 	IconUserCircle,
 	IconDotsVertical,
 } from "@tabler/icons-react";
@@ -96,10 +95,6 @@ export function NavUser({ user, avatar }) {
 								<DropdownMenuItem onClick={() => setOpenDialog(true)}>
 									<IconUserCircle />
 									Account
-								</DropdownMenuItem>
-								<DropdownMenuItem>
-									<IconNotification />
-									Notifications
 								</DropdownMenuItem>
 							</DropdownMenuGroup>
 
