@@ -193,12 +193,15 @@ export function useDashboard(dashboardType = 'case', filters = {}) {
     setError(null);
     setSyncStatus(null);
 
+    let usedCache = false; // Track whether the initial load came from cache
+
     try {
       switch (dashboardType) {
         case 'case':
         case 'program': {
           // Try to get dashboard data (offline-aware)
           const result = await getDashboardData(dashboardType, filtersRef.current, forceRefresh);
+          usedCache = !!result.fromCache;
           
           setData(result.data);
           setFromCache(result.fromCache || false);
@@ -252,6 +255,24 @@ export function useDashboard(dashboardType = 'case', filters = {}) {
       setSyncStatus("Error loading dashboard data");
     } finally {
       setLoading(false);
+    }
+
+    // If we served cached data and we are online, immediately revalidate in the background
+    if (usedCache && !forceRefresh && isBrowserOnline()) {
+      setSyncing(true);
+      setSyncStatus("Refreshing from server...");
+
+      try {
+        const fresh = await fetchAndCacheDashboardData(dashboardType, filtersRef.current);
+        setData(fresh);
+        setFromCache(false);
+        setSyncStatus("Data refreshed from server");
+      } catch (err) {
+        console.error("Background refresh failed:", err);
+        setSyncStatus("Failed to refresh from server");
+      } finally {
+        setSyncing(false);
+      }
     }
   }, [dashboardType, role]);
 
@@ -324,7 +345,7 @@ export function useDashboard(dashboardType = 'case', filters = {}) {
       data,
       loading,
       error,
-      refresh: () => fetchDashboardData(false),
+      refresh: () => fetchDashboardData(true),
       refreshFromServer,
       syncing,
       syncStatus,
