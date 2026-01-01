@@ -263,7 +263,7 @@ export function SidebarNotificationCalendar() {
         </div>
 
         <Calendar
-          className="[&_[role=gridcell].bg-accent]:bg-sidebar-primary [&_[role=gridcell].bg-accent]:text-sidebar-primary-foreground [&_[role=gridcell]]:w-[32px]"
+          className="[--cell-size:31px] [&_[role=gridcell].bg-accent]:bg-sidebar-primary [&_[role=gridcell].bg-accent]:text-sidebar-primary-foreground [&_[role=gridcell]]:w-[31px]"
           onDayClick={handleDayClick}
           components={{
             DayButton: (props) => (
