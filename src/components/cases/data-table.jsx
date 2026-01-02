@@ -2318,7 +2318,7 @@ export function DataTable({
 
 			{/* Documents Dialog */}
 			<Dialog open={documentsDialogOpen} onOpenChange={setDocumentsDialogOpen}>
-				<DialogContent className="max-w-3xl">
+				<DialogContent className="min-w-5xl">
 					<DialogHeader>
 						<DialogTitle>Case Documents</DialogTitle>
 					</DialogHeader>
