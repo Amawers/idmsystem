@@ -36,15 +36,18 @@ import {
  * @returns {Object} Computed statistics
  */
 function computeCaseStats(cases) {
+  // Drop Family Assistance Card (FAC) and Family Assistance Record (FAR) from dashboard stats
+  const scopedCases = cases.filter(c => c.__source !== 'fac' && c.__source !== 'far');
+
   const now = new Date();
   const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
   const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
   // Filter recent cases
-  const recentCases = cases.filter(c => 
+  const recentCases = scopedCases.filter(c => 
     new Date(c.created_at || c.date_filed) >= thirtyDaysAgo
   );
-  const lastWeekCases = cases.filter(c => 
+  const lastWeekCases = scopedCases.filter(c => 
     new Date(c.created_at || c.date_filed) >= sevenDaysAgo
   );
 
@@ -55,20 +58,20 @@ function computeCaseStats(cases) {
   // - far_case: 'Filed', 'Assessed', 'In Process', 'Resolved'
   // - fac_case: 'active', 'closed', 'pending'
   // We normalize to: 'active', 'in-progress', 'pending', 'closed', 'resolved'
-  const statusCounts = cases.reduce((acc, c) => {
+  const statusCounts = scopedCases.reduce((acc, c) => {
     const status = c.status || 'unknown';
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, {});
 
   // Count active cases (cases that are not closed/resolved)
-  const activeCases = cases.filter(c => {
+  const activeCases = scopedCases.filter(c => {
     const status = (c.status || '').toLowerCase();
     return status !== 'closed' && status !== 'resolved';
   }).length;
 
   // Count closed cases (cases that are closed or resolved)
-  const closedCases = cases.filter(c => {
+  const closedCases = scopedCases.filter(c => {
     const status = (c.status || '').toLowerCase();
     return status === 'closed' || status === 'resolved';
   }).length;
@@ -80,7 +83,9 @@ function computeCaseStats(cases) {
   // - far_case: 'Low', 'Medium', 'High' (capitalized)
   // - fac_case: 'low', 'normal', 'high', 'urgent'
   // We normalize all to lowercase 'high', 'medium', 'low' for consistent aggregation
-  const priorityCounts = cases.reduce((acc, c) => {
+  // Exclude FAC and FAR cases from priority distribution
+  const priorityCounts = scopedCases.reduce((acc, c) => {
+
     // Normalize priority values to lowercase and map variants
     let priority = (c.priority || 'medium').toLowerCase();
     
@@ -93,14 +98,15 @@ function computeCaseStats(cases) {
   }, {});
 
   // Case manager workload
-  const managerWorkload = cases.reduce((acc, c) => {
+  // Exclude FAC and FAR cases from workload visualization
+  const managerWorkload = scopedCases.reduce((acc, c) => {
     const manager = c.case_manager || 'unassigned';
     acc[manager] = (acc[manager] || 0) + 1;
     return acc;
   }, {});
 
   return {
-    total: cases.length,
+    total: scopedCases.length,
     active: activeCases,
     inProgress: statusCounts['in-progress'] || statusCounts['In Process'] || 0,
     pending: statusCounts.pending || 0,

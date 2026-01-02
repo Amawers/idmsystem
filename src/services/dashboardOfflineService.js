@@ -39,22 +39,25 @@ function isCacheFresh(timestamp) {
  * @returns {Promise<Object>} Object containing all case type arrays
  */
 async function fetchAllCasesFromSupabase() {
-    const [caseRes, ciclcarRes, facRes, ivacRes] = await Promise.all([
+    const [caseRes, ciclcarRes, facRes, farRes, ivacRes] = await Promise.all([
         supabase.from("case").select("*").order("updated_at", { ascending: false }),
         supabase.from("ciclcar_case").select("*").order("updated_at", { ascending: false }),
         supabase.from("fac_case").select("*").order("created_at", { ascending: false }),
+        supabase.from("far_case").select("*").order("created_at", { ascending: false }),
         supabase.from("ivac_cases").select("*").order("created_at", { ascending: false }),
     ]);
 
     if (caseRes.error) throw caseRes.error;
     if (ciclcarRes.error) throw ciclcarRes.error;
     if (facRes.error) throw facRes.error;
+    if (farRes.error) throw farRes.error;
     if (ivacRes.error) throw ivacRes.error;
 
     return {
         cases: caseRes.data || [],
         ciclcar: ciclcarRes.data || [],
         fac: facRes.data || [],
+        far: farRes.data || [],
         ivac: ivacRes.data || [],
     };
 }
@@ -145,34 +148,38 @@ function computeProgramDashboardData(rawData) {
  * @returns {Object} Computed statistics
  */
 function computeCaseStats(cases) {
+    // Drop Family Assistance Card (fac) and Family Assistance Record (far) from all dashboard stats
+    const scopedCases = cases.filter(c => c.__source !== 'fac' && c.__source !== 'far');
+
     const now = new Date();
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
-    const recentCases = cases.filter(c => 
+    const recentCases = scopedCases.filter(c => 
         new Date(c.created_at || c.date_filed) >= thirtyDaysAgo
     );
-    const lastWeekCases = cases.filter(c => 
+    const lastWeekCases = scopedCases.filter(c => 
         new Date(c.created_at || c.date_filed) >= sevenDaysAgo
     );
 
-    const statusCounts = cases.reduce((acc, c) => {
+    const statusCounts = scopedCases.reduce((acc, c) => {
         const status = c.status || 'unknown';
         acc[status] = (acc[status] || 0) + 1;
         return acc;
     }, {});
 
-    const activeCases = cases.filter(c => {
+    const activeCases = scopedCases.filter(c => {
         const status = (c.status || '').toLowerCase();
         return status !== 'closed' && status !== 'resolved';
     }).length;
 
-    const closedCases = cases.filter(c => {
+    const closedCases = scopedCases.filter(c => {
         const status = (c.status || '').toLowerCase();
         return status === 'closed' || status === 'resolved';
     }).length;
 
-    const priorityCounts = cases.reduce((acc, c) => {
+    // Exclude FAC and FAR cases from priority distribution
+    const priorityCounts = scopedCases.reduce((acc, c) => {
         let priority = (c.priority || 'medium').toLowerCase();
         if (priority === 'normal') priority = 'medium';
         if (priority === 'urgent') priority = 'high';
@@ -180,14 +187,15 @@ function computeCaseStats(cases) {
         return acc;
     }, {});
 
-    const managerWorkload = cases.reduce((acc, c) => {
+    // Exclude FAC and FAR cases from workload visualization
+    const managerWorkload = scopedCases.reduce((acc, c) => {
         const manager = c.case_manager || 'unassigned';
         acc[manager] = (acc[manager] || 0) + 1;
         return acc;
     }, {});
 
     return {
-        total: cases.length,
+        total: scopedCases.length,
         active: activeCases,
         inProgress: statusCounts['in-progress'] || statusCounts['In Process'] || 0,
         pending: statusCounts.pending || 0,
@@ -285,13 +293,17 @@ function applyFilters(cases, filters) {
  */
 function computeDashboardData(rawData, filters = {}) {
     const allCases = [
-        ...(rawData.cases || []),
-        ...(rawData.ciclcar || []),
-        ...(rawData.fac || []),
-        ...(rawData.ivac || []),
+        ...(rawData.cases || []).map(c => ({ ...c, __source: 'case' })),
+        ...(rawData.ciclcar || []).map(c => ({ ...c, __source: 'ciclcar' })),
+        ...(rawData.fac || []).map(c => ({ ...c, __source: 'fac' })),
+        ...(rawData.far || []).map(c => ({ ...c, __source: 'far' })),
+        ...(rawData.ivac || []).map(c => ({ ...c, __source: 'ivac' })),
     ];
 
-    const filteredCases = applyFilters(allCases, filters);
+    // Remove FAC and FAR from dashboard aggregates
+    const visibleCases = allCases.filter(c => c.__source !== 'fac' && c.__source !== 'far');
+
+    const filteredCases = applyFilters(visibleCases, filters);
     const stats = computeCaseStats(filteredCases);
     const timeTrends = computeTimeTrends(filteredCases, 30);
 
@@ -302,7 +314,7 @@ function computeDashboardData(rawData, filters = {}) {
         : 30;
     const previousPeriodStart = new Date(previousPeriodEnd.getTime() - periodLength * 24 * 60 * 60 * 1000);
     
-    const previousCases = allCases.filter(c => {
+    const previousCases = visibleCases.filter(c => {
         const date = new Date(c.created_at || c.date_filed);
         return date >= previousPeriodStart && date < previousPeriodEnd;
     });
