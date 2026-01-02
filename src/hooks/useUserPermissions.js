@@ -17,6 +17,55 @@ import { useState, useEffect, useCallback } from "react";
 import supabase from "@/../config/supabase";
 import { useAuthStore } from "@/store/authStore";
 
+// Cache permissions in localStorage to avoid repeated network fetches for case managers
+const CACHE_KEY_PREFIX = "idm_permissions_cache";
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+function getCacheKey(userId) {
+	return `${CACHE_KEY_PREFIX}:${userId}`;
+}
+
+function readCachedPermissions(userId) {
+	if (typeof localStorage === "undefined" || !userId) return null;
+	try {
+		const raw = localStorage.getItem(getCacheKey(userId));
+		if (!raw) return null;
+
+		const parsed = JSON.parse(raw);
+		if (!parsed?.permissions || !Array.isArray(parsed.permissions)) return null;
+
+		const isFresh = Date.now() - (parsed.timestamp || 0) < CACHE_TTL_MS;
+		if (!isFresh) return null;
+
+		return parsed.permissions;
+	} catch (err) {
+		console.error("Failed to read cached permissions", err);
+		return null;
+	}
+}
+
+function writeCachedPermissions(userId, permissions) {
+	if (typeof localStorage === "undefined" || !userId) return;
+	try {
+		const payload = {
+			permissions,
+			timestamp: Date.now(),
+		};
+		localStorage.setItem(getCacheKey(userId), JSON.stringify(payload));
+	} catch (err) {
+		console.error("Failed to write cached permissions", err);
+	}
+}
+
+function clearCachedPermissions(userId) {
+	if (typeof localStorage === "undefined" || !userId) return;
+	try {
+		localStorage.removeItem(getCacheKey(userId));
+	} catch (err) {
+		console.error("Failed to clear cached permissions", err);
+	}
+}
+
 /**
  * Hook to check permissions for the current logged-in user
  * 
@@ -46,7 +95,7 @@ export function useUserPermissions() {
 	const [permissions, setPermissions] = useState([]);
 	const [loading, setLoading] = useState(true);
 
-	const loadUserPermissions = useCallback(async () => {
+	const loadUserPermissions = useCallback(async (forceNetwork = false) => {
 		if (!user) {
 			setPermissions([]);
 			setLoading(false);
@@ -104,14 +153,22 @@ export function useUserPermissions() {
 				"upload_documents",
 				"delete_documents",
 			]);
+			clearCachedPermissions(user.id);
 			setLoading(false);
 			return;
 		}
 
-		try {
+		// Case managers & others: try cached permissions first
+		const cached = !forceNetwork ? readCachedPermissions(user.id) : null;
+		if (cached) {
+			setPermissions(cached);
+			setLoading(false);
+		} else {
 			setLoading(true);
+		}
 
-			// Fetch permissions for current user
+		try {
+			// Always revalidate in background to ensure freshness
 			const { data, error } = await supabase
 				.from("user_permissions")
 				.select(`
@@ -123,15 +180,17 @@ export function useUserPermissions() {
 
 			if (error) throw error;
 
-			// Extract permission names into a simple array
 			const permissionNames = (data || [])
 				.map((up) => up.permissions?.name)
 				.filter(Boolean);
 
 			setPermissions(permissionNames);
+			writeCachedPermissions(user.id, permissionNames);
 		} catch (err) {
 			console.error("Error loading user permissions:", err);
-			setPermissions([]);
+			if (!cached) {
+				setPermissions([]);
+			}
 		} finally {
 			setLoading(false);
 		}
@@ -183,6 +242,6 @@ export function useUserPermissions() {
 		hasAllPermissions,
 		permissions,
 		loading,
-		reload: loadUserPermissions,
+		reload: (forceNetwork = false) => loadUserPermissions(forceNetwork),
 	};
 }
