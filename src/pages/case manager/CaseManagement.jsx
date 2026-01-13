@@ -284,10 +284,18 @@ export default function CaseManagement() {
 	return (
 		<>
 			{/* ================= HEADER ================= */}
-			<div className="flex items-center justify-between px-4 lg:px-6 pb-4">
+			<div className="flex items-start justify-between gap-4 px-4 lg:px-6 pb-4">
 				<div>
 					<h2 className="text-base font-bold tracking-tight">Case Management</h2>
 					<p className="text-muted-foreground text-[11px]">View and manage all case records and intake forms</p>
+				</div>
+				<div className="hidden sm:block max-w-[520px] text-right text-[11px] leading-snug text-muted-foreground">
+					<p>
+						<span className="font-semibold text-foreground">CICL/CAR</span> - Children In Conflict with the Law (CICL) and Child at Risk (CAR)
+					</p>
+					<p>
+						<span className="font-semibold text-foreground">Incidence on VAC</span> - Incidence on Violence Against Children
+					</p>
 				</div>
 			</div>
 
