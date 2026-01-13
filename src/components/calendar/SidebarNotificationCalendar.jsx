@@ -101,7 +101,7 @@ function NotificationDayButton({
   );
 }
 
-function NotificationListItem({ notification }) {
+function NotificationListItem({ notification, onViewDetails }) {
   const category = notification?.category ? String(notification.category).toLowerCase() : "system";
   const createdAt = notification?.createdAt ? new Date(notification.createdAt) : null;
 
@@ -121,21 +121,90 @@ function NotificationListItem({ notification }) {
         )}
       </div>
 
-      {notification?.message && (
-        <p className="text-sm text-muted-foreground">{notification.message}</p>
-      )}
-
       <div className="flex items-center justify-between gap-2">
         <Badge variant="outline" className={cn("h-6", getNotificationCategoryBadgeClass(category))}>
           {formatCategoryLabel(category)}
         </Badge>
-        {notification?.resourceLabel && (
-          <span className="truncate text-[11px] text-muted-foreground">
-            {notification.resourceLabel}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {notification?.resourceLabel && (
+            <span className="max-w-[180px] truncate text-[11px] text-muted-foreground">
+              {notification.resourceLabel}
+            </span>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 px-2 text-xs"
+            onClick={() => onViewDetails?.(notification)}
+          >
+            View Details
+          </Button>
+        </div>
       </div>
     </div>
+  );
+}
+
+function NotificationDetailsDialog({ open, onOpenChange, notification }) {
+  const createdAt = notification?.createdAt ? new Date(notification.createdAt) : null;
+  const category = notification?.category ? String(notification.category).toLowerCase() : "system";
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{notification?.title || "Notification details"}</DialogTitle>
+          <DialogDescription>
+            {createdAt ? format(createdAt, "PPP p") : "Details"}
+          </DialogDescription>
+        </DialogHeader>
+
+        {!notification ? (
+          <p className="text-sm text-muted-foreground">No notification selected.</p>
+        ) : (
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline" className={cn("h-6", getNotificationCategoryBadgeClass(category))}>
+                {formatCategoryLabel(category)}
+              </Badge>
+              {notification?.severity && (
+                <Badge variant="outline" className="h-6">
+                  {String(notification.severity).toUpperCase()}
+                </Badge>
+              )}
+            </div>
+
+            {notification?.actor && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Actor</p>
+                <p className="text-sm">{notification.actor}</p>
+              </div>
+            )}
+
+            {notification?.message && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Message</p>
+                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{notification.message}</p>
+              </div>
+            )}
+
+            {notification?.resourceLabel && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Resource</p>
+                <p className="text-sm">{notification.resourceLabel}</p>
+              </div>
+            )}
+
+            {notification?.id && (
+              <div>
+                <p className="text-xs font-medium text-muted-foreground">Notification ID</p>
+                <p className="text-sm break-all">{notification.id}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -174,6 +243,8 @@ export function SidebarNotificationCalendar() {
 
   const [selectedDateKey, setSelectedDateKey] = React.useState(null);
   const [modalOpen, setModalOpen] = React.useState(false);
+  const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [selectedNotification, setSelectedNotification] = React.useState(null);
 
   const dayNotifications = React.useMemo(() => {
     if (!selectedDateKey) return [];
@@ -203,6 +274,11 @@ export function SidebarNotificationCalendar() {
     },
     [byDay],
   );
+
+  const handleViewDetails = React.useCallback((notification) => {
+    setSelectedNotification(notification || null);
+    setDetailsOpen(true);
+  }, []);
 
   return (
     <SidebarGroup className="px-0">
@@ -291,13 +367,23 @@ export function SidebarNotificationCalendar() {
               <ScrollArea className="max-h-[420px] pr-3">
                 <div className="space-y-3">
                   {dayNotifications.map((notification) => (
-                    <NotificationListItem key={notification.id} notification={notification} />
+                    <NotificationListItem
+                      key={notification.id}
+                      notification={notification}
+                      onViewDetails={handleViewDetails}
+                    />
                   ))}
                 </div>
               </ScrollArea>
             )}
           </DialogContent>
         </Dialog>
+
+        <NotificationDetailsDialog
+          open={detailsOpen}
+          onOpenChange={setDetailsOpen}
+          notification={selectedNotification}
+        />
       </SidebarGroupContent>
     </SidebarGroup>
   );
