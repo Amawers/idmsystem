@@ -201,14 +201,14 @@ const fetchDeadlineReminders = async ({
   const context = profileContext ?? (await getProfileContext());
   if (!context.user) return [];
 
-  const isHead = context.role === "head";
+  const isSocialWorker = context.role === "social_worker";
   const fullName = context.fullName;
 
   const reminders = [];
 
   // --- Case inactivity reminders (Option 1) ---
   // Only scan scoped cases for case managers to avoid leaking other staff cases.
-  if (isHead || fullName) {
+  if (isSocialWorker || fullName) {
     let casesQuery = supabase
       .from("case")
       .select(
@@ -217,7 +217,7 @@ const fetchDeadlineReminders = async ({
       .order("updated_at", { ascending: false })
       .limit(250);
 
-    if (!isHead && fullName) {
+    if (!isSocialWorker && fullName) {
       casesQuery = casesQuery.eq("case_manager", fullName);
     }
 
@@ -290,7 +290,7 @@ const fetchDeadlineReminders = async ({
       .order("expected_completion_date", { ascending: true })
       .limit(300);
 
-    if (!isHead) {
+    if (!isSocialWorker) {
       if (fullName) {
         enrollmentsQuery = enrollmentsQuery.or(
           `case_worker.eq.${fullName},assigned_by.eq.${context.user.id}`,
@@ -343,9 +343,9 @@ const fetchDeadlineReminders = async ({
 
 const filterAuditLogsForRole = (logs, role) => {
   const normalizedRole = typeof role === "string" ? role.toLowerCase() : "";
-  if (normalizedRole === "head") return logs;
+  if (normalizedRole === "social_worker") return logs;
 
-  // Case managers (and any non-head roles) should not see auth notifications.
+  // Non-social-worker roles should not see auth notifications.
   return (logs || []).filter((log) => {
     if (!log) return false;
     const category = typeof log.action_category === "string" ? log.action_category.toLowerCase() : "";

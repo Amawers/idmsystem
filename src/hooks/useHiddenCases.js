@@ -1,11 +1,11 @@
 /**
  * @file useHiddenCases.js
- * @description Hook to manage hidden case records (for heads only)
+ * @description Hook to manage hidden case records
  * @module hooks/useHiddenCases
  * 
  * @overview
- * Provides functionality for heads to hide sensitive cases from specific case managers.
- * Also provides filtering to exclude hidden cases for case managers.
+ * Provides functionality to hide sensitive cases from specific users.
+ * Also provides filtering to exclude cases hidden from the current user.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -43,12 +43,9 @@ export function useHiddenCases() {
 		try {
 			setLoading(true);
 			
-			// Different queries for heads vs case managers
+			// Load full details for the management UI
 			let data, error;
-			
-			if (role === 'head') {
-				// Heads need full details including user info for the management UI
-				const result = await supabase.from("hidden_cases").select(`
+			const result = await supabase.from("hidden_cases").select(`
 					id,
 					case_id,
 					table_type,
@@ -56,43 +53,26 @@ export function useHiddenCases() {
 					hidden_by,
 					reason,
 					hidden_at
-				`).order("hidden_at", { ascending: false });
-				
-				data = result.data;
-				error = result.error;
-				
-				// Manually fetch user details for each hidden case
-				if (data && data.length > 0) {
-					const userIds = [...new Set(data.map(hc => hc.hidden_from_user_id))];
-					const { data: users } = await supabase
-						.from("profile")
-						.select("id, email, full_name")
-						.in("id", userIds);
-					
-					// Map user details back to hidden cases
-					if (users) {
-						data = data.map(hc => ({
-							...hc,
-							hidden_from_user: users.find(u => u.id === hc.hidden_from_user_id)
-						}));
-					}
+			`).order("hidden_at", { ascending: false });
+
+			data = result.data;
+			error = result.error;
+
+			// Manually fetch user details for each hidden case
+			if (data && data.length > 0) {
+				const userIds = [...new Set(data.map(hc => hc.hidden_from_user_id))];
+				const { data: users } = await supabase
+					.from("profile")
+					.select("id, email, full_name")
+					.in("id", userIds);
+
+				// Map user details back to hidden cases
+				if (users) {
+					data = data.map(hc => ({
+						...hc,
+						hidden_from_user: users.find(u => u.id === hc.hidden_from_user_id)
+					}));
 				}
-			} else if (role === 'case_manager') {
-				// Case managers only need case IDs for filtering
-				const result = await supabase.from("hidden_cases").select(`
-					id,
-					case_id,
-					table_type,
-					hidden_from_user_id,
-					hidden_by,
-					reason,
-					hidden_at
-				`)
-				.eq('hidden_from_user_id', user.id)
-				.order("hidden_at", { ascending: false });
-				
-				data = result.data;
-				error = result.error;
 			}
 
 			if (error) throw error;
@@ -100,9 +80,7 @@ export function useHiddenCases() {
 			setHiddenCases(data || []);
 		} catch (err) {
 			console.error("Error loading hidden cases:", err);
-			if (role === 'head') {
-				toast.error("Failed to load hidden cases");
-			}
+			toast.error("Failed to load hidden cases");
 		} finally {
 			setLoading(false);
 		}
@@ -120,10 +98,7 @@ export function useHiddenCases() {
 	 * @param {string} reason - Optional reason for hiding
 	 */
 	const hideCase = async (caseId, userId, tableType, reason = "") => {
-		if (role !== 'head') {
-			toast.error("Only heads can hide cases");
-			return false;
-		}
+		if (!user) return false;
 
 		try {
 			const { error } = await supabase
@@ -159,10 +134,7 @@ export function useHiddenCases() {
 	 * @param {string} hiddenCaseId - Hidden case record ID
 	 */
 	const unhideCase = async (hiddenCaseId) => {
-		if (role !== 'head') {
-			toast.error("Only heads can unhide cases");
-			return false;
-		}
+		if (!user) return false;
 
 		try {
 			const { error } = await supabase
@@ -211,27 +183,12 @@ export function useHiddenCases() {
 	 * @returns {Array} Filtered array
 	 */
 	const filterVisibleCases = useCallback((cases) => {
-
-		// Heads see all cases
-		if (role === 'head') {
-			return cases;
-		}
-
-		// Case managers see only non-hidden cases
-		if (role === 'case_manager' && user) {
-			// Inline the filtering logic to avoid dependency issues
-			const hiddenCaseIds = hiddenCases
-				.filter(hc => hc.hidden_from_user_id === user.id)
-				.map(hc => hc.case_id);
-
-			const filtered = cases.filter(c => !hiddenCaseIds.includes(c.id));
-			
-			return filtered;
-		}
-
-		console.log('[filterVisibleCases] No filtering applied, returning all cases');
-		return cases;
-	}, [role, user, hiddenCases]);
+		if (!user) return cases;
+		const hiddenCaseIds = hiddenCases
+			.filter(hc => hc.hidden_from_user_id === user.id)
+			.map(hc => hc.case_id);
+		return cases.filter(c => !hiddenCaseIds.includes(c.id));
+	}, [user, hiddenCases]);
 
 	return {
 		hiddenCases,

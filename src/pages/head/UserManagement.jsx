@@ -18,7 +18,7 @@
 // <Route
 //   path="/account"
 //   element={
-//     <ProtectedRoute allowedRoles={["head"]}>
+//     <ProtectedRoute allowedRoles={["social_worker"]}>
 //       <Layout>
 //         <UserManagement />
 //       </Layout>
@@ -216,7 +216,7 @@ export default function UserManagement() {
 				<div>
 					<h1 className="text-2xl font-bold tracking-tight">User Management</h1>
 					<p className="text-sm text-muted-foreground mt-1">
-						Manage case manager and head accounts
+						Manage social worker accounts
 					</p>
 				</div>
 				<Button onClick={() => setCreateDialogOpen(true)}>

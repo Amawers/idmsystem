@@ -127,7 +127,7 @@ export async function fetchCaseManagersFromSupabase() {
     const { data, error } = await supabase
         .from("profile")
         .select("id, full_name, email, role")
-        .eq("role", "case_manager")
+        .eq("role", "social_worker")
         .order("full_name", { ascending: true });
     if (error) throw error;
     return data ?? [];

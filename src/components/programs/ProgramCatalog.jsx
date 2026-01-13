@@ -13,7 +13,6 @@
 
 import { useState, useEffect, useRef } from "react";
 import { usePrograms } from "@/hooks/usePrograms";
-import { useNavigate } from "react-router-dom";
 import {
   Table,
   TableBody,
@@ -112,7 +111,6 @@ export default function ProgramCatalog() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   
-  const navigate = useNavigate();
 
   const filterOptions = {
     status: statusFilter !== "all" ? statusFilter : undefined,
@@ -229,11 +227,6 @@ export default function ProgramCatalog() {
   const handleProgramSuccess = async () => {
     // Refresh programs list after create/update
     await fetchPrograms();
-  };
-
-  const handleViewEnrollments = (program) => {
-    // Navigate to enrollments page with program filter
-    navigate(`/program/enrollments?programId=${program.id}&programName=${encodeURIComponent(program.program_name)}`);
   };
 
   const handleViewEnrollmentsDialog = (program) => {

@@ -80,8 +80,6 @@ function aggregateWorkloadRows(countMaps, roleMap) {
 
   const rows = [];
   for (const manager of managers) {
-    if (roleMap[manager] === "head") continue;
-
     const totals = {
       vac: (countMaps[0] || {})[manager] || { total: 0, active: 0, urgent: 0, high: 0, weightedScore: 0 },
       ciclcar: (countMaps[1] || {})[manager] || { total: 0, active: 0, urgent: 0, high: 0, weightedScore: 0 },
@@ -110,7 +108,7 @@ function aggregateWorkloadRows(countMaps, roleMap) {
     rows.push({
       staff_name: manager,
       case_manager: manager,
-      staff_role: roleMap[manager] ? roleMap[manager].replace(/_/g, " ") : "Case Manager",
+      staff_role: roleMap[manager] ? roleMap[manager].replace(/_/g, " ") : "Social Worker",
       total_cases: totalCases,
       active_cases: activeCases,
       urgent_cases: urgentCases,

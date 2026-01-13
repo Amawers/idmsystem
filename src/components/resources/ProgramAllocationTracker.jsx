@@ -172,7 +172,7 @@ function ProgramCard({ program, allocations }) {
 export default function ProgramAllocationTracker() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const { programs, loading: programsLoading, fetchPrograms, pendingCount, runSync, syncing, syncStatus, offline } = usePrograms({ status: 'active' });
-  const { allocations, budgetUtilization, loading: allocationsLoading, refresh: refreshAllocations } = useResourceAllocations();
+  const { allocations, loading: allocationsLoading, refresh: refreshAllocations } = useResourceAllocations();
   
   const loading = programsLoading || allocationsLoading;
 

@@ -1,11 +1,11 @@
 // =============================================
 // User Management Store (Zustand)
 // ---------------------------------------------
-// Purpose: Centralized state management for heads-only user account
+// Purpose: Centralized state management for user account
 // operations including create, edit, ban/suspend, and view users.
 //
 // Key Responsibilities:
-// - Fetch and cache list of all users (case managers)
+// - Fetch and cache list of all users
 // - Create new user accounts via Supabase Admin API
 // - Update user details (name, email, role, status)
 // - Ban/suspend and reactivate user accounts
@@ -46,7 +46,7 @@
 // await createUser({ 
 //   fullName: 'Juan Dela Cruz',
 //   email: 'newuser@example.com', 
-//   role: 'case_manager',
+//   role: 'social_worker',
 //   status: 'active'
 // });
 //
@@ -140,22 +140,23 @@ export const useUserManagementStore = create((set, get) => ({
 	// ===============================
 	/**
 	 * Creates a new user account with specified details.
-	 * Requires head role. Password can be auto-generated or provided.
+	 * In the single-role system, all created users are `social_worker`.
 	 * 
 	 * @param {Object} userData - User data object
 	 * @param {string} userData.fullName - User's full name
 	 * @param {string} userData.email - User's email address (unique)
 	 * @param {string} userData.password - User's password (optional, auto-generated if not provided)
-	 * @param {string} userData.role - User role (case_manager or head)
+	 * @param {string} userData.role - Ignored (forced to social_worker)
 	 * @param {string} userData.status - Account status (active/inactive)
 	 * @returns {Promise<Object>} Created user object or error
 	 */
 	createUser: async (userData) => {
 		set({ loading: true, error: null });
 		try {
-			const { fullName, email, password, role = "case_manager", status = "active" } = userData;
+			const { fullName, email, password, status = "active" } = userData;
+			const role = "social_worker";
 
-			// Get current user (the head creating this account)
+			// Get current user (the admin creating this account)
 			const {
 				data: { user: currentUser },
 			} = await supabase.auth.getUser();
@@ -245,7 +246,7 @@ export const useUserManagementStore = create((set, get) => ({
 	 * 
 	 * @param {string} userId - UUID of user to update
 	 * @param {Object} updates - Fields to update
-	 * @param {string} [updates.role] - New role
+	 * @param {string} [updates.role] - Ignored (forced to social_worker)
 	 * @param {string} [updates.status] - New status
 	 * @param {string} [updates.email] - New email (updates auth.users)
 	 * @returns {Promise<void>}
@@ -255,7 +256,7 @@ export const useUserManagementStore = create((set, get) => ({
 		try {
 			// Separate profile updates from auth updates
 			const profileUpdates = {};
-			if (updates.role) profileUpdates.role = updates.role;
+			if (updates.role) profileUpdates.role = "social_worker";
 			if (updates.status) profileUpdates.status = updates.status;
 
 			// Update profile table
@@ -406,7 +407,7 @@ export const useUserManagementStore = create((set, get) => ({
 	 * @param {string} newPassword - New password to set
 	 * @returns {Promise<void>}
 	 */
-	resetUserPassword: async (userId, newPassword) => {
+	resetUserPassword: async (_userId, _newPassword) => {
 		set({ loading: true, error: null });
 		try {
 			// Note: This requires Supabase Admin API

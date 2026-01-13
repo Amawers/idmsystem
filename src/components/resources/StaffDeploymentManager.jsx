@@ -34,16 +34,6 @@ function StaffAvailabilityCard({ staff }) {
     return colors[status] || "bg-gray-500";
   };
 
-  const getAvailabilityLabel = (status) => {
-    const labels = {
-      available: "Available",
-      partially_available: "Partial",
-      busy: "Busy",
-      unavailable: "Unavailable",
-    };
-    return labels[status] || "Unknown";
-  };
-
   return (
     <div className="flex items-start justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
       <div className="flex items-start gap-3 flex-1">

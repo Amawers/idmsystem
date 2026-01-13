@@ -36,7 +36,7 @@ import offlineCaseDb from "@/db/offlineCaseDb";
 /**
  * Metric Card Component
  */
-function MetricCard({ title, value, subtitle, icon: Icon, trend, trendValue, color = "blue", status }) {
+function MetricCard({ title, value, subtitle, icon: _Icon, trend, trendValue, color = "blue", status }) {
   const colorClasses = {
     blue: "text-blue-600 bg-blue-50",
     green: "text-green-600 bg-green-50",
@@ -50,7 +50,7 @@ function MetricCard({ title, value, subtitle, icon: Icon, trend, trendValue, col
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 pt-4 px-4">
         <CardTitle className="text-sm font-medium">{title}</CardTitle>
         <div className={`p-2 rounded-full ${colorClasses[color]}`}>
-          <Icon className="h-4 w-4" />
+          <_Icon className="h-4 w-4" />
         </div>
       </CardHeader>
       <CardContent className="pb-4 px-4">
@@ -306,7 +306,7 @@ function SuppliesInventory({ inventoryItems, loading }) {
  */
 export default function RealTimeInventoryDashboard() {
   const [lastUpdate, setLastUpdate] = useState(new Date());
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [autoRefresh] = useState(true);
   const [staffAssignments, setStaffAssignments] = useState([]);
   const [staffLoading, setStaffLoading] = useState(false);
 
@@ -319,7 +319,7 @@ export default function RealTimeInventoryDashboard() {
 
   const { programs, loading: programsLoading, fetchPrograms } = usePrograms();
 
-  // Fetch staff assignments excluding heads
+  // Fetch staff assignments
   const fetchStaffAssignments = async () => {
     setStaffLoading(true);
     try {
@@ -332,7 +332,7 @@ export default function RealTimeInventoryDashboard() {
             staff_id: cm.id,
             availability_status: 'available',
             staff_name: cm.full_name,
-            staff_role: cm.role || 'case_manager',
+            staff_role: cm.role || 'social_worker',
             profile: cm,
           }));
           setStaffAssignments(mockAssignments);
@@ -359,14 +359,10 @@ export default function RealTimeInventoryDashboard() {
         .order('start_date', { ascending: false });
 
       if (!assignmentsError && assignmentsData && assignmentsData.length > 0) {
-        // Filter out staff who are heads
-        const filteredAssignments = assignmentsData.filter(
-          assignment => assignment.profile?.role !== 'head'
-        );
-        setStaffAssignments(filteredAssignments);
+        setStaffAssignments(assignmentsData);
         // Persist case manager snapshot for offline use
         try {
-          const caseManagers = filteredAssignments
+          const caseManagers = assignmentsData
             .map(a => a.profile)
             .filter(Boolean)
             .map(p => ({ id: p.id, full_name: p.full_name, role: p.role }));
@@ -382,7 +378,7 @@ export default function RealTimeInventoryDashboard() {
         const { data: caseManagers, error: profileError } = await supabase
           .from('profile')
           .select('id, full_name, email, role')
-          .eq('role', 'case_manager')
+          .eq('role', 'social_worker')
           .eq('status', 'active')
           .order('full_name', { ascending: true });
 

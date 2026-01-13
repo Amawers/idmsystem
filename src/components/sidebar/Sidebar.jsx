@@ -42,43 +42,7 @@ export default function Sidebar(props) {
 
   // ================= ROLE-BASED NAVIGATION =================
   const roleNavs = {
-    case_manager: [
-      { 
-        path: "/case", 
-        label: "Case Management", 
-        icon: IconHeartHandshake,
-        items: [
-          { path: "/case/dashboard", label: "Dashboard", icon: IconDashboard },
-          { path: "/case/management", label: "Management", icon: IconFolders },
-        ]
-      },
-      { 
-        path: "/program", 
-        label: "Program Management", 
-        icon: IconListDetails,
-        items: [
-          { path: "/program/dashboard", label: "Dashboard", icon: IconDashboard },
-          { path: "/program/catalog", label: "Programs", icon: IconFolders },
-          { path: "/program/enrollments", label: "Enrollments", icon: IconUsersGroup },
-          { path: "/program/service-delivery", label: "Service Delivery", icon: IconClipboardData },
-          { path: "/program/partners", label: "Partners", icon: IconHeartHandshake },
-        ]
-      },
-      { 
-        path: "/resource", 
-        label: "Resource Allocation", 
-        icon: IconChartBar,
-        items: [
-          { path: "/resource/dashboard", label: "Dashboard", icon: IconDashboard },
-          { path: "/resource/stock", label: "Stock", icon: IconPackage },
-          { path: "/resource/approvals", label: "Approvals", icon: IconCircleCheck },
-          { path: "/resource/staff", label: "Staff", icon: IconUserCheck },
-          { path: "/resource/programs", label: "Programs", icon: IconFolders },
-        ]
-      },
-      // Security & Audit is hidden for case managers (heads only)
-    ],
-    head: [
+    social_worker: [
       { 
         path: "/case", 
         label: "Case Management", 
@@ -126,7 +90,7 @@ export default function Sidebar(props) {
     ],
   }
 
-  const navItems = roleNavs[role] || [] // get items based on role
+  const navItems = roleNavs[role] || roleNavs.social_worker || [] // defensive fallback
 
   return (
     <ShadcnSidebar collapsible="offcanvas" {...props}>

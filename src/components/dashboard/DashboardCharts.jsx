@@ -20,13 +20,11 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 /**
  * Time Trend Chart - Shows cases over time
  */
 export function TimeTrendChart({ data, loading, title = "Case Trends", description = "Cases over time" }) {
-  const isMobile = useIsMobile();
   const [timeRange, setTimeRange] = useState("30d");
 
   // Filter data based on time range

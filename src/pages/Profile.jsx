@@ -16,12 +16,11 @@ import { Eye, EyeOff } from "lucide-react";
 
 export default function Profile({ open, setOpen }) {
 	// Zustand store: current user, avatar URL, upload and password functions
-	const { user, avatar_url, uploadAvatar, updatePassword } = useAuthStore();
+	const { user, role, avatar_url, uploadAvatar, updatePassword } = useAuthStore();
 
 	// Map roles from DB to readable labels
 	const roleLabels = {
-		case_manager: "Case Manager",
-		head: "Head",
+		social_worker: "Social Worker",
 	};
 
 	// ===============================
@@ -138,7 +137,7 @@ export default function Profile({ open, setOpen }) {
 						{/* Display full name + role */}
 						<div className="text-center">
 							<p className="text-md font-semibold">
-								{roleLabels[user.user_metadata.role] || "Role"}
+								{roleLabels[role] || "Role"}
 							</p>
 							<p className="text-sm text-gray-500">
 								{user.user_metadata.full_name || "Full Name"}

@@ -28,12 +28,12 @@ import Profile from "@/pages/Profile";
 export function NavUser({ user, avatar }) {
 	const { isMobile } = useSidebar();
 	const logout = useAuthStore((s) => s.logout);
+	const role = useAuthStore((s) => s.role);
 
 	const [openDialog, setOpenDialog] = useState(false);
 
 	const roleLabels = {
-		case_manager: "Case Manager",
-		head: "Head",
+		social_worker: "Social Worker",
 	};
 
 	return (
@@ -55,7 +55,7 @@ export function NavUser({ user, avatar }) {
 								{/* USER INFO */}
 								<div className="grid flex-1 text-left text-sm leading-tight">
 									<span className="truncate font-medium">
-										{roleLabels[user.role] || user.role}
+										{roleLabels[role] || "Social Worker"}
 									</span>
 									<span className="text-muted-foreground truncate text-xs">
 										{user.email}

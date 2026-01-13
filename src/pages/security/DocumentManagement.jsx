@@ -1,6 +1,6 @@
 /**
  * @file DocumentManagement.jsx
- * @description Head-only operations document management page (Security & Audit section)
+ * @description Social-worker operations document management page (Security & Audit section)
  * @module pages/security/DocumentManagement
  *
  * Notes:

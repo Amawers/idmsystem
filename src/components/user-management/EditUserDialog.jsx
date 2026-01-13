@@ -1,11 +1,11 @@
 // =============================================
 // Edit User Dialog Component
 // ---------------------------------------------
-// Purpose: Dialog form for heads to edit existing user account details.
-// Allows updating role and status. Email changes are restricted.
+// Purpose: Dialog form to edit existing user account details.
+// Allows updating status. Email changes are restricted.
 //
 // Features:
-// - Update user role (case_manager/head)
+// - Single role: social_worker (role not editable)
 // - Update account status (active/inactive/banned)
 // - Form validation with Zod
 // - Toast notifications on success/error
@@ -74,9 +74,6 @@ import { Badge } from "@/components/ui/badge";
 
 // Validation schema
 const editUserSchema = z.object({
-	role: z.enum(["case_manager", "head"], {
-		required_error: "Please select a role",
-	}),
 	status: z.enum(["active", "inactive", "banned"], {
 		required_error: "Please select a status",
 	}),
@@ -88,7 +85,6 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }) {
 	const form = useForm({
 		resolver: zodResolver(editUserSchema),
 		defaultValues: {
-			role: "case_manager",
 			status: "active",
 		},
 	});
@@ -97,7 +93,6 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }) {
 	useEffect(() => {
 		if (user) {
 			form.reset({
-				role: user.role || "case_manager",
 				status: user.status || "active",
 			});
 		}
@@ -109,7 +104,6 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }) {
 
 		try {
 			await updateUser(user.id, {
-				role: data.role,
 				status: data.status,
 			});
 
@@ -118,26 +112,8 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }) {
 			});
 
 			// Create audit log for user update
-			const oldRole = user.role;
 			const oldStatus = user.status;
-			const roleChanged = oldRole !== data.role;
 			const statusChanged = oldStatus !== data.status;
-
-			if (roleChanged) {
-				await createAuditLog({
-					actionType: AUDIT_ACTIONS.UPDATE_ROLE,
-					actionCategory: AUDIT_CATEGORIES.USER,
-					description: `Changed ${user.email}'s role from ${oldRole} to ${data.role}`,
-					resourceType: 'user',
-					resourceId: user.id,
-					metadata: {
-						email: user.email,
-						oldRole,
-						newRole: data.role
-					},
-					severity: 'critical'
-				});
-			}
 
 			if (statusChanged) {
 				await createAuditLog({
@@ -172,7 +148,7 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }) {
 				<DialogHeader>
 					<DialogTitle>Edit User Account</DialogTitle>
 					<DialogDescription>
-						Update user role and account status. Email cannot be changed.
+						Update account status. Email cannot be changed.
 					</DialogDescription>
 				</DialogHeader>
 
@@ -200,36 +176,9 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }) {
 
 				<Form {...form}>
 					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-						{/* Role Selection */}
-						<FormField
-							control={form.control}
-							name="role"
-							render={({ field }) => (
-								<FormItem>
-									<FormLabel>Role</FormLabel>
-									<Select
-										onValueChange={field.onChange}
-										value={field.value}
-									>
-										<FormControl>
-											<SelectTrigger>
-												<SelectValue placeholder="Select a role" />
-											</SelectTrigger>
-										</FormControl>
-										<SelectContent>
-											<SelectItem value="case_manager">
-												Case Manager
-											</SelectItem>
-											<SelectItem value="head">Head</SelectItem>
-										</SelectContent>
-									</Select>
-									<FormDescription>
-										Case Managers handle cases; Heads manage users
-									</FormDescription>
-									<FormMessage />
-								</FormItem>
-							)}
-						/>
+						<div className="rounded-lg border p-3 text-sm text-muted-foreground">
+							Role: Social Worker
+						</div>
 
 						{/* Status Selection */}
 						<FormField

@@ -92,7 +92,7 @@ function RequestDetailsDialog({ request, open, onOpenChange, onApprove, onReject
 
   if (!request) return null;
 
-  const canApprove = role === 'head' && request.status === 'submitted';
+  const canApprove = role === 'social_worker' && request.status === 'submitted';
 
   const handleApprove = async () => {
     setActionLoading(true);
@@ -298,7 +298,6 @@ export default function ApprovalWorkflowManager() {
 
   const {
     requests,
-    pendingApprovals,
     submitRequest,
     updateRequestStatus,
     refreshRequests,
@@ -311,7 +310,7 @@ export default function ApprovalWorkflowManager() {
   } = useResourceApprovalsOffline();
   const { adjustStock } = useInventoryOffline();
   const { role, user } = useAuthStore();
-  const canSubmitResourceRequest = role === "case_manager";
+  const canSubmitResourceRequest = role === "social_worker";
 
   useEffect(() => {
     if (typeof window === "undefined") return;

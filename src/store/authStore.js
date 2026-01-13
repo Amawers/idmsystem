@@ -8,6 +8,15 @@ import {
 	saveOfflineSession,
 } from "@/lib/offlineAuthSession";
 
+const normalizeRole = (role) => {
+	// The system now supports a single role: `social_worker`.
+	// Treat legacy roles as `social_worker` to preserve functionality.
+	if (!role) return "social_worker";
+	if (role === "social_worker") return "social_worker";
+	if (role === "head" || role === "case_manager") return "social_worker";
+	return "social_worker";
+};
+
 const sanitizeUserForOffline = (user) => {
 	if (!user) return null;
 	return {
@@ -26,7 +35,7 @@ export const useAuthStore = create((set) => {
 		set({
 			user: cached.user,
 			avatar_url: cached.avatarSignedUrl ?? null,
-			role: cached.role ?? "case_manager",
+			role: normalizeRole(cached.role),
 			loading: false,
 			offlineMode: true,
 		});
@@ -56,7 +65,8 @@ export const useAuthStore = create((set) => {
 		// ===============================
 		// SET USER & ROLE (helper)
 		// ===============================
-		setUser: (user, role) => set({ user, role, loading: false, offlineMode: false }),
+		setUser: (user, role) =>
+			set({ user, role: normalizeRole(role), loading: false, offlineMode: false }),
 
 	// ===============================
 	// LOGIN FUNCTION
@@ -110,7 +120,7 @@ export const useAuthStore = create((set) => {
 			set({
 				user: data.user,
 				avatar_url: avatarSignedUrl,
-				role: profile.role,
+				role: normalizeRole(profile?.role),
 				loading: false,
 				offlineMode: false,
 			});
@@ -119,7 +129,7 @@ export const useAuthStore = create((set) => {
 			if (rememberMe) {
 				saveOfflineSession({
 					user: sanitizeUserForOffline(data.user),
-					role: profile.role,
+					role: normalizeRole(profile?.role),
 					avatarSignedUrl,
 				});
 			} else {
@@ -198,7 +208,7 @@ export const useAuthStore = create((set) => {
 					set({
 						user: data.user,
 						avatar_url: avatarSignedUrl,
-						role: profile?.role || "case_manager", // default role if missing
+						role: normalizeRole(profile?.role),
 						loading: false,
 						offlineMode: false,
 					});
@@ -266,7 +276,7 @@ export const useAuthStore = create((set) => {
 							set({
 								user: session.user,
 								avatar_url: avatarSignedUrl,
-								role: profile?.role || "case_manager",
+								role: normalizeRole(profile?.role),
 								loading: false,
 								offlineMode: false,
 							});

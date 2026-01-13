@@ -75,7 +75,6 @@ export default function ProgramDashboard() {
   
   // Use offline-aware dashboard hook
   const {
-    data: dashboardData,
     loading: dashboardLoading,
     refreshFromServer,
     syncing,

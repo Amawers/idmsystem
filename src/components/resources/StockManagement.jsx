@@ -77,6 +77,7 @@ import {
   WifiOff,
   CloudUpload,
 } from "lucide-react";
+import PermissionGuard from "@/components/PermissionGuard";
 import { useResourceStore } from "@/store/useResourceStore";
 import { useAuthStore } from "@/store/authStore";
 import { useInventoryOffline, INVENTORY_FORCE_SYNC_KEY } from "@/hooks/useInventoryOffline";
@@ -720,7 +721,7 @@ export default function StockManagement() {
   } = useInventoryOffline();
   const submitRequest = useResourceStore((state) => state.submitRequest);
 
-  const { role, user } = useAuthStore();
+  const { user } = useAuthStore();
   const isOnline = useNetworkStatus();
   const [autoSyncPending, setAutoSyncPending] = useState(false);
   const runSyncRef = useRef(runSync);
@@ -954,17 +955,18 @@ export default function StockManagement() {
                   <CloudUpload className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
                   {syncing ? "Syncing..." : "Sync Changes"}
                 </Button>
-                {role === "case_manager" ? (
+                <PermissionGuard permission="create_resource_request">
                   <Button onClick={() => setShowRequestDialog(true)} size="sm" className="cursor-pointer">
                     <PlusCircle className="mr-2 h-4 w-4" />
                     New Request
                   </Button>
-                ) : (
+                </PermissionGuard>
+                <PermissionGuard permission="create_inventory_item">
                   <Button onClick={() => setShowAddDialog(true)} size="sm" className="cursor-pointer">
                     <PlusCircle className="mr-2 h-4 w-4" />
                     Add Item
                   </Button>
-                )}
+                </PermissionGuard>
               </div>
             </div>
           </div>
@@ -1070,19 +1072,22 @@ export default function StockManagement() {
                         <StatusBadge status={item.status} />
                       </TableCell>
                       <TableCell className="text-right">
-                        {role === "case_manager" ? (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleViewDetails(item);
-                            }}
-                            className="h-6 px-2 text-xs cursor-pointer"
-                          >
-                            <Eye className="h-3 w-3" />
-                          </Button>
-                        ) : (
+                        <PermissionGuard
+                          permission="update_inventory_stock"
+                          fallback={
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewDetails(item);
+                              }}
+                              className="h-6 px-2 text-xs cursor-pointer"
+                            >
+                              <Eye className="h-3 w-3" />
+                            </Button>
+                          }
+                        >
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                               <Button
@@ -1136,7 +1141,7 @@ export default function StockManagement() {
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
-                        )}
+                        </PermissionGuard>
                       </TableCell>
                     </TableRow>
                   ))

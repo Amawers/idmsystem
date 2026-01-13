@@ -10,7 +10,7 @@
  * - Status breakdown (active/inactive/banned)
  * - User activity insights
  * 
- * Only accessible by users with 'head' role.
+ * Only accessible by users with 'social_worker' role.
  */
 
 import DynamicDashboard from "@/components/dashboard/DynamicDashboard";

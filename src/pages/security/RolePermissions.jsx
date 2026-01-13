@@ -4,7 +4,7 @@
  * @module pages/security/RolePermissions
  * 
  * @overview
- * This component allows heads to manage individual user permissions.
+ * This component allows social workers to manage individual user permissions.
  * Unlike role-based access control, permissions are granted per user.
  * Changes are staged and can be saved in batch.
  * 
@@ -82,7 +82,6 @@ export default function RolePermissions() {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [pendingChanges, setPendingChanges] = useState({});
 	const [saving, setSaving] = useState(false);
-	const [refreshing, setRefreshing] = useState(false);
 
 	// ================= LOAD DATA FROM DATABASE =================
 	useEffect(() => {
@@ -169,9 +168,6 @@ export default function RolePermissions() {
 
 		// ================= FILTERING =================
 	const filteredUsers = users.filter((user) => {
-		// Only show case managers, not heads
-		if (user.role !== "case_manager") return false;
-		
 		const matchesSearch =
 			user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
 			user.role?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -179,14 +175,8 @@ export default function RolePermissions() {
 	});
 
 	// ================= PERMISSION HELPERS =================
-	// HEAD-ONLY permissions that cannot be assigned to case managers
-	const HEAD_ONLY_PERMISSIONS = [
-		'update_inventory_stock',
-		'create_inventory_item',
-		'approve_resource_request',
-		'reject_resource_request',
-		'manage_staff_assignment'
-	];
+	// In the single-role system, social workers have all permissions by default.
+	const DEFAULT_ALL_PERMISSIONS_ROLE = "social_worker";
 
 	// Group permissions by category
 	const groupedPermissions = permissions.reduce((acc, perm) => {
@@ -198,17 +188,10 @@ export default function RolePermissions() {
 	}, {});
 
 	// Check if a permission can be assigned to the selected user
-	const canAssignPermission = (permissionName) => {
+	const canAssignPermission = () => {
 		if (!selectedUser) return false;
-		
-		// If user is a head, they already have all permissions by default
-		if (selectedUser.role === 'head') return false;
-		
-		// Case managers cannot be assigned HEAD-ONLY permissions
-		if (selectedUser.role === 'case_manager' && HEAD_ONLY_PERMISSIONS.includes(permissionName)) {
-			return false;
-		}
-		
+		// Default-all role: per-user permissions are not applicable
+		if (selectedUser.role === DEFAULT_ALL_PERMISSIONS_ROLE) return false;
 		return true;
 	};
 
@@ -231,9 +214,8 @@ export default function RolePermissions() {
 	const togglePermission = (permissionId, permissionName, currentState) => {
 		if (!selectedUser) return;
 		
-		// Prevent toggling HEAD-ONLY permissions for case managers
-		if (!canAssignPermission(permissionName)) {
-			toast.error("This permission can only be assigned to heads");
+		if (!canAssignPermission()) {
+			toast.error("Social workers already have all permissions by default");
 			return;
 		}
 
@@ -345,23 +327,6 @@ export default function RolePermissions() {
 		toast.info("Changes discarded");
 	};
 
-	// Refresh all data
-	const handleRefresh = async () => {
-		setRefreshing(true);
-		try {
-			await Promise.all([
-				loadPermissions(),
-				loadUsers(),
-				loadUserPermissions()
-			]);
-			toast.success("Data refreshed successfully");
-		} catch (error) {
-			console.error("Error refreshing data:", error);
-			toast.error("Failed to refresh data");
-		} finally {
-			setRefreshing(false);
-		}
-	};
 
 	// ================= CATEGORY STYLING =================
 	const getCategoryInfo = (category) => {
@@ -411,9 +376,8 @@ export default function RolePermissions() {
 					variant="outline"
 					size="sm"
 					onClick={() => window.location.reload()}
-					disabled={refreshing}
 				>
-					<RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+					<RefreshCw className="mr-2 h-4 w-4" />
 					Refresh
 				</Button>
 			</div>
@@ -476,7 +440,7 @@ export default function RolePermissions() {
 										>
 											<div className="font-medium text-sm">{user.email}</div>
 											<Badge variant="secondary" className="mt-1 text-xs">
-												{user.role === "head" ? "Head" : "Case Manager"}
+												Social Worker
 											</Badge>
 										</button>
 									))
@@ -556,12 +520,11 @@ export default function RolePermissions() {
 																	pendingChanges[
 																		`${selectedUser.id}_${perm.id}`
 																	] !== undefined;
-																const isHeadOnly = HEAD_ONLY_PERMISSIONS.includes(perm.name);
 																const canAssign = canAssignPermission(perm.name);
-																const isDisabled = !canAssign || selectedUser?.role === 'head';
+																const isDisabled = !canAssign || selectedUser?.role === 'social_worker';
 
 																return (
-																	<TableRow key={perm.id} className={isHeadOnly && selectedUser?.role === 'case_manager' ? 'opacity-50' : ''}>
+																	<TableRow key={perm.id}>
 																		<TableCell>
 																			<Checkbox
 																				checked={isEnabled}
@@ -577,18 +540,12 @@ export default function RolePermissions() {
 																		</TableCell>
 																		<TableCell className="font-medium">
 																			{perm.display_name}
-																			{isHeadOnly && selectedUser?.role === 'case_manager' && (
-																				<Badge variant="secondary" className="ml-2 text-xs">
-																					<Shield className="h-3 w-3 mr-1" />
-																					Head Only
-																				</Badge>
-																			)}
 																		</TableCell>
 																		<TableCell className="text-sm text-muted-foreground">
 																			{perm.description}
 																		</TableCell>
 																		<TableCell className="text-right">
-																			{selectedUser?.role === 'head' ? (
+																			{selectedUser?.role === 'social_worker' ? (
 																				<Badge
 																					variant="outline"
 																					className="border-blue-500 text-blue-600"

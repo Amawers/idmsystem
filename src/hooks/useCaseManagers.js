@@ -4,7 +4,7 @@
  * @module hooks/useCaseManagers
  * 
  * Features:
- * - Fetch all users with case_manager role
+ * - Fetch all users with social_worker role
  * - Real-time updates via Supabase subscriptions
  * - Error handling and loading states
  * 
@@ -38,7 +38,7 @@ export function useCaseManagers() {
       let { data, error: fetchError } = await supabase
         .from('profile')
         .select('id, full_name, email, role')
-        .eq('role', 'case_manager')
+        .eq('role', 'social_worker')
         .eq('status', 'active')
         .order('full_name', { ascending: true });
 
@@ -48,7 +48,7 @@ export function useCaseManagers() {
         const retry = await supabase
           .from('profile')
           .select('id, full_name, email, role')
-          .eq('role', 'case_manager')
+          .eq('role', 'social_worker')
           .order('full_name', { ascending: true });
         
         data = retry.data;

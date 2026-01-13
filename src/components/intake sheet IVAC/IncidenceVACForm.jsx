@@ -165,7 +165,7 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
         const { data: users, error } = await supabase
           .from("profile")
           .select("id, full_name, role")
-          .eq("role", "case_manager")
+          .eq("role", "social_worker")
           .eq("status", "active")
           .order("full_name", { ascending: true });
 

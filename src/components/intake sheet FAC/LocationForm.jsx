@@ -24,7 +24,7 @@ const schema = z.object({
   evacuationCenter: z.string().min(2, "Required"),
 });
 
-export function LocationForm({ sectionKey, goNext, goBack }) {
+export function LocationForm({ sectionKey, goNext }) {
   const { data, setSectionField } = useIntakeFormStore();
 
   const form = useForm({

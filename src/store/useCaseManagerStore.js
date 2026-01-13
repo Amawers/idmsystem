@@ -1,6 +1,6 @@
 /**
  * @file useCaseManagerStore.js
- * @description Zustand store for case managers with caching and offline support
+ * @description Zustand store for staff (social workers) with caching and offline support
  * @module store/useCaseManagerStore
  * 
  * Features:
@@ -33,8 +33,8 @@ import offlineCaseDb from "@/db/offlineCaseDb";
 const CASE_MANAGER_TABLE = offlineCaseDb.table("case_managers");
 
 /**
- * Case Manager Store
- * Provides centralized, cached access to case managers list
+ * Staff Store
+ * Provides centralized, cached access to staff list
  */
 export const useCaseManagerStore = create((set, get) => ({
   // State
@@ -68,7 +68,7 @@ export const useCaseManagerStore = create((set, get) => ({
       let { data, error: fetchError } = await supabase
         .from('profile')
         .select('id, full_name, email, role')
-        .eq('role', 'case_manager')
+        .eq('role', 'social_worker')
         .eq('status', 'active')
         .order('full_name', { ascending: true });
 
@@ -78,7 +78,7 @@ export const useCaseManagerStore = create((set, get) => ({
         const retry = await supabase
           .from('profile')
           .select('id, full_name, email, role')
-          .eq('role', 'case_manager')
+          .eq('role', 'social_worker')
           .order('full_name', { ascending: true });
         
         data = retry.data;

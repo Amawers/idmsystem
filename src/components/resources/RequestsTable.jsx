@@ -26,7 +26,6 @@ export default function RequestsTable({
   requests = [], 
   loading, 
   onUpdateStatus, 
-  onRecordDisbursement,
   showApprovalActions = false 
 }) {
   const getStatusBadge = (status) => {

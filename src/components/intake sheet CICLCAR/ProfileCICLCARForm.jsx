@@ -41,7 +41,7 @@ const schema = z.object({
   educationalStatus: z.string().min(2, "Required"),
 });
 
-export function ProfileCICLCARForm({ sectionKey, goNext, goBack }) {
+export function ProfileCICLCARForm({ sectionKey, goNext }) {
   const { data, setSectionField } = useIntakeFormStore();
 
   const form = useForm({

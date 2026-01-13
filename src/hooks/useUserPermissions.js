@@ -102,9 +102,8 @@ export function useUserPermissions() {
 			return;
 		}
 
-		// Heads have all permissions by default
-		if (role === "head") {
-			// Grant all permissions to heads (view_cases and export_cases are accessible to all users)
+		// Social workers have all permissions by default (this replaces the old `head` role)
+		if (role === "social_worker") {
 			setPermissions([
 				// Case Management
 				"create_case",
@@ -158,7 +157,7 @@ export function useUserPermissions() {
 			return;
 		}
 
-		// Case managers & others: try cached permissions first
+		// Fallback: try cached per-user permissions first
 		const cached = !forceNetwork ? readCachedPermissions(user.id) : null;
 		if (cached) {
 			setPermissions(cached);

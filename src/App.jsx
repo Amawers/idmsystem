@@ -103,11 +103,11 @@ export default function App() {
         {/* Public route: Login page */}
         <Route path="/login" element={<Login />} />
 
-        {/* Protected route: Case Management (case manager + head) */}
+        {/* Protected route: Case Management (social worker) */}
         <Route
           path="/case"
           element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <Case />
               </Layout>
@@ -115,11 +115,11 @@ export default function App() {
           }
         />
 
-        {/* Protected route: Case Dashboard (case manager + head) */}
+        {/* Protected route: Case Dashboard (social worker) */}
         <Route
           path="/case/dashboard"
           element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <CaseDashboard />
               </Layout>
@@ -127,11 +127,11 @@ export default function App() {
           }
         />
 
-        {/* Protected route: Case Management Table (case manager + head) */}
+        {/* Protected route: Case Management Table (social worker) */}
         <Route
           path="/case/management"
           element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <CaseManagement />
               </Layout>
@@ -139,11 +139,11 @@ export default function App() {
           }
         />
         
-        {/* Protected route: Program Management Dashboard (case manager + head) */}
+        {/* Protected route: Program Management Dashboard (social worker) */}
         <Route
           path="/program/dashboard"
           element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <ProgramDashboardPage />
               </Layout>
@@ -151,11 +151,11 @@ export default function App() {
           }
         />
 
-        {/* Protected route: Program Catalog (case manager + head) */}
+        {/* Protected route: Program Catalog (social worker) */}
         <Route
           path="/program/catalog"
           element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <ProgramCatalogPage />
               </Layout>
@@ -163,11 +163,11 @@ export default function App() {
           }
         />
 
-        {/* Protected route: Program Enrollments (case manager + head) */}
+        {/* Protected route: Program Enrollments (social worker) */}
         <Route
           path="/program/enrollments"
           element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <ProgramEnrollmentsPage />
               </Layout>
@@ -175,11 +175,11 @@ export default function App() {
           }
         />
 
-        {/* Protected route: Service Delivery (case manager + head) */}
+        {/* Protected route: Service Delivery (social worker) */}
         <Route
           path="/program/service-delivery"
           element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <ServiceDeliveryPage />
               </Layout>
@@ -187,11 +187,11 @@ export default function App() {
           }
         />
 
-        {/* Protected route: Partners (case manager + head) */}
+        {/* Protected route: Partners (social worker) */}
         <Route
           path="/program/partners"
           element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <PartnersPage />
               </Layout>
@@ -205,11 +205,11 @@ export default function App() {
           element={<Navigate to="/program/dashboard" replace />}
         />
 
-        {/* Protected route: Resource Dashboard (case manager + head) */}
+        {/* Protected route: Resource Dashboard (social worker) */}
         <Route
           path="/resource/dashboard"
           element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <ResourceDashboard />
               </Layout>
@@ -217,11 +217,11 @@ export default function App() {
           }
         />
 
-        {/* Protected route: Resource Stock (case manager + head) */}
+        {/* Protected route: Resource Stock (social worker) */}
         <Route
           path="/resource/stock"
           element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <ResourceStock />
               </Layout>
@@ -229,11 +229,11 @@ export default function App() {
           }
         />
 
-        {/* Protected route: Resource Approvals (case manager + head) */}
+        {/* Protected route: Resource Approvals (social worker) */}
         <Route
           path="/resource/approvals"
           element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <ResourceApprovals />
               </Layout>
@@ -241,11 +241,11 @@ export default function App() {
           }
         />
 
-        {/* Protected route: Resource Staff (case manager + head) */}
+        {/* Protected route: Resource Staff (social worker) */}
         <Route
           path="/resource/staff"
           element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <ResourceStaff />
               </Layout>
@@ -253,11 +253,11 @@ export default function App() {
           }
         />
 
-        {/* Protected route: Resource Programs (case manager + head) */}
+        {/* Protected route: Resource Programs (social worker) */}
         <Route
           path="/resource/programs"
           element={
-            <ProtectedRoute allowedRoles={["case_manager", "head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <ResourcePrograms />
               </Layout>
@@ -271,11 +271,11 @@ export default function App() {
           element={<Navigate to="/resource/dashboard" replace />}
         />
 
-        {/* Protected route: Account Management (head) */}
+        {/* Protected route: Account Management (social worker) */}
         <Route
           path="/account"
           element={
-            <ProtectedRoute allowedRoles={["head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <UserManagement />
               </Layout>
@@ -283,11 +283,11 @@ export default function App() {
           }
         />
 
-        {/* Protected route: Security & Audit (head only) */}
+        {/* Protected route: Security & Audit (social worker) */}
         <Route
           path="/controls"
           element={
-            <ProtectedRoute allowedRoles={["head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <SecurityAudit />
               </Layout>
@@ -295,11 +295,11 @@ export default function App() {
           }
         />
 
-        {/* Protected route: Audit Trail (head only) */}
+        {/* Protected route: Audit Trail (social worker) */}
         <Route
           path="/controls/audit"
           element={
-            <ProtectedRoute allowedRoles={["head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <AuditTrail />
               </Layout>
@@ -307,11 +307,11 @@ export default function App() {
           }
         />
 
-        {/* Protected route: Role Permissions (head only) */}
+        {/* Protected route: Role Permissions (social worker) */}
         <Route
           path="/controls/permissions"
           element={
-            <ProtectedRoute allowedRoles={["head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <RolePermissions />
               </Layout>
@@ -319,11 +319,11 @@ export default function App() {
           }
         />
 
-        {/* Protected route: Document Management (head only) */}
+        {/* Protected route: Document Management (social worker) */}
         <Route
           path="/controls/documents"
           element={
-            <ProtectedRoute allowedRoles={["head"]}>
+            <ProtectedRoute allowedRoles={["social_worker"]}>
               <Layout>
                 <DocumentManagement />
               </Layout>

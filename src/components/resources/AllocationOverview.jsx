@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress";
  * @param {boolean} props.loading - Loading state
  * @returns {JSX.Element}
  */
-export default function AllocationOverview({ allocations = {}, topPrograms = [], loading }) {
+export default function AllocationOverview({ allocations = {}, loading }) {
   if (loading) {
     return <div className="text-center py-8">Loading allocations...</div>;
   }

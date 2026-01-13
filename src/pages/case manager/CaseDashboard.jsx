@@ -25,7 +25,6 @@ export default function CaseDashboard() {
   const [isFiltersOpen, setIsFiltersOpen] = useState(false);
   const isOnline = useNetworkStatus();
   const previousOnline = useRef(isOnline);
-  const [autoSyncAfterReload, setAutoSyncAfterReload] = useState(false);
 
   // Handle filter changes
   const handleFilterChange = useCallback((newFilters) => {
@@ -46,16 +45,6 @@ export default function CaseDashboard() {
       filters.datePreset !== 'month' && filters.datePreset,
     ].filter(Boolean).length;
   }, [filters]);
-
-  // Check for forced reload flag on mount
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const forcedSync = sessionStorage.getItem("caseDashboard.forceSync") === "true";
-    if (forcedSync) {
-      setAutoSyncAfterReload(true);
-      sessionStorage.removeItem("caseDashboard.forceSync");
-    }
-  }, []);
 
   // Handle reconnection: reload page to trigger fresh data fetch
   useEffect(() => {

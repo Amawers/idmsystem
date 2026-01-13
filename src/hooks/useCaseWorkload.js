@@ -76,7 +76,7 @@ export function useCaseWorkload() {
     if (!lastSyncedAt) return null;
     try {
       return new Date(lastSyncedAt).toLocaleString();
-    } catch (error) {
+    } catch {
       return lastSyncedAt;
     }
   }, [lastSyncedAt]);

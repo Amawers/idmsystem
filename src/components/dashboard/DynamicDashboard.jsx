@@ -48,8 +48,6 @@ function CaseDashboard({ filters }) {
     data, 
     loading, 
     error, 
-    refresh,
-    refreshFromServer,
     syncing,
     syncStatus,
     fromCache,
@@ -285,7 +283,7 @@ function UserDashboard({ filters, onFilterToggle, filterCount }) {
           icon={Users}
           iconColor="text-blue-600"
           description="All registered accounts"
-          footer="Case managers and heads"
+          footer="Social worker accounts"
           loading={loading}
         />
 
@@ -322,21 +320,13 @@ function UserDashboard({ filters, onFilterToggle, filterCount }) {
 
       {/* Role Distribution */}
       <div className="grid grid-cols-1 gap-3 px-4 lg:px-6 @xl/main:grid-cols-2">
-        <MetricCardGrid className="grid-cols-2">
+        <MetricCardGrid className="grid-cols-1">
           <DynamicMetricCard
-            title="Case Managers"
-            value={stats.caseManagers || 0}
+            title="Social Workers"
+            value={stats.socialWorkers || 0}
             icon={Users}
             iconColor="text-purple-600"
-            description="Standard access level"
-            loading={loading}
-          />
-          <DynamicMetricCard
-            title="Heads"
-            value={stats.heads || 0}
-            icon={ShieldAlert}
-            iconColor="text-orange-600"
-            description="Administrative access"
+            description="System access"
             loading={loading}
           />
         </MetricCardGrid>

@@ -13,7 +13,6 @@
 
 import { useState, useEffect } from "react";
 import { useEnrollments } from "@/hooks/useEnrollments";
-import { usePrograms } from "@/hooks/usePrograms";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import {
 	getCachedCasesByType,
@@ -76,7 +75,7 @@ export default function CreateEnrollmentDialog({
 	});
 
 	const [cases, setCases] = useState([]);
-	const [selectedCase, setSelectedCase] = useState(null);
+	const [, setSelectedCase] = useState(null);
 
 	// Load programs from cache on dialog open (already pre-fetched by page)
 	useEffect(() => {
@@ -153,7 +152,6 @@ export default function CreateEnrollmentDialog({
 	const formatCasesForDisplay = (data, caseType) => {
 		return (data || []).map((caseItem) => {
 			let displayName = "";
-			let nameField = "";
 
 			if (caseType === "CICL/CAR") {
 				displayName = caseItem.profile_name || "Unknown";

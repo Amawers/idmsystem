@@ -2,15 +2,6 @@ import { useState } from "react";
 import supabase from "@/../config/supabase";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuLabel,
-	DropdownMenuRadioGroup,
-	DropdownMenuRadioItem,
-	DropdownMenuSeparator,
-	DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
 
@@ -22,11 +13,13 @@ export default function Signup() {
 	const [fullName, setFullName] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
-	const [role, setRole] = useState("");
 	const [error, setError] = useState(null);
 	const [success, setSuccess] = useState(null);
 	const [showPassword, setShowPassword] = useState(false);
 	const navigate = useNavigate();
+
+	// Single-role system
+	const role = "social_worker";
 
 	const handleSignup = async (e) => {
 		e.preventDefault();
@@ -103,28 +96,9 @@ export default function Signup() {
 					</div>
 				</div>
 
-				<DropdownMenu>
-					<DropdownMenuTrigger asChild className="w-full mb-3">
-						<Button variant="outline">
-							{role ? role : "Select Role"}
-						</Button>
-					</DropdownMenuTrigger>
-					<DropdownMenuContent className="w-56">
-						<DropdownMenuLabel>Select Role</DropdownMenuLabel>
-						<DropdownMenuSeparator />
-						<DropdownMenuRadioGroup
-							value={role}
-							onValueChange={setRole}
-						>
-							<DropdownMenuRadioItem value="head">
-								Head
-							</DropdownMenuRadioItem>
-							<DropdownMenuRadioItem value="case_manager">
-								Case Manager
-							</DropdownMenuRadioItem>
-						</DropdownMenuRadioGroup>
-					</DropdownMenuContent>
-				</DropdownMenu>
+				<div className="mb-3 text-xs text-muted-foreground">
+					Role: Social Worker
+				</div>
 
 				{error && <p className="text-red-500 text-sm mb-2">{error}</p>}
 				{success && (

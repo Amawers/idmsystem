@@ -54,7 +54,7 @@ import supabase from "@/../config/supabase";
 import { toast } from "sonner";
 
 export default function HiddenCasesManager() {
-	const { hiddenCases, loading, hideCase, unhideCase, refresh } = useHiddenCases();
+	const { hiddenCases, loading, hideCase, unhideCase } = useHiddenCases();
 	
 	const [showHideDialog, setShowHideDialog] = useState(false);
 	const [cases, setCases] = useState([]);
@@ -156,7 +156,7 @@ export default function HiddenCasesManager() {
 			const { data, error } = await supabase
 				.from("profile")
 				.select("id, email, full_name")
-				.eq("role", "case_manager")
+				.eq("role", "social_worker")
 				.eq("status", "active")
 				.order("email", { ascending: true });
 

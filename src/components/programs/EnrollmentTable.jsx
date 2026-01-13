@@ -127,7 +127,6 @@ export default function EnrollmentTable() {
     syncing,
     syncStatus,
     runSync,
-    offline,
   } = useEnrollments(filterOptions);
 
   const filteredEnrollments = (enrollments || []).filter(
