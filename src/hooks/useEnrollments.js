@@ -232,11 +232,6 @@ export function useEnrollments(options = {}) {
                 program_type,
                 coordinator,
                 status
-              ),
-              assigned_by_user:profile!program_enrollments_assigned_by_fkey(
-                id,
-                full_name,
-                role
               )
             `,
             )
@@ -316,11 +311,6 @@ export function useEnrollments(options = {}) {
                 program_type,
                 coordinator,
                 status
-              ),
-              assigned_by_user:profile!program_enrollments_assigned_by_fkey(
-                id,
-                full_name,
-                role
               )
             `,
             )
