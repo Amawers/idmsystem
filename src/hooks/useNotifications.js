@@ -341,17 +341,22 @@ const fetchDeadlineReminders = async ({
   return reminders;
 };
 
-const filterAuditLogsForRole = (logs, role) => {
-  const normalizedRole = typeof role === "string" ? role.toLowerCase() : "";
-  if (normalizedRole === "social_worker") return logs;
-
-  // Non-social-worker roles should not see auth notifications.
+const filterAuditLogsForRole = (logs, _role) => {
+  // Auth-category audit logs (login/logout/password changes) are not shown in the UI.
+  // Keep this filter here so all consumers (bell, sidebar calendar, etc.) behave consistently.
   return (logs || []).filter((log) => {
     if (!log) return false;
     const category = typeof log.action_category === "string" ? log.action_category.toLowerCase() : "";
     return category !== "auth";
   });
 };
+
+const isAuthCategory = (value) => String(value ?? "").toLowerCase() === "auth";
+
+const filterOutAuthNotifications = (items = []) =>
+  (items || []).filter(
+    (item) => !isAuthCategory(item?.category) && !isAuthCategory(item?.raw?.action_category),
+  );
 
 const persist = (key, value) => {
   if (typeof window === "undefined") return;
@@ -403,14 +408,15 @@ export function useNotifications({ limit = 20 } = {}) {
   useEffect(() => {
     if (typeof window === "undefined") return undefined;
 
-    const cachedNotifications = safeParse(
-      window.localStorage.getItem(CACHE_KEY),
-      [],
+    const cachedNotifications = filterOutAuthNotifications(
+      safeParse(window.localStorage.getItem(CACHE_KEY), []),
     );
     const cachedReadIds = safeParse(window.localStorage.getItem(READ_KEY), []);
 
     if (cachedNotifications.length) {
       setNotifications(cachedNotifications);
+      // Clear any previously cached auth notifications.
+      persist(CACHE_KEY, cachedNotifications);
     }
     if (cachedReadIds.length) {
       setReadIds(new Set(cachedReadIds));
@@ -418,7 +424,7 @@ export function useNotifications({ limit = 20 } = {}) {
 
     const handleStorage = (event) => {
       if (event.key === CACHE_KEY && event.newValue) {
-        setNotifications(safeParse(event.newValue, []));
+        setNotifications(filterOutAuthNotifications(safeParse(event.newValue, [])));
       }
       if (event.key === READ_KEY && event.newValue) {
         setReadIds(new Set(safeParse(event.newValue, [])));
@@ -466,7 +472,8 @@ export function useNotifications({ limit = 20 } = {}) {
         const reminders = Array.isArray(remindersResult?.data) ? remindersResult.data : [];
 
         setNotifications((prev) => {
-          const next = mergeNotifications([...mapped, ...alertNotifications, ...reminders], prev, limit);
+          const merged = mergeNotifications([...mapped, ...alertNotifications, ...reminders], prev, limit);
+          const next = filterOutAuthNotifications(merged);
           persist(CACHE_KEY, next);
           return next;
         });
