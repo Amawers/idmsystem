@@ -443,14 +443,13 @@ export default function ServiceDeliveryTable({ autoSync = false, onAutoSyncHandl
                     <TableHead>Program</TableHead>
                     <TableHead>Delivered By</TableHead>
                     <TableHead>Attendance</TableHead>
-                    <TableHead>Progress Notes</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                 {paginatedDeliveries.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">
                       {filteredDeliveries.length === 0 
                         ? "No service delivery records found"
                         : "No records on this page"}
@@ -512,19 +511,6 @@ export default function ServiceDeliveryTable({ autoSync = false, onAutoSyncHandl
                             <span className="text-sm">Absent</span>
                           </div>
                         )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="max-w-[250px]">
-                          <div className="truncate text-sm text-muted-foreground">
-                            {delivery.progress_notes || "No notes"}
-                          </div>
-                          {delivery.duration_minutes && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                              <Clock className="h-3 w-3" />
-                              {delivery.duration_minutes} min
-                            </div>
-                          )}
-                        </div>
                       </TableCell>
                       <TableCell className="text-right">
                         <DropdownMenu>
