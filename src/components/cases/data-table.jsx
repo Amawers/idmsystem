@@ -40,7 +40,7 @@ import {
 	IconPlus,
 	IconRefresh,
 } from "@tabler/icons-react";
-import { Edit, ChevronLeft, ChevronRight, WifiOff } from "lucide-react";
+import { Edit, ChevronLeft, ChevronRight, WifiOff, Search } from "lucide-react";
 
 // Other utilities
 // import { toast } from "sonner";
@@ -65,6 +65,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
 	Select,
 	SelectContent,
@@ -957,6 +958,117 @@ const formatToMMDDYYYY = (str) => {
 	return `${mm}-${dd}-${yyyy}`;
 };
 
+function normalizeSearchText(value) {
+	return String(value ?? "")
+		.toLowerCase()
+		.replace(/\s+/g, " ")
+		.trim();
+}
+
+function buildRowSearchText(row, maxDepth = 2) {
+	const seen = new Set();
+
+	function walk(value, depth) {
+		if (value == null) return [];
+		if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+			return [String(value)];
+		}
+		if (depth <= 0) return [];
+		if (Array.isArray(value)) {
+			return value.flatMap((item) => walk(item, depth - 1));
+		}
+		if (typeof value === "object") {
+			if (seen.has(value)) return [];
+			seen.add(value);
+			return Object.values(value).flatMap((item) => walk(item, depth - 1));
+		}
+		return [];
+	}
+
+	if (!row || typeof row !== "object") return "";
+
+	const preferred = [
+		row.id,
+		row["case ID"],
+		row.case_id,
+		row.case_number,
+		row.case_no,
+		row.case_manager,
+		row.case_managers,
+		row.status,
+		row.priority,
+		row.barangay,
+		row.municipality,
+		row.city,
+		row.province,
+		row.region,
+		row.beneficiary_name,
+		row.client_name,
+		row.child_name,
+		row.victim_name,
+		row.respondent_name,
+		row.guardian_name,
+		row.parent_name,
+	];
+
+	const fallback = walk(row, maxDepth);
+	return normalizeSearchText([...preferred, ...fallback].filter(Boolean).join(" "));
+}
+
+function getRowDateFiled(row) {
+	if (!row || typeof row !== "object") return null;
+	const candidate =
+		row.date_filed ??
+		row.filed_date ??
+		row.intake_date ??
+		row.created_at ??
+		row.createdAt ??
+		row.dateCreated;
+	if (!candidate) return null;
+	const parsed = new Date(candidate);
+	return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function filterRowsByGlobalSearch(rows, searchQuery, advancedFilters) {
+	const safeRows = Array.isArray(rows) ? rows : [];
+	const query = normalizeSearchText(searchQuery);
+	const statusFilter = advancedFilters?.status ?? "all";
+	const priorityFilter = advancedFilters?.priority ?? "all";
+	const dateFrom = advancedFilters?.dateFrom ? new Date(`${advancedFilters.dateFrom}T00:00:00`) : null;
+	const dateTo = advancedFilters?.dateTo ? new Date(`${advancedFilters.dateTo}T23:59:59`) : null;
+	const hasFrom = dateFrom && !Number.isNaN(dateFrom.getTime());
+	const hasTo = dateTo && !Number.isNaN(dateTo.getTime());
+
+	const normalizedStatus = normalizeSearchText(statusFilter);
+	const normalizedPriority = normalizeSearchText(priorityFilter);
+
+	return safeRows.filter((row) => {
+		if (query) {
+			const text = buildRowSearchText(row);
+			if (!text.includes(query)) return false;
+		}
+
+		if (statusFilter !== "all") {
+			const rowStatus = normalizeSearchText(row?.status);
+			if (!rowStatus || rowStatus !== normalizedStatus) return false;
+		}
+
+		if (priorityFilter !== "all") {
+			const rowPriority = normalizeSearchText(row?.priority);
+			if (!rowPriority || rowPriority !== normalizedPriority) return false;
+		}
+
+		if (hasFrom || hasTo) {
+			const filed = getRowDateFiled(row);
+			if (!filed) return false;
+			if (hasFrom && filed < dateFrom) return false;
+			if (hasTo && filed > dateTo) return false;
+		}
+
+		return true;
+	});
+}
+
 // ==========================
 //* Main DataTable wrapper
 // ==========================
@@ -1126,6 +1238,15 @@ export function DataTable({
 	// Tracks which tab is currently active
 	const [activeTab, setActiveTab] = useState(initialTab);
 
+	// Global search + advanced filters across all tabs
+	const [searchQuery, setSearchQuery] = useState("");
+	const [advancedFilters, setAdvancedFilters] = useState({
+		status: "all",
+		priority: "all",
+		dateFrom: "",
+		dateTo: "",
+	});
+
 	const handleTabValueChange = (value) => {
 		setActiveTab(value);
 		onTabChange?.(value);
@@ -1141,6 +1262,60 @@ export function DataTable({
 	const [farCaseManager, setFarCaseManager] = useState("all");
 	const [facCaseManager, setFacCaseManager] = useState("all");
 	const [ivacCaseManager, setIvacCaseManager] = useState("all");
+
+	const safeCaseData = caseData ?? [];
+	const safeCiclcarData = ciclcarData ?? [];
+	const safeFarData = farData ?? [];
+	const safeFacData = facData ?? [];
+	const safeIvacData = ivacData ?? [];
+
+	const allRows = React.useMemo(
+		() => [
+			...safeCaseData,
+			...safeCiclcarData,
+			...safeFarData,
+			...safeFacData,
+			...safeIvacData,
+		],
+		[safeCaseData, safeCiclcarData, safeFarData, safeFacData, safeIvacData],
+	);
+
+	const statusOptions = React.useMemo(() => {
+		const set = new Set(
+			allRows
+				.map((row) => row?.status)
+				.filter((value) => typeof value === "string" && value.trim().length > 0),
+		);
+		return Array.from(set).sort((a, b) => a.localeCompare(b));
+	}, [allRows]);
+
+	const priorityOptions = React.useMemo(() => {
+		const set = new Set(
+			allRows
+				.map((row) => row?.priority)
+				.filter((value) => typeof value === "string" && value.trim().length > 0),
+		);
+		return Array.from(set).sort((a, b) => a.localeCompare(b));
+	}, [allRows]);
+
+	const hasActiveGlobalFilters =
+		searchQuery.trim().length > 0 ||
+		advancedFilters.status !== "all" ||
+		advancedFilters.priority !== "all" ||
+		advancedFilters.dateFrom !== "" ||
+		advancedFilters.dateTo !== "";
+
+	const activeGlobalFilterCount =
+		(searchQuery.trim().length > 0 ? 1 : 0) +
+		(advancedFilters.status !== "all" ? 1 : 0) +
+		(advancedFilters.priority !== "all" ? 1 : 0) +
+		(advancedFilters.dateFrom !== "" ? 1 : 0) +
+		(advancedFilters.dateTo !== "" ? 1 : 0);
+
+	const clearGlobalFilters = React.useCallback(() => {
+		setSearchQuery("");
+		setAdvancedFilters({ status: "all", priority: "all", dateFrom: "", dateTo: "" });
+	}, []);
 
 	const casePending = caseSync?.pendingCount ?? 0;
 	const caseSyncing = caseSync?.syncing ?? false;
@@ -1355,16 +1530,71 @@ export function DataTable({
 		}
 	}, [activeTab, isRefreshing, reloadCases, reloadCiclcar, reloadFar, reloadFac, reloadIvac]);
 
+	const caseManagerFilteredData = React.useMemo(() => {
+		return caseCaseManager === "all"
+			? safeCaseData
+			: safeCaseData.filter((row) => row.case_manager === caseCaseManager);
+	}, [caseCaseManager, safeCaseData]);
+
+	const ciclcarManagerFilteredData = React.useMemo(() => {
+		return ciclcarCaseManager === "all"
+			? safeCiclcarData
+			: safeCiclcarData.filter((row) => row.case_manager === ciclcarCaseManager);
+	}, [ciclcarCaseManager, safeCiclcarData]);
+
+	const farManagerFilteredData = React.useMemo(() => {
+		return farCaseManager === "all"
+			? safeFarData
+			: safeFarData.filter((row) => row.case_manager === farCaseManager);
+	}, [farCaseManager, safeFarData]);
+
+	const facManagerFilteredData = React.useMemo(() => {
+		return facCaseManager === "all"
+			? safeFacData
+			: safeFacData.filter((row) => row.case_manager === facCaseManager);
+	}, [facCaseManager, safeFacData]);
+
+	const ivacManagerFilteredData = React.useMemo(() => {
+		if (ivacCaseManager === "all") return safeIvacData;
+		return safeIvacData.filter((row) => {
+			if (Array.isArray(row.case_managers)) {
+				return row.case_managers.includes(ivacCaseManager);
+			}
+			return row.case_manager === ivacCaseManager;
+		});
+	}, [ivacCaseManager, safeIvacData]);
+
+	const caseFilteredData = React.useMemo(
+		() => filterRowsByGlobalSearch(caseManagerFilteredData, searchQuery, advancedFilters),
+		[caseManagerFilteredData, searchQuery, advancedFilters],
+	);
+	const ciclcarFilteredData = React.useMemo(
+		() => filterRowsByGlobalSearch(ciclcarManagerFilteredData, searchQuery, advancedFilters),
+		[ciclcarManagerFilteredData, searchQuery, advancedFilters],
+	);
+	const farFilteredData = React.useMemo(
+		() => filterRowsByGlobalSearch(farManagerFilteredData, searchQuery, advancedFilters),
+		[farManagerFilteredData, searchQuery, advancedFilters],
+	);
+	const facFilteredData = React.useMemo(
+		() => filterRowsByGlobalSearch(facManagerFilteredData, searchQuery, advancedFilters),
+		[facManagerFilteredData, searchQuery, advancedFilters],
+	);
+	const ivacFilteredData = React.useMemo(
+		() => filterRowsByGlobalSearch(ivacManagerFilteredData, searchQuery, advancedFilters),
+		[ivacManagerFilteredData, searchQuery, advancedFilters],
+	);
+
 	// Initialize CASE table with dynamic columns (handler referenced above)
 	const caseTable = useDataTable({
-		initialData: caseCaseManager === "all" ? caseData : caseData.filter(row => row.case_manager === caseCaseManager),
+		initialData: caseFilteredData,
 		// CHANGED: pass edit handler so actions column calls this for “Edit”
 		columns: createCaseColumns(handleEnrollClick, handleEditCaseRow, handleDeleteClick, handleDocumentsClick),
 	});
 
 	// Table instance for CICLCAR tab with its own data and column definitions
 	const ciclcarTable = useDataTable({
-		initialData: ciclcarCaseManager === "all" ? ciclcarData : ciclcarData.filter(row => row.case_manager === ciclcarCaseManager),
+		initialData: ciclcarFilteredData,
 		columns: ciclcarColumns(
 			handleEnrollClick,
 			handleEditCiclcarRow,
@@ -1377,31 +1607,43 @@ export function DataTable({
 
 	// Table instance for FAR tab with its own data and column definitions
 	const farTable = useDataTable({
-		initialData: farCaseManager === "all" ? farData : farData.filter(row => row.case_manager === farCaseManager),
+		initialData: farFilteredData,
 		columns: farColumns(handleEnrollClick, handleEditFarRow, handleDeleteClick, handleDocumentsClick),
 		onRowClick: handleEditFarRow, // Add click handler for FAR rows
 	});
 
 	// Table instance for FAC tab with its own data and column definitions
 	const facTable = useDataTable({
-		initialData: facCaseManager === "all" ? facData : facData.filter(row => row.case_manager === facCaseManager),
+		initialData: facFilteredData,
 		columns: facColumns(handleEditFacRow, handleDeleteClick, handleDocumentsClick),
 		onRowClick: handleEditFacRow, // Add click handler for FAC rows
 	});
 
 	// Table instance for IVAC tab with its own data and column definitions
 	const ivacTable = useDataTable({
-		initialData: ivacCaseManager === "all" ? ivacData : ivacData.filter(row => {
-			// IVAC uses case_managers array, so check if it includes the selected manager
-			if (Array.isArray(row.case_managers)) {
-				return row.case_managers.includes(ivacCaseManager);
-			}
-			// Fallback to single case_manager field
-			return row.case_manager === ivacCaseManager;
-		}),
+		initialData: ivacFilteredData,
 		columns: ivacColumns(handleEditIvacRow, handleDeleteClick, handleDocumentsClick),
 		onRowClick: handleEditIvacRow, // Add click handler for IVAC rows
 	});
+
+	React.useEffect(() => {
+		caseTable.table.setPageIndex(0);
+		ciclcarTable.table.setPageIndex(0);
+		farTable.table.setPageIndex(0);
+		facTable.table.setPageIndex(0);
+		ivacTable.table.setPageIndex(0);
+	}, [
+		searchQuery,
+		advancedFilters.status,
+		advancedFilters.priority,
+		advancedFilters.dateFrom,
+		advancedFilters.dateTo,
+		caseTable.table,
+		ciclcarTable.table,
+		farTable.table,
+		facTable.table,
+		ivacTable.table,
+	]);
 
 	// ============================
 	//* TAB TRIGGER SECTION WAPPER
@@ -2173,6 +2415,130 @@ export function DataTable({
 						</>
 					)}
 					</div>
+				</div>
+
+				{/* Global Search + Advanced Filters (applies across all tabs) */}
+				<div className="flex flex-wrap items-center gap-2">
+					<div className="relative flex-1 min-w-[240px] max-w-[520px]">
+						<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+						<Input
+							placeholder="Search across all case types..."
+							value={searchQuery}
+							onChange={(e) => setSearchQuery(e.target.value)}
+							className="pl-8"
+						/>
+					</div>
+
+					<Popover>
+						<PopoverTrigger asChild>
+							<Button variant="outline" size="sm" className="cursor-pointer">
+								Advanced
+								<IconChevronDown className="h-4 w-4" />
+							</Button>
+						</PopoverTrigger>
+						<PopoverContent align="start" className="w-[340px] p-4">
+							<div className="space-y-3">
+								<div className="grid grid-cols-2 gap-3">
+									<div className="space-y-1">
+										<Label className="text-xs">Status</Label>
+										<Select
+											value={advancedFilters.status}
+											onValueChange={(value) =>
+												setAdvancedFilters((prev) => ({ ...prev, status: value }))
+											}
+										>
+											<SelectTrigger className="h-9">
+												<SelectValue placeholder="All" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="all">All</SelectItem>
+												{statusOptions.map((status) => (
+													<SelectItem key={status} value={status}>
+														{status}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+
+									<div className="space-y-1">
+										<Label className="text-xs">Priority</Label>
+										<Select
+											value={advancedFilters.priority}
+											onValueChange={(value) =>
+												setAdvancedFilters((prev) => ({ ...prev, priority: value }))
+											}
+										>
+											<SelectTrigger className="h-9">
+												<SelectValue placeholder="All" />
+											</SelectTrigger>
+											<SelectContent>
+												<SelectItem value="all">All</SelectItem>
+												{priorityOptions.map((priority) => (
+													<SelectItem key={priority} value={priority}>
+														{priority}
+													</SelectItem>
+												))}
+											</SelectContent>
+										</Select>
+									</div>
+								</div>
+
+								<div className="grid grid-cols-2 gap-3">
+									<div className="space-y-1">
+										<Label className="text-xs">Date Filed From</Label>
+										<Input
+											type="date"
+											value={advancedFilters.dateFrom}
+											onChange={(e) =>
+												setAdvancedFilters((prev) => ({ ...prev, dateFrom: e.target.value }))
+											}
+											className="h-9"
+										/>
+									</div>
+									<div className="space-y-1">
+										<Label className="text-xs">Date Filed To</Label>
+										<Input
+											type="date"
+											value={advancedFilters.dateTo}
+											onChange={(e) =>
+												setAdvancedFilters((prev) => ({ ...prev, dateTo: e.target.value }))
+											}
+											className="h-9"
+										/>
+									</div>
+								</div>
+
+								<div className="flex items-center justify-between pt-1">
+									<div className="text-xs text-muted-foreground">
+										{hasActiveGlobalFilters
+											? `${activeGlobalFilterCount} active filter${activeGlobalFilterCount === 1 ? "" : "s"}`
+											: "No active filters"}
+									</div>
+									<Button
+										variant="ghost"
+										size="sm"
+										onClick={clearGlobalFilters}
+										disabled={!hasActiveGlobalFilters}
+										className="h-8 px-2"
+									>
+										Clear
+									</Button>
+								</div>
+							</div>
+						</PopoverContent>
+					</Popover>
+
+					{hasActiveGlobalFilters && (
+						<Button
+							variant="ghost"
+							size="sm"
+							onClick={clearGlobalFilters}
+							className="h-9 px-2"
+						>
+							Clear
+						</Button>
+					)}
 				</div>
 
 				<div className="flex flex-wrap items-center justify-between gap-2">
