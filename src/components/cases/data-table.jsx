@@ -5,7 +5,7 @@
 // =============================================
 // DataTable Component
 // ---------------------------------------------
-// Purpose: Renders a tabbed data table for cases, CICL/CAR, FAR, IVAC, and FAC with drag-and-drop, selection, and intake sheet modals.
+// Purpose: Renders a tabbed data table for cases, CICL/CAR, FAR, FAC, IVAC, and Single Parents with drag-and-drop, selection, and intake sheet modals.
 //
 // Key Responsibilities:
 // - Display data in tables with customizable columns
@@ -97,6 +97,7 @@ import IntakeSheetCICLCAREdit from "@/pages/case manager/IntakeSheetCICLCAREdit"
 import IntakeSheetFAR from "@/pages/case manager/IntakeSheetFAR";
 import IntakeSheetFAC from "@/pages/case manager/IntakeSheetFAC";
 import IntakeSheetIVAC from "@/pages/case manager/IntakeSheetIVAC";
+import IntakeSheetSP from "@/pages/case manager/IntakeSheetSP";
 // ADD THIS IMPORT
 import IntakeSheetEdit from "@/pages/case manager/intakeSheetCaseEdit";
 import useDataTable from "@/hooks/useDataTable";
@@ -1030,6 +1031,166 @@ const ivacColumns = (
 		),
 	},
 ];
+
+// =================================
+//* SINGLE PARENTS Table COLUMN DEFINITIONS
+// =================================
+const spColumns = (handleDeleteClick, handleDocumentsClick) => [
+	//* =====================
+	//* START OF DATA COLUMNS
+	//* =====================
+
+	//* CASE ID
+	{
+		accessorKey: "id",
+		header: "Case ID",
+		cell: ({ row }) => {
+			const caseId = row.original.id || "N/A";
+			return <div className="font-medium">{caseId}</div>;
+		},
+		enableHiding: false,
+	},
+
+	//* FULL NAME
+	{
+		accessorKey: "full_name",
+		header: "Full Name",
+		cell: ({ row }) => {
+			const firstName =
+				row.original.first_name || row.original.firstName || "";
+			const lastName =
+				row.original.last_name || row.original.lastName || "";
+			const fallback =
+				row.original.full_name ||
+				row.original.client_name ||
+				row.original.respondent_name ||
+				row.original.parent_name ||
+				"N/A";
+			const fullName = `${firstName} ${lastName}`.trim() || fallback;
+			return <div>{fullName}</div>;
+		},
+	},
+
+	//* CONTACT NUMBER
+	{
+		accessorKey: "contact_number",
+		header: "Contact Number",
+		cell: ({ row }) => {
+			const contact =
+				row.original.contact_number ||
+				row.original.contactNumber ||
+				row.original.phone ||
+				row.original.mobile ||
+				"-";
+			return <div>{contact}</div>;
+		},
+	},
+
+	//* EMAIL
+	{
+		accessorKey: "email",
+		header: "Email",
+		cell: ({ row }) => {
+			const email =
+				row.original.email || row.original.email_address || "-";
+			return <div>{email}</div>;
+		},
+	},
+
+	//* ADDRESS
+	{
+		accessorKey: "address",
+		header: "Address",
+		cell: ({ row }) => {
+			const address =
+				row.original.address || row.original.location_address || "-";
+			return <div>{address}</div>;
+		},
+	},
+
+	//* STATUS
+	{
+		accessorKey: "status",
+		header: "Status",
+		cell: ({ row }) => {
+			const status = row.original.status || "N/A";
+			return (
+				<Badge variant="outline" className="capitalize">
+					{status}
+				</Badge>
+			);
+		},
+	},
+
+	//* CREATED AT
+	{
+		accessorKey: "created_at",
+		header: "Created",
+		cell: ({ row }) => (
+			<div className="px-2">
+				{formatToMMDDYYYY(
+					row.original.created_at || row.original.date_created,
+				) || "-"}
+			</div>
+		),
+	},
+
+	//* UPDATED AT
+	{
+		accessorKey: "updated_at",
+		header: "Last Updated",
+		cell: ({ row }) => (
+			<div className="px-2">
+				{formatToMMDDYYYY(
+					row.original.updated_at || row.original.last_updated,
+				) || "-"}
+			</div>
+		),
+	},
+
+	//* ACTIONS
+	{
+		id: "actions",
+		header: "Actions",
+		cell: ({ row }) => (
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						variant="outline"
+						size="sm"
+						className="h-6 px-2 text-xs cursor-pointer"
+					>
+						<Edit className="h-3 w-3" />
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="w-40">
+					<PermissionGuard permission="view_documents">
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDocumentsClick(row.original, "SP");
+							}}
+						>
+							Documents
+						</DropdownMenuItem>
+					</PermissionGuard>
+					<DropdownMenuSeparator />
+					<PermissionGuard permission="delete_case">
+						<DropdownMenuItem
+							variant="destructive"
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDeleteClick(row.original, "SP");
+							}}
+						>
+							Delete
+						</DropdownMenuItem>
+					</PermissionGuard>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		),
+	},
+];
 //!!!!!!!!!!!!!!!!!!!
 // ! NEW ADDED TYPES	==========================================================================================================================================================================
 //!!!!!!!!!!!!!!!!!!!
@@ -1343,6 +1504,14 @@ function buildRowSearchText(row, maxDepth = 2) {
 		row.respondent_name,
 		row.guardian_name,
 		row.parent_name,
+		row.full_name,
+		row.first_name,
+		row.last_name,
+		row.contact_number,
+		row.contactNumber,
+		row.email,
+		row.email_address,
+		row.address,
 	];
 
 	const fallback = walk(row, maxDepth);
@@ -1491,9 +1660,11 @@ function PaginationControls({ table }) {
  * @param {Array} props.caseData - Data for CASE tab
  * @param {Array} props.ciclcarData - Data for CICLCAR tab
  * @param {Array} props.farData - Data for FAR tab
+ * @param {Array} props.spData - Data for Single Parents tab
  * @param {Function} props.reloadCases - Function to reload case data
  * @param {Function} props.reloadCiclcar - Function to reload CICLCAR data
  * @param {Function} props.reloadFar - Function to reload FAR data
+ * @param {Function} props.reloadSp - Function to reload Single Parents data
  *
  * @returns {JSX.Element} Rendered DataTable component
  *
@@ -1513,16 +1684,19 @@ export function DataTable({
 	farData,
 	facData,
 	ivacData,
+	spData,
 	reloadCases,
 	reloadCiclcar,
 	reloadFar,
 	reloadFac,
 	reloadIvac,
+	reloadSp,
 	deleteCase,
 	deleteCiclcarCase,
 	deleteFarCase,
 	deleteFacCase,
 	deleteIvacCase,
+	deleteSpCase,
 	initialTab = "CASE",
 	onTabChange,
 	caseSync,
@@ -1530,6 +1704,7 @@ export function DataTable({
 	facSync,
 	farSync,
 	ivacSync,
+	spSync,
 	ciclcarProgramEnrollments = {},
 	ciclcarProgramEnrollmentsLoading = false,
 	isOnline = true,
@@ -1605,12 +1780,17 @@ export function DataTable({
 	const [farCaseManager, setFarCaseManager] = useState("all");
 	const [facCaseManager, setFacCaseManager] = useState("all");
 	const [ivacCaseManager, setIvacCaseManager] = useState("all");
+	const [spCaseManager, setSpCaseManager] = useState("all");
 
-	const safeCaseData = caseData ?? [];
-	const safeCiclcarData = ciclcarData ?? [];
-	const safeFarData = farData ?? [];
-	const safeFacData = facData ?? [];
-	const safeIvacData = ivacData ?? [];
+	const safeCaseData = React.useMemo(() => caseData ?? [], [caseData]);
+	const safeCiclcarData = React.useMemo(
+		() => ciclcarData ?? [],
+		[ciclcarData],
+	);
+	const safeFarData = React.useMemo(() => farData ?? [], [farData]);
+	const safeFacData = React.useMemo(() => facData ?? [], [facData]);
+	const safeIvacData = React.useMemo(() => ivacData ?? [], [ivacData]);
+	const safeSpData = React.useMemo(() => spData ?? [], [spData]);
 
 	const allRows = React.useMemo(
 		() => [
@@ -1619,8 +1799,16 @@ export function DataTable({
 			...safeFarData,
 			...safeFacData,
 			...safeIvacData,
+			...safeSpData,
 		],
-		[safeCaseData, safeCiclcarData, safeFarData, safeFacData, safeIvacData],
+		[
+			safeCaseData,
+			safeCiclcarData,
+			safeFarData,
+			safeFacData,
+			safeIvacData,
+			safeSpData,
+		],
 	);
 
 	const statusOptions = React.useMemo(() => {
@@ -1691,6 +1879,10 @@ export function DataTable({
 	const ivacSyncing = ivacSync?.syncing ?? false;
 	const ivacSyncStatus = ivacSync?.syncStatus ?? null;
 	const ivacOnSync = ivacSync?.onSync;
+	const spPending = spSync?.pendingCount ?? 0;
+	const spSyncing = spSync?.syncing ?? false;
+	const spSyncStatus = spSync?.syncStatus ?? null;
+	const spOnSync = spSync?.onSync;
 	const getCiclcarPrefetchedEnrollments = React.useCallback(
 		(caseId) => {
 			if (!caseId) return undefined;
@@ -1786,6 +1978,9 @@ export function DataTable({
 				case "IVAC":
 					result = await deleteIvacCase(caseId);
 					break;
+				case "SP":
+					result = await deleteSpCase(caseId);
+					break;
 				default:
 					toast.error("Unknown case type");
 					return;
@@ -1873,6 +2068,9 @@ export function DataTable({
 				case "IVAC":
 					promises.push(reloadIvac?.());
 					break;
+				case "SP":
+					promises.push(reloadSp?.());
+					break;
 				default:
 					promises.push(
 						reloadCases?.(),
@@ -1880,6 +2078,7 @@ export function DataTable({
 						reloadFar?.(),
 						reloadFac?.(),
 						reloadIvac?.(),
+						reloadSp?.(),
 					);
 			}
 			await Promise.all(promises.filter(Boolean));
@@ -1902,6 +2101,7 @@ export function DataTable({
 		reloadFar,
 		reloadFac,
 		reloadIvac,
+		reloadSp,
 	]);
 
 	const caseManagerFilteredData = React.useMemo(() => {
@@ -1941,6 +2141,16 @@ export function DataTable({
 			return row.case_manager === ivacCaseManager;
 		});
 	}, [ivacCaseManager, safeIvacData]);
+
+	const spManagerFilteredData = React.useMemo(() => {
+		if (spCaseManager === "all") return safeSpData;
+		return safeSpData.filter((row) => {
+			if (Array.isArray(row.case_managers)) {
+				return row.case_managers.includes(spCaseManager);
+			}
+			return row.case_manager === spCaseManager;
+		});
+	}, [spCaseManager, safeSpData]);
 
 	const caseFilteredData = React.useMemo(
 		() =>
@@ -1986,6 +2196,15 @@ export function DataTable({
 				advancedFilters,
 			),
 		[ivacManagerFilteredData, searchQuery, advancedFilters],
+	);
+	const spFilteredData = React.useMemo(
+		() =>
+			filterRowsByGlobalSearch(
+				spManagerFilteredData,
+				searchQuery,
+				advancedFilters,
+			),
+		[spManagerFilteredData, searchQuery, advancedFilters],
 	);
 
 	// Initialize CASE table with dynamic columns (handler referenced above)
@@ -2047,12 +2266,19 @@ export function DataTable({
 		onRowClick: handleEditIvacRow, // Add click handler for IVAC rows
 	});
 
+	// Table instance for Single Parents tab with its own data and column definitions
+	const spTable = useDataTable({
+		initialData: spFilteredData,
+		columns: spColumns(handleDeleteClick, handleDocumentsClick),
+	});
+
 	React.useEffect(() => {
 		caseTable.table.setPageIndex(0);
 		ciclcarTable.table.setPageIndex(0);
 		farTable.table.setPageIndex(0);
 		facTable.table.setPageIndex(0);
 		ivacTable.table.setPageIndex(0);
+		spTable.table.setPageIndex(0);
 	}, [
 		searchQuery,
 		advancedFilters.status,
@@ -2064,6 +2290,7 @@ export function DataTable({
 		farTable.table,
 		facTable.table,
 		ivacTable.table,
+		spTable.table,
 	]);
 
 	// ============================
@@ -3110,6 +3337,190 @@ export function DataTable({
 									)}
 								</>
 							)}
+
+							{/* SINGLE PARENTS SECTION */}
+							{activeTab === "SP" && (
+								<>
+									{/* Case Manager Filter */}
+									<Select
+										value={spCaseManager}
+										onValueChange={setSpCaseManager}
+									>
+										<SelectTrigger className="w-[180px] h-9">
+											<SelectValue placeholder="Filter by Manager" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">
+												All Managers
+											</SelectItem>
+											{caseManagersLoading ? (
+												<SelectItem
+													value="loading"
+													disabled
+												>
+													Loading...
+												</SelectItem>
+											) : (
+												caseManagers.map((manager) => (
+													<SelectItem
+														key={manager.id}
+														value={
+															manager.full_name
+														}
+													>
+														{manager.full_name}
+													</SelectItem>
+												))
+											)}
+										</SelectContent>
+									</Select>
+
+									{/* Refresh Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleRefresh}
+										disabled={isRefreshing}
+										className="cursor-pointer"
+									>
+										<IconRefresh
+											className={
+												isRefreshing
+													? "animate-spin"
+													: ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{isRefreshing
+												? "REFRESHING..."
+												: "REFRESH"}
+										</span>
+									</Button>
+
+									{/* Sync Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => spOnSync?.()}
+										disabled={
+											!isOnline ||
+											spSyncing ||
+											spPending === 0
+										}
+										className="cursor-pointer"
+									>
+										<IconCloudUpload
+											className={
+												spSyncing ? "animate-spin" : ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{spSyncing ? "SYNCING..." : "SYNC"}
+										</span>
+									</Button>
+
+									{/* Customize Columns Dropdown */}
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="outline"
+												size="sm"
+												className="cursor-pointer"
+											>
+												<IconLayoutColumns />
+												<span>COLUMNS</span>
+												<IconChevronDown />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent
+											align="end"
+											className="w-56"
+										>
+											{spTable.table
+												.getAllColumns()
+												.filter(
+													(c) =>
+														typeof c.accessorFn !==
+															"undefined" &&
+														c.getCanHide(),
+												)
+												.map((c) => (
+													<DropdownMenuCheckboxItem
+														key={c.id}
+														checked={c.getIsVisible()}
+														onCheckedChange={(v) =>
+															c.toggleVisibility(
+																!!v,
+															)
+														}
+														className="capitalize"
+													>
+														{c.id}
+													</DropdownMenuCheckboxItem>
+												))}
+										</DropdownMenuContent>
+									</DropdownMenu>
+
+									{/* INTAKE SINGLE PARENT BUTTON */}
+									<PermissionGuard permission="create_case">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() =>
+												setOpenIntakeSheet(true)
+											}
+											className="cursor-pointer"
+										>
+											<IconPlus />
+											<span className="hidden lg:inline">
+												INTAKE SINGLE PARENT
+											</span>
+										</Button>
+									</PermissionGuard>
+
+									{/* SINGLE PARENT Create Modal */}
+									<IntakeSheetSP
+										open={openIntakeSheet}
+										setOpen={setOpenIntakeSheet}
+										onSuccess={reloadSp}
+									/>
+
+									{(spSyncing ||
+										spPending > 0 ||
+										spSyncStatus) && (
+										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+											{spSyncing ? (
+												<>
+													<IconLoader className="h-3 w-3 animate-spin" />
+													<span>
+														{spSyncStatus ||
+															"Syncing queued changes..."}
+													</span>
+												</>
+											) : spPending > 0 ? (
+												<>
+													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
+													<span className="text-amber-600">
+														{spPending} pending
+														change
+														{spPending === 1
+															? ""
+															: "s"}{" "}
+														waiting for sync
+													</span>
+												</>
+											) : (
+												<>
+													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
+													<span className="text-emerald-600">
+														{spSyncStatus}
+													</span>
+												</>
+											)}
+										</div>
+									)}
+								</>
+							)}
 						</div>
 					</div>
 
@@ -3322,6 +3733,9 @@ export function DataTable({
 								<SelectItem value="FAR">
 									Family Assistance Record
 								</SelectItem>
+								<SelectItem value="SP">
+									Single Parents
+								</SelectItem>
 							</SelectContent>
 						</Select>
 						{/*
@@ -3360,6 +3774,12 @@ export function DataTable({
 									className="cursor-pointer"
 								>
 									Family Assistance Record
+								</TabsTrigger>
+								<TabsTrigger
+									value="SP"
+									className="cursor-pointer"
+								>
+									Single Parents
 								</TabsTrigger>
 							</TabsList>
 						</div>
@@ -3468,6 +3888,26 @@ export function DataTable({
 						onRowClick={handleEditFacRow}
 					/>
 					<PaginationControls table={facTable.table} />
+				</TabsContent>
+
+				{/*
+        // =====================
+        // *SINGLE PARENTS VIEW
+        // =====================
+        */}
+				<TabsContent
+					value="SP"
+					className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+				>
+					<TableRenderer
+						table={spTable.table}
+						setData={spTable.setData}
+						columns={spColumns(
+							handleDeleteClick,
+							handleDocumentsClick,
+						)}
+					/>
+					<PaginationControls table={spTable.table} />
 				</TabsContent>
 
 				{/* Documents Dialog */}

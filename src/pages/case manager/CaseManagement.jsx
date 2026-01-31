@@ -6,10 +6,7 @@
 
 import { DataTable } from "@/components/cases/data-table";
 import React, { useEffect, useState, useRef, useCallback } from "react";
-import {
-	Card,
-	CardContent,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { useCasesOffline } from "@/hooks/useCasesOffline";
 import { useCiclcarCases } from "@/hooks/useCiclcarCases";
 import { useFarCases } from "@/hooks/useFarCases";
@@ -22,11 +19,11 @@ const FORCED_TAB_AFTER_RELOAD_KEY = "caseManagement.forceTabAfterReload";
 
 export default function CaseManagement() {
 	// Load dynamic CASE rows from Supabase with offline support
-	const { 
-		data: caseRows, 
-		loading: casesLoading, 
-		error: casesError, 
-		reload, 
+	const {
+		data: caseRows,
+		loading: casesLoading,
+		error: casesError,
+		reload,
 		deleteCase,
 		pendingCount: casePendingCount,
 		syncing: caseSyncing,
@@ -80,6 +77,23 @@ export default function CaseManagement() {
 		runSync: runIvacSync,
 	} = useIvacCases();
 
+	// Single Parents (Solo Parent) placeholder data until backend integration is available
+	const spRows = [];
+	const spLoading = false;
+	const spError = null;
+	const reloadSp = useCallback(async () => {}, []);
+	const deleteSpCase = useCallback(
+		async () => ({
+			success: false,
+			error: { message: "Single Parents delete not configured" },
+		}),
+		[],
+	);
+	const spPendingCount = 0;
+	const spSyncing = false;
+	const spSyncStatus = null;
+	const runSpSync = useCallback(async () => {}, []);
+
 	// Filter hidden cases for case managers
 	const { filterVisibleCases } = useHiddenCases();
 	const isOnline = useNetworkStatus();
@@ -87,7 +101,14 @@ export default function CaseManagement() {
 	const [autoSyncAfterReloadTab, setAutoSyncAfterReloadTab] = useState(null);
 	const hasBootstrappedTab = useRef(false);
 	const previousOnline = useRef(isOnline);
-	const autoSyncTriggeredRef = useRef({ CASE: false, CICLCAR: false, FAC: false, FAR: false, IVAC: false });
+	const autoSyncTriggeredRef = useRef({
+		CASE: false,
+		CICLCAR: false,
+		FAC: false,
+		FAR: false,
+		IVAC: false,
+		SP: false,
+	});
 
 	const persistActiveTab = useCallback((tabValue) => {
 		if (typeof window === "undefined") return;
@@ -99,24 +120,31 @@ export default function CaseManagement() {
 		hasBootstrappedTab.current = true;
 		if (typeof window === "undefined") return;
 		const forcedTab = sessionStorage.getItem(FORCED_TAB_AFTER_RELOAD_KEY);
-		const forcedCaseSync = sessionStorage.getItem("caseManagement.forceCaseSync") === "true";
-		const forcedCiclcarSync = sessionStorage.getItem("caseManagement.forceCiclcarSync") === "true";
-		const forcedFacSync = sessionStorage.getItem("caseManagement.forceFacSync") === "true";
-		const forcedFarSync = sessionStorage.getItem("caseManagement.forceFarSync") === "true";
-		const forcedIvacSync = sessionStorage.getItem("caseManagement.forceIvacSync") === "true";
+		const forcedCaseSync =
+			sessionStorage.getItem("caseManagement.forceCaseSync") === "true";
+		const forcedCiclcarSync =
+			sessionStorage.getItem("caseManagement.forceCiclcarSync") ===
+			"true";
+		const forcedFacSync =
+			sessionStorage.getItem("caseManagement.forceFacSync") === "true";
+		const forcedFarSync =
+			sessionStorage.getItem("caseManagement.forceFarSync") === "true";
+		const forcedIvacSync =
+			sessionStorage.getItem("caseManagement.forceIvacSync") === "true";
 		const storedTab = sessionStorage.getItem("caseManagement.activeTab");
-		const nextTab = forcedTab
-			|| (forcedCaseSync
+		const nextTab =
+			forcedTab ||
+			(forcedCaseSync
 				? "CASE"
 				: forcedCiclcarSync
-				? "CICLCAR"
-				: forcedFacSync
-				? "FAC"
-				: forcedFarSync
-				? "FAR"
-				: forcedIvacSync
-				? "IVAC"
-				: storedTab || "CASE");
+					? "CICLCAR"
+					: forcedFacSync
+						? "FAC"
+						: forcedFarSync
+							? "FAR"
+							: forcedIvacSync
+								? "IVAC"
+								: storedTab || "CASE");
 		setInitialTab(nextTab);
 		if (forcedCaseSync) {
 			setAutoSyncAfterReloadTab("CASE");
@@ -149,35 +177,59 @@ export default function CaseManagement() {
 			if (typeof window !== "undefined") {
 				if (casePendingCount > 0) {
 					sessionStorage.setItem("caseManagement.activeTab", "CASE");
-					sessionStorage.setItem("caseManagement.forceCaseSync", "true");
+					sessionStorage.setItem(
+						"caseManagement.forceCaseSync",
+						"true",
+					);
 					window.location.reload();
 					previousOnline.current = isOnline;
 					return;
 				}
 				if (ciclcarPendingCount > 0) {
-					sessionStorage.setItem("caseManagement.activeTab", "CICLCAR");
-					sessionStorage.setItem("caseManagement.forceCiclcarSync", "true");
+					sessionStorage.setItem(
+						"caseManagement.activeTab",
+						"CICLCAR",
+					);
+					sessionStorage.setItem(
+						"caseManagement.forceCiclcarSync",
+						"true",
+					);
 					window.location.reload();
 					previousOnline.current = isOnline;
 					return;
 				}
 				if (facPendingCount > 0) {
 					sessionStorage.setItem("caseManagement.activeTab", "FAC");
-					sessionStorage.setItem("caseManagement.forceFacSync", "true");
+					sessionStorage.setItem(
+						"caseManagement.forceFacSync",
+						"true",
+					);
 					window.location.reload();
 					previousOnline.current = isOnline;
 					return;
 				}
 				if (farPendingCount > 0) {
 					sessionStorage.setItem("caseManagement.activeTab", "FAR");
-					sessionStorage.setItem("caseManagement.forceFarSync", "true");
+					sessionStorage.setItem(
+						"caseManagement.forceFarSync",
+						"true",
+					);
 					window.location.reload();
 					previousOnline.current = isOnline;
 					return;
 				}
 				if (ivacPendingCount > 0) {
 					sessionStorage.setItem("caseManagement.activeTab", "IVAC");
-					sessionStorage.setItem("caseManagement.forceIvacSync", "true");
+					sessionStorage.setItem(
+						"caseManagement.forceIvacSync",
+						"true",
+					);
+					window.location.reload();
+					previousOnline.current = isOnline;
+					return;
+				}
+				if (spPendingCount > 0) {
+					sessionStorage.setItem("caseManagement.activeTab", "SP");
 					window.location.reload();
 					previousOnline.current = isOnline;
 					return;
@@ -185,31 +237,58 @@ export default function CaseManagement() {
 			}
 		}
 		previousOnline.current = isOnline;
-		}, [isOnline, casePendingCount, ciclcarPendingCount, facPendingCount, farPendingCount, ivacPendingCount]);
+	}, [
+		isOnline,
+		casePendingCount,
+		ciclcarPendingCount,
+		facPendingCount,
+		farPendingCount,
+		ivacPendingCount,
+		spPendingCount,
+	]);
 
 	useEffect(() => {
 		if (!autoSyncAfterReloadTab) return;
 		if (!isOnline) return;
-		const runSync = autoSyncAfterReloadTab === "CASE"
-			? runCaseSync
-			: autoSyncAfterReloadTab === "CICLCAR"
-			? runCiclcarSync
-			: autoSyncAfterReloadTab === "FAC"
-			? runFacSync
-			: autoSyncAfterReloadTab === "FAR"
-			? runFarSync
-			: autoSyncAfterReloadTab === "IVAC"
-			? runIvacSync
-			: null;
+		const runSync =
+			autoSyncAfterReloadTab === "CASE"
+				? runCaseSync
+				: autoSyncAfterReloadTab === "CICLCAR"
+					? runCiclcarSync
+					: autoSyncAfterReloadTab === "FAC"
+						? runFacSync
+						: autoSyncAfterReloadTab === "FAR"
+							? runFarSync
+							: autoSyncAfterReloadTab === "IVAC"
+								? runIvacSync
+								: autoSyncAfterReloadTab === "SP"
+									? runSpSync
+									: null;
 		if (!runSync) return;
 		runSync()
 			.catch((err) => console.error("Auto sync failed:", err))
 			.finally(() => setAutoSyncAfterReloadTab(null));
-	}, [autoSyncAfterReloadTab, isOnline, runCaseSync, runCiclcarSync, runFacSync, runFarSync, runIvacSync]);
+	}, [
+		autoSyncAfterReloadTab,
+		isOnline,
+		runCaseSync,
+		runCiclcarSync,
+		runFacSync,
+		runFarSync,
+		runIvacSync,
+		runSpSync,
+	]);
 
 	useEffect(() => {
 		if (!isOnline) {
-			autoSyncTriggeredRef.current = { CASE: false, CICLCAR: false, FAC: false, FAR: false, IVAC: false };
+			autoSyncTriggeredRef.current = {
+				CASE: false,
+				CICLCAR: false,
+				FAC: false,
+				FAR: false,
+				IVAC: false,
+				SP: false,
+			};
 			return;
 		}
 		if (autoSyncAfterReloadTab) return;
@@ -225,7 +304,9 @@ export default function CaseManagement() {
 		if (ciclcarPendingCount > 0 && !ciclcarSyncing && !triggers.CICLCAR) {
 			triggers.CICLCAR = true;
 			runCiclcarSync()
-				.catch((err) => console.error("Auto CICL/CAR sync failed:", err))
+				.catch((err) =>
+					console.error("Auto CICL/CAR sync failed:", err),
+				)
 				.finally(() => {
 					triggers.CICLCAR = false;
 				});
@@ -254,6 +335,14 @@ export default function CaseManagement() {
 					triggers.IVAC = false;
 				});
 		}
+		if (spPendingCount > 0 && !spSyncing && !triggers.SP) {
+			triggers.SP = true;
+			runSpSync()
+				.catch((err) => console.error("Auto SP sync failed:", err))
+				.finally(() => {
+					triggers.SP = false;
+				});
+		}
 	}, [
 		isOnline,
 		autoSyncAfterReloadTab,
@@ -262,39 +351,72 @@ export default function CaseManagement() {
 		runFacSync,
 		runFarSync,
 		runIvacSync,
+		runSpSync,
 		casePendingCount,
 		ciclcarPendingCount,
 		facPendingCount,
 		farPendingCount,
 		ivacPendingCount,
+		spPendingCount,
 		caseSyncing,
 		ciclcarSyncing,
 		facSyncing,
 		farSyncing,
 		ivacSyncing,
+		spSyncing,
 	]);
 
 	// Apply filtering to all case data
-	const filteredCaseRows = React.useMemo(() => filterVisibleCases(caseRows || []), [caseRows, filterVisibleCases]);
-	const filteredCiclcarRows = React.useMemo(() => filterVisibleCases(ciclcarRows || []), [ciclcarRows, filterVisibleCases]);
-	const filteredFarRows = React.useMemo(() => filterVisibleCases(farRows || []), [farRows, filterVisibleCases]);
-	const filteredFacRows = React.useMemo(() => filterVisibleCases(facRows || []), [facRows, filterVisibleCases]);
-	const filteredIvacRows = React.useMemo(() => filterVisibleCases(ivacRows || []), [ivacRows, filterVisibleCases]);
+	const filteredCaseRows = React.useMemo(
+		() => filterVisibleCases(caseRows || []),
+		[caseRows, filterVisibleCases],
+	);
+	const filteredCiclcarRows = React.useMemo(
+		() => filterVisibleCases(ciclcarRows || []),
+		[ciclcarRows, filterVisibleCases],
+	);
+	const filteredFarRows = React.useMemo(
+		() => filterVisibleCases(farRows || []),
+		[farRows, filterVisibleCases],
+	);
+	const filteredFacRows = React.useMemo(
+		() => filterVisibleCases(facRows || []),
+		[facRows, filterVisibleCases],
+	);
+	const filteredIvacRows = React.useMemo(
+		() => filterVisibleCases(ivacRows || []),
+		[ivacRows, filterVisibleCases],
+	);
+	const filteredSpRows = React.useMemo(
+		() => filterVisibleCases(spRows || []),
+		[spRows, filterVisibleCases],
+	);
 
 	return (
 		<>
 			{/* ================= HEADER ================= */}
 			<div className="flex items-start justify-between gap-4 px-4 lg:px-6 pb-4">
 				<div>
-					<h2 className="text-base font-bold tracking-tight">Case Management</h2>
-					<p className="text-muted-foreground text-[11px]">View and manage all case records and intake forms</p>
+					<h2 className="text-base font-bold tracking-tight">
+						Case Management
+					</h2>
+					<p className="text-muted-foreground text-[11px]">
+						View and manage all case records and intake forms
+					</p>
 				</div>
 				<div className="hidden sm:block max-w-[520px] text-right text-[11px] leading-snug text-muted-foreground">
 					<p>
-						<span className="font-semibold text-foreground">CICL/CAR</span> - Children In Conflict with the Law (CICL) and Child at Risk (CAR)
+						<span className="font-semibold text-foreground">
+							CICL/CAR
+						</span>{" "}
+						- Children In Conflict with the Law (CICL) and Child at
+						Risk (CAR)
 					</p>
 					<p>
-						<span className="font-semibold text-foreground">Incidence on VAC</span> - Incidence on Violence Against Children
+						<span className="font-semibold text-foreground">
+							Incidence on VAC
+						</span>{" "}
+						- Incidence on Violence Against Children
 					</p>
 				</div>
 			</div>
@@ -315,7 +437,10 @@ export default function CaseManagement() {
 						{ciclcarError ? (
 							<div className="text-sm text-red-600">
 								Failed to load CICL-CAR cases.{" "}
-								<button className="underline" onClick={reloadCiclcar}>
+								<button
+									className="underline"
+									onClick={reloadCiclcar}
+								>
 									Retry
 								</button>
 							</div>
@@ -323,7 +448,10 @@ export default function CaseManagement() {
 						{farError ? (
 							<div className="text-sm text-red-600">
 								Failed to load FAR cases.{" "}
-								<button className="underline" onClick={reloadFar}>
+								<button
+									className="underline"
+									onClick={reloadFar}
+								>
 									Retry
 								</button>
 							</div>
@@ -331,7 +459,10 @@ export default function CaseManagement() {
 						{facError ? (
 							<div className="text-sm text-red-600">
 								Failed to load FAC cases.{" "}
-								<button className="underline" onClick={reloadFac}>
+								<button
+									className="underline"
+									onClick={reloadFac}
+								>
 									Retry
 								</button>
 							</div>
@@ -339,7 +470,21 @@ export default function CaseManagement() {
 						{ivacError ? (
 							<div className="text-sm text-red-600">
 								Failed to load IVAC cases.{" "}
-								<button className="underline" onClick={reloadIvac}>
+								<button
+									className="underline"
+									onClick={reloadIvac}
+								>
+									Retry
+								</button>
+							</div>
+						) : null}
+						{spError ? (
+							<div className="text-sm text-red-600">
+								Failed to load Single Parents cases.{" "}
+								<button
+									className="underline"
+									onClick={reloadSp}
+								>
 									Retry
 								</button>
 							</div>
@@ -347,20 +492,25 @@ export default function CaseManagement() {
 
 						<DataTable
 							caseData={casesLoading ? [] : filteredCaseRows}
-							ciclcarData={ciclcarLoading ? [] : filteredCiclcarRows}
+							ciclcarData={
+								ciclcarLoading ? [] : filteredCiclcarRows
+							}
 							farData={farLoading ? [] : filteredFarRows}
 							facData={facLoading ? [] : filteredFacRows}
 							ivacData={ivacLoading ? [] : filteredIvacRows}
+							spData={spLoading ? [] : filteredSpRows}
 							reloadCases={reload}
 							reloadCiclcar={reloadCiclcar}
 							reloadFar={reloadFar}
 							reloadFac={reloadFac}
 							reloadIvac={reloadIvac}
+							reloadSp={reloadSp}
 							deleteCase={deleteCase}
 							deleteCiclcarCase={deleteCiclcarCase}
 							deleteFarCase={deleteFarCase}
 							deleteFacCase={deleteFacCase}
 							deleteIvacCase={deleteIvacCase}
+							deleteSpCase={deleteSpCase}
 							initialTab={initialTab}
 							onTabChange={persistActiveTab}
 							caseSync={{
@@ -393,8 +543,18 @@ export default function CaseManagement() {
 								syncStatus: ivacSyncStatus,
 								onSync: runIvacSync,
 							}}
-							ciclcarProgramEnrollments={ciclcarProgramEnrollments}
-							ciclcarProgramEnrollmentsLoading={ciclcarProgramEnrollmentsLoading}
+							spSync={{
+								pendingCount: spPendingCount,
+								syncing: spSyncing,
+								syncStatus: spSyncStatus,
+								onSync: runSpSync,
+							}}
+							ciclcarProgramEnrollments={
+								ciclcarProgramEnrollments
+							}
+							ciclcarProgramEnrollmentsLoading={
+								ciclcarProgramEnrollmentsLoading
+							}
 							isOnline={isOnline}
 						/>
 					</CardContent>
