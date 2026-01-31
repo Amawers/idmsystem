@@ -65,7 +65,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+	Popover,
+	PopoverContent,
+	PopoverTrigger,
+} from "@/components/ui/popover";
 import {
 	Select,
 	SelectContent,
@@ -152,7 +156,12 @@ function formatDateTime(isoString) {
 // =================================
 // Replace previous `const caseColumns = [ ... ]` with the factory below.
 
-const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, handleDocumentsClick) => [
+const createCaseColumns = (
+	handleEnrollClick,
+	handleEditClick,
+	handleDeleteClick,
+	handleDocumentsClick,
+) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -262,29 +271,50 @@ const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
 					<PermissionGuard permission="edit_case">
-						<DropdownMenuItem onClick={(e) => {
-							e.stopPropagation();
-							handleEditClick(row.original, "CASE");
-						}}>Edit</DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleEditClick(row.original, "CASE");
+							}}
+						>
+							Edit
+						</DropdownMenuItem>
 					</PermissionGuard>
 					<PermissionGuard permission="view_documents">
-						<DropdownMenuItem onClick={(e) => {
-							e.stopPropagation();
-							handleDocumentsClick(row.original, "CASE");
-						}}>Documents</DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDocumentsClick(row.original, "CASE");
+							}}
+						>
+							Documents
+						</DropdownMenuItem>
 					</PermissionGuard>
-					<DropdownMenuItem onClick={(e) => {
-						e.stopPropagation();
-						handleEnrollClick(row.original, "CASE");
-					}}>Enroll Program</DropdownMenuItem>
+					<DropdownMenuItem
+						onClick={(e) => {
+							e.stopPropagation();
+							handleEnrollClick(row.original, "CASE");
+						}}
+					>
+						Enroll Program
+					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<PermissionGuard permission="delete_case">
-						<DropdownMenuItem variant="destructive" onClick={(e) => {
-							console.log("[CASE DELETE] Dropdown item clicked, event:", e);
-							console.log("[CASE DELETE] Row data:", row.original);
-							e.stopPropagation();
-							handleDeleteClick(row.original, "CASE");
-						}}>
+						<DropdownMenuItem
+							variant="destructive"
+							onClick={(e) => {
+								console.log(
+									"[CASE DELETE] Dropdown item clicked, event:",
+									e,
+								);
+								console.log(
+									"[CASE DELETE] Row data:",
+									row.original,
+								);
+								e.stopPropagation();
+								handleDeleteClick(row.original, "CASE");
+							}}
+						>
 							Delete
 						</DropdownMenuItem>
 					</PermissionGuard>
@@ -297,7 +327,13 @@ const createCaseColumns = (handleEnrollClick, handleEditClick, handleDeleteClick
 // =================================
 //* CICLCAR Table COLUMN DEFINITIONS
 // =================================
-const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, getPrefetchedEnrollments, handleDocumentsClick) => [
+const ciclcarColumns = (
+	handleEnrollClick,
+	handleEditClick,
+	handleDeleteClick,
+	getPrefetchedEnrollments,
+	handleDocumentsClick,
+) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -407,27 +443,42 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, g
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
 					<PermissionGuard permission="edit_case">
-						<DropdownMenuItem onClick={(e) => {
-							e.stopPropagation();
-							handleEditClick(row.original, "CICLCAR");
-						}}>Edit</DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleEditClick(row.original, "CICLCAR");
+							}}
+						>
+							Edit
+						</DropdownMenuItem>
 					</PermissionGuard>
 					<PermissionGuard permission="view_documents">
-						<DropdownMenuItem onClick={(e) => {
-							e.stopPropagation();
-							handleDocumentsClick(row.original, "CICLCAR");
-						}}>Documents</DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDocumentsClick(row.original, "CICLCAR");
+							}}
+						>
+							Documents
+						</DropdownMenuItem>
 					</PermissionGuard>
-					<DropdownMenuItem onClick={(e) => {
-						e.stopPropagation();
-						handleEnrollClick(row.original, "CICLCAR");
-					}}>Enroll Program</DropdownMenuItem>
+					<DropdownMenuItem
+						onClick={(e) => {
+							e.stopPropagation();
+							handleEnrollClick(row.original, "CICLCAR");
+						}}
+					>
+						Enroll Program
+					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<PermissionGuard permission="delete_case">
-						<DropdownMenuItem variant="destructive" onClick={(e) => {
-							e.stopPropagation();
-							handleDeleteClick(row.original, "CICLCAR");
-						}}>
+						<DropdownMenuItem
+							variant="destructive"
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDeleteClick(row.original, "CICLCAR");
+							}}
+						>
 							Delete
 						</DropdownMenuItem>
 					</PermissionGuard>
@@ -440,11 +491,16 @@ const ciclcarColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, g
 // =================================
 //* FAR Table COLUMN DEFINITIONS
 // =================================
-const farColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, handleDocumentsClick) => [
+const farColumns = (
+	handleEnrollClick,
+	handleEditClick,
+	handleDeleteClick,
+	handleDocumentsClick,
+) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
-	
+
 	//* CASE ID
 	{
 		accessorKey: "id",
@@ -584,27 +640,42 @@ const farColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, handl
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
 					<PermissionGuard permission="edit_case">
-						<DropdownMenuItem onClick={(e) => {
-							e.stopPropagation();
-							handleEditClick(row.original, "FAR");
-						}}>Edit</DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleEditClick(row.original, "FAR");
+							}}
+						>
+							Edit
+						</DropdownMenuItem>
 					</PermissionGuard>
 					<PermissionGuard permission="view_documents">
-						<DropdownMenuItem onClick={(e) => {
-							e.stopPropagation();
-							handleDocumentsClick(row.original, "FAR");
-						}}>Documents</DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDocumentsClick(row.original, "FAR");
+							}}
+						>
+							Documents
+						</DropdownMenuItem>
 					</PermissionGuard>
-					<DropdownMenuItem onClick={(e) => {
-						e.stopPropagation();
-						handleEnrollClick(row.original, "FAR");
-					}}>Enroll Program</DropdownMenuItem>
+					<DropdownMenuItem
+						onClick={(e) => {
+							e.stopPropagation();
+							handleEnrollClick(row.original, "FAR");
+						}}
+					>
+						Enroll Program
+					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<PermissionGuard permission="delete_case">
-						<DropdownMenuItem variant="destructive" onClick={(e) => {
-							e.stopPropagation();
-							handleDeleteClick(row.original, "FAR");
-						}}>
+						<DropdownMenuItem
+							variant="destructive"
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDeleteClick(row.original, "FAR");
+							}}
+						>
 							Delete
 						</DropdownMenuItem>
 					</PermissionGuard>
@@ -617,11 +688,15 @@ const farColumns = (handleEnrollClick, handleEditClick, handleDeleteClick, handl
 // =================================
 //* FAC Table COLUMN DEFINITIONS
 // =================================
-const facColumns = (handleEditClick, handleDeleteClick, handleDocumentsClick) => [
+const facColumns = (
+	handleEditClick,
+	handleDeleteClick,
+	handleDocumentsClick,
+) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
-	
+
 	//* CASE ID
 	{
 		accessorKey: "id",
@@ -744,23 +819,34 @@ const facColumns = (handleEditClick, handleDeleteClick, handleDocumentsClick) =>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
 					<PermissionGuard permission="edit_case">
-						<DropdownMenuItem onClick={(e) => {
-							e.stopPropagation();
-							handleEditClick(row.original, "FAC");
-						}}>Edit</DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleEditClick(row.original, "FAC");
+							}}
+						>
+							Edit
+						</DropdownMenuItem>
 					</PermissionGuard>
 					<PermissionGuard permission="view_documents">
-						<DropdownMenuItem onClick={(e) => {
-							e.stopPropagation();
-							handleDocumentsClick(row.original, "FAC");
-						}}>Documents</DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDocumentsClick(row.original, "FAC");
+							}}
+						>
+							Documents
+						</DropdownMenuItem>
 					</PermissionGuard>
 					<DropdownMenuSeparator />
 					<PermissionGuard permission="delete_case">
-						<DropdownMenuItem variant="destructive" onClick={(e) => {
-							e.stopPropagation();
-							handleDeleteClick(row.original, "FAC");
-						}}>
+						<DropdownMenuItem
+							variant="destructive"
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDeleteClick(row.original, "FAC");
+							}}
+						>
 							Delete
 						</DropdownMenuItem>
 					</PermissionGuard>
@@ -773,11 +859,15 @@ const facColumns = (handleEditClick, handleDeleteClick, handleDocumentsClick) =>
 // =================================
 //* IVAC Table COLUMN DEFINITIONS
 // =================================
-const ivacColumns = (handleEditClick, handleDeleteClick, handleDocumentsClick) => [
+const ivacColumns = (
+	handleEditClick,
+	handleDeleteClick,
+	handleDocumentsClick,
+) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
-	
+
 	//* CASE ID
 	{
 		accessorKey: "id",
@@ -815,8 +905,9 @@ const ivacColumns = (handleEditClick, handleDeleteClick, handleDocumentsClick) =
 		header: "Total VAC Victims",
 		cell: ({ row }) => {
 			const records = row.original.records || [];
-			const total = records.reduce((sum, record) => 
-				sum + parseInt(record.vacVictims || 0, 10), 0
+			const total = records.reduce(
+				(sum, record) => sum + parseInt(record.vacVictims || 0, 10),
+				0,
 			);
 			return <div className="text-center font-semibold">{total}</div>;
 		},
@@ -837,7 +928,11 @@ const ivacColumns = (handleEditClick, handleDeleteClick, handleDocumentsClick) =
 			return (
 				<div className="flex flex-wrap gap-1">
 					{caseManagers.map((manager, index) => (
-						<Badge key={index} variant="secondary" className="text-xs">
+						<Badge
+							key={index}
+							variant="secondary"
+							className="text-xs"
+						>
 							{manager}
 						</Badge>
 					))}
@@ -899,23 +994,34 @@ const ivacColumns = (handleEditClick, handleDeleteClick, handleDocumentsClick) =
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
 					<PermissionGuard permission="edit_case">
-						<DropdownMenuItem onClick={(e) => {
-							e.stopPropagation();
-							handleEditClick(row.original, "IVAC");
-						}}>Edit</DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleEditClick(row.original, "IVAC");
+							}}
+						>
+							Edit
+						</DropdownMenuItem>
 					</PermissionGuard>
 					<PermissionGuard permission="view_documents">
-						<DropdownMenuItem onClick={(e) => {
-							e.stopPropagation();
-							handleDocumentsClick(row.original, "IVAC");
-						}}>Documents</DropdownMenuItem>
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDocumentsClick(row.original, "IVAC");
+							}}
+						>
+							Documents
+						</DropdownMenuItem>
 					</PermissionGuard>
 					<DropdownMenuSeparator />
 					<PermissionGuard permission="delete_case">
-						<DropdownMenuItem variant="destructive" onClick={(e) => {
-							e.stopPropagation();
-							handleDeleteClick(row.original, "IVAC");
-						}}>
+						<DropdownMenuItem
+							variant="destructive"
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDeleteClick(row.original, "IVAC");
+							}}
+						>
 							Delete
 						</DropdownMenuItem>
 					</PermissionGuard>
@@ -924,6 +1030,228 @@ const ivacColumns = (handleEditClick, handleDeleteClick, handleDocumentsClick) =
 		),
 	},
 ];
+//!!!!!!!!!!!!!!!!!!!
+// ! NEW ADDED TYPES	==========================================================================================================================================================================
+//!!!!!!!!!!!!!!!!!!!
+
+// =================================
+//* FA Table COLUMN DEFINITIONS
+// =================================
+const faColumns = (
+	handleEnrollClick,
+	handleEditClick,
+	handleDeleteClick,
+	handleDocumentsClick,
+) => [
+	//* =====================
+	//* START OF DATA COLUMNS
+	//* =====================
+
+	//* CASE ID
+	{
+		accessorKey: "id",
+		header: "Case ID",
+		cell: ({ row }) => {
+			const caseId = row.original.id || "N/A";
+			return <div className="font-medium">{caseId}</div>;
+		},
+		enableHiding: false,
+	},
+
+	//* DATE OF INTERVIEW
+	{
+		accessorKey: "interview_date",
+		header: "Interview Date",
+		cell: ({ row }) => (
+			<div className="px-2">
+				{formatToMMDDYYYY(row.original.interview_date) || "-"}
+			</div>
+		),
+	},
+
+	//* DATE RECORDED
+	{
+		accessorKey: "date_recorded",
+		header: "Date Recorded",
+		cell: ({ row }) => {
+			const dateRecorded = row.original.date_recorded || "N/A";
+			return <div>{dateRecorded}</div>;
+		},
+	},
+
+	//* CLIENT NAME
+	{
+		accessorKey: "client_name",
+		header: "Client Name",
+		cell: ({ row }) => {
+			const clientName = row.original.client_name || "N/A";
+			return <div>{clientName}</div>;
+		},
+	},
+
+	//* ADDRESS
+	{
+		accessorKey: "address",
+		header: "Address",
+		cell: ({ row }) => {
+			const address = row.original.address || "N/A";
+			return <div>{address}</div>;
+		},
+	},
+
+	//* PURPOSE
+	{
+		accessorKey: "purpose",
+		header: "Purpose",
+		cell: ({ row }) => {
+			const purpose = row.original.purpose || "N/A";
+			return <div>{purpose}</div>;
+		},
+	},
+
+	//* NAME OF BENIFICIARY
+	{
+		accessorKey: "benificiary_name",
+		header: "Name of Beneficiary",
+		cell: ({ row }) => {
+			const benificiaryName = row.original.benificiary_name || "N/A";
+			return <div>{benificiaryName}</div>;
+		},
+	},
+
+	//* CONTACT NUMBER
+	{
+		accessorKey: "contact_number",
+		header: "Contact Number",
+		cell: ({ row }) => {
+			const contactNumber = row.original.contact_number || "N/A";
+			return <div>{contactNumber}</div>;
+		},
+	},
+
+	//* SOCIAL CASE STUDY REPORT PREPARED BY
+	{
+		accessorKey: "prepared_by",
+		header: "Social Case Study Report Prepared By",
+		cell: ({ row }) => {
+			const preparedBy = row.original.prepared_by || "N/A";
+			return <div>{preparedBy}</div>;
+		},
+	},
+
+	//* SOCIAL CASE STUDY REPORT STATUS
+	{
+		accessorKey: "status_report",
+		header: "Social Case Study Report Status",
+		cell: ({ row }) => {
+			const statusReport = row.original.status_report || "-";
+			return <div>{statusReport}</div>;
+		},
+	},
+
+	//* CLIENT CATEGORY
+	{
+		accessorKey: "client_category",
+		header: "Client Category",
+		cell: ({ row }) => {
+			const clientCategory = row.original.client_category || "-";
+			return <div>{clientCategory}</div>;
+		},
+	},
+
+	//* GENDER
+	{
+		accessorKey: "gender",
+		header: "Gender",
+		cell: ({ row }) => {
+			const gender = row.original.gender || "-";
+			return <div>{gender}</div>;
+		},
+	},
+
+	//* 4P's Member
+	{
+		accessorKey: "four_ps_member",
+		header: "4P's Member",
+		cell: ({ row }) => {
+			const fourPsMember = row.original.four_ps_member || "-";
+			return <div>{fourPsMember}</div>;
+		},
+	},
+
+	//* TRANSACTION
+	{
+		accessorKey: "transaction",
+		header: "Transaction",
+		cell: ({ row }) => {
+			const transaction = row.original.transaction || "-";
+			return <div>{transaction}</div>;
+		},
+	},
+
+	//* ACTIONS
+	{
+		id: "actions",
+		header: "Actions",
+		cell: ({ row }) => (
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						variant="outline"
+						size="sm"
+						className="h-6 px-2 text-xs cursor-pointer"
+					>
+						<Edit className="h-3 w-3" />
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="w-40">
+					<PermissionGuard permission="edit_case">
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleEditClick(row.original, "FAR");
+							}}
+						>
+							Edit
+						</DropdownMenuItem>
+					</PermissionGuard>
+					<PermissionGuard permission="view_documents">
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDocumentsClick(row.original, "FAR");
+							}}
+						>
+							Documents
+						</DropdownMenuItem>
+					</PermissionGuard>
+					<DropdownMenuItem
+						onClick={(e) => {
+							e.stopPropagation();
+							handleEnrollClick(row.original, "FAR");
+						}}
+					>
+						Enroll Program
+					</DropdownMenuItem>
+					<DropdownMenuSeparator />
+					<PermissionGuard permission="delete_case">
+						<DropdownMenuItem
+							variant="destructive"
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDeleteClick(row.original, "FAR");
+							}}
+						>
+							Delete
+						</DropdownMenuItem>
+					</PermissionGuard>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		),
+	},
+];
+
+//! =======================================================================================================================================================================================================================
 
 // --- Date normalization/format helpers (module scope)
 // Convert either MM-DD-YYYY or ISO (YYYY-MM-DD) or Date-like strings to ISO (YYYY-MM-DD)
@@ -970,7 +1298,11 @@ function buildRowSearchText(row, maxDepth = 2) {
 
 	function walk(value, depth) {
 		if (value == null) return [];
-		if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") {
+		if (
+			typeof value === "string" ||
+			typeof value === "number" ||
+			typeof value === "boolean"
+		) {
 			return [String(value)];
 		}
 		if (depth <= 0) return [];
@@ -980,7 +1312,9 @@ function buildRowSearchText(row, maxDepth = 2) {
 		if (typeof value === "object") {
 			if (seen.has(value)) return [];
 			seen.add(value);
-			return Object.values(value).flatMap((item) => walk(item, depth - 1));
+			return Object.values(value).flatMap((item) =>
+				walk(item, depth - 1),
+			);
 		}
 		return [];
 	}
@@ -1012,7 +1346,9 @@ function buildRowSearchText(row, maxDepth = 2) {
 	];
 
 	const fallback = walk(row, maxDepth);
-	return normalizeSearchText([...preferred, ...fallback].filter(Boolean).join(" "));
+	return normalizeSearchText(
+		[...preferred, ...fallback].filter(Boolean).join(" "),
+	);
 }
 
 function getRowDateFiled(row) {
@@ -1034,8 +1370,12 @@ function filterRowsByGlobalSearch(rows, searchQuery, advancedFilters) {
 	const query = normalizeSearchText(searchQuery);
 	const statusFilter = advancedFilters?.status ?? "all";
 	const priorityFilter = advancedFilters?.priority ?? "all";
-	const dateFrom = advancedFilters?.dateFrom ? new Date(`${advancedFilters.dateFrom}T00:00:00`) : null;
-	const dateTo = advancedFilters?.dateTo ? new Date(`${advancedFilters.dateTo}T23:59:59`) : null;
+	const dateFrom = advancedFilters?.dateFrom
+		? new Date(`${advancedFilters.dateFrom}T00:00:00`)
+		: null;
+	const dateTo = advancedFilters?.dateTo
+		? new Date(`${advancedFilters.dateTo}T23:59:59`)
+		: null;
 	const hasFrom = dateFrom && !Number.isNaN(dateFrom.getTime());
 	const hasTo = dateTo && !Number.isNaN(dateTo.getTime());
 
@@ -1055,7 +1395,8 @@ function filterRowsByGlobalSearch(rows, searchQuery, advancedFilters) {
 
 		if (priorityFilter !== "all") {
 			const rowPriority = normalizeSearchText(row?.priority);
-			if (!rowPriority || rowPriority !== normalizedPriority) return false;
+			if (!rowPriority || rowPriority !== normalizedPriority)
+				return false;
 		}
 
 		if (hasFrom || hasTo) {
@@ -1095,7 +1436,9 @@ function PaginationControls({ table }) {
 					Page {currentPage} of {totalPages || 1}
 				</div>
 				<div className="flex items-center gap-2">
-					<span className="text-sm text-muted-foreground">Rows per page:</span>
+					<span className="text-sm text-muted-foreground">
+						Rows per page:
+					</span>
 					<Select
 						value={String(pageSize)}
 						onValueChange={(value) => {
@@ -1155,18 +1498,18 @@ function PaginationControls({ table }) {
  * @returns {JSX.Element} Rendered DataTable component
  *
  * @example
- * <DataTable 
- *   caseData={cases} 
- *   ciclcarData={ciclcar} 
+ * <DataTable
+ *   caseData={cases}
+ *   ciclcarData={ciclcar}
  *   farData={far}
  *   reloadCases={reloadCases}
  *   reloadCiclcar={reloadCiclcar}
  *   reloadFar={reloadFar}
  * />
  */
-export function DataTable({ 
-	caseData, 
-	ciclcarData, 
+export function DataTable({
+	caseData,
+	ciclcarData,
 	farData,
 	facData,
 	ivacData,
@@ -1284,7 +1627,10 @@ export function DataTable({
 		const set = new Set(
 			allRows
 				.map((row) => row?.status)
-				.filter((value) => typeof value === "string" && value.trim().length > 0),
+				.filter(
+					(value) =>
+						typeof value === "string" && value.trim().length > 0,
+				),
 		);
 		return Array.from(set).sort((a, b) => a.localeCompare(b));
 	}, [allRows]);
@@ -1293,7 +1639,10 @@ export function DataTable({
 		const set = new Set(
 			allRows
 				.map((row) => row?.priority)
-				.filter((value) => typeof value === "string" && value.trim().length > 0),
+				.filter(
+					(value) =>
+						typeof value === "string" && value.trim().length > 0,
+				),
 		);
 		return Array.from(set).sort((a, b) => a.localeCompare(b));
 	}, [allRows]);
@@ -1314,7 +1663,12 @@ export function DataTable({
 
 	const clearGlobalFilters = React.useCallback(() => {
 		setSearchQuery("");
-		setAdvancedFilters({ status: "all", priority: "all", dateFrom: "", dateTo: "" });
+		setAdvancedFilters({
+			status: "all",
+			priority: "all",
+			dateFrom: "",
+			dateTo: "",
+		});
 	}, []);
 
 	const casePending = caseSync?.pendingCount ?? 0;
@@ -1393,8 +1747,15 @@ export function DataTable({
 
 	// Handle delete click - opens confirmation dialog
 	function handleDeleteClick(caseData, caseType) {
-		console.log("[DELETE CLICK] Delete requested for:", caseData, "Type:", caseType);
-		console.log("[DELETE CLICK] handleDeleteClick function called successfully");
+		console.log(
+			"[DELETE CLICK] Delete requested for:",
+			caseData,
+			"Type:",
+			caseType,
+		);
+		console.log(
+			"[DELETE CLICK] handleDeleteClick function called successfully",
+		);
 		setCaseToDelete(caseData);
 		setCaseTypeToDelete(caseType);
 		setDeleteDialogOpen(true);
@@ -1436,7 +1797,9 @@ export function DataTable({
 				});
 			} else {
 				toast.error("Delete Failed", {
-					description: result.error?.message || "Failed to delete case. Please try again.",
+					description:
+						result.error?.message ||
+						"Failed to delete case. Please try again.",
 				});
 			}
 		} catch (error) {
@@ -1483,7 +1846,10 @@ export function DataTable({
 
 		if (typeof window !== "undefined") {
 			sessionStorage.setItem("caseManagement.activeTab", activeTab);
-			sessionStorage.setItem("caseManagement.forceTabAfterReload", activeTab);
+			sessionStorage.setItem(
+				"caseManagement.forceTabAfterReload",
+				activeTab,
+			);
 			window.location.reload();
 			return;
 		}
@@ -1528,18 +1894,30 @@ export function DataTable({
 		} finally {
 			setIsRefreshing(false);
 		}
-	}, [activeTab, isRefreshing, reloadCases, reloadCiclcar, reloadFar, reloadFac, reloadIvac]);
+	}, [
+		activeTab,
+		isRefreshing,
+		reloadCases,
+		reloadCiclcar,
+		reloadFar,
+		reloadFac,
+		reloadIvac,
+	]);
 
 	const caseManagerFilteredData = React.useMemo(() => {
 		return caseCaseManager === "all"
 			? safeCaseData
-			: safeCaseData.filter((row) => row.case_manager === caseCaseManager);
+			: safeCaseData.filter(
+					(row) => row.case_manager === caseCaseManager,
+				);
 	}, [caseCaseManager, safeCaseData]);
 
 	const ciclcarManagerFilteredData = React.useMemo(() => {
 		return ciclcarCaseManager === "all"
 			? safeCiclcarData
-			: safeCiclcarData.filter((row) => row.case_manager === ciclcarCaseManager);
+			: safeCiclcarData.filter(
+					(row) => row.case_manager === ciclcarCaseManager,
+				);
 	}, [ciclcarCaseManager, safeCiclcarData]);
 
 	const farManagerFilteredData = React.useMemo(() => {
@@ -1565,23 +1943,48 @@ export function DataTable({
 	}, [ivacCaseManager, safeIvacData]);
 
 	const caseFilteredData = React.useMemo(
-		() => filterRowsByGlobalSearch(caseManagerFilteredData, searchQuery, advancedFilters),
+		() =>
+			filterRowsByGlobalSearch(
+				caseManagerFilteredData,
+				searchQuery,
+				advancedFilters,
+			),
 		[caseManagerFilteredData, searchQuery, advancedFilters],
 	);
 	const ciclcarFilteredData = React.useMemo(
-		() => filterRowsByGlobalSearch(ciclcarManagerFilteredData, searchQuery, advancedFilters),
+		() =>
+			filterRowsByGlobalSearch(
+				ciclcarManagerFilteredData,
+				searchQuery,
+				advancedFilters,
+			),
 		[ciclcarManagerFilteredData, searchQuery, advancedFilters],
 	);
 	const farFilteredData = React.useMemo(
-		() => filterRowsByGlobalSearch(farManagerFilteredData, searchQuery, advancedFilters),
+		() =>
+			filterRowsByGlobalSearch(
+				farManagerFilteredData,
+				searchQuery,
+				advancedFilters,
+			),
 		[farManagerFilteredData, searchQuery, advancedFilters],
 	);
 	const facFilteredData = React.useMemo(
-		() => filterRowsByGlobalSearch(facManagerFilteredData, searchQuery, advancedFilters),
+		() =>
+			filterRowsByGlobalSearch(
+				facManagerFilteredData,
+				searchQuery,
+				advancedFilters,
+			),
 		[facManagerFilteredData, searchQuery, advancedFilters],
 	);
 	const ivacFilteredData = React.useMemo(
-		() => filterRowsByGlobalSearch(ivacManagerFilteredData, searchQuery, advancedFilters),
+		() =>
+			filterRowsByGlobalSearch(
+				ivacManagerFilteredData,
+				searchQuery,
+				advancedFilters,
+			),
 		[ivacManagerFilteredData, searchQuery, advancedFilters],
 	);
 
@@ -1589,7 +1992,12 @@ export function DataTable({
 	const caseTable = useDataTable({
 		initialData: caseFilteredData,
 		// CHANGED: pass edit handler so actions column calls this for “Edit”
-		columns: createCaseColumns(handleEnrollClick, handleEditCaseRow, handleDeleteClick, handleDocumentsClick),
+		columns: createCaseColumns(
+			handleEnrollClick,
+			handleEditCaseRow,
+			handleDeleteClick,
+			handleDocumentsClick,
+		),
 	});
 
 	// Table instance for CICLCAR tab with its own data and column definitions
@@ -1608,21 +2016,34 @@ export function DataTable({
 	// Table instance for FAR tab with its own data and column definitions
 	const farTable = useDataTable({
 		initialData: farFilteredData,
-		columns: farColumns(handleEnrollClick, handleEditFarRow, handleDeleteClick, handleDocumentsClick),
+		columns: farColumns(
+			handleEnrollClick,
+			handleEditFarRow,
+			handleDeleteClick,
+			handleDocumentsClick,
+		),
 		onRowClick: handleEditFarRow, // Add click handler for FAR rows
 	});
 
 	// Table instance for FAC tab with its own data and column definitions
 	const facTable = useDataTable({
 		initialData: facFilteredData,
-		columns: facColumns(handleEditFacRow, handleDeleteClick, handleDocumentsClick),
+		columns: facColumns(
+			handleEditFacRow,
+			handleDeleteClick,
+			handleDocumentsClick,
+		),
 		onRowClick: handleEditFacRow, // Add click handler for FAC rows
 	});
 
 	// Table instance for IVAC tab with its own data and column definitions
 	const ivacTable = useDataTable({
 		initialData: ivacFilteredData,
-		columns: ivacColumns(handleEditIvacRow, handleDeleteClick, handleDocumentsClick),
+		columns: ivacColumns(
+			handleEditIvacRow,
+			handleDeleteClick,
+			handleDocumentsClick,
+		),
 		onRowClick: handleEditIvacRow, // Add click handler for IVAC rows
 	});
 
@@ -1684,1059 +2105,1435 @@ export function DataTable({
 							<IconRefresh className="h-6 w-6 animate-spin text-primary" />
 						</div>
 						<div className="space-y-1">
-							<p className="text-base font-medium">Refreshing data</p>
+							<p className="text-base font-medium">
+								Refreshing data
+							</p>
 							<p className="text-sm text-muted-foreground">
-								Hang tight while we reload the latest records for the {activeTab} tab.
+								Hang tight while we reload the latest records
+								for the {activeTab} tab.
 							</p>
 						</div>
 					</div>
 				</div>
 			)}
 			<Tabs
-			value={activeTab}
-			onValueChange={handleTabValueChange}
-			className="w-full flex-col justify-start gap-6"
-		>
-			<div className="flex flex-col gap-3 px-4 lg:px-6">
-				<div className="flex flex-wrap items-start justify-between gap-3">
-					<div className="space-y-1">
-						<h3 className="text-base font-bold leading-tight">Case Records</h3>
-						<p className="text-xs text-muted-foreground">
-							Manage and track all case intake forms and records across different categories
-						</p>
-					</div>
-					<div className="flex items-center gap-2">
-					{!isOnline && (
-						<Badge variant="destructive" className="gap-1 text-[11px]">
-							<WifiOff className="h-3 w-3" />
-							Offline
-						</Badge>
-					)}
-					{/* CASES SECTION */}
-					{activeTab === "CASE" && (
-						<>
-							{/* Case Manager Filter */}
-							<Select value={caseCaseManager} onValueChange={setCaseCaseManager}>
-								<SelectTrigger className="w-[180px] h-9">
-									<SelectValue placeholder="Filter by Manager" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">All Managers</SelectItem>
-									{caseManagersLoading ? (
-										<SelectItem value="loading" disabled>Loading...</SelectItem>
-									) : (
-										caseManagers.map((manager) => (
-											<SelectItem key={manager.id} value={manager.full_name}>
-												{manager.full_name}
-											</SelectItem>
-										))
-									)}
-								</SelectContent>
-							</Select>
-
-							{/* Refresh Button */}
-							<Button 
-								variant="outline" 
-								size="sm"
-								onClick={handleRefresh}
-								disabled={isRefreshing}
-								className="cursor-pointer"
-							>
-								<IconRefresh className={isRefreshing ? "animate-spin" : ""} />
-								<span className="hidden lg:inline">
-									{isRefreshing ? "REFRESHING..." : "REFRESH"}
-								</span>
-							</Button>
-
-							{/* Sync Button */}
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => caseOnSync?.()}
-								disabled={!isOnline || caseSyncing || casePending === 0}
-								className="cursor-pointer"
-							>
-								<IconCloudUpload className={caseSyncing ? "animate-spin" : ""} />
-								<span className="hidden lg:inline">
-									{caseSyncing ? "SYNCING..." : "SYNC"}
-								</span>
-							</Button>
-
-							{/* Customize Columns Dropdown */}
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button variant="outline" size="sm" className="cursor-pointer">
-										<IconLayoutColumns />
-										<span>COLUMNS</span>
-										<IconChevronDown />
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent
-									align="end"
-									className="w-56"
+				value={activeTab}
+				onValueChange={handleTabValueChange}
+				className="w-full flex-col justify-start gap-6"
+			>
+				<div className="flex flex-col gap-3 px-4 lg:px-6">
+					<div className="flex flex-wrap items-start justify-between gap-3">
+						<div className="space-y-1">
+							<h3 className="text-base font-bold leading-tight">
+								Case Records
+							</h3>
+							<p className="text-xs text-muted-foreground">
+								Manage and track all case intake forms and
+								records across different categories
+							</p>
+						</div>
+						<div className="flex items-center gap-2">
+							{!isOnline && (
+								<Badge
+									variant="destructive"
+									className="gap-1 text-[11px]"
 								>
-									{caseTable.table
-										.getAllColumns()
-										.filter(
-											(c) =>
-												typeof c.accessorFn !==
-													"undefined" &&
-												c.getCanHide()
-										)
-										.map((c) => (
-											<DropdownMenuCheckboxItem
-												key={c.id}
-												checked={c.getIsVisible()}
-												onCheckedChange={(v) =>
-													c.toggleVisibility(!!v)
-												}
-												className="capitalize"
-											>
-												{c.id}
-											</DropdownMenuCheckboxItem>
-										))}
-								</DropdownMenuContent>
-							</DropdownMenu>
-
-							{/* INTAKE SHEET BUTTON*/}
-							<PermissionGuard permission="create_case">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setOpenIntakeSheet(true)}
-									className="cursor-pointer"
-								>
-									<IconPlus />
-									<span className="hidden lg:inline">
-										INTAKE SHEET
-									</span>
-								</Button>
-							</PermissionGuard>
-
-							<IntakeSheetCaseCreate
-								open={openIntakeSheet}
-								setOpen={setOpenIntakeSheet}
-								onSuccess={reloadCases}
-							/>
-
-							{/* ADD: INTAKE SHEET EDIT (Edit) */}
-							<IntakeSheetEdit
-								open={openEditSheet}
-								onOpenChange={setOpenEditSheet}
-								row={editingRecord}
-								onSuccess={reloadCases}
-							/>
-
-							{(caseSyncing || casePending > 0 || caseSyncStatus) && (
-								<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-									{caseSyncing ? (
-										<>
-											<IconLoader className="h-3 w-3 animate-spin" />
-											<span>{caseSyncStatus || "Syncing queued changes..."}</span>
-										</>
-									) : casePending > 0 ? (
-										<>
-											<IconAlertTriangle className="h-3 w-3 text-amber-500" />
-											<span className="text-amber-600">
-												{casePending} pending change{casePending === 1 ? "" : "s"} waiting for sync
-											</span>
-										</>
-									) : (
-										<>
-											<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
-											<span className="text-emerald-600">{caseSyncStatus}</span>
-										</>
-									)}
-								</div>
+									<WifiOff className="h-3 w-3" />
+									Offline
+								</Badge>
 							)}
-						</>
-					)}
-
-					{/* CICLCAR SECTION */}
-					{activeTab === "CICLCAR" && (
-						<>
-							{/* Case Manager Filter */}
-							<Select value={ciclcarCaseManager} onValueChange={setCiclcarCaseManager}>
-								<SelectTrigger className="w-[180px] h-9">
-									<SelectValue placeholder="Filter by Manager" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">All Managers</SelectItem>
-									{caseManagersLoading ? (
-										<SelectItem value="loading" disabled>Loading...</SelectItem>
-									) : (
-										caseManagers.map((manager) => (
-											<SelectItem key={manager.id} value={manager.full_name}>
-												{manager.full_name}
-											</SelectItem>
-										))
-									)}
-								</SelectContent>
-							</Select>
-
-							{/* Refresh Button */}
-							<Button 
-								variant="outline" 
-								size="sm"
-								onClick={handleRefresh}
-								disabled={isRefreshing}
-								className="cursor-pointer"
-							>
-								<IconRefresh className={isRefreshing ? "animate-spin" : ""} />
-								<span className="hidden lg:inline">
-									{isRefreshing ? "REFRESHING..." : "REFRESH"}
-								</span>
-							</Button>
-
-							{/* Sync Button */}
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => ciclcarOnSync?.()}
-								disabled={!isOnline || ciclcarSyncing || ciclcarPending === 0}
-								className="cursor-pointer"
-							>
-								<IconCloudUpload className={ciclcarSyncing ? "animate-spin" : ""} />
-								<span className="hidden lg:inline">
-									{ciclcarSyncing ? "SYNCING..." : "SYNC"}
-								</span>
-							</Button>
-
-							{/* Customize Columns Dropdown */}
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button variant="outline" size="sm" className="cursor-pointer">
-										<IconLayoutColumns />
-										<span>COLUMNS</span>
-										<IconChevronDown />
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent
-									align="end"
-									className="w-56"
-								>
-									{ciclcarTable.table
-										.getAllColumns()
-										.filter(
-											(c) =>
-												typeof c.accessorFn !==
-													"undefined" &&
-												c.getCanHide()
-										)
-										.map((c) => (
-											<DropdownMenuCheckboxItem
-												key={c.id}
-												checked={c.getIsVisible()}
-												onCheckedChange={(v) =>
-													c.toggleVisibility(!!v)
-												}
-												className="capitalize"
-											>
-												{c.id}
-											</DropdownMenuCheckboxItem>
-										))}
-								</DropdownMenuContent>
-							</DropdownMenu>
-
-							{/* INTAKE CICL/CAR BUTTON*/}
-							<PermissionGuard permission="create_case">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setOpenIntakeSheet(true)}
-									className="cursor-pointer"
-								>
-									<IconPlus />
-									<span className="hidden lg:inline">
-										INTAKE CICL/CAR
-									</span>
-								</Button>
-							</PermissionGuard>
-
-							<IntakeSheetCICLCARCreate
-								open={openIntakeSheet}
-								setOpen={setOpenIntakeSheet}
-								onSuccess={reloadCiclcar}
-							/>
-
-							{/* CICL/CAR Edit Modal */}
-							<IntakeSheetCICLCAREdit
-								open={openCiclcarEditSheet}
-								setOpen={setOpenCiclcarEditSheet}
-								row={editingCiclcarRecord}
-								onSuccess={reloadCiclcar}
-							/>
-
-							{(ciclcarSyncing || ciclcarPending > 0 || ciclcarSyncStatus) && (
-								<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-									{ciclcarSyncing ? (
-										<>
-											<IconLoader className="h-3 w-3 animate-spin" />
-											<span>{ciclcarSyncStatus || "Syncing queued changes..."}</span>
-										</>
-									) : ciclcarPending > 0 ? (
-										<>
-											<IconAlertTriangle className="h-3 w-3 text-amber-500" />
-											<span className="text-amber-600">
-												{ciclcarPending} pending change{ciclcarPending === 1 ? "" : "s"} waiting for sync
-											</span>
-										</>
-									) : (
-										<>
-											<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
-											<span className="text-emerald-600">{ciclcarSyncStatus}</span>
-										</>
-									)}
-								</div>
-							)}
-						</>
-					)}
-
-					{/* FAR SECTION */}
-					{activeTab === "FAR" && (
-						<>
-							{/* Case Manager Filter */}
-							<Select value={farCaseManager} onValueChange={setFarCaseManager}>
-								<SelectTrigger className="w-[180px] h-9">
-									<SelectValue placeholder="Filter by Manager" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">All Managers</SelectItem>
-									{caseManagersLoading ? (
-										<SelectItem value="loading" disabled>Loading...</SelectItem>
-									) : (
-										caseManagers.map((manager) => (
-											<SelectItem key={manager.id} value={manager.full_name}>
-												{manager.full_name}
-											</SelectItem>
-										))
-									)}
-								</SelectContent>
-							</Select>
-
-							{/* Refresh Button */}
-							<Button 
-								variant="outline" 
-								size="sm"
-								onClick={handleRefresh}
-								disabled={isRefreshing}
-								className="cursor-pointer"
-							>
-								<IconRefresh className={isRefreshing ? "animate-spin" : ""} />
-								<span className="hidden lg:inline">
-									{isRefreshing ? "REFRESHING..." : "REFRESH"}
-								</span>
-							</Button>
-
-							{/* Sync Button */}
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => farOnSync?.()}
-								disabled={!isOnline || farSyncing || farPending === 0}
-								className="cursor-pointer"
-							>
-								<IconCloudUpload className={farSyncing ? "animate-spin" : ""} />
-								<span className="hidden lg:inline">
-									{farSyncing ? "SYNCING..." : "SYNC"}
-								</span>
-							</Button>
-
-							{/* Customize Columns Dropdown */}
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button variant="outline" size="sm" className="cursor-pointer">
-										<IconLayoutColumns />
-										<span>COLUMNS</span>
-										<IconChevronDown />
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent
-									align="end"
-									className="w-56"
-								>
-									{farTable.table
-										.getAllColumns()
-										.filter(
-											(c) =>
-												typeof c.accessorFn !==
-													"undefined" &&
-												c.getCanHide()
-										)
-										.map((c) => (
-											<DropdownMenuCheckboxItem
-												key={c.id}
-												checked={c.getIsVisible()}
-												onCheckedChange={(v) =>
-													c.toggleVisibility(!!v)
-												}
-												className="capitalize"
-											>
-												{c.id}
-											</DropdownMenuCheckboxItem>
-										))}
-								</DropdownMenuContent>
-							</DropdownMenu>
-
-							{/* INTAKE FAR BUTTON*/}
-							<PermissionGuard permission="create_case">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setOpenIntakeSheet(true)}
-									className="cursor-pointer"
-								>
-									<IconPlus />
-									<span className="hidden lg:inline">
-										INTAKE FAR
-									</span>
-								</Button>
-							</PermissionGuard>
-
-							<IntakeSheetFAR
-								open={openIntakeSheet}
-								setOpen={setOpenIntakeSheet}
-								onSuccess={reloadFar}
-							/>
-
-							{/* FAR Edit Modal */}
-							<IntakeSheetFAR
-								open={openFarEditSheet}
-								setOpen={setOpenFarEditSheet}
-								onSuccess={reloadFar}
-								editingRecord={editingFarRecord}
-							/>
-
-							{(farSyncing || farPending > 0 || farSyncStatus) && (
-								<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-									{farSyncing ? (
-										<>
-											<IconLoader className="h-3 w-3 animate-spin" />
-											<span>{farSyncStatus || "Syncing queued changes..."}</span>
-										</>
-									) : farPending > 0 ? (
-										<>
-											<IconAlertTriangle className="h-3 w-3 text-amber-500" />
-											<span className="text-amber-600">
-												{farPending} pending change{farPending === 1 ? "" : "s"} waiting for sync
-											</span>
-										</>
-									) : (
-										<>
-											<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
-											<span className="text-emerald-600">{farSyncStatus}</span>
-										</>
-									)}
-								</div>
-							)}
-						</>
-					)}
-
-					{/* FAC SECTION */}
-					{activeTab === "FAC" && (
-						<>
-							{/* Case Manager Filter */}
-							<Select value={facCaseManager} onValueChange={setFacCaseManager}>
-								<SelectTrigger className="w-[180px] h-9">
-									<SelectValue placeholder="Filter by Manager" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">All Managers</SelectItem>
-									{caseManagersLoading ? (
-										<SelectItem value="loading" disabled>Loading...</SelectItem>
-									) : (
-										caseManagers.map((manager) => (
-											<SelectItem key={manager.id} value={manager.full_name}>
-												{manager.full_name}
-											</SelectItem>
-										))
-									)}
-								</SelectContent>
-							</Select>
-
-							{/* Refresh Button */}
-							<Button 
-								variant="outline" 
-								size="sm"
-								onClick={handleRefresh}
-								disabled={isRefreshing}
-								className="cursor-pointer"
-							>
-								<IconRefresh className={isRefreshing ? "animate-spin" : ""} />
-								<span className="hidden lg:inline">
-									{isRefreshing ? "REFRESHING..." : "REFRESH"}
-								</span>
-							</Button>
-
-							{/* Sync Button */}
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => facOnSync?.()}
-								disabled={!isOnline || facSyncing || facPending === 0}
-								className="cursor-pointer"
-							>
-								<IconCloudUpload className={facSyncing ? "animate-spin" : ""} />
-								<span className="hidden lg:inline">
-									{facSyncing ? "SYNCING..." : "SYNC"}
-								</span>
-							</Button>
-
-							{/* Customize Columns Dropdown */}
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button variant="outline" size="sm" className="cursor-pointer">
-										<IconLayoutColumns />
-										<span>COLUMNS</span>
-										<IconChevronDown />
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent
-									align="end"
-									className="w-56"
-								>
-									{facTable.table
-										.getAllColumns()
-										.filter(
-											(c) =>
-												typeof c.accessorFn !==
-													"undefined" &&
-												c.getCanHide()
-										)
-										.map((c) => (
-											<DropdownMenuCheckboxItem
-												key={c.id}
-												checked={c.getIsVisible()}
-												onCheckedChange={(v) =>
-													c.toggleVisibility(!!v)
-												}
-												className="capitalize"
-											>
-												{c.id}
-											</DropdownMenuCheckboxItem>
-										))}
-								</DropdownMenuContent>
-							</DropdownMenu>
-
-							{/* INTAKE FAC BUTTON */}
-							<PermissionGuard permission="create_case">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setOpenIntakeSheet(true)}
-									className="cursor-pointer"
-								>
-									<IconPlus />
-									<span className="hidden lg:inline">
-										INTAKE FAC
-									</span>
-								</Button>
-							</PermissionGuard>
-
-							{/* FAC Create Modal */}
-							<IntakeSheetFAC
-								open={openIntakeSheet}
-								setOpen={setOpenIntakeSheet}
-								onSuccess={reloadFac}
-							/>
-
-							{/* FAC Edit Modal */}
-							<IntakeSheetFAC
-								open={openFacEditSheet}
-								setOpen={setOpenFacEditSheet}
-								editingRecord={editingFacRecord}
-								onSuccess={reloadFac}
-							/>
-
-							{(facSyncing || facPending > 0 || facSyncStatus) && (
-								<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-									{facSyncing ? (
-										<>
-											<IconLoader className="h-3 w-3 animate-spin" />
-											<span>{facSyncStatus || "Syncing queued changes..."}</span>
-										</>
-									) : facPending > 0 ? (
-										<>
-											<IconAlertTriangle className="h-3 w-3 text-amber-500" />
-											<span className="text-amber-600">
-												{facPending} pending change{facPending === 1 ? "" : "s"} waiting for sync
-											</span>
-										</>
-									) : (
-										<>
-											<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
-											<span className="text-emerald-600">{facSyncStatus}</span>
-										</>
-									)}
-								</div>
-							)}
-						</>
-					)}
-
-					{/* IVAC SECTION */}
-					{activeTab === "IVAC" && (
-						<>
-							{/* Case Manager Filter */}
-							<Select value={ivacCaseManager} onValueChange={setIvacCaseManager}>
-								<SelectTrigger className="w-[180px] h-9">
-									<SelectValue placeholder="Filter by Manager" />
-								</SelectTrigger>
-								<SelectContent>
-									<SelectItem value="all">All Managers</SelectItem>
-									{caseManagersLoading ? (
-										<SelectItem value="loading" disabled>Loading...</SelectItem>
-									) : (
-										caseManagers.map((manager) => (
-											<SelectItem key={manager.id} value={manager.full_name}>
-												{manager.full_name}
-											</SelectItem>
-										))
-									)}
-								</SelectContent>
-							</Select>
-
-							{/* Refresh Button */}
-							<Button 
-								variant="outline" 
-								size="sm"
-								onClick={handleRefresh}
-								disabled={isRefreshing}
-								className="cursor-pointer"
-							>
-								<IconRefresh className={isRefreshing ? "animate-spin" : ""} />
-								<span className="hidden lg:inline">
-									{isRefreshing ? "REFRESHING..." : "REFRESH"}
-								</span>
-							</Button>
-
-							
-							{/* Sync Button */}
-							<Button
-								variant="outline"
-								size="sm"
-								onClick={() => ivacOnSync?.()}
-								disabled={!isOnline || ivacSyncing || ivacPending === 0}
-								className="cursor-pointer"
-							>
-								<IconCloudUpload className={ivacSyncing ? "animate-spin" : ""} />
-								<span className="hidden lg:inline">
-									{ivacSyncing ? "SYNCING..." : "SYNC"}
-								</span>
-							</Button>
-
-							{/* Customize Columns Dropdown */}
-							<DropdownMenu>
-								<DropdownMenuTrigger asChild>
-									<Button variant="outline" size="sm" className="cursor-pointer">
-										<IconLayoutColumns />
-										<span>COLUMNS</span>
-										<IconChevronDown />
-									</Button>
-								</DropdownMenuTrigger>
-								<DropdownMenuContent
-									align="end"
-									className="w-56"
-								>
-									{ivacTable.table
-										.getAllColumns()
-										.filter(
-											(c) =>
-												typeof c.accessorFn !==
-													"undefined" &&
-												c.getCanHide()
-										)
-										.map((c) => (
-											<DropdownMenuCheckboxItem
-												key={c.id}
-												checked={c.getIsVisible()}
-												onCheckedChange={(v) =>
-													c.toggleVisibility(!!v)
-												}
-												className="capitalize"
-											>
-												{c.id}
-											</DropdownMenuCheckboxItem>
-										))}
-								</DropdownMenuContent>
-							</DropdownMenu>
-
-							{/* INTAKE IVAC BUTTON */}
-							<PermissionGuard permission="create_case">
-								<Button
-									variant="outline"
-									size="sm"
-									onClick={() => setOpenIntakeSheet(true)}
-									className="cursor-pointer"
-								>
-									<IconPlus />
-									<span className="hidden lg:inline">
-										INTAKE IVAC
-									</span>
-								</Button>
-							</PermissionGuard>
-
-							{/* IVAC Create Modal */}
-							<IntakeSheetIVAC
-								open={openIntakeSheet}
-								setOpen={setOpenIntakeSheet}
-								onSuccess={reloadIvac}
-							/>
-
-							{/* IVAC Edit Modal */}
-							<IntakeSheetIVAC
-								open={openIvacEditSheet}
-								setOpen={setOpenIvacEditSheet}
-								editingRecord={editingIvacRecord}
-								onSuccess={reloadIvac}
-							/>
-
-							{(ivacSyncing || ivacPending > 0 || ivacSyncStatus) && (
-								<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-									{ivacSyncing ? (
-										<>
-											<IconLoader className="h-3 w-3 animate-spin" />
-											<span>{ivacSyncStatus || "Syncing queued changes..."}</span>
-										</>
-									) : ivacPending > 0 ? (
-										<>
-											<IconAlertTriangle className="h-3 w-3 text-amber-500" />
-											<span className="text-amber-600">
-												{ivacPending} pending change{ivacPending === 1 ? "" : "s"} waiting for sync
-											</span>
-										</>
-									) : (
-										<>
-											<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
-											<span className="text-emerald-600">{ivacSyncStatus}</span>
-										</>
-									)}
-								</div>
-							)}
-						</>
-					)}
-					</div>
-				</div>
-
-				{/* Global Search + Advanced Filters (applies across all tabs) */}
-				<div className="flex flex-wrap items-center gap-2">
-					<div className="relative flex-1 min-w-[240px] max-w-[520px]">
-						<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-						<Input
-							placeholder="Search across all case types..."
-							value={searchQuery}
-							onChange={(e) => setSearchQuery(e.target.value)}
-							className="pl-8"
-						/>
-					</div>
-
-					<Popover>
-						<PopoverTrigger asChild>
-							<Button variant="outline" size="sm" className="cursor-pointer">
-								Advanced
-								<IconChevronDown className="h-4 w-4" />
-							</Button>
-						</PopoverTrigger>
-						<PopoverContent align="start" className="w-[340px] p-4">
-							<div className="space-y-3">
-								<div className="grid grid-cols-2 gap-3">
-									<div className="space-y-1">
-										<Label className="text-xs">Status</Label>
-										<Select
-											value={advancedFilters.status}
-											onValueChange={(value) =>
-												setAdvancedFilters((prev) => ({ ...prev, status: value }))
-											}
-										>
-											<SelectTrigger className="h-9">
-												<SelectValue placeholder="All" />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="all">All</SelectItem>
-												{statusOptions.map((status) => (
-													<SelectItem key={status} value={status}>
-														{status}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</div>
-
-									<div className="space-y-1">
-										<Label className="text-xs">Priority</Label>
-										<Select
-											value={advancedFilters.priority}
-											onValueChange={(value) =>
-												setAdvancedFilters((prev) => ({ ...prev, priority: value }))
-											}
-										>
-											<SelectTrigger className="h-9">
-												<SelectValue placeholder="All" />
-											</SelectTrigger>
-											<SelectContent>
-												<SelectItem value="all">All</SelectItem>
-												{priorityOptions.map((priority) => (
-													<SelectItem key={priority} value={priority}>
-														{priority}
-													</SelectItem>
-												))}
-											</SelectContent>
-										</Select>
-									</div>
-								</div>
-
-								<div className="grid grid-cols-2 gap-3">
-									<div className="space-y-1">
-										<Label className="text-xs">Date Filed From</Label>
-										<Input
-											type="date"
-											value={advancedFilters.dateFrom}
-											onChange={(e) =>
-												setAdvancedFilters((prev) => ({ ...prev, dateFrom: e.target.value }))
-											}
-											className="h-9"
-										/>
-									</div>
-									<div className="space-y-1">
-										<Label className="text-xs">Date Filed To</Label>
-										<Input
-											type="date"
-											value={advancedFilters.dateTo}
-											onChange={(e) =>
-												setAdvancedFilters((prev) => ({ ...prev, dateTo: e.target.value }))
-											}
-											className="h-9"
-										/>
-									</div>
-								</div>
-
-								<div className="flex items-center justify-between pt-1">
-									<div className="text-xs text-muted-foreground">
-										{hasActiveGlobalFilters
-											? `${activeGlobalFilterCount} active filter${activeGlobalFilterCount === 1 ? "" : "s"}`
-											: "No active filters"}
-									</div>
-									<Button
-										variant="ghost"
-										size="sm"
-										onClick={clearGlobalFilters}
-										disabled={!hasActiveGlobalFilters}
-										className="h-8 px-2"
+							{/* CASES SECTION */}
+							{activeTab === "CASE" && (
+								<>
+									{/* Case Manager Filter */}
+									<Select
+										value={caseCaseManager}
+										onValueChange={setCaseCaseManager}
 									>
-										Clear
+										<SelectTrigger className="w-[180px] h-9">
+											<SelectValue placeholder="Filter by Manager" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">
+												All Managers
+											</SelectItem>
+											{caseManagersLoading ? (
+												<SelectItem
+													value="loading"
+													disabled
+												>
+													Loading...
+												</SelectItem>
+											) : (
+												caseManagers.map((manager) => (
+													<SelectItem
+														key={manager.id}
+														value={
+															manager.full_name
+														}
+													>
+														{manager.full_name}
+													</SelectItem>
+												))
+											)}
+										</SelectContent>
+									</Select>
+
+									{/* Refresh Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleRefresh}
+										disabled={isRefreshing}
+										className="cursor-pointer"
+									>
+										<IconRefresh
+											className={
+												isRefreshing
+													? "animate-spin"
+													: ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{isRefreshing
+												? "REFRESHING..."
+												: "REFRESH"}
+										</span>
 									</Button>
+
+									{/* Sync Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => caseOnSync?.()}
+										disabled={
+											!isOnline ||
+											caseSyncing ||
+											casePending === 0
+										}
+										className="cursor-pointer"
+									>
+										<IconCloudUpload
+											className={
+												caseSyncing
+													? "animate-spin"
+													: ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{caseSyncing
+												? "SYNCING..."
+												: "SYNC"}
+										</span>
+									</Button>
+
+									{/* Customize Columns Dropdown */}
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="outline"
+												size="sm"
+												className="cursor-pointer"
+											>
+												<IconLayoutColumns />
+												<span>COLUMNS</span>
+												<IconChevronDown />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent
+											align="end"
+											className="w-56"
+										>
+											{caseTable.table
+												.getAllColumns()
+												.filter(
+													(c) =>
+														typeof c.accessorFn !==
+															"undefined" &&
+														c.getCanHide(),
+												)
+												.map((c) => (
+													<DropdownMenuCheckboxItem
+														key={c.id}
+														checked={c.getIsVisible()}
+														onCheckedChange={(v) =>
+															c.toggleVisibility(
+																!!v,
+															)
+														}
+														className="capitalize"
+													>
+														{c.id}
+													</DropdownMenuCheckboxItem>
+												))}
+										</DropdownMenuContent>
+									</DropdownMenu>
+
+									{/* INTAKE SHEET BUTTON*/}
+									<PermissionGuard permission="create_case">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() =>
+												setOpenIntakeSheet(true)
+											}
+											className="cursor-pointer"
+										>
+											<IconPlus />
+											<span className="hidden lg:inline">
+												INTAKE SHEET
+											</span>
+										</Button>
+									</PermissionGuard>
+
+									<IntakeSheetCaseCreate
+										open={openIntakeSheet}
+										setOpen={setOpenIntakeSheet}
+										onSuccess={reloadCases}
+									/>
+
+									{/* ADD: INTAKE SHEET EDIT (Edit) */}
+									<IntakeSheetEdit
+										open={openEditSheet}
+										onOpenChange={setOpenEditSheet}
+										row={editingRecord}
+										onSuccess={reloadCases}
+									/>
+
+									{(caseSyncing ||
+										casePending > 0 ||
+										caseSyncStatus) && (
+										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+											{caseSyncing ? (
+												<>
+													<IconLoader className="h-3 w-3 animate-spin" />
+													<span>
+														{caseSyncStatus ||
+															"Syncing queued changes..."}
+													</span>
+												</>
+											) : casePending > 0 ? (
+												<>
+													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
+													<span className="text-amber-600">
+														{casePending} pending
+														change
+														{casePending === 1
+															? ""
+															: "s"}{" "}
+														waiting for sync
+													</span>
+												</>
+											) : (
+												<>
+													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
+													<span className="text-emerald-600">
+														{caseSyncStatus}
+													</span>
+												</>
+											)}
+										</div>
+									)}
+								</>
+							)}
+
+							{/* CICLCAR SECTION */}
+							{activeTab === "CICLCAR" && (
+								<>
+									{/* Case Manager Filter */}
+									<Select
+										value={ciclcarCaseManager}
+										onValueChange={setCiclcarCaseManager}
+									>
+										<SelectTrigger className="w-[180px] h-9">
+											<SelectValue placeholder="Filter by Manager" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">
+												All Managers
+											</SelectItem>
+											{caseManagersLoading ? (
+												<SelectItem
+													value="loading"
+													disabled
+												>
+													Loading...
+												</SelectItem>
+											) : (
+												caseManagers.map((manager) => (
+													<SelectItem
+														key={manager.id}
+														value={
+															manager.full_name
+														}
+													>
+														{manager.full_name}
+													</SelectItem>
+												))
+											)}
+										</SelectContent>
+									</Select>
+
+									{/* Refresh Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleRefresh}
+										disabled={isRefreshing}
+										className="cursor-pointer"
+									>
+										<IconRefresh
+											className={
+												isRefreshing
+													? "animate-spin"
+													: ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{isRefreshing
+												? "REFRESHING..."
+												: "REFRESH"}
+										</span>
+									</Button>
+
+									{/* Sync Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => ciclcarOnSync?.()}
+										disabled={
+											!isOnline ||
+											ciclcarSyncing ||
+											ciclcarPending === 0
+										}
+										className="cursor-pointer"
+									>
+										<IconCloudUpload
+											className={
+												ciclcarSyncing
+													? "animate-spin"
+													: ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{ciclcarSyncing
+												? "SYNCING..."
+												: "SYNC"}
+										</span>
+									</Button>
+
+									{/* Customize Columns Dropdown */}
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="outline"
+												size="sm"
+												className="cursor-pointer"
+											>
+												<IconLayoutColumns />
+												<span>COLUMNS</span>
+												<IconChevronDown />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent
+											align="end"
+											className="w-56"
+										>
+											{ciclcarTable.table
+												.getAllColumns()
+												.filter(
+													(c) =>
+														typeof c.accessorFn !==
+															"undefined" &&
+														c.getCanHide(),
+												)
+												.map((c) => (
+													<DropdownMenuCheckboxItem
+														key={c.id}
+														checked={c.getIsVisible()}
+														onCheckedChange={(v) =>
+															c.toggleVisibility(
+																!!v,
+															)
+														}
+														className="capitalize"
+													>
+														{c.id}
+													</DropdownMenuCheckboxItem>
+												))}
+										</DropdownMenuContent>
+									</DropdownMenu>
+
+									{/* INTAKE CICL/CAR BUTTON*/}
+									<PermissionGuard permission="create_case">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() =>
+												setOpenIntakeSheet(true)
+											}
+											className="cursor-pointer"
+										>
+											<IconPlus />
+											<span className="hidden lg:inline">
+												INTAKE CICL/CAR
+											</span>
+										</Button>
+									</PermissionGuard>
+
+									<IntakeSheetCICLCARCreate
+										open={openIntakeSheet}
+										setOpen={setOpenIntakeSheet}
+										onSuccess={reloadCiclcar}
+									/>
+
+									{/* CICL/CAR Edit Modal */}
+									<IntakeSheetCICLCAREdit
+										open={openCiclcarEditSheet}
+										setOpen={setOpenCiclcarEditSheet}
+										row={editingCiclcarRecord}
+										onSuccess={reloadCiclcar}
+									/>
+
+									{(ciclcarSyncing ||
+										ciclcarPending > 0 ||
+										ciclcarSyncStatus) && (
+										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+											{ciclcarSyncing ? (
+												<>
+													<IconLoader className="h-3 w-3 animate-spin" />
+													<span>
+														{ciclcarSyncStatus ||
+															"Syncing queued changes..."}
+													</span>
+												</>
+											) : ciclcarPending > 0 ? (
+												<>
+													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
+													<span className="text-amber-600">
+														{ciclcarPending} pending
+														change
+														{ciclcarPending === 1
+															? ""
+															: "s"}{" "}
+														waiting for sync
+													</span>
+												</>
+											) : (
+												<>
+													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
+													<span className="text-emerald-600">
+														{ciclcarSyncStatus}
+													</span>
+												</>
+											)}
+										</div>
+									)}
+								</>
+							)}
+
+							{/* FAR SECTION */}
+							{activeTab === "FAR" && (
+								<>
+									{/* Case Manager Filter */}
+									<Select
+										value={farCaseManager}
+										onValueChange={setFarCaseManager}
+									>
+										<SelectTrigger className="w-[180px] h-9">
+											<SelectValue placeholder="Filter by Manager" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">
+												All Managers
+											</SelectItem>
+											{caseManagersLoading ? (
+												<SelectItem
+													value="loading"
+													disabled
+												>
+													Loading...
+												</SelectItem>
+											) : (
+												caseManagers.map((manager) => (
+													<SelectItem
+														key={manager.id}
+														value={
+															manager.full_name
+														}
+													>
+														{manager.full_name}
+													</SelectItem>
+												))
+											)}
+										</SelectContent>
+									</Select>
+
+									{/* Refresh Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleRefresh}
+										disabled={isRefreshing}
+										className="cursor-pointer"
+									>
+										<IconRefresh
+											className={
+												isRefreshing
+													? "animate-spin"
+													: ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{isRefreshing
+												? "REFRESHING..."
+												: "REFRESH"}
+										</span>
+									</Button>
+
+									{/* Sync Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => farOnSync?.()}
+										disabled={
+											!isOnline ||
+											farSyncing ||
+											farPending === 0
+										}
+										className="cursor-pointer"
+									>
+										<IconCloudUpload
+											className={
+												farSyncing ? "animate-spin" : ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{farSyncing ? "SYNCING..." : "SYNC"}
+										</span>
+									</Button>
+
+									{/* Customize Columns Dropdown */}
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="outline"
+												size="sm"
+												className="cursor-pointer"
+											>
+												<IconLayoutColumns />
+												<span>COLUMNS</span>
+												<IconChevronDown />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent
+											align="end"
+											className="w-56"
+										>
+											{farTable.table
+												.getAllColumns()
+												.filter(
+													(c) =>
+														typeof c.accessorFn !==
+															"undefined" &&
+														c.getCanHide(),
+												)
+												.map((c) => (
+													<DropdownMenuCheckboxItem
+														key={c.id}
+														checked={c.getIsVisible()}
+														onCheckedChange={(v) =>
+															c.toggleVisibility(
+																!!v,
+															)
+														}
+														className="capitalize"
+													>
+														{c.id}
+													</DropdownMenuCheckboxItem>
+												))}
+										</DropdownMenuContent>
+									</DropdownMenu>
+
+									{/* INTAKE FAR BUTTON*/}
+									<PermissionGuard permission="create_case">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() =>
+												setOpenIntakeSheet(true)
+											}
+											className="cursor-pointer"
+										>
+											<IconPlus />
+											<span className="hidden lg:inline">
+												INTAKE FAR
+											</span>
+										</Button>
+									</PermissionGuard>
+
+									<IntakeSheetFAR
+										open={openIntakeSheet}
+										setOpen={setOpenIntakeSheet}
+										onSuccess={reloadFar}
+									/>
+
+									{/* FAR Edit Modal */}
+									<IntakeSheetFAR
+										open={openFarEditSheet}
+										setOpen={setOpenFarEditSheet}
+										onSuccess={reloadFar}
+										editingRecord={editingFarRecord}
+									/>
+
+									{(farSyncing ||
+										farPending > 0 ||
+										farSyncStatus) && (
+										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+											{farSyncing ? (
+												<>
+													<IconLoader className="h-3 w-3 animate-spin" />
+													<span>
+														{farSyncStatus ||
+															"Syncing queued changes..."}
+													</span>
+												</>
+											) : farPending > 0 ? (
+												<>
+													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
+													<span className="text-amber-600">
+														{farPending} pending
+														change
+														{farPending === 1
+															? ""
+															: "s"}{" "}
+														waiting for sync
+													</span>
+												</>
+											) : (
+												<>
+													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
+													<span className="text-emerald-600">
+														{farSyncStatus}
+													</span>
+												</>
+											)}
+										</div>
+									)}
+								</>
+							)}
+
+							{/* FAC SECTION */}
+							{activeTab === "FAC" && (
+								<>
+									{/* Case Manager Filter */}
+									<Select
+										value={facCaseManager}
+										onValueChange={setFacCaseManager}
+									>
+										<SelectTrigger className="w-[180px] h-9">
+											<SelectValue placeholder="Filter by Manager" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">
+												All Managers
+											</SelectItem>
+											{caseManagersLoading ? (
+												<SelectItem
+													value="loading"
+													disabled
+												>
+													Loading...
+												</SelectItem>
+											) : (
+												caseManagers.map((manager) => (
+													<SelectItem
+														key={manager.id}
+														value={
+															manager.full_name
+														}
+													>
+														{manager.full_name}
+													</SelectItem>
+												))
+											)}
+										</SelectContent>
+									</Select>
+
+									{/* Refresh Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleRefresh}
+										disabled={isRefreshing}
+										className="cursor-pointer"
+									>
+										<IconRefresh
+											className={
+												isRefreshing
+													? "animate-spin"
+													: ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{isRefreshing
+												? "REFRESHING..."
+												: "REFRESH"}
+										</span>
+									</Button>
+
+									{/* Sync Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => facOnSync?.()}
+										disabled={
+											!isOnline ||
+											facSyncing ||
+											facPending === 0
+										}
+										className="cursor-pointer"
+									>
+										<IconCloudUpload
+											className={
+												facSyncing ? "animate-spin" : ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{facSyncing ? "SYNCING..." : "SYNC"}
+										</span>
+									</Button>
+
+									{/* Customize Columns Dropdown */}
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="outline"
+												size="sm"
+												className="cursor-pointer"
+											>
+												<IconLayoutColumns />
+												<span>COLUMNS</span>
+												<IconChevronDown />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent
+											align="end"
+											className="w-56"
+										>
+											{facTable.table
+												.getAllColumns()
+												.filter(
+													(c) =>
+														typeof c.accessorFn !==
+															"undefined" &&
+														c.getCanHide(),
+												)
+												.map((c) => (
+													<DropdownMenuCheckboxItem
+														key={c.id}
+														checked={c.getIsVisible()}
+														onCheckedChange={(v) =>
+															c.toggleVisibility(
+																!!v,
+															)
+														}
+														className="capitalize"
+													>
+														{c.id}
+													</DropdownMenuCheckboxItem>
+												))}
+										</DropdownMenuContent>
+									</DropdownMenu>
+
+									{/* INTAKE FAC BUTTON */}
+									<PermissionGuard permission="create_case">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() =>
+												setOpenIntakeSheet(true)
+											}
+											className="cursor-pointer"
+										>
+											<IconPlus />
+											<span className="hidden lg:inline">
+												INTAKE FAC
+											</span>
+										</Button>
+									</PermissionGuard>
+
+									{/* FAC Create Modal */}
+									<IntakeSheetFAC
+										open={openIntakeSheet}
+										setOpen={setOpenIntakeSheet}
+										onSuccess={reloadFac}
+									/>
+
+									{/* FAC Edit Modal */}
+									<IntakeSheetFAC
+										open={openFacEditSheet}
+										setOpen={setOpenFacEditSheet}
+										editingRecord={editingFacRecord}
+										onSuccess={reloadFac}
+									/>
+
+									{(facSyncing ||
+										facPending > 0 ||
+										facSyncStatus) && (
+										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+											{facSyncing ? (
+												<>
+													<IconLoader className="h-3 w-3 animate-spin" />
+													<span>
+														{facSyncStatus ||
+															"Syncing queued changes..."}
+													</span>
+												</>
+											) : facPending > 0 ? (
+												<>
+													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
+													<span className="text-amber-600">
+														{facPending} pending
+														change
+														{facPending === 1
+															? ""
+															: "s"}{" "}
+														waiting for sync
+													</span>
+												</>
+											) : (
+												<>
+													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
+													<span className="text-emerald-600">
+														{facSyncStatus}
+													</span>
+												</>
+											)}
+										</div>
+									)}
+								</>
+							)}
+
+							{/* IVAC SECTION */}
+							{activeTab === "IVAC" && (
+								<>
+									{/* Case Manager Filter */}
+									<Select
+										value={ivacCaseManager}
+										onValueChange={setIvacCaseManager}
+									>
+										<SelectTrigger className="w-[180px] h-9">
+											<SelectValue placeholder="Filter by Manager" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">
+												All Managers
+											</SelectItem>
+											{caseManagersLoading ? (
+												<SelectItem
+													value="loading"
+													disabled
+												>
+													Loading...
+												</SelectItem>
+											) : (
+												caseManagers.map((manager) => (
+													<SelectItem
+														key={manager.id}
+														value={
+															manager.full_name
+														}
+													>
+														{manager.full_name}
+													</SelectItem>
+												))
+											)}
+										</SelectContent>
+									</Select>
+
+									{/* Refresh Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleRefresh}
+										disabled={isRefreshing}
+										className="cursor-pointer"
+									>
+										<IconRefresh
+											className={
+												isRefreshing
+													? "animate-spin"
+													: ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{isRefreshing
+												? "REFRESHING..."
+												: "REFRESH"}
+										</span>
+									</Button>
+
+									{/* Sync Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => ivacOnSync?.()}
+										disabled={
+											!isOnline ||
+											ivacSyncing ||
+											ivacPending === 0
+										}
+										className="cursor-pointer"
+									>
+										<IconCloudUpload
+											className={
+												ivacSyncing
+													? "animate-spin"
+													: ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{ivacSyncing
+												? "SYNCING..."
+												: "SYNC"}
+										</span>
+									</Button>
+
+									{/* Customize Columns Dropdown */}
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="outline"
+												size="sm"
+												className="cursor-pointer"
+											>
+												<IconLayoutColumns />
+												<span>COLUMNS</span>
+												<IconChevronDown />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent
+											align="end"
+											className="w-56"
+										>
+											{ivacTable.table
+												.getAllColumns()
+												.filter(
+													(c) =>
+														typeof c.accessorFn !==
+															"undefined" &&
+														c.getCanHide(),
+												)
+												.map((c) => (
+													<DropdownMenuCheckboxItem
+														key={c.id}
+														checked={c.getIsVisible()}
+														onCheckedChange={(v) =>
+															c.toggleVisibility(
+																!!v,
+															)
+														}
+														className="capitalize"
+													>
+														{c.id}
+													</DropdownMenuCheckboxItem>
+												))}
+										</DropdownMenuContent>
+									</DropdownMenu>
+
+									{/* INTAKE IVAC BUTTON */}
+									<PermissionGuard permission="create_case">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() =>
+												setOpenIntakeSheet(true)
+											}
+											className="cursor-pointer"
+										>
+											<IconPlus />
+											<span className="hidden lg:inline">
+												INTAKE IVAC
+											</span>
+										</Button>
+									</PermissionGuard>
+
+									{/* IVAC Create Modal */}
+									<IntakeSheetIVAC
+										open={openIntakeSheet}
+										setOpen={setOpenIntakeSheet}
+										onSuccess={reloadIvac}
+									/>
+
+									{/* IVAC Edit Modal */}
+									<IntakeSheetIVAC
+										open={openIvacEditSheet}
+										setOpen={setOpenIvacEditSheet}
+										editingRecord={editingIvacRecord}
+										onSuccess={reloadIvac}
+									/>
+
+									{(ivacSyncing ||
+										ivacPending > 0 ||
+										ivacSyncStatus) && (
+										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+											{ivacSyncing ? (
+												<>
+													<IconLoader className="h-3 w-3 animate-spin" />
+													<span>
+														{ivacSyncStatus ||
+															"Syncing queued changes..."}
+													</span>
+												</>
+											) : ivacPending > 0 ? (
+												<>
+													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
+													<span className="text-amber-600">
+														{ivacPending} pending
+														change
+														{ivacPending === 1
+															? ""
+															: "s"}{" "}
+														waiting for sync
+													</span>
+												</>
+											) : (
+												<>
+													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
+													<span className="text-emerald-600">
+														{ivacSyncStatus}
+													</span>
+												</>
+											)}
+										</div>
+									)}
+								</>
+							)}
+						</div>
+					</div>
+
+					{/* Global Search + Advanced Filters (applies across all tabs) */}
+					<div className="flex flex-wrap items-center gap-2">
+						<div className="relative flex-1 min-w-[240px] max-w-[520px]">
+							<Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+							<Input
+								placeholder="Search across all case types..."
+								value={searchQuery}
+								onChange={(e) => setSearchQuery(e.target.value)}
+								className="pl-8"
+							/>
+						</div>
+
+						<Popover>
+							<PopoverTrigger asChild>
+								<Button
+									variant="outline"
+									size="sm"
+									className="cursor-pointer"
+								>
+									Advanced
+									<IconChevronDown className="h-4 w-4" />
+								</Button>
+							</PopoverTrigger>
+							<PopoverContent
+								align="start"
+								className="w-[340px] p-4"
+							>
+								<div className="space-y-3">
+									<div className="grid grid-cols-2 gap-3">
+										<div className="space-y-1">
+											<Label className="text-xs">
+												Status
+											</Label>
+											<Select
+												value={advancedFilters.status}
+												onValueChange={(value) =>
+													setAdvancedFilters(
+														(prev) => ({
+															...prev,
+															status: value,
+														}),
+													)
+												}
+											>
+												<SelectTrigger className="h-9">
+													<SelectValue placeholder="All" />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="all">
+														All
+													</SelectItem>
+													{statusOptions.map(
+														(status) => (
+															<SelectItem
+																key={status}
+																value={status}
+															>
+																{status}
+															</SelectItem>
+														),
+													)}
+												</SelectContent>
+											</Select>
+										</div>
+
+										<div className="space-y-1">
+											<Label className="text-xs">
+												Priority
+											</Label>
+											<Select
+												value={advancedFilters.priority}
+												onValueChange={(value) =>
+													setAdvancedFilters(
+														(prev) => ({
+															...prev,
+															priority: value,
+														}),
+													)
+												}
+											>
+												<SelectTrigger className="h-9">
+													<SelectValue placeholder="All" />
+												</SelectTrigger>
+												<SelectContent>
+													<SelectItem value="all">
+														All
+													</SelectItem>
+													{priorityOptions.map(
+														(priority) => (
+															<SelectItem
+																key={priority}
+																value={priority}
+															>
+																{priority}
+															</SelectItem>
+														),
+													)}
+												</SelectContent>
+											</Select>
+										</div>
+									</div>
+
+									<div className="grid grid-cols-2 gap-3">
+										<div className="space-y-1">
+											<Label className="text-xs">
+												Date Filed From
+											</Label>
+											<Input
+												type="date"
+												value={advancedFilters.dateFrom}
+												onChange={(e) =>
+													setAdvancedFilters(
+														(prev) => ({
+															...prev,
+															dateFrom:
+																e.target.value,
+														}),
+													)
+												}
+												className="h-9"
+											/>
+										</div>
+										<div className="space-y-1">
+											<Label className="text-xs">
+												Date Filed To
+											</Label>
+											<Input
+												type="date"
+												value={advancedFilters.dateTo}
+												onChange={(e) =>
+													setAdvancedFilters(
+														(prev) => ({
+															...prev,
+															dateTo: e.target
+																.value,
+														}),
+													)
+												}
+												className="h-9"
+											/>
+										</div>
+									</div>
+
+									<div className="flex items-center justify-between pt-1">
+										<div className="text-xs text-muted-foreground">
+											{hasActiveGlobalFilters
+												? `${activeGlobalFilterCount} active filter${activeGlobalFilterCount === 1 ? "" : "s"}`
+												: "No active filters"}
+										</div>
+										<Button
+											variant="ghost"
+											size="sm"
+											onClick={clearGlobalFilters}
+											disabled={!hasActiveGlobalFilters}
+											className="h-8 px-2"
+										>
+											Clear
+										</Button>
+									</div>
 								</div>
-							</div>
-						</PopoverContent>
-					</Popover>
+							</PopoverContent>
+						</Popover>
 
-					{hasActiveGlobalFilters && (
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={clearGlobalFilters}
-							className="h-9 px-2"
-						>
-							Clear
-						</Button>
-					)}
-				</div>
+						{hasActiveGlobalFilters && (
+							<Button
+								variant="ghost"
+								size="sm"
+								onClick={clearGlobalFilters}
+								className="h-9 px-2"
+							>
+								Clear
+							</Button>
+						)}
+					</div>
 
-				<div className="flex flex-wrap items-center justify-between gap-2">
-					<Label htmlFor="view-selector" className="sr-only">
-						View
-					</Label>
-					{/*
+					<div className="flex flex-wrap items-center justify-between gap-2">
+						<Label htmlFor="view-selector" className="sr-only">
+							View
+						</Label>
+						{/*
          // ==============
          // *MOBILE SCREEN
          // ==============
          */}
-					<Select value={activeTab} onValueChange={handleTabValueChange}>
-						<SelectTrigger
-							className="flex w-fit @4xl/main:hidden"
-							size="sm"
-							id="view-selector"
+						<Select
+							value={activeTab}
+							onValueChange={handleTabValueChange}
 						>
-							<SelectValue placeholder="Select a view" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="CASE">Cases</SelectItem>
-							<SelectItem value="CICLCAR">CICL/CAR</SelectItem>
-							<SelectItem value="IVAC">Incidence on VAC</SelectItem>
-							<SelectItem value="FAC">
-								Family Assistance Card
-							</SelectItem>
-							<SelectItem value="FAR">
-								Family Assistance Record
-							</SelectItem>
-						</SelectContent>
-					</Select>
-					{/*
+							<SelectTrigger
+								className="flex w-fit @4xl/main:hidden"
+								size="sm"
+								id="view-selector"
+							>
+								<SelectValue placeholder="Select a view" />
+							</SelectTrigger>
+							<SelectContent>
+								<SelectItem value="CASE">Cases</SelectItem>
+								<SelectItem value="CICLCAR">
+									CICL/CAR
+								</SelectItem>
+								<SelectItem value="IVAC">
+									Incidence on VAC
+								</SelectItem>
+								<SelectItem value="FAC">
+									Family Assistance Card
+								</SelectItem>
+								<SelectItem value="FAR">
+									Family Assistance Record
+								</SelectItem>
+							</SelectContent>
+						</Select>
+						{/*
          // ================
          // * DESKTOP SCREEN
          // ================
          */}
-					<div className="hidden items-center gap-2 @4xl/main:flex">
-						<TabsList>
-							<TabsTrigger value="CASE" className="cursor-pointer">Cases</TabsTrigger>
-							<TabsTrigger value="CICLCAR" className="cursor-pointer">CICL/CAR</TabsTrigger>
-							<TabsTrigger value="IVAC" className="cursor-pointer">Incidence on VAC</TabsTrigger>
-							<TabsTrigger value="FAC" className="cursor-pointer">
-								Family Assistance Card
-							</TabsTrigger>
-							<TabsTrigger value="FAR" className="cursor-pointer">
-								Family Assistance Record
-							</TabsTrigger>
-						</TabsList>
+						<div className="hidden items-center gap-2 @4xl/main:flex">
+							<TabsList>
+								<TabsTrigger
+									value="CASE"
+									className="cursor-pointer"
+								>
+									Cases
+								</TabsTrigger>
+								<TabsTrigger
+									value="CICLCAR"
+									className="cursor-pointer"
+								>
+									CICL/CAR
+								</TabsTrigger>
+								<TabsTrigger
+									value="IVAC"
+									className="cursor-pointer"
+								>
+									Incidence on VAC
+								</TabsTrigger>
+								<TabsTrigger
+									value="FAC"
+									className="cursor-pointer"
+								>
+									Family Assistance Card
+								</TabsTrigger>
+								<TabsTrigger
+									value="FAR"
+									className="cursor-pointer"
+								>
+									Family Assistance Record
+								</TabsTrigger>
+							</TabsList>
+						</div>
 					</div>
 				</div>
-			</div>
-			{/*
+				{/*
         // ============
         // *CASES VIEW
         // ============
         */}
-			<TabsContent
-				value="CASE"
-				className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
-			>
-				<TableRenderer
-					table={caseTable.table}
-					setData={caseTable.setData}
-					columns={caseTable.table.getAllColumns()}
-				/>
-				<PaginationControls table={caseTable.table} />
-			</TabsContent>
-			{/*
+				<TabsContent
+					value="CASE"
+					className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+				>
+					<TableRenderer
+						table={caseTable.table}
+						setData={caseTable.setData}
+						columns={caseTable.table.getAllColumns()}
+					/>
+					<PaginationControls table={caseTable.table} />
+				</TabsContent>
+				{/*
         // ==============
         // *CICL/CAR VIEW
         // ==============
         */}
-			<TabsContent
-				value="CICLCAR"
-				className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
-			>
-				<TableRenderer
-					table={ciclcarTable.table}
-					setData={ciclcarTable.setData}
-					columns={ciclcarColumns(
-						handleEnrollClick,
-						handleEditCiclcarRow,
-						handleDeleteClick,
-						getCiclcarPrefetchedEnrollments,
-						handleDocumentsClick,
-					)}
-					onRowClick={handleEditCiclcarRow}
-				/>
-				<PaginationControls table={ciclcarTable.table} />
-			</TabsContent>
-			{/*
+				<TabsContent
+					value="CICLCAR"
+					className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+				>
+					<TableRenderer
+						table={ciclcarTable.table}
+						setData={ciclcarTable.setData}
+						columns={ciclcarColumns(
+							handleEnrollClick,
+							handleEditCiclcarRow,
+							handleDeleteClick,
+							getCiclcarPrefetchedEnrollments,
+							handleDocumentsClick,
+						)}
+						onRowClick={handleEditCiclcarRow}
+					/>
+					<PaginationControls table={ciclcarTable.table} />
+				</TabsContent>
+				{/*
         // ============
         // *FAR VIEW
         // ============
         */}
-			<TabsContent
-				value="FAR"
-				className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
-			>
-				<TableRenderer
-					table={farTable.table}
-					setData={farTable.setData}
-					columns={farColumns(handleEnrollClick, handleEditFarRow, handleDeleteClick, handleDocumentsClick)}
-					onRowClick={handleEditFarRow}
-				/>
-				<PaginationControls table={farTable.table} />
-			</TabsContent>
+				<TabsContent
+					value="FAR"
+					className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+				>
+					<TableRenderer
+						table={farTable.table}
+						setData={farTable.setData}
+						columns={farColumns(
+							handleEnrollClick,
+							handleEditFarRow,
+							handleDeleteClick,
+							handleDocumentsClick,
+						)}
+						onRowClick={handleEditFarRow}
+					/>
+					<PaginationControls table={farTable.table} />
+				</TabsContent>
 
-			{/*
+				{/*
         // ==========
         // *IVAC VIEW
         // ==========
         */}
-			<TabsContent
-				value="IVAC"
-				className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
-			>
-				<TableRenderer
-					table={ivacTable.table}
-					setData={ivacTable.setData}
-					columns={ivacColumns(handleEditIvacRow, handleDeleteClick, handleDocumentsClick)}
-					onRowClick={handleEditIvacRow}
-				/>
-				<PaginationControls table={ivacTable.table} />
-			</TabsContent>
-			{/*
+				<TabsContent
+					value="IVAC"
+					className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+				>
+					<TableRenderer
+						table={ivacTable.table}
+						setData={ivacTable.setData}
+						columns={ivacColumns(
+							handleEditIvacRow,
+							handleDeleteClick,
+							handleDocumentsClick,
+						)}
+						onRowClick={handleEditIvacRow}
+					/>
+					<PaginationControls table={ivacTable.table} />
+				</TabsContent>
+				{/*
         // ============
         // *FAC VIEW
         // ============
         */}
-			<TabsContent
-				value="FAC"
-				className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
-		>
-			<TableRenderer
-				table={facTable.table}
-				setData={facTable.setData}
-				columns={facColumns(handleEditFacRow, handleDeleteClick, handleDocumentsClick)}
-				onRowClick={handleEditFacRow}
-			/>
-			<PaginationControls table={facTable.table} />
-		</TabsContent>
+				<TabsContent
+					value="FAC"
+					className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+				>
+					<TableRenderer
+						table={facTable.table}
+						setData={facTable.setData}
+						columns={facColumns(
+							handleEditFacRow,
+							handleDeleteClick,
+							handleDocumentsClick,
+						)}
+						onRowClick={handleEditFacRow}
+					/>
+					<PaginationControls table={facTable.table} />
+				</TabsContent>
 
-			{/* Documents Dialog */}
-			<Dialog open={documentsDialogOpen} onOpenChange={setDocumentsDialogOpen}>
-				<DialogContent className="min-w-5xl">
-					<DialogHeader>
-						<DialogTitle>Case Documents</DialogTitle>
-					</DialogHeader>
-					<PermissionGuard
-						permission="view_documents"
-						fallback={
-							<div className="text-sm text-muted-foreground">Access denied.</div>
-						}
-					>
-						<DocumentManager
-							relatedType={documentsContext.relatedType}
-							relatedId={documentsContext.relatedId}
-							open={documentsDialogOpen}
-						/>
-					</PermissionGuard>
-				</DialogContent>
-			</Dialog>
-
-			{/* Enrollment Dialog */}
-			<EnrollCaseDialog
-				open={openEnrollDialog}
-				onOpenChange={setOpenEnrollDialog}
-				caseData={enrollingCase}
-				caseType={enrollingCaseType}
-				onSuccess={() => {
-					// Optionally reload data here
-					console.log("Enrollment successful");
-				}}
-			/>
-
-			{/* Delete Confirmation Dialog */}
-			<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-				<AlertDialogContent>
-					<AlertDialogHeader>
-						<AlertDialogTitle>Are you sure?</AlertDialogTitle>
-						<AlertDialogDescription>
-							This action cannot be undone. This will permanently delete this{" "}
-							{caseTypeToDelete} case from the database.
-						</AlertDialogDescription>
-					</AlertDialogHeader>
-					<AlertDialogFooter>
-						<AlertDialogCancel>Cancel</AlertDialogCancel>
-						<AlertDialogAction
-							onClick={handleConfirmDelete}
-							className="bg-destructive text-white hover:bg-destructive/90"
+				{/* Documents Dialog */}
+				<Dialog
+					open={documentsDialogOpen}
+					onOpenChange={setDocumentsDialogOpen}
+				>
+					<DialogContent className="min-w-5xl">
+						<DialogHeader>
+							<DialogTitle>Case Documents</DialogTitle>
+						</DialogHeader>
+						<PermissionGuard
+							permission="view_documents"
+							fallback={
+								<div className="text-sm text-muted-foreground">
+									Access denied.
+								</div>
+							}
 						>
-							Delete
-						</AlertDialogAction>
-					</AlertDialogFooter>
-				</AlertDialogContent>
-			</AlertDialog>
-		</Tabs>
+							<DocumentManager
+								relatedType={documentsContext.relatedType}
+								relatedId={documentsContext.relatedId}
+								open={documentsDialogOpen}
+							/>
+						</PermissionGuard>
+					</DialogContent>
+				</Dialog>
+
+				{/* Enrollment Dialog */}
+				<EnrollCaseDialog
+					open={openEnrollDialog}
+					onOpenChange={setOpenEnrollDialog}
+					caseData={enrollingCase}
+					caseType={enrollingCaseType}
+					onSuccess={() => {
+						// Optionally reload data here
+						console.log("Enrollment successful");
+					}}
+				/>
+
+				{/* Delete Confirmation Dialog */}
+				<AlertDialog
+					open={deleteDialogOpen}
+					onOpenChange={setDeleteDialogOpen}
+				>
+					<AlertDialogContent>
+						<AlertDialogHeader>
+							<AlertDialogTitle>Are you sure?</AlertDialogTitle>
+							<AlertDialogDescription>
+								This action cannot be undone. This will
+								permanently delete this {caseTypeToDelete} case
+								from the database.
+							</AlertDialogDescription>
+						</AlertDialogHeader>
+						<AlertDialogFooter>
+							<AlertDialogCancel>Cancel</AlertDialogCancel>
+							<AlertDialogAction
+								onClick={handleConfirmDelete}
+								className="bg-destructive text-white hover:bg-destructive/90"
+							>
+								Delete
+							</AlertDialogAction>
+						</AlertDialogFooter>
+					</AlertDialogContent>
+				</AlertDialog>
+			</Tabs>
 		</>
 	);
 }
