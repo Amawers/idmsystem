@@ -5,7 +5,7 @@
 // =============================================
 // DataTable Component
 // ---------------------------------------------
-// Purpose: Renders a tabbed data table for cases, CICL/CAR, FAR, FAC, IVAC, and Single Parents with drag-and-drop, selection, and intake sheet modals.
+// Purpose: Renders a tabbed data table for cases, CICL/CAR, FAR, FAC, IVAC, Single Parents, and Financial Assistance with drag-and-drop, selection, and intake sheet modals.
 //
 // Key Responsibilities:
 // - Display data in tables with customizable columns
@@ -98,6 +98,7 @@ import IntakeSheetFAR from "@/pages/case manager/IntakeSheetFAR";
 import IntakeSheetFAC from "@/pages/case manager/IntakeSheetFAC";
 import IntakeSheetIVAC from "@/pages/case manager/IntakeSheetIVAC";
 import IntakeSheetSP from "@/pages/case manager/IntakeSheetSP";
+import IntakeSheetFA from "@/pages/case manager/IntakeSheetFA";
 // ADD THIS IMPORT
 import IntakeSheetEdit from "@/pages/case manager/intakeSheetCaseEdit";
 import useDataTable from "@/hooks/useDataTable";
@@ -644,7 +645,7 @@ const farColumns = (
 						<DropdownMenuItem
 							onClick={(e) => {
 								e.stopPropagation();
-								handleEditClick(row.original, "FAR");
+								handleEditClick(row.original, "FA");
 							}}
 						>
 							Edit
@@ -654,7 +655,7 @@ const farColumns = (
 						<DropdownMenuItem
 							onClick={(e) => {
 								e.stopPropagation();
-								handleDocumentsClick(row.original, "FAR");
+								handleDocumentsClick(row.original, "FA");
 							}}
 						>
 							Documents
@@ -663,7 +664,7 @@ const farColumns = (
 					<DropdownMenuItem
 						onClick={(e) => {
 							e.stopPropagation();
-							handleEnrollClick(row.original, "FAR");
+							handleEnrollClick(row.original, "FA");
 						}}
 					>
 						Enroll Program
@@ -674,7 +675,7 @@ const farColumns = (
 							variant="destructive"
 							onClick={(e) => {
 								e.stopPropagation();
-								handleDeleteClick(row.original, "FAR");
+								handleDeleteClick(row.original, "FA");
 							}}
 						>
 							Delete
@@ -1661,10 +1662,12 @@ function PaginationControls({ table }) {
  * @param {Array} props.ciclcarData - Data for CICLCAR tab
  * @param {Array} props.farData - Data for FAR tab
  * @param {Array} props.spData - Data for Single Parents tab
+ * @param {Array} props.faData - Data for Financial Assistance tab
  * @param {Function} props.reloadCases - Function to reload case data
  * @param {Function} props.reloadCiclcar - Function to reload CICLCAR data
  * @param {Function} props.reloadFar - Function to reload FAR data
  * @param {Function} props.reloadSp - Function to reload Single Parents data
+ * @param {Function} props.reloadFa - Function to reload Financial Assistance data
  *
  * @returns {JSX.Element} Rendered DataTable component
  *
@@ -1685,18 +1688,21 @@ export function DataTable({
 	facData,
 	ivacData,
 	spData,
+	faData,
 	reloadCases,
 	reloadCiclcar,
 	reloadFar,
 	reloadFac,
 	reloadIvac,
 	reloadSp,
+	reloadFa,
 	deleteCase,
 	deleteCiclcarCase,
 	deleteFarCase,
 	deleteFacCase,
 	deleteIvacCase,
 	deleteSpCase,
+	deleteFaCase,
 	initialTab = "CASE",
 	onTabChange,
 	caseSync,
@@ -1705,12 +1711,14 @@ export function DataTable({
 	farSync,
 	ivacSync,
 	spSync,
+	faSync,
 	ciclcarProgramEnrollments = {},
 	ciclcarProgramEnrollmentsLoading = false,
 	isOnline = true,
 }) {
 	// State to control Intake Sheet modal visibility (open/close)
 	const [openIntakeSheet, setOpenIntakeSheet] = useState(false);
+	const [openFaIntakeSheet, setOpenFaIntakeSheet] = useState(false);
 
 	// Delete confirmation dialog state
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -1781,6 +1789,7 @@ export function DataTable({
 	const [facCaseManager, setFacCaseManager] = useState("all");
 	const [ivacCaseManager, setIvacCaseManager] = useState("all");
 	const [spCaseManager, setSpCaseManager] = useState("all");
+	const [faCaseManager, setFaCaseManager] = useState("all");
 
 	const safeCaseData = React.useMemo(() => caseData ?? [], [caseData]);
 	const safeCiclcarData = React.useMemo(
@@ -1791,6 +1800,7 @@ export function DataTable({
 	const safeFacData = React.useMemo(() => facData ?? [], [facData]);
 	const safeIvacData = React.useMemo(() => ivacData ?? [], [ivacData]);
 	const safeSpData = React.useMemo(() => spData ?? [], [spData]);
+	const safeFaData = React.useMemo(() => faData ?? [], [faData]);
 
 	const allRows = React.useMemo(
 		() => [
@@ -1800,6 +1810,7 @@ export function DataTable({
 			...safeFacData,
 			...safeIvacData,
 			...safeSpData,
+			...safeFaData,
 		],
 		[
 			safeCaseData,
@@ -1808,6 +1819,7 @@ export function DataTable({
 			safeFacData,
 			safeIvacData,
 			safeSpData,
+			safeFaData,
 		],
 	);
 
@@ -1883,6 +1895,10 @@ export function DataTable({
 	const spSyncing = spSync?.syncing ?? false;
 	const spSyncStatus = spSync?.syncStatus ?? null;
 	const spOnSync = spSync?.onSync;
+	const faPending = faSync?.pendingCount ?? 0;
+	const faSyncing = faSync?.syncing ?? false;
+	const faSyncStatus = faSync?.syncStatus ?? null;
+	const faOnSync = faSync?.onSync;
 	const getCiclcarPrefetchedEnrollments = React.useCallback(
 		(caseId) => {
 			if (!caseId) return undefined;
@@ -1921,6 +1937,15 @@ export function DataTable({
 		console.log("Editing FAR record:", record);
 		setEditingFarRecord(record);
 		setOpenFarEditSheet(true);
+	}
+
+	// Handle FA row click for editing (placeholder until FA edit form is added)
+	function handleEditFaRow(record) {
+		console.log("Editing FA record:", record);
+		toast.error("Edit Not Available", {
+			description:
+				"Financial Assistance edit form is not configured yet.",
+		});
 	}
 
 	// Handle FAC row click for editing
@@ -1980,6 +2005,16 @@ export function DataTable({
 					break;
 				case "SP":
 					result = await deleteSpCase(caseId);
+					break;
+				case "FA":
+					if (!deleteFaCase) {
+						toast.error("Delete Failed", {
+							description:
+								"No delete handler is configured for Financial Assistance.",
+						});
+						return;
+					}
+					result = await deleteFaCase(caseId);
 					break;
 				default:
 					toast.error("Unknown case type");
@@ -2071,6 +2106,9 @@ export function DataTable({
 				case "SP":
 					promises.push(reloadSp?.());
 					break;
+				case "FA":
+					promises.push(reloadFa?.());
+					break;
 				default:
 					promises.push(
 						reloadCases?.(),
@@ -2079,6 +2117,7 @@ export function DataTable({
 						reloadFac?.(),
 						reloadIvac?.(),
 						reloadSp?.(),
+						reloadFa?.(),
 					);
 			}
 			await Promise.all(promises.filter(Boolean));
@@ -2102,6 +2141,7 @@ export function DataTable({
 		reloadFac,
 		reloadIvac,
 		reloadSp,
+		reloadFa,
 	]);
 
 	const caseManagerFilteredData = React.useMemo(() => {
@@ -2151,6 +2191,12 @@ export function DataTable({
 			return row.case_manager === spCaseManager;
 		});
 	}, [spCaseManager, safeSpData]);
+
+	const faManagerFilteredData = React.useMemo(() => {
+		return faCaseManager === "all"
+			? safeFaData
+			: safeFaData.filter((row) => row.case_manager === faCaseManager);
+	}, [faCaseManager, safeFaData]);
 
 	const caseFilteredData = React.useMemo(
 		() =>
@@ -2205,6 +2251,15 @@ export function DataTable({
 				advancedFilters,
 			),
 		[spManagerFilteredData, searchQuery, advancedFilters],
+	);
+	const faFilteredData = React.useMemo(
+		() =>
+			filterRowsByGlobalSearch(
+				faManagerFilteredData,
+				searchQuery,
+				advancedFilters,
+			),
+		[faManagerFilteredData, searchQuery, advancedFilters],
 	);
 
 	// Initialize CASE table with dynamic columns (handler referenced above)
@@ -2272,6 +2327,17 @@ export function DataTable({
 		columns: spColumns(handleDeleteClick, handleDocumentsClick),
 	});
 
+	// Table instance for Financial Assistance tab with its own data and column definitions
+	const faTable = useDataTable({
+		initialData: faFilteredData,
+		columns: faColumns(
+			handleEnrollClick,
+			handleEditFaRow,
+			handleDeleteClick,
+			handleDocumentsClick,
+		),
+	});
+
 	React.useEffect(() => {
 		caseTable.table.setPageIndex(0);
 		ciclcarTable.table.setPageIndex(0);
@@ -2279,6 +2345,7 @@ export function DataTable({
 		facTable.table.setPageIndex(0);
 		ivacTable.table.setPageIndex(0);
 		spTable.table.setPageIndex(0);
+		faTable.table.setPageIndex(0);
 	}, [
 		searchQuery,
 		advancedFilters.status,
@@ -2291,6 +2358,7 @@ export function DataTable({
 		facTable.table,
 		ivacTable.table,
 		spTable.table,
+		faTable.table,
 	]);
 
 	// ============================
@@ -3521,6 +3589,190 @@ export function DataTable({
 									)}
 								</>
 							)}
+
+							{/* FINANCIAL ASSISTANCE SECTION */}
+							{activeTab === "FA" && (
+								<>
+									{/* Case Manager Filter */}
+									<Select
+										value={faCaseManager}
+										onValueChange={setFaCaseManager}
+									>
+										<SelectTrigger className="w-[180px] h-9">
+											<SelectValue placeholder="Filter by Manager" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">
+												All Managers
+											</SelectItem>
+											{caseManagersLoading ? (
+												<SelectItem
+													value="loading"
+													disabled
+												>
+													Loading...
+												</SelectItem>
+											) : (
+												caseManagers.map((manager) => (
+													<SelectItem
+														key={manager.id}
+														value={
+															manager.full_name
+														}
+													>
+														{manager.full_name}
+													</SelectItem>
+												))
+											)}
+										</SelectContent>
+									</Select>
+
+									{/* Refresh Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleRefresh}
+										disabled={isRefreshing}
+										className="cursor-pointer"
+									>
+										<IconRefresh
+											className={
+												isRefreshing
+													? "animate-spin"
+													: ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{isRefreshing
+												? "REFRESHING..."
+												: "REFRESH"}
+										</span>
+									</Button>
+
+									{/* Sync Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => faOnSync?.()}
+										disabled={
+											!isOnline ||
+											faSyncing ||
+											faPending === 0
+										}
+										className="cursor-pointer"
+									>
+										<IconCloudUpload
+											className={
+												faSyncing ? "animate-spin" : ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{faSyncing ? "SYNCING..." : "SYNC"}
+										</span>
+									</Button>
+
+									{/* Customize Columns Dropdown */}
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="outline"
+												size="sm"
+												className="cursor-pointer"
+											>
+												<IconLayoutColumns />
+												<span>COLUMNS</span>
+												<IconChevronDown />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent
+											align="end"
+											className="w-56"
+										>
+											{faTable.table
+												.getAllColumns()
+												.filter(
+													(c) =>
+														typeof c.accessorFn !==
+															"undefined" &&
+														c.getCanHide(),
+												)
+												.map((c) => (
+													<DropdownMenuCheckboxItem
+														key={c.id}
+														checked={c.getIsVisible()}
+														onCheckedChange={(v) =>
+															c.toggleVisibility(
+																!!v,
+															)
+														}
+														className="capitalize"
+													>
+														{c.id}
+													</DropdownMenuCheckboxItem>
+												))}
+										</DropdownMenuContent>
+									</DropdownMenu>
+
+									{/* INTAKE FINANCIAL ASSISTANCE BUTTON */}
+									<PermissionGuard permission="create_case">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() =>
+												setOpenFaIntakeSheet(true)
+											}
+											className="cursor-pointer"
+										>
+											<IconPlus />
+											<span className="hidden lg:inline">
+												INTAKE FINANCIAL ASSISTANCE
+											</span>
+										</Button>
+									</PermissionGuard>
+
+									{/* FINANCIAL ASSISTANCE Create Modal */}
+									<IntakeSheetFA
+										open={openFaIntakeSheet}
+										setOpen={setOpenFaIntakeSheet}
+										onSuccess={reloadFa}
+									/>
+
+									{(faSyncing ||
+										faPending > 0 ||
+										faSyncStatus) && (
+										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+											{faSyncing ? (
+												<>
+													<IconLoader className="h-3 w-3 animate-spin" />
+													<span>
+														{faSyncStatus ||
+															"Syncing queued changes..."}
+													</span>
+												</>
+											) : faPending > 0 ? (
+												<>
+													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
+													<span className="text-amber-600">
+														{faPending} pending
+														change
+														{faPending === 1
+															? ""
+															: "s"}{" "}
+														waiting for sync
+													</span>
+												</>
+											) : (
+												<>
+													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
+													<span className="text-emerald-600">
+														{faSyncStatus}
+													</span>
+												</>
+											)}
+										</div>
+									)}
+								</>
+							)}
 						</div>
 					</div>
 
@@ -3736,6 +3988,9 @@ export function DataTable({
 								<SelectItem value="SP">
 									Single Parents
 								</SelectItem>
+								<SelectItem value="FA">
+									Financial Assistance
+								</SelectItem>
 							</SelectContent>
 						</Select>
 						{/*
@@ -3780,6 +4035,12 @@ export function DataTable({
 									className="cursor-pointer"
 								>
 									Single Parents
+								</TabsTrigger>
+								<TabsTrigger
+									value="FA"
+									className="cursor-pointer"
+								>
+									Financial Assistance
 								</TabsTrigger>
 							</TabsList>
 						</div>
@@ -3908,6 +4169,28 @@ export function DataTable({
 						)}
 					/>
 					<PaginationControls table={spTable.table} />
+				</TabsContent>
+
+				{/*
+        // ==========================
+        // *FINANCIAL ASSISTANCE VIEW
+        // ==========================
+        */}
+				<TabsContent
+					value="FA"
+					className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+				>
+					<TableRenderer
+						table={faTable.table}
+						setData={faTable.setData}
+						columns={faColumns(
+							handleEnrollClick,
+							handleEditFaRow,
+							handleDeleteClick,
+							handleDocumentsClick,
+						)}
+					/>
+					<PaginationControls table={faTable.table} />
 				</TabsContent>
 
 				{/* Documents Dialog */}
