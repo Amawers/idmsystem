@@ -5,7 +5,7 @@
 // =============================================
 // DataTable Component
 // ---------------------------------------------
-// Purpose: Renders a tabbed data table for cases, CICL/CAR, FAR, FAC, IVAC, Single Parents, and Financial Assistance with drag-and-drop, selection, and intake sheet modals.
+// Purpose: Renders a tabbed data table for cases, CICL/CAR, FAR, FAC, IVAC, Single Parents, Financial Assistance, and Persons with Disabilities with drag-and-drop, selection, and intake sheet modals.
 //
 // Key Responsibilities:
 // - Display data in tables with customizable columns
@@ -99,6 +99,7 @@ import IntakeSheetFAC from "@/pages/case manager/IntakeSheetFAC";
 import IntakeSheetIVAC from "@/pages/case manager/IntakeSheetIVAC";
 import IntakeSheetSP from "@/pages/case manager/IntakeSheetSP";
 import IntakeSheetFA from "@/pages/case manager/IntakeSheetFA";
+import IntakeSheetPWD from "@/pages/case manager/IntakeSheetPWD";
 // ADD THIS IMPORT
 import IntakeSheetEdit from "@/pages/case manager/intakeSheetCaseEdit";
 import useDataTable from "@/hooks/useDataTable";
@@ -1413,6 +1414,163 @@ const faColumns = (
 	},
 ];
 
+// =================================
+//* PWD Table COLUMN DEFINITIONS
+// =================================
+const pwdColumns = (handleDeleteClick, handleDocumentsClick) => [
+	//* =====================
+	//* START OF DATA COLUMNS
+	//* =====================
+
+	//* CASE ID
+	{
+		accessorKey: "id",
+		header: "Case ID",
+		cell: ({ row }) => {
+			const caseId = row.original.id || "N/A";
+			return <div className="font-medium">{caseId}</div>;
+		},
+		enableHiding: false,
+	},
+
+	//* FULL NAME
+	{
+		accessorKey: "full_name",
+		header: "Full Name",
+		cell: ({ row }) => {
+			const firstName =
+				row.original.first_name || row.original.firstName || "";
+			const lastName =
+				row.original.last_name || row.original.lastName || "";
+			const fallback =
+				row.original.full_name ||
+				row.original.client_name ||
+				row.original.person_name ||
+				"N/A";
+			const fullName = `${firstName} ${lastName}`.trim() || fallback;
+			return <div>{fullName}</div>;
+		},
+	},
+
+	//* DISABILITY TYPE
+	{
+		accessorKey: "disability_type",
+		header: "Disability Type",
+		cell: ({ row }) => {
+			const disabilityType = row.original.disability_type || "N/A";
+			return <div>{disabilityType}</div>;
+		},
+	},
+
+	//* CONTACT NUMBER
+	{
+		accessorKey: "contact_number",
+		header: "Contact Number",
+		cell: ({ row }) => {
+			const contact =
+				row.original.contact_number ||
+				row.original.contactNumber ||
+				row.original.phone ||
+				"-";
+			return <div>{contact}</div>;
+		},
+	},
+
+	//* ADDRESS
+	{
+		accessorKey: "address",
+		header: "Address",
+		cell: ({ row }) => {
+			const address =
+				row.original.address || row.original.location_address || "-";
+			return <div>{address}</div>;
+		},
+	},
+
+	//* STATUS
+	{
+		accessorKey: "status",
+		header: "Status",
+		cell: ({ row }) => {
+			const status = row.original.status || "N/A";
+			return (
+				<Badge variant="outline" className="capitalize">
+					{status}
+				</Badge>
+			);
+		},
+	},
+
+	//* CREATED AT
+	{
+		accessorKey: "created_at",
+		header: "Created",
+		cell: ({ row }) => (
+			<div className="px-2">
+				{formatToMMDDYYYY(
+					row.original.created_at || row.original.date_created,
+				) || "-"}
+			</div>
+		),
+	},
+
+	//* UPDATED AT
+	{
+		accessorKey: "updated_at",
+		header: "Last Updated",
+		cell: ({ row }) => (
+			<div className="px-2">
+				{formatToMMDDYYYY(
+					row.original.updated_at || row.original.last_updated,
+				) || "-"}
+			</div>
+		),
+	},
+
+	//* ACTIONS
+	{
+		id: "actions",
+		header: "Actions",
+		cell: ({ row }) => (
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						variant="outline"
+						size="sm"
+						className="h-6 px-2 text-xs cursor-pointer"
+					>
+						<Edit className="h-3 w-3" />
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="w-40">
+					<PermissionGuard permission="view_documents">
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDocumentsClick(row.original, "PWD");
+							}}
+						>
+							Documents
+						</DropdownMenuItem>
+					</PermissionGuard>
+					<DropdownMenuSeparator />
+					<PermissionGuard permission="delete_case">
+						<DropdownMenuItem
+							variant="destructive"
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDeleteClick(row.original, "PWD");
+							}}
+						>
+							Delete
+						</DropdownMenuItem>
+					</PermissionGuard>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		),
+	},
+];
+
 //! =======================================================================================================================================================================================================================
 
 // --- Date normalization/format helpers (module scope)
@@ -1663,11 +1821,13 @@ function PaginationControls({ table }) {
  * @param {Array} props.farData - Data for FAR tab
  * @param {Array} props.spData - Data for Single Parents tab
  * @param {Array} props.faData - Data for Financial Assistance tab
+ * @param {Array} props.pwdData - Data for Persons with Disabilities tab
  * @param {Function} props.reloadCases - Function to reload case data
  * @param {Function} props.reloadCiclcar - Function to reload CICLCAR data
  * @param {Function} props.reloadFar - Function to reload FAR data
  * @param {Function} props.reloadSp - Function to reload Single Parents data
  * @param {Function} props.reloadFa - Function to reload Financial Assistance data
+ * @param {Function} props.reloadPwd - Function to reload Persons with Disabilities data
  *
  * @returns {JSX.Element} Rendered DataTable component
  *
@@ -1689,6 +1849,7 @@ export function DataTable({
 	ivacData,
 	spData,
 	faData,
+	pwdData,
 	reloadCases,
 	reloadCiclcar,
 	reloadFar,
@@ -1696,6 +1857,7 @@ export function DataTable({
 	reloadIvac,
 	reloadSp,
 	reloadFa,
+	reloadPwd,
 	deleteCase,
 	deleteCiclcarCase,
 	deleteFarCase,
@@ -1703,6 +1865,7 @@ export function DataTable({
 	deleteIvacCase,
 	deleteSpCase,
 	deleteFaCase,
+	deletePwdCase,
 	initialTab = "CASE",
 	onTabChange,
 	caseSync,
@@ -1712,6 +1875,7 @@ export function DataTable({
 	ivacSync,
 	spSync,
 	faSync,
+	pwdSync,
 	ciclcarProgramEnrollments = {},
 	ciclcarProgramEnrollmentsLoading = false,
 	isOnline = true,
@@ -1719,6 +1883,7 @@ export function DataTable({
 	// State to control Intake Sheet modal visibility (open/close)
 	const [openIntakeSheet, setOpenIntakeSheet] = useState(false);
 	const [openFaIntakeSheet, setOpenFaIntakeSheet] = useState(false);
+	const [openPwdIntakeSheet, setOpenPwdIntakeSheet] = useState(false);
 
 	// Delete confirmation dialog state
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -1790,6 +1955,7 @@ export function DataTable({
 	const [ivacCaseManager, setIvacCaseManager] = useState("all");
 	const [spCaseManager, setSpCaseManager] = useState("all");
 	const [faCaseManager, setFaCaseManager] = useState("all");
+	const [pwdCaseManager, setPwdCaseManager] = useState("all");
 
 	const safeCaseData = React.useMemo(() => caseData ?? [], [caseData]);
 	const safeCiclcarData = React.useMemo(
@@ -1801,6 +1967,7 @@ export function DataTable({
 	const safeIvacData = React.useMemo(() => ivacData ?? [], [ivacData]);
 	const safeSpData = React.useMemo(() => spData ?? [], [spData]);
 	const safeFaData = React.useMemo(() => faData ?? [], [faData]);
+	const safePwdData = React.useMemo(() => pwdData ?? [], [pwdData]);
 
 	const allRows = React.useMemo(
 		() => [
@@ -1811,6 +1978,7 @@ export function DataTable({
 			...safeIvacData,
 			...safeSpData,
 			...safeFaData,
+			...safePwdData,
 		],
 		[
 			safeCaseData,
@@ -1820,6 +1988,7 @@ export function DataTable({
 			safeIvacData,
 			safeSpData,
 			safeFaData,
+			safePwdData,
 		],
 	);
 
@@ -1899,6 +2068,10 @@ export function DataTable({
 	const faSyncing = faSync?.syncing ?? false;
 	const faSyncStatus = faSync?.syncStatus ?? null;
 	const faOnSync = faSync?.onSync;
+	const pwdPending = pwdSync?.pendingCount ?? 0;
+	const pwdSyncing = pwdSync?.syncing ?? false;
+	const pwdSyncStatus = pwdSync?.syncStatus ?? null;
+	const pwdOnSync = pwdSync?.onSync;
 	const getCiclcarPrefetchedEnrollments = React.useCallback(
 		(caseId) => {
 			if (!caseId) return undefined;
@@ -2016,6 +2189,16 @@ export function DataTable({
 					}
 					result = await deleteFaCase(caseId);
 					break;
+				case "PWD":
+					if (!deletePwdCase) {
+						toast.error("Delete Failed", {
+							description:
+								"No delete handler is configured for Persons with Disabilities.",
+						});
+						return;
+					}
+					result = await deletePwdCase(caseId);
+					break;
 				default:
 					toast.error("Unknown case type");
 					return;
@@ -2109,6 +2292,9 @@ export function DataTable({
 				case "FA":
 					promises.push(reloadFa?.());
 					break;
+				case "PWD":
+					promises.push(reloadPwd?.());
+					break;
 				default:
 					promises.push(
 						reloadCases?.(),
@@ -2118,6 +2304,7 @@ export function DataTable({
 						reloadIvac?.(),
 						reloadSp?.(),
 						reloadFa?.(),
+						reloadPwd?.(),
 					);
 			}
 			await Promise.all(promises.filter(Boolean));
@@ -2142,6 +2329,7 @@ export function DataTable({
 		reloadIvac,
 		reloadSp,
 		reloadFa,
+		reloadPwd,
 	]);
 
 	const caseManagerFilteredData = React.useMemo(() => {
@@ -2197,6 +2385,12 @@ export function DataTable({
 			? safeFaData
 			: safeFaData.filter((row) => row.case_manager === faCaseManager);
 	}, [faCaseManager, safeFaData]);
+
+	const pwdManagerFilteredData = React.useMemo(() => {
+		return pwdCaseManager === "all"
+			? safePwdData
+			: safePwdData.filter((row) => row.case_manager === pwdCaseManager);
+	}, [pwdCaseManager, safePwdData]);
 
 	const caseFilteredData = React.useMemo(
 		() =>
@@ -2260,6 +2454,15 @@ export function DataTable({
 				advancedFilters,
 			),
 		[faManagerFilteredData, searchQuery, advancedFilters],
+	);
+	const pwdFilteredData = React.useMemo(
+		() =>
+			filterRowsByGlobalSearch(
+				pwdManagerFilteredData,
+				searchQuery,
+				advancedFilters,
+			),
+		[pwdManagerFilteredData, searchQuery, advancedFilters],
 	);
 
 	// Initialize CASE table with dynamic columns (handler referenced above)
@@ -2338,6 +2541,12 @@ export function DataTable({
 		),
 	});
 
+	// Table instance for Persons with Disabilities tab with its own data and column definitions
+	const pwdTable = useDataTable({
+		initialData: pwdFilteredData,
+		columns: pwdColumns(handleDeleteClick, handleDocumentsClick),
+	});
+
 	React.useEffect(() => {
 		caseTable.table.setPageIndex(0);
 		ciclcarTable.table.setPageIndex(0);
@@ -2346,6 +2555,7 @@ export function DataTable({
 		ivacTable.table.setPageIndex(0);
 		spTable.table.setPageIndex(0);
 		faTable.table.setPageIndex(0);
+		pwdTable.table.setPageIndex(0);
 	}, [
 		searchQuery,
 		advancedFilters.status,
@@ -2359,6 +2569,7 @@ export function DataTable({
 		ivacTable.table,
 		spTable.table,
 		faTable.table,
+		pwdTable.table,
 	]);
 
 	// ============================
@@ -3773,6 +3984,190 @@ export function DataTable({
 									)}
 								</>
 							)}
+
+							{/* PERSONS WITH DISABILITIES SECTION */}
+							{activeTab === "PWD" && (
+								<>
+									{/* Case Manager Filter */}
+									<Select
+										value={pwdCaseManager}
+										onValueChange={setPwdCaseManager}
+									>
+										<SelectTrigger className="w-[180px] h-9">
+											<SelectValue placeholder="Filter by Manager" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">
+												All Managers
+											</SelectItem>
+											{caseManagersLoading ? (
+												<SelectItem
+													value="loading"
+													disabled
+												>
+													Loading...
+												</SelectItem>
+											) : (
+												caseManagers.map((manager) => (
+													<SelectItem
+														key={manager.id}
+														value={
+															manager.full_name
+														}
+													>
+														{manager.full_name}
+													</SelectItem>
+												))
+											)}
+										</SelectContent>
+									</Select>
+
+									{/* Refresh Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleRefresh}
+										disabled={isRefreshing}
+										className="cursor-pointer"
+									>
+										<IconRefresh
+											className={
+												isRefreshing
+													? "animate-spin"
+													: ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{isRefreshing
+												? "REFRESHING..."
+												: "REFRESH"}
+										</span>
+									</Button>
+
+									{/* Sync Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => pwdOnSync?.()}
+										disabled={
+											!isOnline ||
+											pwdSyncing ||
+											pwdPending === 0
+										}
+										className="cursor-pointer"
+									>
+										<IconCloudUpload
+											className={
+												pwdSyncing ? "animate-spin" : ""
+											}
+										/>
+										<span className="hidden lg:inline">
+											{pwdSyncing ? "SYNCING..." : "SYNC"}
+										</span>
+									</Button>
+
+									{/* Customize Columns Dropdown */}
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="outline"
+												size="sm"
+												className="cursor-pointer"
+											>
+												<IconLayoutColumns />
+												<span>COLUMNS</span>
+												<IconChevronDown />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent
+											align="end"
+											className="w-56"
+										>
+											{pwdTable.table
+												.getAllColumns()
+												.filter(
+													(c) =>
+														typeof c.accessorFn !==
+															"undefined" &&
+														c.getCanHide(),
+												)
+												.map((c) => (
+													<DropdownMenuCheckboxItem
+														key={c.id}
+														checked={c.getIsVisible()}
+														onCheckedChange={(v) =>
+															c.toggleVisibility(
+																!!v,
+															)
+														}
+														className="capitalize"
+													>
+														{c.id}
+													</DropdownMenuCheckboxItem>
+												))}
+										</DropdownMenuContent>
+									</DropdownMenu>
+
+									{/* INTAKE PWD BUTTON */}
+									<PermissionGuard permission="create_case">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() =>
+												setOpenPwdIntakeSheet(true)
+											}
+											className="cursor-pointer"
+										>
+											<IconPlus />
+											<span className="hidden lg:inline">
+												INTAKE PWD
+											</span>
+										</Button>
+									</PermissionGuard>
+
+									{/* PWD Create Modal */}
+									<IntakeSheetPWD
+										open={openPwdIntakeSheet}
+										setOpen={setOpenPwdIntakeSheet}
+										onSuccess={reloadPwd}
+									/>
+
+									{(pwdSyncing ||
+										pwdPending > 0 ||
+										pwdSyncStatus) && (
+										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+											{pwdSyncing ? (
+												<>
+													<IconLoader className="h-3 w-3 animate-spin" />
+													<span>
+														{pwdSyncStatus ||
+															"Syncing queued changes..."}
+													</span>
+												</>
+											) : pwdPending > 0 ? (
+												<>
+													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
+													<span className="text-amber-600">
+														{pwdPending} pending
+														change
+														{pwdPending === 1
+															? ""
+															: "s"}{" "}
+														waiting for sync
+													</span>
+												</>
+											) : (
+												<>
+													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
+													<span className="text-emerald-600">
+														{pwdSyncStatus}
+													</span>
+												</>
+											)}
+										</div>
+									)}
+								</>
+							)}
 						</div>
 					</div>
 
@@ -3991,6 +4386,9 @@ export function DataTable({
 								<SelectItem value="FA">
 									Financial Assistance
 								</SelectItem>
+								<SelectItem value="PWD">
+									Persons with Disabilities
+								</SelectItem>
 							</SelectContent>
 						</Select>
 						{/*
@@ -4041,6 +4439,12 @@ export function DataTable({
 									className="cursor-pointer"
 								>
 									Financial Assistance
+								</TabsTrigger>
+								<TabsTrigger
+									value="PWD"
+									className="cursor-pointer"
+								>
+									Persons with Disabilities
 								</TabsTrigger>
 							</TabsList>
 						</div>
@@ -4191,6 +4595,26 @@ export function DataTable({
 						)}
 					/>
 					<PaginationControls table={faTable.table} />
+				</TabsContent>
+
+				{/*
+        // ================================
+        // *PERSONS WITH DISABILITIES VIEW
+        // ================================
+        */}
+				<TabsContent
+					value="PWD"
+					className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+				>
+					<TableRenderer
+						table={pwdTable.table}
+						setData={pwdTable.setData}
+						columns={pwdColumns(
+							handleDeleteClick,
+							handleDocumentsClick,
+						)}
+					/>
+					<PaginationControls table={pwdTable.table} />
 				</TabsContent>
 
 				{/* Documents Dialog */}
