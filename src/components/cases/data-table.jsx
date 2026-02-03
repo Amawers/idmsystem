@@ -100,6 +100,7 @@ import IntakeSheetIVAC from "@/pages/case manager/IntakeSheetIVAC";
 import IntakeSheetSP from "@/pages/case manager/IntakeSheetSP";
 import IntakeSheetFA from "@/pages/case manager/IntakeSheetFA";
 import IntakeSheetPWD from "@/pages/case manager/IntakeSheetPWD";
+import IntakeSheetSeniorCitizen from "@/pages/case manager/IntakeSheetSeniorCitizen";
 // ADD THIS IMPORT
 import IntakeSheetEdit from "@/pages/case manager/intakeSheetCaseEdit";
 import useDataTable from "@/hooks/useDataTable";
@@ -1571,6 +1572,141 @@ const pwdColumns = (handleDeleteClick, handleDocumentsClick) => [
 	},
 ];
 
+// =================================
+//* SENIOR CITIZEN Table COLUMN DEFINITIONS
+// =================================
+const scColumns = (handleDeleteClick, handleDocumentsClick) => [
+	{
+		accessorKey: "id",
+		header: "Case ID",
+		cell: ({ row }) => {
+			const caseId = row.original.id || "N/A";
+			return <div className="font-medium">{caseId}</div>;
+		},
+		enableHiding: false,
+	},
+	{
+		accessorKey: "senior_name",
+		header: "Senior Citizen",
+		cell: ({ row }) => {
+			const fallback =
+				row.original.senior_name ||
+				row.original.full_name ||
+				row.original.client_name ||
+				row.original.person_name ||
+				"N/A";
+			return <div>{fallback}</div>;
+		},
+	},
+	{
+		accessorKey: "contact_number",
+		header: "Contact Number",
+		cell: ({ row }) => {
+			const contact =
+				row.original.contact_number ||
+				row.original.contactNumber ||
+				row.original.phone ||
+				"-";
+			return <div>{contact}</div>;
+		},
+	},
+	{
+		accessorKey: "address",
+		header: "Address",
+		cell: ({ row }) => {
+			const region = row.original.region || "";
+			const province = row.original.province || "";
+			const city = row.original.city_municipality || row.original.municipality || "";
+			const barangay = row.original.barangay || "";
+			const composed = [region, province, city, barangay]
+				.map((v) => String(v).trim())
+				.filter(Boolean)
+				.join(", ");
+			const address =
+				composed ||
+				row.original.address ||
+				row.original.location_address ||
+				"-";
+			return <div>{address}</div>;
+		},
+	},
+	{
+		accessorKey: "status",
+		header: "Status",
+		cell: ({ row }) => {
+			const status = row.original.status || "N/A";
+			return (
+				<Badge variant="outline" className="capitalize">
+					{status}
+				</Badge>
+			);
+		},
+	},
+	{
+		accessorKey: "created_at",
+		header: "Created",
+		cell: ({ row }) => (
+			<div className="px-2">
+				{formatToMMDDYYYY(
+					row.original.created_at || row.original.date_created,
+				) || "-"}
+			</div>
+		),
+	},
+	{
+		accessorKey: "updated_at",
+		header: "Last Updated",
+		cell: ({ row }) => (
+			<div className="px-2">
+				{formatToMMDDYYYY(
+					row.original.updated_at || row.original.last_updated,
+				) || "-"}
+			</div>
+		),
+	},
+	{
+		id: "actions",
+		header: "Actions",
+		cell: ({ row }) => (
+			<DropdownMenu>
+				<DropdownMenuTrigger asChild>
+					<Button
+						variant="outline"
+						size="sm"
+						className="h-6 px-2 text-xs cursor-pointer"
+					>
+						<Edit className="h-3 w-3" />
+					</Button>
+				</DropdownMenuTrigger>
+				<DropdownMenuContent align="end" className="w-40">
+					<PermissionGuard permission="view_documents">
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDocumentsClick(row.original, "SC");
+							}}
+						>
+							Documents
+						</DropdownMenuItem>
+					</PermissionGuard>
+					<DropdownMenuSeparator />
+					<PermissionGuard permission="delete_case">
+						<DropdownMenuItem
+							variant="destructive"
+							onClick={(e) => {
+								e.stopPropagation();
+								handleDeleteClick(row.original, "SC");
+							}}
+						>
+							Delete
+						</DropdownMenuItem>
+					</PermissionGuard>
+				</DropdownMenuContent>
+			</DropdownMenu>
+		),
+	},
+];
+
 //! =======================================================================================================================================================================================================================
 
 // --- Date normalization/format helpers (module scope)
@@ -1822,12 +1958,14 @@ function PaginationControls({ table }) {
  * @param {Array} props.spData - Data for Single Parents tab
  * @param {Array} props.faData - Data for Financial Assistance tab
  * @param {Array} props.pwdData - Data for Persons with Disabilities tab
+ * @param {Array} props.scData - Data for Senior Citizen tab
  * @param {Function} props.reloadCases - Function to reload case data
  * @param {Function} props.reloadCiclcar - Function to reload CICLCAR data
  * @param {Function} props.reloadFar - Function to reload FAR data
  * @param {Function} props.reloadSp - Function to reload Single Parents data
  * @param {Function} props.reloadFa - Function to reload Financial Assistance data
  * @param {Function} props.reloadPwd - Function to reload Persons with Disabilities data
+ * @param {Function} props.reloadSc - Function to reload Senior Citizen data
  *
  * @returns {JSX.Element} Rendered DataTable component
  *
@@ -1850,6 +1988,7 @@ export function DataTable({
 	spData,
 	faData,
 	pwdData,
+	scData,
 	reloadCases,
 	reloadCiclcar,
 	reloadFar,
@@ -1858,6 +1997,7 @@ export function DataTable({
 	reloadSp,
 	reloadFa,
 	reloadPwd,
+	reloadSc,
 	deleteCase,
 	deleteCiclcarCase,
 	deleteFarCase,
@@ -1866,6 +2006,7 @@ export function DataTable({
 	deleteSpCase,
 	deleteFaCase,
 	deletePwdCase,
+	deleteScCase,
 	initialTab = "CASE",
 	onTabChange,
 	caseSync,
@@ -1876,6 +2017,7 @@ export function DataTable({
 	spSync,
 	faSync,
 	pwdSync,
+	scSync,
 	ciclcarProgramEnrollments = {},
 	ciclcarProgramEnrollmentsLoading = false,
 	isOnline = true,
@@ -1884,6 +2026,7 @@ export function DataTable({
 	const [openIntakeSheet, setOpenIntakeSheet] = useState(false);
 	const [openFaIntakeSheet, setOpenFaIntakeSheet] = useState(false);
 	const [openPwdIntakeSheet, setOpenPwdIntakeSheet] = useState(false);
+	const [openScIntakeSheet, setOpenScIntakeSheet] = useState(false);
 
 	// Delete confirmation dialog state
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -1956,6 +2099,7 @@ export function DataTable({
 	const [spCaseManager, setSpCaseManager] = useState("all");
 	const [faCaseManager, setFaCaseManager] = useState("all");
 	const [pwdCaseManager, setPwdCaseManager] = useState("all");
+	const [scCaseManager, setScCaseManager] = useState("all");
 
 	const safeCaseData = React.useMemo(() => caseData ?? [], [caseData]);
 	const safeCiclcarData = React.useMemo(
@@ -1968,6 +2112,7 @@ export function DataTable({
 	const safeSpData = React.useMemo(() => spData ?? [], [spData]);
 	const safeFaData = React.useMemo(() => faData ?? [], [faData]);
 	const safePwdData = React.useMemo(() => pwdData ?? [], [pwdData]);
+	const safeScData = React.useMemo(() => scData ?? [], [scData]);
 
 	const allRows = React.useMemo(
 		() => [
@@ -1979,6 +2124,7 @@ export function DataTable({
 			...safeSpData,
 			...safeFaData,
 			...safePwdData,
+			...safeScData,
 		],
 		[
 			safeCaseData,
@@ -1989,6 +2135,7 @@ export function DataTable({
 			safeSpData,
 			safeFaData,
 			safePwdData,
+			safeScData,
 		],
 	);
 
@@ -2072,6 +2219,10 @@ export function DataTable({
 	const pwdSyncing = pwdSync?.syncing ?? false;
 	const pwdSyncStatus = pwdSync?.syncStatus ?? null;
 	const pwdOnSync = pwdSync?.onSync;
+	const scPending = scSync?.pendingCount ?? 0;
+	const scSyncing = scSync?.syncing ?? false;
+	const scSyncStatus = scSync?.syncStatus ?? null;
+	const scOnSync = scSync?.onSync;
 	const getCiclcarPrefetchedEnrollments = React.useCallback(
 		(caseId) => {
 			if (!caseId) return undefined;
@@ -2199,6 +2350,16 @@ export function DataTable({
 					}
 					result = await deletePwdCase(caseId);
 					break;
+				case "SC":
+					if (!deleteScCase) {
+						toast.error("Delete Failed", {
+							description:
+								"No delete handler is configured for Senior Citizen.",
+						});
+						return;
+					}
+					result = await deleteScCase(caseId);
+					break;
 				default:
 					toast.error("Unknown case type");
 					return;
@@ -2295,6 +2456,9 @@ export function DataTable({
 				case "PWD":
 					promises.push(reloadPwd?.());
 					break;
+				case "SC":
+					promises.push(reloadSc?.());
+					break;
 				default:
 					promises.push(
 						reloadCases?.(),
@@ -2305,6 +2469,7 @@ export function DataTable({
 						reloadSp?.(),
 						reloadFa?.(),
 						reloadPwd?.(),
+						reloadSc?.(),
 					);
 			}
 			await Promise.all(promises.filter(Boolean));
@@ -2330,6 +2495,7 @@ export function DataTable({
 		reloadSp,
 		reloadFa,
 		reloadPwd,
+	reloadSc,
 	]);
 
 	const caseManagerFilteredData = React.useMemo(() => {
@@ -2391,6 +2557,12 @@ export function DataTable({
 			? safePwdData
 			: safePwdData.filter((row) => row.case_manager === pwdCaseManager);
 	}, [pwdCaseManager, safePwdData]);
+
+	const scManagerFilteredData = React.useMemo(() => {
+		return scCaseManager === "all"
+			? safeScData
+			: safeScData.filter((row) => row.case_manager === scCaseManager);
+	}, [scCaseManager, safeScData]);
 
 	const caseFilteredData = React.useMemo(
 		() =>
@@ -2463,6 +2635,15 @@ export function DataTable({
 				advancedFilters,
 			),
 		[pwdManagerFilteredData, searchQuery, advancedFilters],
+	);
+	const scFilteredData = React.useMemo(
+		() =>
+			filterRowsByGlobalSearch(
+				scManagerFilteredData,
+				searchQuery,
+				advancedFilters,
+			),
+		[scManagerFilteredData, searchQuery, advancedFilters],
 	);
 
 	// Initialize CASE table with dynamic columns (handler referenced above)
@@ -2547,6 +2728,12 @@ export function DataTable({
 		columns: pwdColumns(handleDeleteClick, handleDocumentsClick),
 	});
 
+	// Table instance for Senior Citizen tab with its own data and column definitions
+	const scTable = useDataTable({
+		initialData: scFilteredData,
+		columns: scColumns(handleDeleteClick, handleDocumentsClick),
+	});
+
 	React.useEffect(() => {
 		caseTable.table.setPageIndex(0);
 		ciclcarTable.table.setPageIndex(0);
@@ -2556,6 +2743,7 @@ export function DataTable({
 		spTable.table.setPageIndex(0);
 		faTable.table.setPageIndex(0);
 		pwdTable.table.setPageIndex(0);
+		scTable.table.setPageIndex(0);
 	}, [
 		searchQuery,
 		advancedFilters.status,
@@ -2570,6 +2758,7 @@ export function DataTable({
 		spTable.table,
 		faTable.table,
 		pwdTable.table,
+		scTable.table,
 	]);
 
 	// ============================
@@ -4168,6 +4357,160 @@ export function DataTable({
 									)}
 								</>
 							)}
+
+							{/* SENIOR CITIZEN SECTION */}
+							{activeTab === "SC" && (
+								<>
+									{/* Case Manager Filter */}
+									<Select
+										value={scCaseManager}
+										onValueChange={setScCaseManager}
+									>
+										<SelectTrigger className="w-[180px] h-9">
+											<SelectValue placeholder="Filter by Manager" />
+										</SelectTrigger>
+										<SelectContent>
+											<SelectItem value="all">
+												All Managers
+											</SelectItem>
+											{caseManagersLoading ? (
+												<SelectItem value="loading" disabled>
+													Loading...
+												</SelectItem>
+											) : (
+												caseManagers.map((manager) => (
+													<SelectItem
+														key={manager.id}
+														value={manager.full_name}
+													>
+														{manager.full_name}
+													</SelectItem>
+												))
+											)}
+										</SelectContent>
+									</Select>
+
+									{/* Refresh Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleRefresh}
+										disabled={isRefreshing}
+										className="cursor-pointer"
+									>
+										<IconRefresh
+											className={isRefreshing ? "animate-spin" : ""}
+										/>
+										<span className="hidden lg:inline">
+											{isRefreshing ? "REFRESHING..." : "REFRESH"}
+										</span>
+									</Button>
+
+									{/* Sync Button */}
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={() => scOnSync?.()}
+										disabled={!isOnline || scSyncing || scPending === 0}
+										className="cursor-pointer"
+									>
+										<IconCloudUpload
+											className={scSyncing ? "animate-spin" : ""}
+										/>
+										<span className="hidden lg:inline">
+											{scSyncing ? "SYNCING..." : "SYNC"}
+										</span>
+									</Button>
+
+									{/* Customize Columns Dropdown */}
+									<DropdownMenu>
+										<DropdownMenuTrigger asChild>
+											<Button
+												variant="outline"
+												size="sm"
+												className="cursor-pointer"
+											>
+												<IconLayoutColumns />
+												<span>COLUMNS</span>
+												<IconChevronDown />
+											</Button>
+										</DropdownMenuTrigger>
+										<DropdownMenuContent align="end" className="w-56">
+											{scTable.table
+												.getAllColumns()
+												.filter(
+													(c) =>
+														typeof c.accessorFn !== "undefined" &&
+														c.getCanHide(),
+												)
+												.map((c) => (
+													<DropdownMenuCheckboxItem
+														key={c.id}
+														checked={c.getIsVisible()}
+														onCheckedChange={(v) =>
+															c.toggleVisibility(!!v)
+														}
+													className="capitalize"
+												>
+													{c.id}
+												</DropdownMenuCheckboxItem>
+												))}
+										</DropdownMenuContent>
+									</DropdownMenu>
+
+									{/* INTAKE SENIOR CITIZEN BUTTON */}
+									<PermissionGuard permission="create_case">
+										<Button
+											variant="outline"
+											size="sm"
+											onClick={() => setOpenScIntakeSheet(true)}
+											className="cursor-pointer"
+										>
+											<IconPlus />
+											<span className="hidden lg:inline">
+												INTAKE SENIOR CITIZEN
+											</span>
+										</Button>
+									</PermissionGuard>
+
+									{/* Senior Citizen Create Modal */}
+									<IntakeSheetSeniorCitizen
+										open={openScIntakeSheet}
+										setOpen={setOpenScIntakeSheet}
+										onSuccess={reloadSc}
+									/>
+
+									{(scSyncing || scPending > 0 || scSyncStatus) && (
+										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
+											{scSyncing ? (
+												<>
+													<IconLoader className="h-3 w-3 animate-spin" />
+													<span>
+														{scSyncStatus ||
+															"Syncing queued changes..."}
+													</span>
+												</>
+											) : scPending > 0 ? (
+												<>
+													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
+													<span className="text-amber-600">
+														{scPending} pending change
+														{scPending === 1 ? "" : "s"} waiting
+														 for sync
+													</span>
+												</>
+											) : (
+												<>
+													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
+													<span className="text-emerald-600">
+														{scSyncStatus}
+													</span>
+												</>
+											)}
+										</div>
+									)}
+								</>
+							)}
 						</div>
 					</div>
 
@@ -4389,6 +4732,9 @@ export function DataTable({
 								<SelectItem value="PWD">
 									Persons with Disabilities
 								</SelectItem>
+								<SelectItem value="SC">
+									Senior Citizen
+								</SelectItem>
 							</SelectContent>
 						</Select>
 						{/*
@@ -4445,6 +4791,12 @@ export function DataTable({
 									className="cursor-pointer"
 								>
 									Persons with Disabilities
+								</TabsTrigger>
+								<TabsTrigger
+									value="SC"
+									className="cursor-pointer"
+								>
+									Senior Citizen
 								</TabsTrigger>
 							</TabsList>
 						</div>
@@ -4615,6 +4967,26 @@ export function DataTable({
 						)}
 					/>
 					<PaginationControls table={pwdTable.table} />
+				</TabsContent>
+
+				{/*
+				// ====================
+				// *SENIOR CITIZEN VIEW
+				// ====================
+				*/}
+				<TabsContent
+					value="SC"
+					className="relative flex flex-col gap-4 overflow-auto px-4 lg:px-6"
+				>
+					<TableRenderer
+						table={scTable.table}
+						setData={scTable.setData}
+						columns={scColumns(
+							handleDeleteClick,
+							handleDocumentsClick,
+						)}
+					/>
+					<PaginationControls table={scTable.table} />
 				</TabsContent>
 
 				{/* Documents Dialog */}
