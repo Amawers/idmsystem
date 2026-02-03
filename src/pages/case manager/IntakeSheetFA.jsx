@@ -75,7 +75,7 @@ export default function IntakeSheetFA({ open, setOpen, onSuccess }) {
 
 	return (
 		<Dialog open={open} onOpenChange={setOpen}>
-			<DialogContent className="max-w-6xl">
+			<DialogContent className="min-w-6xl">
 				<DialogHeader>
 					<DialogTitle>Financial Assistance Intake</DialogTitle>
 				</DialogHeader>
