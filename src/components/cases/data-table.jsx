@@ -155,6 +155,27 @@ function formatDateTime(isoString) {
 	return date.toLocaleString("en-US", options);
 }
 
+const getRowTimestamp = (row) => {
+	const value =
+		row?.updated_at ||
+		row?.created_at ||
+		row?.date_filed ||
+		row?.date_recorded ||
+		row?.date_applied ||
+		row?.interview_date ||
+		row?.date ||
+		row?.last_updated ||
+		row?.createdAt ||
+		row?.updatedAt ||
+		null;
+	if (!value) return 0;
+	const time = new Date(value).getTime();
+	return Number.isNaN(time) ? 0 : time;
+};
+
+const sortByLatest = (rows = []) =>
+	[...rows].sort((a, b) => getRowTimestamp(b) - getRowTimestamp(a));
+
 // =================================
 //* CASE Table COLUMN DEFINITIONS
 // =================================
@@ -1616,7 +1637,10 @@ const scColumns = (handleDeleteClick, handleDocumentsClick) => [
 		cell: ({ row }) => {
 			const region = row.original.region || "";
 			const province = row.original.province || "";
-			const city = row.original.city_municipality || row.original.municipality || "";
+			const city =
+				row.original.city_municipality ||
+				row.original.municipality ||
+				"";
 			const barangay = row.original.barangay || "";
 			const composed = [region, province, city, barangay]
 				.map((v) => String(v).trim())
@@ -2495,7 +2519,7 @@ export function DataTable({
 		reloadSp,
 		reloadFa,
 		reloadPwd,
-	reloadSc,
+		reloadSc,
 	]);
 
 	const caseManagerFilteredData = React.useMemo(() => {
@@ -2646,9 +2670,46 @@ export function DataTable({
 		[scManagerFilteredData, searchQuery, advancedFilters],
 	);
 
+	const caseSortedData = React.useMemo(
+		() => sortByLatest(caseFilteredData),
+		[caseFilteredData],
+	);
+	const ciclcarSortedData = React.useMemo(
+		() => sortByLatest(ciclcarFilteredData),
+		[ciclcarFilteredData],
+	);
+	const farSortedData = React.useMemo(
+		() => sortByLatest(farFilteredData),
+		[farFilteredData],
+	);
+	const facSortedData = React.useMemo(
+		() => sortByLatest(facFilteredData),
+		[facFilteredData],
+	);
+	const ivacSortedData = React.useMemo(
+		() => sortByLatest(ivacFilteredData),
+		[ivacFilteredData],
+	);
+	const spSortedData = React.useMemo(
+		() => sortByLatest(spFilteredData),
+		[spFilteredData],
+	);
+	const faSortedData = React.useMemo(
+		() => sortByLatest(faFilteredData),
+		[faFilteredData],
+	);
+	const pwdSortedData = React.useMemo(
+		() => sortByLatest(pwdFilteredData),
+		[pwdFilteredData],
+	);
+	const scSortedData = React.useMemo(
+		() => sortByLatest(scFilteredData),
+		[scFilteredData],
+	);
+
 	// Initialize CASE table with dynamic columns (handler referenced above)
 	const caseTable = useDataTable({
-		initialData: caseFilteredData,
+		initialData: caseSortedData,
 		// CHANGED: pass edit handler so actions column calls this for “Edit”
 		columns: createCaseColumns(
 			handleEnrollClick,
@@ -2660,7 +2721,7 @@ export function DataTable({
 
 	// Table instance for CICLCAR tab with its own data and column definitions
 	const ciclcarTable = useDataTable({
-		initialData: ciclcarFilteredData,
+		initialData: ciclcarSortedData,
 		columns: ciclcarColumns(
 			handleEnrollClick,
 			handleEditCiclcarRow,
@@ -2673,7 +2734,7 @@ export function DataTable({
 
 	// Table instance for FAR tab with its own data and column definitions
 	const farTable = useDataTable({
-		initialData: farFilteredData,
+		initialData: farSortedData,
 		columns: farColumns(
 			handleEnrollClick,
 			handleEditFarRow,
@@ -2685,7 +2746,7 @@ export function DataTable({
 
 	// Table instance for FAC tab with its own data and column definitions
 	const facTable = useDataTable({
-		initialData: facFilteredData,
+		initialData: facSortedData,
 		columns: facColumns(
 			handleEditFacRow,
 			handleDeleteClick,
@@ -2696,7 +2757,7 @@ export function DataTable({
 
 	// Table instance for IVAC tab with its own data and column definitions
 	const ivacTable = useDataTable({
-		initialData: ivacFilteredData,
+		initialData: ivacSortedData,
 		columns: ivacColumns(
 			handleEditIvacRow,
 			handleDeleteClick,
@@ -2707,13 +2768,13 @@ export function DataTable({
 
 	// Table instance for Single Parents tab with its own data and column definitions
 	const spTable = useDataTable({
-		initialData: spFilteredData,
+		initialData: spSortedData,
 		columns: spColumns(handleDeleteClick, handleDocumentsClick),
 	});
 
 	// Table instance for Financial Assistance tab with its own data and column definitions
 	const faTable = useDataTable({
-		initialData: faFilteredData,
+		initialData: faSortedData,
 		columns: faColumns(
 			handleEnrollClick,
 			handleEditFaRow,
@@ -2724,13 +2785,13 @@ export function DataTable({
 
 	// Table instance for Persons with Disabilities tab with its own data and column definitions
 	const pwdTable = useDataTable({
-		initialData: pwdFilteredData,
+		initialData: pwdSortedData,
 		columns: pwdColumns(handleDeleteClick, handleDocumentsClick),
 	});
 
 	// Table instance for Senior Citizen tab with its own data and column definitions
 	const scTable = useDataTable({
-		initialData: scFilteredData,
+		initialData: scSortedData,
 		columns: scColumns(handleDeleteClick, handleDocumentsClick),
 	});
 
@@ -4374,14 +4435,19 @@ export function DataTable({
 												All Managers
 											</SelectItem>
 											{caseManagersLoading ? (
-												<SelectItem value="loading" disabled>
+												<SelectItem
+													value="loading"
+													disabled
+												>
 													Loading...
 												</SelectItem>
 											) : (
 												caseManagers.map((manager) => (
 													<SelectItem
 														key={manager.id}
-														value={manager.full_name}
+														value={
+															manager.full_name
+														}
 													>
 														{manager.full_name}
 													</SelectItem>
@@ -4399,10 +4465,16 @@ export function DataTable({
 										className="cursor-pointer"
 									>
 										<IconRefresh
-											className={isRefreshing ? "animate-spin" : ""}
+											className={
+												isRefreshing
+													? "animate-spin"
+													: ""
+											}
 										/>
 										<span className="hidden lg:inline">
-											{isRefreshing ? "REFRESHING..." : "REFRESH"}
+											{isRefreshing
+												? "REFRESHING..."
+												: "REFRESH"}
 										</span>
 									</Button>
 
@@ -4411,11 +4483,17 @@ export function DataTable({
 										variant="outline"
 										size="sm"
 										onClick={() => scOnSync?.()}
-										disabled={!isOnline || scSyncing || scPending === 0}
+										disabled={
+											!isOnline ||
+											scSyncing ||
+											scPending === 0
+										}
 										className="cursor-pointer"
 									>
 										<IconCloudUpload
-											className={scSyncing ? "animate-spin" : ""}
+											className={
+												scSyncing ? "animate-spin" : ""
+											}
 										/>
 										<span className="hidden lg:inline">
 											{scSyncing ? "SYNCING..." : "SYNC"}
@@ -4435,12 +4513,16 @@ export function DataTable({
 												<IconChevronDown />
 											</Button>
 										</DropdownMenuTrigger>
-										<DropdownMenuContent align="end" className="w-56">
+										<DropdownMenuContent
+											align="end"
+											className="w-56"
+										>
 											{scTable.table
 												.getAllColumns()
 												.filter(
 													(c) =>
-														typeof c.accessorFn !== "undefined" &&
+														typeof c.accessorFn !==
+															"undefined" &&
 														c.getCanHide(),
 												)
 												.map((c) => (
@@ -4448,12 +4530,14 @@ export function DataTable({
 														key={c.id}
 														checked={c.getIsVisible()}
 														onCheckedChange={(v) =>
-															c.toggleVisibility(!!v)
+															c.toggleVisibility(
+																!!v,
+															)
 														}
-													className="capitalize"
-												>
-													{c.id}
-												</DropdownMenuCheckboxItem>
+														className="capitalize"
+													>
+														{c.id}
+													</DropdownMenuCheckboxItem>
 												))}
 										</DropdownMenuContent>
 									</DropdownMenu>
@@ -4463,7 +4547,9 @@ export function DataTable({
 										<Button
 											variant="outline"
 											size="sm"
-											onClick={() => setOpenScIntakeSheet(true)}
+											onClick={() =>
+												setOpenScIntakeSheet(true)
+											}
 											className="cursor-pointer"
 										>
 											<IconPlus />
@@ -4480,7 +4566,9 @@ export function DataTable({
 										onSuccess={reloadSc}
 									/>
 
-									{(scSyncing || scPending > 0 || scSyncStatus) && (
+									{(scSyncing ||
+										scPending > 0 ||
+										scSyncStatus) && (
 										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
 											{scSyncing ? (
 												<>
@@ -4494,9 +4582,12 @@ export function DataTable({
 												<>
 													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
 													<span className="text-amber-600">
-														{scPending} pending change
-														{scPending === 1 ? "" : "s"} waiting
-														 for sync
+														{scPending} pending
+														change
+														{scPending === 1
+															? ""
+															: "s"}{" "}
+														waiting for sync
 													</span>
 												</>
 											) : (
