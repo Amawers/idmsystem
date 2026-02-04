@@ -519,6 +519,71 @@ create trigger trigger_update_fa_case_updated_at BEFORE
 update on fa_case for EACH row
 execute FUNCTION update_fa_case_updated_at ();
 
+create table public.pwd_case (
+id uuid not null default gen_random_uuid (),
+created_at timestamp with time zone null default now(),
+updated_at timestamp with time zone null default now(),
+case_manager text null,
+status text null default 'active'::text,
+priority text null default 'normal'::text,
+visibility text null default 'visible'::text,
+application_type text null,
+pwd_number text null,
+date_applied date null,
+last_name text null,
+first_name text null,
+middle_name text null,
+suffix text null,
+date_of_birth date null,
+sex text null,
+civil_status text null,
+type_of_disability jsonb null default '[]'::jsonb,
+cause_of_disability jsonb null default '[]'::jsonb,
+house_no_street text null,
+barangay text null,
+municipality text null,
+province text null,
+region text null,
+landline_number text null,
+mobile_no text null,
+email_address text null,
+educational_attainment text null,
+employment_status text null,
+employment_category text null,
+type_of_employment text null,
+occupation text null,
+organization_affiliated text null,
+contact_person text null,
+office_address text null,
+tel_no text null,
+sss text null,
+gsis text null,
+pag_ibig text null,
+psn text null,
+philhealth text null,
+fathers_name text null,
+mothers_name text null,
+accomplished_by text null,
+certifying_physician text null,
+license_no text null,
+processing_officer text null,
+approving_officer text null,
+encoder text null,
+reporting_unit text null,
+control_no text null,
+constraint pwd_case_pkey primary key (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_pwd_case_created_at on public.pwd_case using btree (created_at desc) TABLESPACE pg_default;
+
+create index IF not exists idx_pwd_case_status on public.pwd_case using btree (status) TABLESPACE pg_default;
+
+create index IF not exists idx_pwd_case_case_manager on public.pwd_case using btree (case_manager) TABLESPACE pg_default;
+
+create trigger trigger_update_pwd_case_updated_at BEFORE
+update on pwd_case for EACH row
+execute FUNCTION update_pwd_case_updated_at ();
+
 create table public.permissions (
 id uuid not null default gen_random_uuid (),
 name text not null,
@@ -1176,6 +1241,14 @@ END;
 ======================
 
 update_fa_case_updated_at
+RETURN TYPE: trigger
+BEGIN
+NEW.updated_at = NOW();
+RETURN NEW;
+END;
+======================
+
+update_pwd_case_updated_at
 RETURN TYPE: trigger
 BEGIN
 NEW.updated_at = NOW();

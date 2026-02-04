@@ -14,6 +14,7 @@ import { useFacCases } from "@/hooks/useFacCases";
 import { useIvacCases } from "@/hooks/useIvacCases";
 import { useSpCases } from "@/hooks/useSpCases";
 import { useFaCases } from "@/hooks/useFaCases";
+import { usePwdCases } from "@/hooks/usePwdCases";
 import { useHiddenCases } from "@/hooks/useHiddenCases";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
@@ -100,6 +101,17 @@ export default function CaseManagement() {
 		syncStatus: faSyncStatus,
 		runSync: runFaSync,
 	} = useFaCases();
+	const {
+		data: pwdRows,
+		loading: pwdLoading,
+		error: pwdError,
+		reload: reloadPwd,
+		deletePwdCase,
+		pendingCount: pwdPendingCount,
+		syncing: pwdSyncing,
+		syncStatus: pwdSyncStatus,
+		runSync: runPwdSync,
+	} = usePwdCases();
 
 	// Filter hidden cases for case managers
 	const { filterVisibleCases } = useHiddenCases();
@@ -116,6 +128,7 @@ export default function CaseManagement() {
 		IVAC: false,
 		SP: false,
 		FA: false,
+		PWD: false,
 	});
 
 	const persistActiveTab = useCallback((tabValue) => {
@@ -135,6 +148,8 @@ export default function CaseManagement() {
 			"true";
 		const forcedSpSync =
 			sessionStorage.getItem("caseManagement.forceSpSync") === "true";
+		const forcedPwdSync =
+			sessionStorage.getItem("caseManagement.forcePwdSync") === "true";
 		const forcedFaSync =
 			sessionStorage.getItem("caseManagement.forceFaSync") === "true";
 		const forcedFacSync =
@@ -160,7 +175,9 @@ export default function CaseManagement() {
 									? "FAR"
 									: forcedIvacSync
 										? "IVAC"
-										: storedTab || "CASE");
+										: forcedPwdSync
+											? "PWD"
+											: storedTab || "CASE");
 		setInitialTab(nextTab);
 		if (forcedCaseSync) {
 			setAutoSyncAfterReloadTab("CASE");
@@ -168,6 +185,8 @@ export default function CaseManagement() {
 			setAutoSyncAfterReloadTab("CICLCAR");
 		} else if (forcedSpSync) {
 			setAutoSyncAfterReloadTab("SP");
+		} else if (forcedPwdSync) {
+			setAutoSyncAfterReloadTab("PWD");
 		} else if (forcedFaSync) {
 			setAutoSyncAfterReloadTab("FA");
 		} else if (forcedFacSync) {
@@ -184,6 +203,7 @@ export default function CaseManagement() {
 		sessionStorage.removeItem("caseManagement.forceFacSync");
 		sessionStorage.removeItem("caseManagement.forceFarSync");
 		sessionStorage.removeItem("caseManagement.forceIvacSync");
+		sessionStorage.removeItem("caseManagement.forcePwdSync");
 		if (forcedTab) {
 			sessionStorage.removeItem(FORCED_TAB_AFTER_RELOAD_KEY);
 		}
@@ -270,6 +290,16 @@ export default function CaseManagement() {
 					previousOnline.current = isOnline;
 					return;
 				}
+				if (pwdPendingCount > 0) {
+					sessionStorage.setItem("caseManagement.activeTab", "PWD");
+					sessionStorage.setItem(
+						"caseManagement.forcePwdSync",
+						"true",
+					);
+					window.location.reload();
+					previousOnline.current = isOnline;
+					return;
+				}
 			}
 		}
 		previousOnline.current = isOnline;
@@ -282,6 +312,7 @@ export default function CaseManagement() {
 		ivacPendingCount,
 		spPendingCount,
 		faPendingCount,
+		pwdPendingCount,
 	]);
 
 	useEffect(() => {
@@ -300,9 +331,11 @@ export default function CaseManagement() {
 								? runIvacSync
 								: autoSyncAfterReloadTab === "SP"
 									? runSpSync
-									: autoSyncAfterReloadTab === "FA"
-										? runFaSync
-										: null;
+									: autoSyncAfterReloadTab === "PWD"
+										? runPwdSync
+										: autoSyncAfterReloadTab === "FA"
+											? runFaSync
+											: null;
 		if (!runSync) return;
 		runSync()
 			.catch((err) => console.error("Auto sync failed:", err))
@@ -316,6 +349,7 @@ export default function CaseManagement() {
 		runFarSync,
 		runIvacSync,
 		runSpSync,
+		runPwdSync,
 		runFaSync,
 	]);
 
@@ -329,6 +363,7 @@ export default function CaseManagement() {
 				IVAC: false,
 				SP: false,
 				FA: false,
+				PWD: false,
 			};
 			return;
 		}
@@ -384,6 +419,14 @@ export default function CaseManagement() {
 					triggers.SP = false;
 				});
 		}
+		if (pwdPendingCount > 0 && !pwdSyncing && !triggers.PWD) {
+			triggers.PWD = true;
+			runPwdSync()
+				.catch((err) => console.error("Auto PWD sync failed:", err))
+				.finally(() => {
+					triggers.PWD = false;
+				});
+		}
 		if (faPendingCount > 0 && !faSyncing && !triggers.FA) {
 			triggers.FA = true;
 			runFaSync()
@@ -408,6 +451,7 @@ export default function CaseManagement() {
 		ivacPendingCount,
 		spPendingCount,
 		faPendingCount,
+		pwdPendingCount,
 		caseSyncing,
 		ciclcarSyncing,
 		facSyncing,
@@ -415,6 +459,7 @@ export default function CaseManagement() {
 		ivacSyncing,
 		spSyncing,
 		faSyncing,
+		pwdSyncing,
 	]);
 
 	// Apply filtering to all case data
@@ -445,6 +490,10 @@ export default function CaseManagement() {
 	const filteredFaRows = React.useMemo(
 		() => filterVisibleCases(faRows || []),
 		[faRows, filterVisibleCases],
+	);
+	const filteredPwdRows = React.useMemo(
+		() => filterVisibleCases(pwdRows || []),
+		[pwdRows, filterVisibleCases],
 	);
 
 	return (
@@ -555,6 +604,17 @@ export default function CaseManagement() {
 								</button>
 							</div>
 						) : null}
+						{pwdError ? (
+							<div className="text-sm text-red-600">
+								Failed to load Persons with Disabilities cases.{" "}
+								<button
+									className="underline"
+									onClick={reloadPwd}
+								>
+									Retry
+								</button>
+							</div>
+						) : null}
 
 						<DataTable
 							caseData={casesLoading ? [] : filteredCaseRows}
@@ -566,6 +626,7 @@ export default function CaseManagement() {
 							ivacData={ivacLoading ? [] : filteredIvacRows}
 							spData={spLoading ? [] : filteredSpRows}
 							faData={faLoading ? [] : filteredFaRows}
+							pwdData={pwdLoading ? [] : filteredPwdRows}
 							reloadCases={reload}
 							reloadCiclcar={reloadCiclcar}
 							reloadFar={reloadFar}
@@ -573,6 +634,7 @@ export default function CaseManagement() {
 							reloadIvac={reloadIvac}
 							reloadSp={reloadSp}
 							reloadFa={reloadFa}
+							reloadPwd={reloadPwd}
 							deleteCase={deleteCase}
 							deleteCiclcarCase={deleteCiclcarCase}
 							deleteFarCase={deleteFarCase}
@@ -580,6 +642,7 @@ export default function CaseManagement() {
 							deleteIvacCase={deleteIvacCase}
 							deleteSpCase={deleteSpCase}
 							deleteFaCase={deleteFaCase}
+							deletePwdCase={deletePwdCase}
 							initialTab={initialTab}
 							onTabChange={persistActiveTab}
 							caseSync={{
@@ -623,6 +686,12 @@ export default function CaseManagement() {
 								syncing: faSyncing,
 								syncStatus: faSyncStatus,
 								onSync: runFaSync,
+							}}
+							pwdSync={{
+								pendingCount: pwdPendingCount,
+								syncing: pwdSyncing,
+								syncStatus: pwdSyncStatus,
+								onSync: runPwdSync,
 							}}
 							ciclcarProgramEnrollments={
 								ciclcarProgramEnrollments

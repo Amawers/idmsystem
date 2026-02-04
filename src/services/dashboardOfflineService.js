@@ -39,7 +39,7 @@ function isCacheFresh(timestamp) {
  * @returns {Promise<Object>} Object containing all case type arrays
  */
 async function fetchAllCasesFromSupabase() {
-	const [caseRes, ciclcarRes, facRes, farRes, ivacRes, spRes, faRes] =
+	const [caseRes, ciclcarRes, facRes, farRes, ivacRes, spRes, faRes, pwdRes] =
 		await Promise.all([
 			supabase
 				.from("case")
@@ -69,6 +69,10 @@ async function fetchAllCasesFromSupabase() {
 				.from("fa_case")
 				.select("*")
 				.order("created_at", { ascending: false }),
+			supabase
+				.from("pwd_case")
+				.select("*")
+				.order("created_at", { ascending: false }),
 		]);
 
 	if (caseRes.error) throw caseRes.error;
@@ -78,6 +82,7 @@ async function fetchAllCasesFromSupabase() {
 	if (ivacRes.error) throw ivacRes.error;
 	if (spRes.error) throw spRes.error;
 	if (faRes.error) throw faRes.error;
+	if (pwdRes.error) throw pwdRes.error;
 
 	return {
 		cases: caseRes.data || [],
@@ -87,6 +92,7 @@ async function fetchAllCasesFromSupabase() {
 		ivac: ivacRes.data || [],
 		sp: spRes.data || [],
 		fa: faRes.data || [],
+		pwd: pwdRes.data || [],
 	};
 }
 
@@ -348,7 +354,7 @@ function applyFilters(cases, filters) {
 
 /**
  * Compute complete dashboard data from raw case data
- * @param {Object} rawData - Object with cases, ciclcar, fac, far, ivac, sp, fa arrays
+ * @param {Object} rawData - Object with cases, ciclcar, fac, far, ivac, sp, fa, pwd arrays
  * @param {Object} filters - Optional filters
  * @returns {Object} Complete dashboard data structure
  */
@@ -361,6 +367,7 @@ function computeDashboardData(rawData, filters = {}) {
 		...(rawData.ivac || []).map((c) => ({ ...c, __source: "ivac" })),
 		...(rawData.sp || []).map((c) => ({ ...c, __source: "sp" })),
 		...(rawData.fa || []).map((c) => ({ ...c, __source: "fa" })),
+		...(rawData.pwd || []).map((c) => ({ ...c, __source: "pwd" })),
 	];
 
 	// Remove FAC and FAR from dashboard aggregates
@@ -513,6 +520,7 @@ export async function loadRawDataFromCache(dashboardType = "case") {
 			ivac: cached.ivac || [],
 			sp: cached.sp || [],
 			fa: cached.fa || [],
+			pwd: cached.pwd || [],
 		};
 	} catch (err) {
 		console.error("Error loading raw data from cache:", err);

@@ -572,4 +572,63 @@ offlineCaseDb.version(18).stores({
 	staff_workload_cache: "++cacheId, staff_name, case_manager, cached_at",
 });
 
+// Version 19: Add Persons with Disabilities cases offline cache + queue
+offlineCaseDb.version(19).stores({
+	ciclcar_cases: "++localId, id, updated_at, case_manager, hasPendingWrites",
+	ciclcar_queue:
+		"++queueId, targetLocalId, targetId, operationType, createdAt",
+	case_managers: "id, full_name",
+	fac_cases:
+		"++localId, id, updated_at, head_first_name, head_last_name, hasPendingWrites",
+	fac_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+	far_cases:
+		"++localId, id, date, receiving_member, assistance, hasPendingWrites",
+	far_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+	ivac_cases:
+		"++localId, id, updated_at, municipality, province, status, hasPendingWrites",
+	ivac_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+	case_cases:
+		"++localId, id, updated_at, identifying_name, case_manager, hasPendingWrites",
+	case_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+	sp_cases:
+		"++localId, id, updated_at, full_name, case_manager, hasPendingWrites",
+	sp_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+	fa_cases:
+		"++localId, id, updated_at, client_name, case_manager, hasPendingWrites",
+	fa_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+	pwd_cases:
+		"++localId, id, updated_at, last_name, first_name, case_manager, hasPendingWrites",
+	pwd_queue: "++queueId, targetLocalId, targetId, operationType, createdAt",
+	dashboard_cache: "++id, dashboardType, timestamp, data",
+	dashboard_raw_data:
+		"++id, dashboardType, timestamp, cases, ciclcar, fac, ivac, sp, fa, pwd",
+	programs:
+		"++localId, id, updated_at, program_name, status, hasPendingWrites",
+	program_queue:
+		"++queueId, targetLocalId, targetId, operationType, createdAt",
+	program_enrollments:
+		"++localId, id, program_id, enrollment_date, status, updated_at, hasPendingWrites",
+	enrollment_queue:
+		"++queueId, targetLocalId, targetId, operationType, createdAt",
+	cached_vac_cases: "id, identifying_name, case_manager, status",
+	cached_far_cases: "id, receiving_member, case_manager, status",
+	service_delivery:
+		"++localId, id, enrollment_id, program_id, service_date, hasPendingWrites, lastLocalChange",
+	service_delivery_queue:
+		"++queueId, targetLocalId, targetId, operationType, createdAt",
+	partners:
+		"++localId, id, organization_name, partnership_status, mou_expiry_date, hasPendingWrites, lastLocalChange",
+	partners_queue:
+		"++queueId, targetLocalId, targetId, operationType, createdAt",
+	inventory_items:
+		"++localId, id, item_name, category, status, hasPendingWrites, lastLocalChange",
+	inventory_queue:
+		"++queueId, targetLocalId, targetId, operationType, createdAt",
+	resource_requests:
+		"++localId, id, request_number, status, priority, requested_by, created_at, hasPendingWrites, pendingAction, lastLocalChange",
+	resource_requests_queue:
+		"++queueId, targetLocalId, targetId, operationType, createdAt",
+	staff_workload_cache: "++cacheId, staff_name, case_manager, cached_at",
+});
+
 export default offlineCaseDb;

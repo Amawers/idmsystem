@@ -18,6 +18,7 @@ const CASE_TABLES = [
 	{ key: "ivac", table: "ivac_cases" },
 	{ key: "sp", table: "sp_case" },
 	{ key: "fa", table: "fa_case" },
+	{ key: "pwd", table: "pwd_case" },
 ];
 
 const STATUS_WEIGHTS = {
@@ -143,6 +144,13 @@ function aggregateWorkloadRows(countMaps, roleMap) {
 				high: 0,
 				weightedScore: 0,
 			},
+			pwd: (countMaps[7] || {})[manager] || {
+				total: 0,
+				active: 0,
+				urgent: 0,
+				high: 0,
+				weightedScore: 0,
+			},
 		};
 
 		const totalCases = Object.values(totals).reduce(
@@ -201,6 +209,7 @@ function aggregateWorkloadRows(countMaps, roleMap) {
 				ivac: totals.ivac.total,
 				sp: totals.sp.total,
 				fa: totals.fa.total,
+				pwd: totals.pwd.total,
 			},
 			cached_at: nowIso(),
 		});
