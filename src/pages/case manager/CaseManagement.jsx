@@ -12,6 +12,7 @@ import { useCiclcarCases } from "@/hooks/useCiclcarCases";
 import { useFarCases } from "@/hooks/useFarCases";
 import { useFacCases } from "@/hooks/useFacCases";
 import { useIvacCases } from "@/hooks/useIvacCases";
+import { useSpCases } from "@/hooks/useSpCases";
 import { useHiddenCases } from "@/hooks/useHiddenCases";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
@@ -76,23 +77,17 @@ export default function CaseManagement() {
 		syncStatus: ivacSyncStatus,
 		runSync: runIvacSync,
 	} = useIvacCases();
-
-	// Single Parents (Solo Parent) placeholder data until backend integration is available
-	const spRows = [];
-	const spLoading = false;
-	const spError = null;
-	const reloadSp = useCallback(async () => {}, []);
-	const deleteSpCase = useCallback(
-		async () => ({
-			success: false,
-			error: { message: "Single Parents delete not configured" },
-		}),
-		[],
-	);
-	const spPendingCount = 0;
-	const spSyncing = false;
-	const spSyncStatus = null;
-	const runSpSync = useCallback(async () => {}, []);
+	const {
+		data: spRows,
+		loading: spLoading,
+		error: spError,
+		reload: reloadSp,
+		deleteSpCase,
+		pendingCount: spPendingCount,
+		syncing: spSyncing,
+		syncStatus: spSyncStatus,
+		runSync: runSpSync,
+	} = useSpCases();
 
 	// Filter hidden cases for case managers
 	const { filterVisibleCases } = useHiddenCases();
@@ -125,6 +120,8 @@ export default function CaseManagement() {
 		const forcedCiclcarSync =
 			sessionStorage.getItem("caseManagement.forceCiclcarSync") ===
 			"true";
+		const forcedSpSync =
+			sessionStorage.getItem("caseManagement.forceSpSync") === "true";
 		const forcedFacSync =
 			sessionStorage.getItem("caseManagement.forceFacSync") === "true";
 		const forcedFarSync =
@@ -138,24 +135,29 @@ export default function CaseManagement() {
 				? "CASE"
 				: forcedCiclcarSync
 					? "CICLCAR"
-					: forcedFacSync
-						? "FAC"
-						: forcedFarSync
-							? "FAR"
-							: forcedIvacSync
-								? "IVAC"
-								: storedTab || "CASE");
+					: forcedSpSync
+						? "SP"
+						: forcedFacSync
+							? "FAC"
+							: forcedFarSync
+								? "FAR"
+								: forcedIvacSync
+									? "IVAC"
+									: storedTab || "CASE");
 		setInitialTab(nextTab);
 		if (forcedCaseSync) {
 			setAutoSyncAfterReloadTab("CASE");
 		} else if (forcedCiclcarSync) {
 			setAutoSyncAfterReloadTab("CICLCAR");
+		} else if (forcedSpSync) {
+			setAutoSyncAfterReloadTab("SP");
 		} else if (forcedFacSync) {
 			setAutoSyncAfterReloadTab("FAC");
 		} else if (forcedFarSync) {
 			setAutoSyncAfterReloadTab("FAR");
 		} else if (forcedIvacSync) {
 			setAutoSyncAfterReloadTab("IVAC");
+			sessionStorage.removeItem("caseManagement.forceSpSync");
 		}
 		sessionStorage.removeItem("caseManagement.forceCaseSync");
 		sessionStorage.removeItem("caseManagement.forceCiclcarSync");
@@ -222,6 +224,16 @@ export default function CaseManagement() {
 					sessionStorage.setItem("caseManagement.activeTab", "IVAC");
 					sessionStorage.setItem(
 						"caseManagement.forceIvacSync",
+						"true",
+					);
+					window.location.reload();
+					previousOnline.current = isOnline;
+					return;
+				}
+				if (spPendingCount > 0) {
+					sessionStorage.setItem("caseManagement.activeTab", "SP");
+					sessionStorage.setItem(
+						"caseManagement.forceSpSync",
 						"true",
 					);
 					window.location.reload();

@@ -20,6 +20,9 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { FamilyCompositionForm } from "@/components/intake sheet SP/FamilyCompositionForm";
+import { useIntakeFormStore } from "@/store/useIntakeFormStore";
+import { buildSPCasePayload } from "@/lib/spSubmission";
+import { createOrUpdateLocalSpCase } from "@/services/spOfflineService";
 
 const tabOrder = ["identification", "familyComposition", "other"];
 
@@ -27,6 +30,16 @@ const tabLabels = {
 	identification: "Identification Data",
 	familyComposition: "Family Composition",
 	other: "Other",
+};
+
+const isBrowserOnline = () =>
+	typeof navigator !== "undefined" ? navigator.onLine : true;
+const forceSpTabReload = () => {
+	if (typeof window === "undefined") return;
+	sessionStorage.setItem("caseManagement.activeTab", "SP");
+	sessionStorage.setItem("caseManagement.forceTabAfterReload", "SP");
+	sessionStorage.setItem("caseManagement.forceSpSync", "true");
+	window.location.reload();
 };
 
 export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
@@ -56,6 +69,7 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 		notes: "",
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const { data: intakeData, resetAll } = useIntakeFormStore();
 
 	useEffect(() => {
 		if (!open) {
@@ -85,10 +99,13 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 				emergencyContactNumber: "",
 				notes: "",
 			});
+			resetAll();
 		}
-	}, [open]);
+	}, [open, resetAll]);
 
 	const currentTab = tabOrder[currentTabIndex];
+	const isFirstTab = currentTabIndex === 0;
+	const isLastTab = currentTabIndex === tabOrder.length - 1;
 
 	const handleChange = (field) => (event) => {
 		setFormState((prev) => ({
@@ -101,13 +118,26 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 		event.preventDefault();
 		setIsSubmitting(true);
 		try {
-			// Template only — replace with Supabase or offline save logic
-			toast.success("Single Parent signup saved", {
-				description:
-					"Template modal saved. Replace with your own logic.",
+			const casePayload = buildSPCasePayload(formState, intakeData);
+			await createOrUpdateLocalSpCase({
+				casePayload,
+				mode: "create",
 			});
+
+			const online = isBrowserOnline();
+			toast.success("Single Parent case queued", {
+				description: online
+					? "Sync queued and will push shortly."
+					: "Stored locally. Sync once you're online.",
+			});
+
+			resetAll();
 			setOpen(false);
 			onSuccess?.();
+
+			if (online) {
+				setTimeout(forceSpTabReload, 0);
+			}
 		} catch (err) {
 			toast.error("Signup failed", {
 				description: err?.message || "Please try again.",
@@ -115,6 +145,14 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 		} finally {
 			setIsSubmitting(false);
 		}
+	};
+
+	const handleNext = () => {
+		setCurrentTabIndex((prev) => Math.min(prev + 1, tabOrder.length - 1));
+	};
+
+	const handleBack = () => {
+		setCurrentTabIndex((prev) => Math.max(prev - 1, 0));
 	};
 
 	return (
@@ -143,10 +181,7 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 						))}
 					</TabsList>
 
-					<form
-						onSubmit={handleSubmit}
-						className="flex-1 overflow-auto"
-					>
+					<div className="flex-1 overflow-auto">
 						<TabsContent
 							value="identification"
 							className="space-y-6"
@@ -501,23 +536,36 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 						</TabsContent>
 
 						<div className="mt-4 flex items-center justify-end gap-2">
-							<Button
-								type="button"
-								variant="outline"
-								onClick={() => setOpen(false)}
-								className="cursor-pointer"
-							>
-								Cancel
-							</Button>
-							<Button
-								type="submit"
-								disabled={isSubmitting}
-								className="cursor-pointer"
-							>
-								{isSubmitting ? "Saving..." : "Save"}
-							</Button>
+							{!isFirstTab ? (
+								<Button
+									type="button"
+									variant="outline"
+									onClick={handleBack}
+									className="cursor-pointer"
+								>
+									Back
+								</Button>
+							) : null}
+							{isLastTab ? (
+								<Button
+									type="button"
+									onClick={handleSubmit}
+									disabled={isSubmitting}
+									className="cursor-pointer"
+								>
+									{isSubmitting ? "Saving..." : "Save"}
+								</Button>
+							) : (
+								<Button
+									type="button"
+									onClick={handleNext}
+									className="cursor-pointer"
+								>
+									Next
+								</Button>
+							)}
 						</div>
-					</form>
+					</div>
 				</Tabs>
 			</DialogContent>
 		</Dialog>
