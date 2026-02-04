@@ -17,6 +17,7 @@ const CASE_TABLES = [
 	{ key: "far", table: "far_case" },
 	{ key: "ivac", table: "ivac_cases" },
 	{ key: "sp", table: "sp_case" },
+	{ key: "fa", table: "fa_case" },
 ];
 
 const STATUS_WEIGHTS = {
@@ -135,6 +136,13 @@ function aggregateWorkloadRows(countMaps, roleMap) {
 				high: 0,
 				weightedScore: 0,
 			},
+			fa: (countMaps[6] || {})[manager] || {
+				total: 0,
+				active: 0,
+				urgent: 0,
+				high: 0,
+				weightedScore: 0,
+			},
 		};
 
 		const totalCases = Object.values(totals).reduce(
@@ -192,6 +200,7 @@ function aggregateWorkloadRows(countMaps, roleMap) {
 				far: totals.far.total,
 				ivac: totals.ivac.total,
 				sp: totals.sp.total,
+				fa: totals.fa.total,
 			},
 			cached_at: nowIso(),
 		});

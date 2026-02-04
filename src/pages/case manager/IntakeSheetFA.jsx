@@ -18,6 +18,8 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { buildFACasePayload } from "@/lib/faSubmission";
+import { createOrUpdateLocalFaCase } from "@/services/faOfflineService";
 
 const initialFormState = {
 	interview_date: "",
@@ -34,6 +36,16 @@ const initialFormState = {
 	four_ps_member: "",
 	transaction: "",
 	notes: "",
+};
+
+const isBrowserOnline = () =>
+	typeof navigator !== "undefined" ? navigator.onLine : true;
+const forceFaTabReload = () => {
+	if (typeof window === "undefined") return;
+	sessionStorage.setItem("caseManagement.activeTab", "FA");
+	sessionStorage.setItem("caseManagement.forceTabAfterReload", "FA");
+	sessionStorage.setItem("caseManagement.forceFaSync", "true");
+	window.location.reload();
 };
 
 export default function IntakeSheetFA({ open, setOpen, onSuccess }) {
@@ -58,12 +70,24 @@ export default function IntakeSheetFA({ open, setOpen, onSuccess }) {
 		event.preventDefault();
 		setIsSubmitting(true);
 		try {
-			toast.success("Financial Assistance saved", {
-				description:
-					"Template modal saved. Replace with your own logic.",
+			const casePayload = buildFACasePayload(formState);
+			await createOrUpdateLocalFaCase({
+				casePayload,
+				mode: "create",
+			});
+
+			const online = isBrowserOnline();
+			toast.success("Financial Assistance case queued", {
+				description: online
+					? "Sync queued and will push shortly."
+					: "Stored locally. Sync once you're online.",
 			});
 			setOpen(false);
 			onSuccess?.();
+
+			if (online) {
+				setTimeout(forceFaTabReload, 0);
+			}
 		} catch (error) {
 			toast.error("Save failed", {
 				description: error?.message || "Please try again.",

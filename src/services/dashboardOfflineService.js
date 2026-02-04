@@ -39,7 +39,7 @@ function isCacheFresh(timestamp) {
  * @returns {Promise<Object>} Object containing all case type arrays
  */
 async function fetchAllCasesFromSupabase() {
-	const [caseRes, ciclcarRes, facRes, farRes, ivacRes, spRes] =
+	const [caseRes, ciclcarRes, facRes, farRes, ivacRes, spRes, faRes] =
 		await Promise.all([
 			supabase
 				.from("case")
@@ -65,6 +65,10 @@ async function fetchAllCasesFromSupabase() {
 				.from("sp_case")
 				.select("*")
 				.order("created_at", { ascending: false }),
+			supabase
+				.from("fa_case")
+				.select("*")
+				.order("created_at", { ascending: false }),
 		]);
 
 	if (caseRes.error) throw caseRes.error;
@@ -73,6 +77,7 @@ async function fetchAllCasesFromSupabase() {
 	if (farRes.error) throw farRes.error;
 	if (ivacRes.error) throw ivacRes.error;
 	if (spRes.error) throw spRes.error;
+	if (faRes.error) throw faRes.error;
 
 	return {
 		cases: caseRes.data || [],
@@ -81,6 +86,7 @@ async function fetchAllCasesFromSupabase() {
 		far: farRes.data || [],
 		ivac: ivacRes.data || [],
 		sp: spRes.data || [],
+		fa: faRes.data || [],
 	};
 }
 
@@ -342,7 +348,7 @@ function applyFilters(cases, filters) {
 
 /**
  * Compute complete dashboard data from raw case data
- * @param {Object} rawData - Object with cases, ciclcar, fac, far, ivac, sp arrays
+ * @param {Object} rawData - Object with cases, ciclcar, fac, far, ivac, sp, fa arrays
  * @param {Object} filters - Optional filters
  * @returns {Object} Complete dashboard data structure
  */
@@ -354,6 +360,7 @@ function computeDashboardData(rawData, filters = {}) {
 		...(rawData.far || []).map((c) => ({ ...c, __source: "far" })),
 		...(rawData.ivac || []).map((c) => ({ ...c, __source: "ivac" })),
 		...(rawData.sp || []).map((c) => ({ ...c, __source: "sp" })),
+		...(rawData.fa || []).map((c) => ({ ...c, __source: "fa" })),
 	];
 
 	// Remove FAC and FAR from dashboard aggregates
@@ -505,6 +512,7 @@ export async function loadRawDataFromCache(dashboardType = "case") {
 			fac: cached.fac || [],
 			ivac: cached.ivac || [],
 			sp: cached.sp || [],
+			fa: cached.fa || [],
 		};
 	} catch (err) {
 		console.error("Error loading raw data from cache:", err);

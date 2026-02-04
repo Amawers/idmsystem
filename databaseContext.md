@@ -484,6 +484,41 @@ create trigger trigger_update_sp_case_updated_at BEFORE
 update on sp_case for EACH row
 execute FUNCTION update_sp_case_updated_at ();
 
+create table public.fa_case (
+id uuid not null default gen_random_uuid (),
+created_at timestamp with time zone null default now(),
+updated_at timestamp with time zone null default now(),
+case_manager text null,
+status text null default 'active'::text,
+priority text null default 'normal'::text,
+visibility text null default 'visible'::text,
+interview_date date null,
+date_recorded date null,
+client_name text null,
+address text null,
+purpose text null,
+benificiary_name text null,
+contact_number text null,
+prepared_by text null,
+status_report text null,
+client_category text null,
+gender text null,
+four_ps_member text null,
+transaction text null,
+notes text null,
+constraint fa_case_pkey primary key (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_fa_case_created_at on public.fa_case using btree (created_at desc) TABLESPACE pg_default;
+
+create index IF not exists idx_fa_case_status on public.fa_case using btree (status) TABLESPACE pg_default;
+
+create index IF not exists idx_fa_case_case_manager on public.fa_case using btree (case_manager) TABLESPACE pg_default;
+
+create trigger trigger_update_fa_case_updated_at BEFORE
+update on fa_case for EACH row
+execute FUNCTION update_fa_case_updated_at ();
+
 create table public.permissions (
 id uuid not null default gen_random_uuid (),
 name text not null,
@@ -1038,7 +1073,7 @@ update_enrollment_attendance
 RETURN TYPE: trigger
 
 DECLARE
-total_sessions INTEGER;
+total*sessions INTEGER;
 attended_sessions INTEGER;
 completed_sessions INTEGER;
 absent_unexcused_sessions INTEGER;
@@ -1049,10 +1084,10 @@ new_progress_level TEXT;
 BEGIN
 -- Get counts for this enrollment from service_delivery table
 SELECT
-COUNT(_) as total,
+COUNT(*) as total,
 COUNT(_) FILTER (WHERE attendance = true AND attendance_status = 'present') as attended,
-COUNT(_) FILTER (WHERE attendance = true AND attendance_status = 'present') as completed,
-COUNT(_) FILTER (WHERE attendance_status = 'absent') as absent_unexcused,
+COUNT(_) FILTER (WHERE attendance = true AND attendance*status = 'present') as completed,
+COUNT(*) FILTER (WHERE attendance_status = 'absent') as absent_unexcused,
 COUNT(\*) FILTER (WHERE attendance_status = 'excused') as absent_excused
 INTO
 total_sessions,
@@ -1140,6 +1175,14 @@ RETURN NEW;
 END;
 ======================
 
+update_fa_case_updated_at
+RETURN TYPE: trigger
+BEGIN
+NEW.updated_at = NOW();
+RETURN NEW;
+END;
+======================
+
 update_ivac_cases_updated_at
 RETURN TYPE: trigger
 BEGIN
@@ -1213,15 +1256,15 @@ RETURN TYPE: INTEGER
 PARAMETERS: program_id_param UUID
 
 DECLARE
-total_enrollments INTEGER;
+total*enrollments INTEGER;
 completed_enrollments INTEGER;
 total_progress DECIMAL;
 success_rate_calculated INTEGER;
 BEGIN
 -- Get enrollment statistics for this program
 SELECT
-COUNT(_) as total,
-COUNT(_) FILTER (WHERE status = 'completed') as completed,
+COUNT(*) as total,
+COUNT(\_) FILTER (WHERE status = 'completed') as completed,
 -- Sum of all progress: completed count as 100%, active use their progress_percentage
 SUM(
 CASE
