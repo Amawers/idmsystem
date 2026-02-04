@@ -19,6 +19,7 @@ const CASE_TABLES = [
 	{ key: "sp", table: "sp_case" },
 	{ key: "fa", table: "fa_case" },
 	{ key: "pwd", table: "pwd_case" },
+	{ key: "sc", table: "sc_case" },
 ];
 
 const STATUS_WEIGHTS = {
@@ -151,6 +152,13 @@ function aggregateWorkloadRows(countMaps, roleMap) {
 				high: 0,
 				weightedScore: 0,
 			},
+			sc: (countMaps[8] || {})[manager] || {
+				total: 0,
+				active: 0,
+				urgent: 0,
+				high: 0,
+				weightedScore: 0,
+			},
 		};
 
 		const totalCases = Object.values(totals).reduce(
@@ -210,6 +218,7 @@ function aggregateWorkloadRows(countMaps, roleMap) {
 				sp: totals.sp.total,
 				fa: totals.fa.total,
 				pwd: totals.pwd.total,
+				sc: totals.sc.total,
 			},
 			cached_at: nowIso(),
 		});

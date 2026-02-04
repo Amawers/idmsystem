@@ -39,41 +39,54 @@ function isCacheFresh(timestamp) {
  * @returns {Promise<Object>} Object containing all case type arrays
  */
 async function fetchAllCasesFromSupabase() {
-	const [caseRes, ciclcarRes, facRes, farRes, ivacRes, spRes, faRes, pwdRes] =
-		await Promise.all([
-			supabase
-				.from("case")
-				.select("*")
-				.order("updated_at", { ascending: false }),
-			supabase
-				.from("ciclcar_case")
-				.select("*")
-				.order("updated_at", { ascending: false }),
-			supabase
-				.from("fac_case")
-				.select("*")
-				.order("created_at", { ascending: false }),
-			supabase
-				.from("far_case")
-				.select("*")
-				.order("created_at", { ascending: false }),
-			supabase
-				.from("ivac_cases")
-				.select("*")
-				.order("created_at", { ascending: false }),
-			supabase
-				.from("sp_case")
-				.select("*")
-				.order("created_at", { ascending: false }),
-			supabase
-				.from("fa_case")
-				.select("*")
-				.order("created_at", { ascending: false }),
-			supabase
-				.from("pwd_case")
-				.select("*")
-				.order("created_at", { ascending: false }),
-		]);
+	const [
+		caseRes,
+		ciclcarRes,
+		facRes,
+		farRes,
+		ivacRes,
+		spRes,
+		faRes,
+		pwdRes,
+		scRes,
+	] = await Promise.all([
+		supabase
+			.from("case")
+			.select("*")
+			.order("updated_at", { ascending: false }),
+		supabase
+			.from("ciclcar_case")
+			.select("*")
+			.order("updated_at", { ascending: false }),
+		supabase
+			.from("fac_case")
+			.select("*")
+			.order("created_at", { ascending: false }),
+		supabase
+			.from("far_case")
+			.select("*")
+			.order("created_at", { ascending: false }),
+		supabase
+			.from("ivac_cases")
+			.select("*")
+			.order("created_at", { ascending: false }),
+		supabase
+			.from("sp_case")
+			.select("*")
+			.order("created_at", { ascending: false }),
+		supabase
+			.from("fa_case")
+			.select("*")
+			.order("created_at", { ascending: false }),
+		supabase
+			.from("pwd_case")
+			.select("*")
+			.order("created_at", { ascending: false }),
+		supabase
+			.from("sc_case")
+			.select("*")
+			.order("created_at", { ascending: false }),
+	]);
 
 	if (caseRes.error) throw caseRes.error;
 	if (ciclcarRes.error) throw ciclcarRes.error;
@@ -83,6 +96,7 @@ async function fetchAllCasesFromSupabase() {
 	if (spRes.error) throw spRes.error;
 	if (faRes.error) throw faRes.error;
 	if (pwdRes.error) throw pwdRes.error;
+	if (scRes.error) throw scRes.error;
 
 	return {
 		cases: caseRes.data || [],
@@ -93,6 +107,7 @@ async function fetchAllCasesFromSupabase() {
 		sp: spRes.data || [],
 		fa: faRes.data || [],
 		pwd: pwdRes.data || [],
+		sc: scRes.data || [],
 	};
 }
 
@@ -355,6 +370,7 @@ function applyFilters(cases, filters) {
 /**
  * Compute complete dashboard data from raw case data
  * @param {Object} rawData - Object with cases, ciclcar, fac, far, ivac, sp, fa, pwd arrays
+ * @param {Object} rawData - Object with cases, ciclcar, fac, far, ivac, sp, fa, pwd, sc arrays
  * @param {Object} filters - Optional filters
  * @returns {Object} Complete dashboard data structure
  */
@@ -368,6 +384,7 @@ function computeDashboardData(rawData, filters = {}) {
 		...(rawData.sp || []).map((c) => ({ ...c, __source: "sp" })),
 		...(rawData.fa || []).map((c) => ({ ...c, __source: "fa" })),
 		...(rawData.pwd || []).map((c) => ({ ...c, __source: "pwd" })),
+		...(rawData.sc || []).map((c) => ({ ...c, __source: "sc" })),
 	];
 
 	// Remove FAC and FAR from dashboard aggregates
@@ -521,6 +538,7 @@ export async function loadRawDataFromCache(dashboardType = "case") {
 			sp: cached.sp || [],
 			fa: cached.fa || [],
 			pwd: cached.pwd || [],
+			sc: cached.sc || [],
 		};
 	} catch (err) {
 		console.error("Error loading raw data from cache:", err);

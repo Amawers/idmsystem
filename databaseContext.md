@@ -584,6 +584,78 @@ create trigger trigger_update_pwd_case_updated_at BEFORE
 update on pwd_case for EACH row
 execute FUNCTION update_pwd_case_updated_at ();
 
+create table public.sc_case (
+id uuid not null default gen_random_uuid (),
+created_at timestamp with time zone null default now(),
+updated_at timestamp with time zone null default now(),
+case_manager text null,
+status text null default 'active'::text,
+priority text null default 'normal'::text,
+visibility text null default 'visible'::text,
+senior_name text null,
+region text null,
+province text null,
+city_municipality text null,
+barangay text null,
+date_of_birth date null,
+place_of_birth text null,
+marital_status text null,
+gender text null,
+contact_number text null,
+email_address text null,
+religion text null,
+ethnic_origin text null,
+language_spoken_written text null,
+osca_id_number text null,
+gsis text null,
+tin text null,
+philhealth text null,
+sc_association text null,
+other_gov_id text null,
+capability_to_travel text null,
+service_business_employment text null,
+current_pension text null,
+name_of_spouse text null,
+fathers_name text null,
+mothers_maiden_name text null,
+children jsonb null default '[]'::jsonb,
+other_dependents text null,
+educational_attainment jsonb null default '[]'::jsonb,
+technical_skills jsonb null default '[]'::jsonb,
+community_service_involvement jsonb null default '[]'::jsonb,
+living_with jsonb null default '[]'::jsonb,
+household_condition jsonb null default '[]'::jsonb,
+source_of_income_assistance jsonb null default '[]'::jsonb,
+assets_real_immovable jsonb null default '[]'::jsonb,
+assets_personal_movable jsonb null default '[]'::jsonb,
+needs_commonly_encountered jsonb null default '[]'::jsonb,
+medical_concern jsonb null default '[]'::jsonb,
+dental_concern jsonb null default '[]'::jsonb,
+optical jsonb null default '[]'::jsonb,
+hearing jsonb null default '[]'::jsonb,
+social jsonb null default '[]'::jsonb,
+difficulty jsonb null default '[]'::jsonb,
+medicines_for_maintenance jsonb null default '[]'::jsonb,
+scheduled_checkup text null,
+checkup_frequency text null,
+assisting_person text null,
+relation_to_senior text null,
+interviewer text null,
+date_of_interview date null,
+place_of_interview text null,
+constraint sc_case_pkey primary key (id)
+) TABLESPACE pg_default;
+
+create index IF not exists idx_sc_case_created_at on public.sc_case using btree (created_at desc) TABLESPACE pg_default;
+
+create index IF not exists idx_sc_case_status on public.sc_case using btree (status) TABLESPACE pg_default;
+
+create index IF not exists idx_sc_case_case_manager on public.sc_case using btree (case_manager) TABLESPACE pg_default;
+
+create trigger trigger_update_sc_case_updated_at BEFORE
+update on sc_case for EACH row
+execute FUNCTION update_sc_case_updated_at ();
+
 create table public.permissions (
 id uuid not null default gen_random_uuid (),
 name text not null,
@@ -1249,6 +1321,14 @@ END;
 ======================
 
 update_pwd_case_updated_at
+RETURN TYPE: trigger
+BEGIN
+NEW.updated_at = NOW();
+RETURN NEW;
+END;
+======================
+
+update_sc_case_updated_at
 RETURN TYPE: trigger
 BEGIN
 NEW.updated_at = NOW();
