@@ -1,46 +1,75 @@
 /**
- * @file auditLog.js
- * @description Utility functions for creating audit trail entries
- * @module lib/auditLog
+ * Audit log helpers.
+ *
+ * Responsibilities:
+ * - Write audit trail entries to the `audit_log` table.
+ * - Fetch audit log entries with common filters/pagination.
+ * - Provide shared constants for action types, categories, and severity.
  */
 
 import supabase from "@/../config/supabase";
 
 /**
- * Creates an audit log entry in the database
- * 
- * @param {Object} params - Audit log parameters
- * @param {string} params.actionType - Specific action (e.g., 'login', 'create_case', 'update_role')
- * @param {string} params.actionCategory - Category (e.g., 'auth', 'case', 'user', 'system', 'permission')
- * @param {string} params.description - Human-readable description
- * @param {string} [params.resourceType] - Type of resource affected (e.g., 'case', 'user', 'role')
- * @param {string} [params.resourceId] - ID of affected resource
- * @param {Object} [params.metadata] - Additional context (before/after values, etc.)
- * @param {string} [params.severity='info'] - Severity level ('info', 'warning', 'critical')
- * @returns {Promise<Object>} Created audit log entry
- * 
- * @example
- * // Log a case creation
- * await createAuditLog({
- *   actionType: 'create_case',
- *   actionCategory: 'case',
- *   description: 'Created new case intake form',
- *   resourceType: 'case',
- *   resourceId: caseId,
- *   metadata: { caseType: 'CICL-CAR', clientName: 'John Doe' }
- * });
- * 
- * @example
- * // Log a role change (critical action)
- * await createAuditLog({
- *   actionType: 'update_role',
- *   actionCategory: 'user',
- *   description: `Changed user role from ${oldRole} to ${newRole}`,
- *   resourceType: 'user',
- *   resourceId: userId,
- *   metadata: { oldRole, newRole },
- *   severity: 'critical'
- * });
+ * @typedef {"info"|"warning"|"critical"} AuditSeverity
+ */
+
+/**
+ * @typedef {Object} CreateAuditLogParams
+ * @property {string} actionType Specific action (e.g., "login", "create_case").
+ * @property {string} actionCategory Category (e.g., "auth", "case", "user").
+ * @property {string} description Human-readable description.
+ * @property {string|null} [resourceType=null] Type of resource affected.
+ * @property {string|null} [resourceId=null] ID of affected resource.
+ * @property {Record<string, any>|null} [metadata=null] Additional context.
+ * @property {AuditSeverity} [severity="info"] Severity level.
+ */
+
+/**
+ * @typedef {Object} FetchAuditLogsFilters
+ * @property {string|null} [userId=null] Filter by user ID.
+ * @property {string|null} [actionCategory=null] Filter by category.
+ * @property {string|null} [actionType=null] Filter by action type.
+ * @property {AuditSeverity|null} [severity=null] Filter by severity.
+ * @property {Date|null} [startDate=null] Filter by start date (inclusive).
+ * @property {Date|null} [endDate=null] Filter by end date (inclusive).
+ * @property {number} [limit=50] Page size.
+ * @property {number} [offset=0] Offset for pagination.
+ */
+
+/**
+ * @typedef {Object} AuditLogRow
+ * A loose representation of an `audit_log` row returned by Supabase.
+ * @property {string} id
+ * @property {string} user_id
+ * @property {string} [user_email]
+ * @property {string|null} [user_role]
+ * @property {string} action_type
+ * @property {string} action_category
+ * @property {string|null} [resource_type]
+ * @property {string|null} [resource_id]
+ * @property {string} description
+ * @property {Record<string, any>|null} [metadata]
+ * @property {AuditSeverity} severity
+ * @property {string} [created_at]
+ */
+
+/**
+ * @typedef {Object} FetchAuditLogsResult
+ * @property {AuditLogRow[]|null} data
+ * @property {any} error
+ * @property {number} count
+ */
+
+/**
+ * Create an audit log entry in the database.
+ *
+ * Behavior:
+ * - Uses the currently authenticated Supabase user.
+ * - Looks up the user's role from the `profile` table.
+ * - Returns `null` if no user is present or insertion fails.
+ *
+ * @param {CreateAuditLogParams} params
+ * @returns {Promise<AuditLogRow|null>}
  */
 export async function createAuditLog({
 	actionType,
@@ -101,18 +130,9 @@ export async function createAuditLog({
 }
 
 /**
- * Fetch audit logs with filtering and pagination
- * 
- * @param {Object} filters - Filter options
- * @param {string} [filters.userId] - Filter by user ID
- * @param {string} [filters.actionCategory] - Filter by category
- * @param {string} [filters.actionType] - Filter by action type
- * @param {string} [filters.severity] - Filter by severity
- * @param {Date} [filters.startDate] - Filter by start date
- * @param {Date} [filters.endDate] - Filter by end date
- * @param {number} [filters.limit=50] - Number of records to fetch
- * @param {number} [filters.offset=0] - Offset for pagination
- * @returns {Promise<Object>} { data: Array, count: number, error: Object }
+ * Fetch audit logs with filtering and pagination.
+ * @param {FetchAuditLogsFilters} [filters]
+ * @returns {Promise<FetchAuditLogsResult>}
  */
 export async function fetchAuditLogs({
 	userId = null,
@@ -151,7 +171,7 @@ export async function fetchAuditLogs({
 }
 
 /**
- * Common audit log action types for consistency
+ * Common audit log action types for consistency.
  */
 export const AUDIT_ACTIONS = {
 	// Authentication
@@ -200,7 +220,7 @@ export const AUDIT_ACTIONS = {
 };
 
 /**
- * Common audit log categories
+ * Common audit log categories.
  */
 export const AUDIT_CATEGORIES = {
 	AUTH: "auth",
@@ -212,7 +232,7 @@ export const AUDIT_CATEGORIES = {
 };
 
 /**
- * Severity levels
+ * Severity levels.
  */
 export const AUDIT_SEVERITY = {
 	INFO: "info",

@@ -1,17 +1,14 @@
 /**
- * @file dashboardOfflineService.js
- * @description Offline caching and synchronization service for Dashboard metrics
- * @module services/dashboardOfflineService
+ * Offline cache for Dashboard metrics.
  *
- * @overview
- * This service provides offline support for the Case Management Dashboard by:
- * - Caching dashboard metrics and raw case data in IndexedDB
- * - Serving cached data when offline
- * - Auto-syncing when reconnecting to the network
- * - Computing metrics from local cached data
+ * Responsibilities:
+ * - Cache computed dashboard payloads and the raw source data in IndexedDB (Dexie).
+ * - Serve cached data when offline (or when refresh is not forced).
+ * - Recompute dashboard metrics locally from cached raw data.
  *
- * The service follows the same pattern as ciclcarOfflineService.js to ensure
- * consistency across the application's offline capabilities.
+ * Notes:
+ * - Cache freshness is time-based via `CACHE_DURATION`.
+ * - This module intentionally favors resilience over perfect freshness when offline.
  */
 
 import { liveQuery } from "dexie";
@@ -19,15 +16,35 @@ import offlineCaseDb from "@/db/offlineCaseDb";
 import supabase from "@/../config/supabase";
 
 /**
- * Cache duration in milliseconds (5 minutes)
- * Dashboard data is refreshed if cache is older than this
+ * @typedef {"case"|"program"} DashboardType
  */
+
+/**
+ * @typedef {Object} RawCaseSnapshot
+ * @property {Array<any>} [cases]
+ * @property {Array<any>} [ciclcar]
+ * @property {Array<any>} [fac]
+ * @property {Array<any>} [far]
+ * @property {Array<any>} [ivac]
+ * @property {Array<any>} [sp]
+ * @property {Array<any>} [fa]
+ * @property {Array<any>} [pwd]
+ * @property {Array<any>} [sc]
+ */
+
+/**
+ * @typedef {Object} ProgramSnapshot
+ * @property {Array<any>} [programs]
+ * @property {Array<any>} [enrollments]
+ */
+
+/** Cache duration in milliseconds (5 minutes). */
 const CACHE_DURATION = 5 * 60 * 1000;
 
 /**
- * Check if cached data is still fresh
- * @param {number} timestamp - Cache timestamp
- * @returns {boolean} True if cache is fresh
+ * Checks whether a cache entry timestamp is still within the freshness window.
+ * @param {number} timestamp
+ * @returns {boolean}
  */
 function isCacheFresh(timestamp) {
 	if (!timestamp) return false;
@@ -35,8 +52,8 @@ function isCacheFresh(timestamp) {
 }
 
 /**
- * Fetch all case data from Supabase
- * @returns {Promise<Object>} Object containing all case type arrays
+ * Fetches the full case dataset needed for dashboard aggregation.
+ * @returns {Promise<RawCaseSnapshot>}
  */
 async function fetchAllCasesFromSupabase() {
 	const [
@@ -112,8 +129,8 @@ async function fetchAllCasesFromSupabase() {
 }
 
 /**
- * Fetch program and enrollment data from Supabase
- * @returns {Promise<Object>} Object containing programs and enrollments
+ * Fetches programs + enrollments needed for the program dashboard.
+ * @returns {Promise<ProgramSnapshot>}
  */
 async function fetchProgramDataFromSupabase() {
 	const [programsRes, enrollmentsRes] = await Promise.all([
@@ -137,10 +154,10 @@ async function fetchProgramDataFromSupabase() {
 }
 
 /**
- * Compute program statistics
- * @param {Array} programs - Array of program objects
- * @param {Array} enrollments - Array of enrollment objects
- * @returns {Object} Computed program statistics
+ * Computes program statistics from raw program and enrollment rows.
+ * @param {Array<any>} programs
+ * @param {Array<any>} enrollments
+ * @returns {Object}
  */
 function computeProgramStats(programs, enrollments) {
 	const total = programs.length;
@@ -188,9 +205,9 @@ function computeProgramStats(programs, enrollments) {
 }
 
 /**
- * Compute complete program dashboard data
- * @param {Object} rawData - Object with programs and enrollments arrays
- * @returns {Object} Complete program dashboard data structure
+ * Computes the full program dashboard payload.
+ * @param {ProgramSnapshot} rawData
+ * @returns {Object}
  */
 function computeProgramDashboardData(rawData) {
 	const programs = rawData.programs || [];
@@ -212,9 +229,9 @@ function computeProgramDashboardData(rawData) {
 }
 
 /**
- * Compute statistics from case data
- * @param {Array} cases - Array of case objects
- * @returns {Object} Computed statistics
+ * Computes aggregate statistics from the (already combined) case rows.
+ * @param {Array<any>} cases
+ * @returns {Object}
  */
 function computeCaseStats(cases) {
 	// Drop Family Assistance Card (fac) and Family Assistance Record (far) from all dashboard stats
@@ -284,10 +301,10 @@ function computeCaseStats(cases) {
 }
 
 /**
- * Compute trend data (percentage change)
- * @param {number} current - Current value
- * @param {number} previous - Previous value
- * @returns {Object} Trend data with percentage and direction
+ * Computes a simple percentage trend comparing two values.
+ * @param {number} current
+ * @param {number} previous
+ * @returns {{percentage: string|number, direction: "up"|"down"|"neutral"}}
  */
 function computeTrend(current, previous) {
 	if (previous === 0) {
@@ -304,10 +321,10 @@ function computeTrend(current, previous) {
 }
 
 /**
- * Compute time-based trends for charts
- * @param {Array} cases - Array of case objects
- * @param {number} days - Number of days to analyze
- * @returns {Array} Daily case counts
+ * Builds daily counts for charting.
+ * @param {Array<any>} cases
+ * @param {number} [days=30]
+ * @returns {Array<{date: string, count: number, label: string}>}
  */
 function computeTimeTrends(cases, days = 30) {
 	const trends = [];
@@ -336,10 +353,10 @@ function computeTimeTrends(cases, days = 30) {
 }
 
 /**
- * Apply filters to case data
- * @param {Array} cases - Array of case objects
- * @param {Object} filters - Filter criteria
- * @returns {Array} Filtered cases
+ * Applies UI filters to cases before aggregation.
+ * @param {Array<any>} cases
+ * @param {Object} filters
+ * @returns {Array<any>}
  */
 function applyFilters(cases, filters) {
 	let filteredCases = cases;
@@ -368,11 +385,10 @@ function applyFilters(cases, filters) {
 }
 
 /**
- * Compute complete dashboard data from raw case data
- * @param {Object} rawData - Object with cases, ciclcar, fac, far, ivac, sp, fa, pwd arrays
- * @param {Object} rawData - Object with cases, ciclcar, fac, far, ivac, sp, fa, pwd, sc arrays
- * @param {Object} filters - Optional filters
- * @returns {Object} Complete dashboard data structure
+ * Computes the full case dashboard payload from raw Supabase snapshots.
+ * @param {RawCaseSnapshot} rawData
+ * @param {Object} [filters]
+ * @returns {Object}
  */
 function computeDashboardData(rawData, filters = {}) {
 	const allCases = [
@@ -430,9 +446,9 @@ function computeDashboardData(rawData, filters = {}) {
 }
 
 /**
- * Load dashboard data from cache
- * @param {string} dashboardType - Type of dashboard ('case', 'user', etc.)
- * @returns {Promise<Object|null>} Cached dashboard data or null
+ * Loads a computed dashboard payload from cache (if fresh).
+ * @param {DashboardType|string} [dashboardType="case"]
+ * @returns {Promise<Object|null>}
  */
 export async function loadDashboardFromCache(dashboardType = "case") {
 	try {
@@ -456,9 +472,9 @@ export async function loadDashboardFromCache(dashboardType = "case") {
 }
 
 /**
- * Save dashboard data to cache
- * @param {string} dashboardType - Type of dashboard
- * @param {Object} data - Dashboard data to cache
+ * Saves a computed dashboard payload to cache.
+ * @param {DashboardType|string} dashboardType
+ * @param {Object} data
  * @returns {Promise<void>}
  */
 export async function saveDashboardToCache(dashboardType, data) {
@@ -485,9 +501,9 @@ export async function saveDashboardToCache(dashboardType, data) {
 }
 
 /**
- * Save raw case data to cache for offline recomputation
- * @param {string} dashboardType - Type of dashboard
- * @param {Object} rawData - Raw case data
+ * Saves raw snapshot data used to recompute the dashboard while offline.
+ * @param {DashboardType|string} dashboardType
+ * @param {Object} rawData
  * @returns {Promise<void>}
  */
 export async function saveRawDataToCache(dashboardType, rawData) {
@@ -517,9 +533,9 @@ export async function saveRawDataToCache(dashboardType, rawData) {
 }
 
 /**
- * Load raw data from cache
- * @param {string} dashboardType - Type of dashboard
- * @returns {Promise<Object|null>} Cached raw data or null
+ * Loads raw snapshot data from cache.
+ * @param {DashboardType|string} [dashboardType="case"]
+ * @returns {Promise<RawCaseSnapshot|ProgramSnapshot|null>}
  */
 export async function loadRawDataFromCache(dashboardType = "case") {
 	try {
@@ -547,10 +563,10 @@ export async function loadRawDataFromCache(dashboardType = "case") {
 }
 
 /**
- * Fetch and cache dashboard data from Supabase
- * @param {string} dashboardType - Type of dashboard
- * @param {Object} filters - Optional filters
- * @returns {Promise<Object>} Dashboard data
+ * Fetches fresh raw data from Supabase, computes the dashboard payload, and caches both.
+ * @param {DashboardType|string} [dashboardType="case"]
+ * @param {Object} [filters]
+ * @returns {Promise<Object>}
  */
 export async function fetchAndCacheDashboardData(
 	dashboardType = "case",
@@ -588,11 +604,15 @@ export async function fetchAndCacheDashboardData(
 }
 
 /**
- * Get dashboard data - tries cache first, then fetches if needed
- * @param {string} dashboardType - Type of dashboard
- * @param {Object} filters - Optional filters
- * @param {boolean} forceRefresh - Force refresh from Supabase
- * @returns {Promise<Object>} Dashboard data and metadata
+ * Gets dashboard data using an offline-first strategy.
+ * - Cache-first when offline or when refresh is not forced.
+ * - If cached raw data exists, recompute locally when computed cache is missing.
+ * - When online, fetches fresh data when required.
+ *
+ * @param {DashboardType|string} [dashboardType="case"]
+ * @param {Object} [filters]
+ * @param {boolean} [forceRefresh=false]
+ * @returns {Promise<{data: Object, fromCache: boolean, recomputed?: boolean}>}
  */
 export async function getDashboardData(
 	dashboardType = "case",
@@ -631,8 +651,8 @@ export async function getDashboardData(
 }
 
 /**
- * Clear dashboard cache
- * @param {string} dashboardType - Type of dashboard, or null to clear all
+ * Clears cached dashboard payloads and raw snapshots.
+ * @param {DashboardType|string|null} [dashboardType=null]
  * @returns {Promise<void>}
  */
 export async function clearDashboardCache(dashboardType = null) {
@@ -656,9 +676,9 @@ export async function clearDashboardCache(dashboardType = null) {
 }
 
 /**
- * Live query for dashboard cache updates
- * @param {string} dashboardType - Type of dashboard
- * @returns {Observable} Dexie live query observable
+ * LiveQuery stream of the computed dashboard payload.
+ * @param {DashboardType|string} [dashboardType="case"]
+ * @returns {import('dexie').LiveQuery<Object|null>}
  */
 export function dashboardCacheLiveQuery(dashboardType = "case") {
 	return liveQuery(async () => {

@@ -14,46 +14,57 @@ import { toast } from "sonner";
 import { CheckCircle, XCircle } from "lucide-react";
 import { Eye, EyeOff } from "lucide-react";
 
+/**
+ * Profile update dialog.
+ *
+ * Provides avatar upload and password update flows.
+ * - Avatar: selects an image file, previews it, then uploads via `authStore.uploadAvatar`.
+ * - Password: updates via `authStore.updatePassword`, with a basic old/new check.
+ *
+ * @param {{ open: boolean, setOpen: (open: boolean) => void }} props
+ */
 export default function Profile({ open, setOpen }) {
-	// Zustand store: current user, avatar URL, upload and password functions
-	const { user, role, avatar_url, uploadAvatar, updatePassword } = useAuthStore();
+	/** Zustand store state/actions used by this dialog. */
+	const { user, role, avatar_url, uploadAvatar, updatePassword } =
+		useAuthStore();
 
-	// Map roles from DB to readable labels
+	/** Human-readable labels for roles stored in the profile/auth metadata. */
 	const roleLabels = {
 		social_worker: "Social Worker",
 	};
 
-	// ===============================
-	// LOCAL STATE
-	// ===============================
-	const [file, setFile] = useState(null); // new avatar file
-	const [preview, setPreview] = useState(null); // preview of selected avatar
-	const [loading, setLoading] = useState(false); // loading state for save button
-	const [oldPassword, setOldPassword] = useState(""); // old password input
-	const [newPassword, setNewPassword] = useState(""); // new password input
-	const [showOld, setShowOld] = useState(false); // toggle old password visibility
-	const [showNew, setShowNew] = useState(false); // toggle new password visibility
+	// Local UI state
+	const [file, setFile] = useState(null);
+	const [preview, setPreview] = useState(null);
+	const [loading, setLoading] = useState(false);
+	const [oldPassword, setOldPassword] = useState("");
+	const [newPassword, setNewPassword] = useState("");
+	const [showOld, setShowOld] = useState(false);
+	const [showNew, setShowNew] = useState(false);
 
-	const fileInputRef = useRef(null); // ref to hidden file input for avatar
+	/** @type {import('react').RefObject<HTMLInputElement>} */
+	const fileInputRef = useRef(null);
 
-	// ===============================
-	// HANDLE FILE CHANGE
-	// ===============================
+	/**
+	 * Handles avatar file selection and sets a local preview URL.
+	 * @param {import('react').ChangeEvent<HTMLInputElement>} e
+	 */
 	const handleFileChange = (e) => {
 		const selected = e.target.files[0];
 		if (selected) {
-			setFile(selected); // save file to state
-			setPreview(URL.createObjectURL(selected)); // create preview URL
+			setFile(selected);
+			setPreview(URL.createObjectURL(selected));
 		}
 	};
 
-	// ===============================
-	// HANDLE SAVE (avatar + password)
-	// ===============================
+	/**
+	 * Persists changes (avatar upload and/or password update).
+	 * Uses toast notifications for success/error feedback.
+	 * @returns {Promise<void>}
+	 */
 	const handleSave = async () => {
 		setLoading(true);
 		try {
-			// --- Upload avatar if selected ---
 			if (file) {
 				const newAvatar = await uploadAvatar(file);
 				useAuthStore.setState({ avatar_url: newAvatar });
@@ -61,7 +72,6 @@ export default function Profile({ open, setOpen }) {
 				setPreview(null);
 			}
 
-			// --- Update password only if old + new provided ---
 			if (oldPassword && newPassword) {
 				const success = await updatePassword(oldPassword, newPassword);
 				if (!success) {
@@ -73,11 +83,10 @@ export default function Profile({ open, setOpen }) {
 				}
 			}
 
-			// --- Success toast ---
 			toast.success("Profile updated!", {
 				icon: <CheckCircle className="text-green-500" size={20} />,
 			});
-			setOpen(false); // close dialog
+			setOpen(false);
 		} catch (err) {
 			console.error(err);
 			toast.error("Update failed", {
@@ -98,15 +107,14 @@ export default function Profile({ open, setOpen }) {
 				</DialogHeader>
 
 				<div className="flex gap-6 p-4">
-					{/* -----------LEFT SIDE: Avatar + Name + Role------------- */}
 					<div className="flex flex-col items-center space-y-4 w-36">
 						<div
 							className="relative w-24 h-24 rounded-full overflow-hidden cursor-pointer group"
-							onClick={() => fileInputRef.current?.click()} // open file picker
+							onClick={() => fileInputRef.current?.click()}
 						>
 							<Avatar className="w-24 h-24">
 								<AvatarImage
-									src={preview || avatar_url} // preview if selected, else current avatar
+									src={preview || avatar_url}
 									alt="Profile Picture"
 								/>
 								<AvatarFallback>
@@ -114,7 +122,6 @@ export default function Profile({ open, setOpen }) {
 								</AvatarFallback>
 							</Avatar>
 
-							{/* Overlay edit icon on hover */}
 							<div className="absolute inset-0 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
 								<div className="w-full h-full flex flex-col items-center justify-center backdrop-blur-sm bg-white/10 rounded-full">
 									<Pencil className="w-4 h-4 text-white mb-1" />
@@ -125,7 +132,6 @@ export default function Profile({ open, setOpen }) {
 							</div>
 						</div>
 
-						{/* Hidden file input */}
 						<input
 							type="file"
 							accept="image/*"
@@ -134,7 +140,6 @@ export default function Profile({ open, setOpen }) {
 							className="hidden"
 						/>
 
-						{/* Display full name + role */}
 						<div className="text-center">
 							<p className="text-md font-semibold">
 								{roleLabels[role] || "Role"}
@@ -145,10 +150,7 @@ export default function Profile({ open, setOpen }) {
 						</div>
 					</div>
 
-					{/* -------------RIGHT SIDE: Email + Password + Save------------ */}
 					<div className="flex-1 space-y-4">
-
-						{/* OLD PASSWORD */}
 						<div className="space-y-2">
 							<label className="font-medium">Old Password</label>
 							<div className="relative">
@@ -175,7 +177,6 @@ export default function Profile({ open, setOpen }) {
 							</div>
 						</div>
 
-						{/* NEW PASSWORD */}
 						<div className="space-y-2">
 							<label className="font-medium">New Password</label>
 							<div className="relative">
@@ -202,7 +203,6 @@ export default function Profile({ open, setOpen }) {
 							</div>
 						</div>
 
-						{/* SAVE BUTTON */}
 						<div className="flex justify-end">
 							<Button
 								onClick={handleSave}

@@ -1,33 +1,30 @@
 /**
- * @file ResourceAlerts.jsx
- * @description Resource Alerts and Notifications page
- * @module pages/head/ResourceAlerts
- * 
- * Features:
- * - Low stock alerts
- * - Budget threshold warnings
- * - Critical resource notifications
+ * Resource alerts page.
+ *
+ * This view is a thin wrapper around `ResourceAlertsPanel` and provides the page
+ * header for monitoring critical inventory/budget notifications. Route access is
+ * enforced by the app router via `ProtectedRoute`.
  */
 
 import ResourceAlertsPanel from "@/components/resources/ResourceAlertsPanel";
 
 /**
- * Resource Alerts Page Component
- * @returns {JSX.Element} Resource Alerts page
+ * Resource alerts and notifications page.
+ * @returns {JSX.Element}
  */
 export default function ResourceAlerts() {
-  return (
-    <div className="flex-1 space-y-3 p-3 md:px-6">
-      {/* Page Header */}
-      <div>
-        <h2 className="text-xl font-bold tracking-tight">Resource Alerts</h2>
-        <p className="text-sm text-muted-foreground">
-          Monitor critical alerts and notifications
-        </p>
-      </div>
+	return (
+		<div className="flex-1 space-y-3 p-3 md:px-6">
+			<div>
+				<h2 className="text-xl font-bold tracking-tight">
+					Resource Alerts
+				</h2>
+				<p className="text-sm text-muted-foreground">
+					Monitor critical alerts and notifications
+				</p>
+			</div>
 
-      {/* Resource Alerts Content */}
-      <ResourceAlertsPanel />
-    </div>
-  );
+			<ResourceAlertsPanel />
+		</div>
+	);
 }

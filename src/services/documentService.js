@@ -1,24 +1,50 @@
-// =============================================
-// Document Service
-// ---------------------------------------------
-// Purpose: Centralized API for document metadata + file storage operations.
-//
-// Key Responsibilities:
-// - Create a metadata row in `public.documents`
-// - Upload to Supabase Storage bucket `documents`
-// - List documents for a related entity (case/program/operation)
-// - Create signed download URLs
-// - Delete document (storage object + metadata row)
-//
-// Notes:
-// - Uses a two-step flow (insert metadata -> upload file). This matches storage RLS policies
-//   that only allow uploading when a metadata row exists for (user, bucket, path).
-// =============================================
+/**
+ * Centralized API for document metadata + Supabase Storage operations.
+ *
+ * Responsibilities:
+ * - Create a metadata row in `public.documents`.
+ * - Upload file bytes to the Supabase Storage bucket `documents`.
+ * - List documents for a related entity (case/program/operation).
+ * - Create signed download URLs.
+ * - Delete a document (storage object + metadata row).
+ *
+ * Notes:
+ * - Uses a two-step flow: insert metadata -> upload file.
+ *   This matches common Storage RLS patterns where uploads are permitted only if a
+ *   corresponding metadata row exists for (user, bucket, path).
+ */
 
 import supabase from "@/../config/supabase";
 
 const DOCUMENT_BUCKET = "documents";
 
+/**
+ * @typedef {"case"|"program"|"operation"} DocumentRelatedType
+ */
+
+/**
+ * @typedef {Object} DocumentRow
+ * @property {string} id
+ * @property {DocumentRelatedType} related_type
+ * @property {string|null} related_id
+ * @property {string|null} title
+ * @property {string|null} description
+ * @property {string} original_filename
+ * @property {string} storage_bucket
+ * @property {string} storage_path
+ * @property {string|null} mime_type
+ * @property {number|null} size_bytes
+ * @property {string|null} uploaded_by
+ * @property {string} created_at
+ * @property {string|null} deleted_at
+ * @property {string|null} deleted_by
+ */
+
+/**
+ * Normalizes a user-provided filename for safe use in storage paths.
+ * @param {string} name
+ * @returns {string}
+ */
 function sanitizeFilename(name) {
 	if (!name) return "file";
 	return name
@@ -28,15 +54,26 @@ function sanitizeFilename(name) {
 		.slice(0, 180);
 }
 
+/**
+ * Infers MIME type from a browser `File` object.
+ * @param {File} file
+ * @returns {string|null}
+ */
 function inferMimeType(file) {
 	return file?.type || null;
 }
 
+/**
+ * Builds a unique storage path for a document.
+ * @param {{ relatedType: DocumentRelatedType, relatedId: string|null, originalFilename: string }} params
+ * @returns {string}
+ */
 function buildStoragePath({ relatedType, relatedId, originalFilename }) {
 	const safeName = sanitizeFilename(originalFilename);
-	const uuid = (globalThis.crypto && typeof globalThis.crypto.randomUUID === "function")
-		? globalThis.crypto.randomUUID()
-		: `${Date.now()}_${Math.random().toString(16).slice(2)}`;
+	const uuid =
+		globalThis.crypto && typeof globalThis.crypto.randomUUID === "function"
+			? globalThis.crypto.randomUUID()
+			: `${Date.now()}_${Math.random().toString(16).slice(2)}`;
 
 	const scope = relatedType;
 	const idPart = relatedId || "general";
@@ -47,14 +84,15 @@ function buildStoragePath({ relatedType, relatedId, originalFilename }) {
  * Lists active (non-deleted) documents for a given related entity.
  *
  * @param {Object} params
- * @param {'case'|'program'|'operation'} params.relatedType
+ * @param {DocumentRelatedType} params.relatedType
  * @param {string|null} params.relatedId
+ * @returns {Promise<DocumentRow[]>}
  */
 export async function listDocuments({ relatedType, relatedId }) {
 	const query = supabase
 		.from("documents")
 		.select(
-			"id, related_type, related_id, title, description, original_filename, storage_bucket, storage_path, mime_type, size_bytes, uploaded_by, created_at, deleted_at, deleted_by"
+			"id, related_type, related_id, title, description, original_filename, storage_bucket, storage_path, mime_type, size_bytes, uploaded_by, created_at, deleted_at, deleted_by",
 		)
 		.eq("related_type", relatedType)
 		.is("deleted_at", null)
@@ -72,11 +110,12 @@ export async function listDocuments({ relatedType, relatedId }) {
  * Creates a metadata placeholder row. Storage upload policy expects this row to exist first.
  *
  * @param {Object} params
- * @param {'case'|'program'|'operation'} params.relatedType
+ * @param {DocumentRelatedType} params.relatedType
  * @param {string|null} params.relatedId
  * @param {File} params.file
  * @param {string|null} [params.title]
  * @param {string|null} [params.description]
+ * @returns {Promise<DocumentRow>}
  */
 export async function createDocumentMetadata({
 	relatedType,
@@ -127,6 +166,7 @@ export async function createDocumentMetadata({
  * @param {Object} params
  * @param {string} params.storagePath
  * @param {File} params.file
+ * @returns {Promise<true>}
  */
 export async function uploadDocumentFile({ storagePath, file }) {
 	const { error } = await supabase.storage
@@ -146,8 +186,12 @@ export async function uploadDocumentFile({ storagePath, file }) {
  * @param {Object} params
  * @param {string} params.storagePath
  * @param {number} [params.expiresInSeconds=300]
+ * @returns {Promise<string|null>}
  */
-export async function createDocumentSignedUrl({ storagePath, expiresInSeconds = 300 }) {
+export async function createDocumentSignedUrl({
+	storagePath,
+	expiresInSeconds = 300,
+}) {
 	const { data, error } = await supabase.storage
 		.from(DOCUMENT_BUCKET)
 		.createSignedUrl(storagePath, expiresInSeconds);
@@ -160,7 +204,8 @@ export async function createDocumentSignedUrl({ storagePath, expiresInSeconds = 
  * Deletes the storage object and then deletes the metadata row.
  *
  * @param {Object} params
- * @param {Object} params.documentRow
+ * @param {DocumentRow} params.documentRow
+ * @returns {Promise<true>}
  */
 export async function deleteDocument({ documentRow }) {
 	if (!documentRow?.id) throw new Error("Invalid document");
@@ -186,9 +231,29 @@ export async function deleteDocument({ documentRow }) {
 /**
  * Full upload helper: creates metadata -> uploads file.
  * Cleans up metadata if upload fails.
+ *
+ * @param {Object} params
+ * @param {DocumentRelatedType} params.relatedType
+ * @param {string|null} params.relatedId
+ * @param {File} params.file
+ * @param {string|null} [params.title]
+ * @param {string|null} [params.description]
+ * @returns {Promise<DocumentRow>}
  */
-export async function uploadDocument({ relatedType, relatedId, file, title = null, description = null }) {
-	const doc = await createDocumentMetadata({ relatedType, relatedId, file, title, description });
+export async function uploadDocument({
+	relatedType,
+	relatedId,
+	file,
+	title = null,
+	description = null,
+}) {
+	const doc = await createDocumentMetadata({
+		relatedType,
+		relatedId,
+		file,
+		title,
+		description,
+	});
 	try {
 		await uploadDocumentFile({ storagePath: doc.storage_path, file });
 		return doc;

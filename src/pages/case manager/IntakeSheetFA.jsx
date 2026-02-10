@@ -1,4 +1,15 @@
 "use client";
+/**
+ * FA (Financial Assistance) intake dialog.
+ *
+ * Responsibilities:
+ * - Collect a single-page intake payload and queue it via the offline service.
+ * - When online, trigger a one-time reload into the FA tab to encourage immediate sync.
+ *
+ * Notes:
+ * - This component maintains local form state (not `useIntakeFormStore`).
+ * - Tab forcing is coordinated via `sessionStorage` keys consumed by the case management page.
+ */
 import { useEffect, useState } from "react";
 import {
 	Dialog,
@@ -21,6 +32,25 @@ import { toast } from "sonner";
 import { buildFACasePayload } from "@/lib/faSubmission";
 import { createOrUpdateLocalFaCase } from "@/services/faOfflineService";
 
+/**
+ * @typedef {Object} FaFormState
+ * @property {string} interview_date
+ * @property {string} date_recorded
+ * @property {string} client_name
+ * @property {string} address
+ * @property {string} purpose
+ * @property {string} benificiary_name
+ * @property {string} contact_number
+ * @property {string} prepared_by
+ * @property {string} status_report
+ * @property {string} client_category
+ * @property {string} gender
+ * @property {string} four_ps_member
+ * @property {string} transaction
+ * @property {string} notes
+ */
+
+/** @type {FaFormState} */
 const initialFormState = {
 	interview_date: "",
 	date_recorded: "",
@@ -38,8 +68,19 @@ const initialFormState = {
 	notes: "",
 };
 
+/**
+ * Safe online check for browser-like environments.
+ * @returns {boolean} True when the browser reports connectivity, otherwise true by default.
+ */
 const isBrowserOnline = () =>
 	typeof navigator !== "undefined" ? navigator.onLine : true;
+
+/**
+ * Forces the Case Management view to reopen on the FA tab.
+ *
+ * Used after queuing a create while online so the FA list can refresh/sync.
+ * @returns {void}
+ */
 const forceFaTabReload = () => {
 	if (typeof window === "undefined") return;
 	sessionStorage.setItem("caseManagement.activeTab", "FA");
@@ -48,10 +89,25 @@ const forceFaTabReload = () => {
 	window.location.reload();
 };
 
+/**
+ * @typedef {Object} IntakeSheetFaProps
+ * @property {boolean} open
+ * @property {(open: boolean) => void} setOpen
+ * @property {() => void} [onSuccess]
+ */
+
+/**
+ * @param {IntakeSheetFaProps} props
+ * @returns {JSX.Element}
+ */
 export default function IntakeSheetFA({ open, setOpen, onSuccess }) {
 	const [formState, setFormState] = useState(initialFormState);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 
+	/**
+	 * Resets local state when the dialog closes.
+	 * @returns {void}
+	 */
 	useEffect(() => {
 		if (!open) {
 			setFormState(initialFormState);
@@ -59,6 +115,11 @@ export default function IntakeSheetFA({ open, setOpen, onSuccess }) {
 		}
 	}, [open]);
 
+	/**
+	 * Field-change handler factory for controlled inputs.
+	 * @param {keyof FaFormState} field
+	 * @returns {(event: { target: { value: string } }) => void}
+	 */
 	const handleChange = (field) => (event) => {
 		setFormState((prev) => ({
 			...prev,
@@ -66,6 +127,11 @@ export default function IntakeSheetFA({ open, setOpen, onSuccess }) {
 		}));
 	};
 
+	/**
+	 * Queues a new FA record via the offline service.
+	 * @param {React.FormEvent<HTMLFormElement>} event
+	 * @returns {Promise<void>}
+	 */
 	const handleSubmit = async (event) => {
 		event.preventDefault();
 		setIsSubmitting(true);

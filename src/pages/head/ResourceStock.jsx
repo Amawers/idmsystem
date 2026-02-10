@@ -1,33 +1,30 @@
 /**
- * @file ResourceStock.jsx
- * @description Stock Management page for inventory control
- * @module pages/head/ResourceStock
- * 
- * Features:
- * - Stock level monitoring
- * - Inventory updates and adjustments
- * - Stock alerts and notifications
+ * Resource stock management page.
+ *
+ * This view is a thin wrapper around `StockManagement` and provides the page header
+ * for inventory monitoring and adjustments. Route access is enforced by the app
+ * router via `ProtectedRoute`.
  */
 
 import StockManagement from "@/components/resources/StockManagement";
 
 /**
- * Resource Stock Page Component
- * @returns {JSX.Element} Resource Stock page
+ * Stock management page.
+ * @returns {JSX.Element}
  */
 export default function ResourceStock() {
-  return (
-    <div className="flex-1 space-y-2 p-0 md:px-6">
-      {/* Page Header */}
-      <div>
-        <h2 className="text-lg font-bold tracking-tight">Stock Management</h2>
-        <p className="text-sm text-muted-foreground">
-          Monitor and manage inventory stock levels
-        </p>
-      </div>
+	return (
+		<div className="flex-1 space-y-2 p-0 md:px-6">
+			<div>
+				<h2 className="text-lg font-bold tracking-tight">
+					Stock Management
+				</h2>
+				<p className="text-sm text-muted-foreground">
+					Monitor and manage inventory stock levels
+				</p>
+			</div>
 
-      {/* Stock Management Content */}
-      <StockManagement />
-    </div>
-  );
+			<StockManagement />
+		</div>
+	);
 }

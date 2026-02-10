@@ -1,10 +1,76 @@
 /**
- * @file spSubmission.js
- * @description Single Parent case submission helpers
- * Maps intake form data to Supabase `sp_case` table.
+ * Single Parent (SP) case submission helpers.
  *
- * @author IDM System
- * @date 2026-02-04
+ * Maps intake form + store-backed intake sections into a payload compatible with the Supabase
+ * `sp_case` table.
+ */
+
+/**
+ * @typedef {Object} SpFormState
+ * @property {string} [caseManager]
+ * @property {string} [status]
+ * @property {string} [priority]
+ * @property {string} [visibility]
+ * @property {string} [name]
+ * @property {string|number} [age]
+ * @property {string} [address]
+ * @property {string|Date|null} [birthDate]
+ * @property {string} [birthPlace]
+ * @property {string} [civilStatus]
+ * @property {string} [educationalAttainment]
+ * @property {string} [occupation]
+ * @property {string} [monthlyIncome]
+ * @property {string} [religion]
+ * @property {string|Date|null} [interviewDate]
+ * @property {string} [yearMember]
+ * @property {string} [skills]
+ * @property {string} [soloParentDuration]
+ * @property {boolean|null} [fourPs]
+ * @property {string} [parentsWhereabouts]
+ * @property {string} [backgroundInformation]
+ * @property {string} [assessment]
+ * @property {string} [cellphoneNumber]
+ * @property {string} [emergencyContactPerson]
+ * @property {string} [emergencyContactNumber]
+ * @property {string} [notes]
+ */
+
+/**
+ * @typedef {Object} IntakeStoreData
+ * @property {{ members?: unknown[] }} [familyComposition]
+ */
+
+/**
+ * @typedef {Object} SpCasePayload
+ * @property {string|null} case_manager
+ * @property {string|null} status
+ * @property {string|null} priority
+ * @property {string|null} visibility
+ * @property {string|null} full_name
+ * @property {string|null} first_name
+ * @property {string|null} last_name
+ * @property {number|null} age
+ * @property {string|null} address
+ * @property {string|null} birth_date
+ * @property {string|null} birth_place
+ * @property {string|null} civil_status
+ * @property {string|null} educational_attainment
+ * @property {string|null} occupation
+ * @property {string|null} monthly_income
+ * @property {string|null} religion
+ * @property {string|null} interview_date
+ * @property {string|null} year_member
+ * @property {string|null} skills
+ * @property {string|null} solo_parent_duration
+ * @property {boolean|null} four_ps
+ * @property {string|null} parents_whereabouts
+ * @property {string|null} background_information
+ * @property {string|null} assessment
+ * @property {string|null} contact_number
+ * @property {string|null} emergency_contact_person
+ * @property {string|null} emergency_contact_number
+ * @property {string|null} notes
+ * @property {unknown[]} family_members
  */
 
 /**
@@ -42,10 +108,10 @@ const parseName = (fullName) => {
 };
 
 /**
- * Build Single Parent case payload from intake form data
- * @param {object} formState - Local intake form state (IntakeSheetSP)
- * @param {object} intakeStoreData - Intake store data (useIntakeFormStore)
- * @returns {object} Payload suitable for Supabase `sp_case` insert
+ * Build Single Parent case payload from intake form data.
+ * @param {SpFormState} [formState] Local intake form state (IntakeSheetSP).
+ * @param {IntakeStoreData} [intakeStoreData] Intake store data (useIntakeFormStore).
+ * @returns {SpCasePayload} Payload suitable for Supabase `sp_case` insert.
  */
 export function buildSPCasePayload(formState = {}, intakeStoreData = {}) {
 	const nameFields = parseName(formState.name);

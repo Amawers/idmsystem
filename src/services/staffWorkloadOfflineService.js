@@ -1,11 +1,59 @@
 /**
- * @file staffWorkloadOfflineService.js
- * @description Offline-first helpers for Resource Allocation > Staff workload view.
+ * Offline-first helpers for Resource Allocation → Staff workload.
+ *
+ * This module builds a derived “workload snapshot” by aggregating case counts
+ * across multiple case tables, then caches the computed rows in IndexedDB.
+ *
+ * Design notes:
+ * - When offline, snapshot loading is skipped (no network calls) and the UI is
+ *   expected to read the last cached rows via `staffWorkloadLiveQuery()`.
+ * - Workload is an approximation based on status + priority weights; it is not
+ *   a strict SLA metric.
  */
 
 import { liveQuery } from "dexie";
 import supabase from "@/../config/supabase";
 import offlineCaseDb from "@/db/offlineCaseDb";
+
+/**
+ * @typedef {Object} CaseCount
+ * @property {number} total
+ * @property {number} active
+ * @property {number} urgent
+ * @property {number} high
+ * @property {number} weightedScore
+ */
+
+/** @typedef {Record<string, CaseCount>} CaseCountMap */
+
+/**
+ * @typedef {Object} WorkloadBreakdown
+ * @property {number} vac
+ * @property {number} ciclcar
+ * @property {number} fac
+ * @property {number} far
+ * @property {number} ivac
+ * @property {number} sp
+ * @property {number} fa
+ * @property {number} pwd
+ * @property {number} sc
+ */
+
+/**
+ * @typedef {Object} StaffWorkloadRow
+ * @property {string} staff_name
+ * @property {string} case_manager
+ * @property {string} staff_role
+ * @property {number} total_cases
+ * @property {number} active_cases
+ * @property {number} urgent_cases
+ * @property {number} high_priority_cases
+ * @property {number} weighted_score
+ * @property {number} workload_percentage
+ * @property {"available"|"partially_available"|"busy"|"unavailable"} availability_status
+ * @property {WorkloadBreakdown} breakdown
+ * @property {string} cached_at
+ */
 
 const STAFF_WORKLOAD_TABLE = offlineCaseDb.table("staff_workload_cache");
 const PROFILE_TABLE = "profile";
@@ -51,6 +99,11 @@ const isBrowserOnline = () =>
 	typeof navigator !== "undefined" ? navigator.onLine : true;
 const nowIso = () => new Date().toISOString();
 
+/**
+ * Fetches basic case fields needed for aggregation and returns counts per manager.
+ * @param {string} tableName
+ * @returns {Promise<CaseCountMap>}
+ */
 async function fetchCaseCounts(tableName) {
 	const { data, error } = await supabase
 		.from(tableName)
@@ -87,6 +140,16 @@ async function fetchCaseCounts(tableName) {
 	return counts;
 }
 
+/**
+ * Aggregates per-table counts into per-staff derived rows.
+ *
+ * Workload percentage is derived from a weighted score normalized against an
+ * arbitrary capacity baseline (50). Thresholds map to availability buckets.
+ *
+ * @param {Array<CaseCountMap>} countMaps
+ * @param {Record<string, string>} roleMap Map of full name → role.
+ * @returns {StaffWorkloadRow[]}
+ */
 function aggregateWorkloadRows(countMaps, roleMap) {
 	const managers = new Set();
 	countMaps.forEach((map = {}) =>
@@ -182,6 +245,7 @@ function aggregateWorkloadRows(countMaps, roleMap) {
 			0,
 		);
 
+		// Baseline capacity: 50 weighted points → ~100% workload.
 		const workloadPercentage = Math.min(
 			100,
 			Math.round((weightedScore / 50) * 100),
@@ -228,6 +292,12 @@ function aggregateWorkloadRows(countMaps, roleMap) {
 	return rows;
 }
 
+/**
+ * Loads a fresh workload snapshot from Supabase and caches it to IndexedDB.
+ *
+ * When offline, it performs no remote calls and returns `{ offline: true }`.
+ * @returns {Promise<{ success: true, offline?: true, count?: number, lastSyncedAt?: string }>}
+ */
 export async function loadStaffWorkloadSnapshot() {
 	if (!isBrowserOnline()) {
 		return { success: true, offline: true };
@@ -265,6 +335,12 @@ export async function loadStaffWorkloadSnapshot() {
 	return { success: true, count: rows.length, lastSyncedAt: nowIso() };
 }
 
+/**
+ * LiveQuery stream of cached workload rows (IndexedDB).
+ * Consumers can subscribe via Dexie `liveQuery` to update UI reactively.
+ *
+ * @returns {import('dexie').LiveQuery<StaffWorkloadRow[]>}
+ */
 export const staffWorkloadLiveQuery = () =>
 	liveQuery(async () => {
 		const rows = await STAFF_WORKLOAD_TABLE.toArray();

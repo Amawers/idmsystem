@@ -1,4 +1,18 @@
 "use client";
+
+/**
+ * Case Intake (Create) dialog.
+ *
+ * Responsibilities:
+ * - Renders a multi-tab intake flow backed by `useIntakeFormStore`.
+ * - On the final step, builds a normalized payload from store sections and queues a local create via
+ *   `createOrUpdateLocalCase` (offline-first).
+ * - When online, triggers a tab reload/sync signal via `sessionStorage` keys to refresh the Case list.
+ *
+ * Notes:
+ * - This component currently initializes `currentTabIndex` to the last step, which effectively
+ *   bypasses step-by-step navigation (intentional per existing behavior).
+ */
 import { useState, useEffect } from "react";
 import {
 	Dialog,
@@ -20,7 +34,15 @@ import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { toast } from "sonner";
 import { createOrUpdateLocalCase } from "@/services/caseOfflineService";
 
-const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+/** @returns {boolean} True when the browser reports an online network state. */
+const isBrowserOnline = () =>
+	typeof navigator !== "undefined" ? navigator.onLine : true;
+
+/**
+ * Forces the Case Management view to reopen the CASE tab after a full reload.
+ *
+ * Used as a simple way to refresh data/sync state after a successful create while online.
+ */
 const forceCaseTabReload = () => {
 	if (typeof window === "undefined") return;
 	sessionStorage.setItem("caseManagement.activeTab", "CASE");
@@ -29,6 +51,35 @@ const forceCaseTabReload = () => {
 	window.location.reload();
 };
 
+/**
+ * @typedef {(
+ *   | "identifying-data"
+ *   | "family-composition"
+ *   | "perpetrator-information"
+ *   | "presenting-problem"
+ *   | "background-information"
+ *   | "community-information"
+ *   | "assessment"
+ *   | "recommendation"
+ *   | "identifying-data2"
+ *   | "family-composition2"
+ *   | "victim-information2"
+ *   | "presenting-problem2"
+ *   | "background-information2"
+ *   | "community-information2"
+ *   | "assessment2"
+ *   | "recommendation2"
+ * )} CaseCreateTabId
+ */
+
+/**
+ * @typedef IntakeSheetCaseCreateProps
+ * @property {boolean} open Controls dialog visibility.
+ * @property {(open: boolean) => void} setOpen Dialog open-state setter.
+ * @property {() => void} [onSuccess] Optional callback fired after a successful create is queued.
+ */
+
+/** @type {CaseCreateTabId[]} */
 const tabOrder = [
 	"identifying-data",
 	"family-composition",
@@ -48,11 +99,9 @@ const tabOrder = [
 	"recommendation2",
 ];
 
-//! capitalize value
-//! verifiy input fields from pciture 
-//! 
-
-
+/**
+ * @param {IntakeSheetCaseCreateProps} props
+ */
 export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 	// DISABLED: Skip directly to the last form (recommendation2)
 	// Set currentTabIndex to last tab index (15 = recommendation2)
@@ -61,7 +110,14 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 	const { getAllData, resetAll } = useIntakeFormStore();
 	const [isSaving, setIsSaving] = useState(false);
 
-	// Helper function to safely extract value from data
+	/**
+	 * Safely picks the first non-empty value for any of the provided keys.
+	 *
+	 * @template T
+	 * @param {T | null | undefined} obj
+	 * @param {...string} keys
+	 * @returns {unknown | null}
+	 */
 	const pick = (obj, ...keys) => {
 		for (const k of keys) {
 			const v = obj?.[k];
@@ -70,7 +126,12 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 		return null;
 	};
 
-	// Helper function to normalize dates
+	/**
+	 * Normalizes a date-like input into an ISO `YYYY-MM-DD` string.
+	 *
+	 * @param {unknown} v
+	 * @returns {string | null}
+	 */
 	const normalizeDate = (v) => {
 		if (!v) return null;
 		const d = v instanceof Date ? v : new Date(v);
@@ -78,7 +139,10 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 		return d.toISOString().slice(0, 10);
 	};
 
-	// Create case record
+	/**
+	 * Builds the case payload from store sections and queues a local create.
+	 * When online, signals the parent Case view to refresh/sync via a full reload.
+	 */
 	const handleCreate = async () => {
 		try {
 			setIsSaving(true);
@@ -109,34 +173,59 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 
 			// Extract family members
 			const familyMembers = [
-				...(Array.isArray(familyData?.members) ? familyData.members : []),
-				...(Array.isArray(familyData2?.members) ? familyData2.members : []),
+				...(Array.isArray(familyData?.members)
+					? familyData.members
+					: []),
+				...(Array.isArray(familyData2?.members)
+					? familyData2.members
+					: []),
 			];
 
 			// Build case payload
 			const casePayload = {
-				case_manager: pick(caseDetails, "caseManager", "case_manager") ?? null,
+				case_manager:
+					pick(caseDetails, "caseManager", "case_manager") ?? null,
 				status: pick(caseDetails, "status") ?? null,
 				priority: pick(caseDetails, "priority") ?? null,
 
 				// Identifying data
 				identifying_name: pick(identifying, "name", "fullName") ?? null,
-				identifying_referral_source: pick(identifying, "referralSource", "referral_source") ?? null,
+				identifying_referral_source:
+					pick(identifying, "referralSource", "referral_source") ??
+					null,
 				identifying_alias: pick(identifying, "alias") ?? null,
 				identifying_age: pick(identifying, "age") ?? null,
-				identifying_status: pick(identifying, "civilStatus", "status") ?? null,
+				identifying_status:
+					pick(identifying, "civilStatus", "status") ?? null,
 				identifying_occupation: pick(identifying, "occupation") ?? null,
 				identifying_income: pick(identifying, "income") ?? null,
 				identifying_sex: pick(identifying, "sex") ?? null,
 				identifying_address: pick(identifying, "address") ?? null,
-				identifying_case_type: pick(identifying, "caseType", "case_type") ?? null,
+				identifying_case_type:
+					pick(identifying, "caseType", "case_type") ?? null,
 				identifying_religion: pick(identifying, "religion") ?? null,
-				identifying_educational_attainment: pick(identifying, "educationalAttainment", "educational_attainment") ?? null,
-				identifying_contact_person: pick(identifying, "contactPerson", "contact_person") ?? null,
-				identifying_birth_place: pick(identifying, "birthPlace", "birth_place") ?? null,
-				identifying_respondent_name: pick(identifying, "respondentName", "respondent_name") ?? null,
-				identifying_birthday: normalizeDate(pick(identifying, "birthday", "birth_date")) ?? null,
-				identifying_intake_date: normalizeDate(pick(identifying, "intakeDate", "intake_date")) ?? null,
+				identifying_educational_attainment:
+					pick(
+						identifying,
+						"educationalAttainment",
+						"educational_attainment",
+					) ?? null,
+				identifying_contact_person:
+					pick(identifying, "contactPerson", "contact_person") ??
+					null,
+				identifying_birth_place:
+					pick(identifying, "birthPlace", "birth_place") ?? null,
+				identifying_respondent_name:
+					pick(identifying, "respondentName", "respondent_name") ??
+					null,
+				identifying_birthday:
+					normalizeDate(
+						pick(identifying, "birthday", "birth_date"),
+					) ?? null,
+				identifying_intake_date:
+					normalizeDate(
+						pick(identifying, "intakeDate", "intake_date"),
+					) ?? null,
 
 				// Perpetrator data
 				perpetrator_name: pick(perpetrator, "name") ?? null,
@@ -144,35 +233,70 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 				perpetrator_alias: pick(perpetrator, "alias") ?? null,
 				perpetrator_sex: pick(perpetrator, "sex") ?? null,
 				perpetrator_address: pick(perpetrator, "address") ?? null,
-				perpetrator_victim_relation: pick(perpetrator, "victimRelation", "victim_relation") ?? null,
-				perpetrator_offence_type: pick(perpetrator, "offenceType", "offence_type") ?? null,
-				perpetrator_commission_datetime: normalizeDate(pick(perpetrator, "commissionDatetime", "commission_datetime")) ?? null,
+				perpetrator_victim_relation:
+					pick(perpetrator, "victimRelation", "victim_relation") ??
+					null,
+				perpetrator_offence_type:
+					pick(perpetrator, "offenceType", "offence_type") ?? null,
+				perpetrator_commission_datetime:
+					normalizeDate(
+						pick(
+							perpetrator,
+							"commissionDatetime",
+							"commission_datetime",
+						),
+					) ?? null,
 
 				// Problems/Assessment/Recommendation
-				presenting_problem: pick(problem, "problem", "presentingProblem") ?? null,
-				background_info: pick(background, "backgroundInfo", "background") ?? null,
-				community_info: pick(community, "communityInfo", "community") ?? null,
+				presenting_problem:
+					pick(problem, "problem", "presentingProblem") ?? null,
+				background_info:
+					pick(background, "backgroundInfo", "background") ?? null,
+				community_info:
+					pick(community, "communityInfo", "community") ?? null,
 				assessment: pick(assessment, "assessment") ?? null,
 				recommendation: pick(recommendation, "recommendation") ?? null,
 
 				// Part 2 - Identifying data
-				identifying2_intake_date: normalizeDate(pick(identifying2, "intakeDate", "intake_date")) ?? null,
-				identifying2_name: pick(identifying2, "name", "fullName") ?? null,
-				identifying2_referral_source: pick(identifying2, "referralSource", "referral_source") ?? null,
+				identifying2_intake_date:
+					normalizeDate(
+						pick(identifying2, "intakeDate", "intake_date"),
+					) ?? null,
+				identifying2_name:
+					pick(identifying2, "name", "fullName") ?? null,
+				identifying2_referral_source:
+					pick(identifying2, "referralSource", "referral_source") ??
+					null,
 				identifying2_alias: pick(identifying2, "alias") ?? null,
 				identifying2_age: pick(identifying2, "age") ?? null,
-				identifying2_status: pick(identifying2, "civilStatus", "status") ?? null,
-				identifying2_occupation: pick(identifying2, "occupation") ?? null,
+				identifying2_status:
+					pick(identifying2, "civilStatus", "status") ?? null,
+				identifying2_occupation:
+					pick(identifying2, "occupation") ?? null,
 				identifying2_income: pick(identifying2, "income") ?? null,
 				identifying2_sex: pick(identifying2, "sex") ?? null,
 				identifying2_address: pick(identifying2, "address") ?? null,
-				identifying2_case_type: pick(identifying2, "caseType", "case_type") ?? null,
+				identifying2_case_type:
+					pick(identifying2, "caseType", "case_type") ?? null,
 				identifying2_religion: pick(identifying2, "religion") ?? null,
-				identifying2_educational_attainment: pick(identifying2, "educationalAttainment", "educational_attainment") ?? null,
-				identifying2_contact_person: pick(identifying2, "contactPerson", "contact_person") ?? null,
-				identifying2_birth_place: pick(identifying2, "birthPlace", "birth_place") ?? null,
-				identifying2_respondent_name: pick(identifying2, "respondentName", "respondent_name") ?? null,
-				identifying2_birthday: normalizeDate(pick(identifying2, "birthday", "birth_date")) ?? null,
+				identifying2_educational_attainment:
+					pick(
+						identifying2,
+						"educationalAttainment",
+						"educational_attainment",
+					) ?? null,
+				identifying2_contact_person:
+					pick(identifying2, "contactPerson", "contact_person") ??
+					null,
+				identifying2_birth_place:
+					pick(identifying2, "birthPlace", "birth_place") ?? null,
+				identifying2_respondent_name:
+					pick(identifying2, "respondentName", "respondent_name") ??
+					null,
+				identifying2_birthday:
+					normalizeDate(
+						pick(identifying2, "birthday", "birth_date"),
+					) ?? null,
 
 				// Part 2 - Victim data
 				victim2_name: pick(victim2, "name") ?? null,
@@ -180,16 +304,29 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 				victim2_alias: pick(victim2, "alias") ?? null,
 				victim2_sex: pick(victim2, "sex") ?? null,
 				victim2_address: pick(victim2, "address") ?? null,
-				victim2_victim_relation: pick(victim2, "victimRelation", "victim_relation") ?? null,
-				victim2_offence_type: pick(victim2, "offenceType", "offence_type") ?? null,
-				victim2_commission_datetime: normalizeDate(pick(victim2, "commissionDatetime", "commission_datetime")) ?? null,
+				victim2_victim_relation:
+					pick(victim2, "victimRelation", "victim_relation") ?? null,
+				victim2_offence_type:
+					pick(victim2, "offenceType", "offence_type") ?? null,
+				victim2_commission_datetime:
+					normalizeDate(
+						pick(
+							victim2,
+							"commissionDatetime",
+							"commission_datetime",
+						),
+					) ?? null,
 
 				// Part 2 - Problems/Assessment/Recommendation
-				presenting_problem2: pick(problem2, "problem", "presentingProblem") ?? null,
-				background_info2: pick(background2, "backgroundInfo", "background") ?? null,
-				community_info2: pick(community2, "communityInfo", "community") ?? null,
+				presenting_problem2:
+					pick(problem2, "problem", "presentingProblem") ?? null,
+				background_info2:
+					pick(background2, "backgroundInfo", "background") ?? null,
+				community_info2:
+					pick(community2, "communityInfo", "community") ?? null,
 				assessment2: pick(assessment2, "assessment") ?? null,
-				recommendation2: pick(recommendation2, "recommendation") ?? null,
+				recommendation2:
+					pick(recommendation2, "recommendation") ?? null,
 			};
 
 			console.log("💾 Final case payload:", casePayload);
@@ -217,7 +354,10 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 				try {
 					onSuccess();
 				} catch (callbackError) {
-					console.error("Case create onSuccess callback failed:", callbackError);
+					console.error(
+						"Case create onSuccess callback failed:",
+						callbackError,
+					);
 				}
 			}
 
@@ -227,14 +367,16 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 		} catch (err) {
 			console.error("Failed to create case record:", err);
 			toast.error("Creation Failed", {
-				description: err.message || "An error occurred while creating the case. Please try again.",
+				description:
+					err.message ||
+					"An error occurred while creating the case. Please try again.",
 			});
 		} finally {
 			setIsSaving(false);
 		}
 	};
 
-	// Go to next tab
+	/** Advances to the next step; on the last step, triggers `handleCreate()`. */
 	const goNext = async () => {
 		setCompletedTabs((prev) => new Set([...prev, currentTabIndex]));
 		if (currentTabIndex < tabOrder.length - 1) {
@@ -245,14 +387,14 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 		}
 	};
 
-	// Go to previous tab
+	/** Moves back one step (no-op at index 0). */
 	const goBack = () => {
 		if (currentTabIndex > 0) {
 			setCurrentTabIndex((prev) => prev - 1);
 		}
 	};
 
-	// Reset when dialog opens/closes
+	/** Resets local navigation state when the dialog closes. */
 	useEffect(() => {
 		if (!open) {
 			setCurrentTabIndex(15); // Reset to last tab (disabled step-by-step)
@@ -260,14 +402,14 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 		}
 	}, [open]);
 
-	// Ensure a fresh form when creating a new record
+	/** Clears the shared intake store when starting a new create session. */
 	useEffect(() => {
 		if (open) {
 			resetAll();
 		}
 	}, [open, resetAll]);
 
-	// Auto-center active tab
+	/** Scrolls the tab strip to keep the active tab centered. */
 	useEffect(() => {
 		const container = document.getElementById("case-tabs-container");
 		const activeEl = container?.querySelector(`[data-state="active"]`);
@@ -293,10 +435,11 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 
 				<Tabs
 					value={currentTab}
-					onValueChange={(tab) => setCurrentTabIndex(tabOrder.indexOf(tab))}
+					onValueChange={(tab) =>
+						setCurrentTabIndex(tabOrder.indexOf(tab))
+					}
 					className="w-full flex flex-col gap-4"
 				>
-					{/* Scrollable Tabs */}
 					<div
 						id="case-tabs-container"
 						className="w-full overflow-x-auto scrollbar-hide scrollbar-thin"
@@ -319,18 +462,24 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 											✓
 										</Badge>
 									) : (
-										<Badge variant="secondary" className="mr-2">
+										<Badge
+											variant="secondary"
+											className="mr-2"
+										>
 											{index + 1}
 										</Badge>
 									)}
-									{tab.replace(/-/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())}
+									{tab
+										.replace(/-/g, " ")
+										.replace(/\b\w/g, (l) =>
+											l.toUpperCase(),
+										)}
 								</TabsTrigger>
 							))}
 						</TabsList>
 					</div>
 
 					<div className="flex-1 overflow-auto">
-						{/*//* PART 1*/}
 						<TabsContent value="identifying-data">
 							<IdentifyingDataForm
 								sectionKey="IdentifyingData"
@@ -396,7 +545,6 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 							/>
 						</TabsContent>
 
-						{/*//* PART 2*/}
 						<TabsContent value="identifying-data2">
 							<IdentifyingDataForm
 								sectionKey="IdentifyingData2"

@@ -1,15 +1,22 @@
 /**
- * @file HiddenCasesManager.jsx
- * @description Component for heads to manage which cases are hidden from specific case managers
- * @module pages/security/HiddenCasesManager
- * 
- * @overview
- * Allows heads to hide sensitive case records from specific case managers.
- * Provides search, filter, and management interface for hidden cases.
+ * Hidden Cases Management.
+ *
+ * Allows authorized staff to hide sensitive case records from specific case managers.
+ * Provides a staging UI (select case + user + optional reason) and an unhide flow.
+ *
+ * Data sources:
+ * - Uses `useHiddenCases()` for the canonical hidden-cases list and hide/unhide actions.
+ * - Fetches case lists and active social workers from Supabase for selection.
  */
 
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -53,38 +60,83 @@ import { useHiddenCases } from "@/hooks/useHiddenCases";
 import supabase from "@/../config/supabase";
 import { toast } from "sonner";
 
+/**
+ * @typedef {"Cases"|"CICL/CAR"|"Incidence on VAC"} HiddenCaseTableType
+ */
+
+/**
+ * @typedef {Object} CasePickerRow
+ * @property {string} id
+ * @property {HiddenCaseTableType} table_type
+ * @property {string|null} [identifying_name]
+ * @property {string|null} [identifying_case_type]
+ * @property {string|null} [case_manager]
+ */
+
+/**
+ * @typedef {Object} SocialWorkerRow
+ * @property {string} id
+ * @property {string|null} [email]
+ * @property {string|null} [full_name]
+ */
+
+/**
+ * @typedef {Object} HiddenCaseRecord
+ * @property {string} id
+ * @property {string} case_id
+ * @property {HiddenCaseTableType|string} table_type
+ * @property {string} hidden_from_user_id
+ * @property {string} hidden_at
+ * @property {string|null} [reason]
+ * @property {{email?: string|null, full_name?: string|null}|null} [hidden_from_user]
+ */
+
 export default function HiddenCasesManager() {
 	const { hiddenCases, loading, hideCase, unhideCase } = useHiddenCases();
-	
+
 	const [showHideDialog, setShowHideDialog] = useState(false);
 	const [cases, setCases] = useState([]);
 	const [users, setUsers] = useState([]);
 	const [searchTerm, setSearchTerm] = useState("");
-	
+
 	// Form state for hiding a case
 	const [selectedCase, setSelectedCase] = useState("");
 	const [selectedUser, setSelectedUser] = useState("");
 	const [hideReason, setHideReason] = useState("");
 	const [submitting, setSubmitting] = useState(false);
-	
+
 	// Unhide confirmation dialog state
 	const [showUnhideDialog, setShowUnhideDialog] = useState(false);
 	const [caseToUnhide, setCaseToUnhide] = useState(null);
-	
+
 	// Search and filter state for case selection
 	const [caseSearchTerm, setCaseSearchTerm] = useState("");
 	const [caseTypeFilter, setCaseTypeFilter] = useState("all");
 
-	// Helper function to get case name from the cases array
+	/**
+	 * Returns a human-friendly case name for display.
+	 * @param {string} caseId
+	 * @param {HiddenCaseTableType|string} tableType
+	 * @returns {string}
+	 */
 	const getCaseName = (caseId, tableType) => {
-		const caseData = cases.find(c => c.id === caseId && c.table_type === tableType);
+		const caseData = cases.find(
+			(c) => c.id === caseId && c.table_type === tableType,
+		);
 		return caseData?.identifying_name || "Unknown Case";
 	};
 
-	// Helper function to check if a case is already hidden from a user
+	/**
+	 * Checks whether a case is already hidden from a user.
+	 * @param {string} caseId
+	 * @param {string} userId
+	 * @returns {boolean}
+	 */
 	const isCaseHiddenFromUser = (caseId, userId) => {
 		if (!userId) return false;
-		return hiddenCases.some(hc => hc.case_id === caseId && hc.hidden_from_user_id === userId);
+		return hiddenCases.some(
+			(hc) => hc.case_id === caseId && hc.hidden_from_user_id === userId,
+		);
 	};
 
 	// Load cases and users
@@ -93,13 +145,19 @@ export default function HiddenCasesManager() {
 		loadUsers();
 	}, []);
 
+	/**
+	 * Loads cases from multiple tables and normalizes them for the picker.
+	 * @returns {Promise<void>}
+	 */
 	const loadCases = async () => {
 		try {
 			// Load from all three case tables with their specific field names
 			const [casesResult, ciclCarResult, farResult] = await Promise.all([
 				supabase
 					.from("case")
-					.select("id, identifying_name, identifying_case_type, case_manager")
+					.select(
+						"id, identifying_name, identifying_case_type, case_manager",
+					)
 					.order("identifying_name", { ascending: true }),
 				supabase
 					.from("ciclcar_case")
@@ -118,19 +176,19 @@ export default function HiddenCasesManager() {
 
 			// Combine and normalize field names with table_type property
 			const allCases = [
-				...(casesResult.data || []).map(c => ({ 
-					...c, 
+				...(casesResult.data || []).map((c) => ({
+					...c,
 					table_type: "Cases",
 					// Keep original field name
 				})),
-				...(ciclCarResult.data || []).map(c => ({ 
-					...c, 
+				...(ciclCarResult.data || []).map((c) => ({
+					...c,
 					table_type: "CICL/CAR",
 					identifying_name: c.profile_name, // Map to common field
 					identifying_case_type: "CICL/CAR", // Default type
 				})),
-				...(farResult.data || []).map(c => ({ 
-					...c, 
+				...(farResult.data || []).map((c) => ({
+					...c,
 					table_type: "Incidence on VAC",
 					identifying_name: c.receiving_member, // Map to common field
 					identifying_case_type: "FAR", // Default type
@@ -151,6 +209,10 @@ export default function HiddenCasesManager() {
 		}
 	};
 
+	/**
+	 * Loads active social workers who can be selected as a "hidden from" target.
+	 * @returns {Promise<void>}
+	 */
 	const loadUsers = async () => {
 		try {
 			const { data, error } = await supabase
@@ -167,6 +229,10 @@ export default function HiddenCasesManager() {
 		}
 	};
 
+	/**
+	 * Submits a hide request for the currently selected case + user.
+	 * @returns {Promise<void>}
+	 */
 	const handleHideCase = async () => {
 		if (!selectedCase || !selectedUser) {
 			toast.error("Please select both a case and a user");
@@ -174,14 +240,19 @@ export default function HiddenCasesManager() {
 		}
 
 		// Find the selected case to get its table_type
-		const caseData = cases.find(c => c.id === selectedCase);
+		const caseData = cases.find((c) => c.id === selectedCase);
 		if (!caseData) {
 			toast.error("Selected case not found");
 			return;
 		}
 
 		setSubmitting(true);
-		const success = await hideCase(selectedCase, selectedUser, caseData.table_type, hideReason);
+		const success = await hideCase(
+			selectedCase,
+			selectedUser,
+			caseData.table_type,
+			hideReason,
+		);
 		setSubmitting(false);
 
 		if (success) {
@@ -192,29 +263,37 @@ export default function HiddenCasesManager() {
 		}
 	};
 
+	/**
+	 * Opens the unhide confirmation dialog for a hidden-case record.
+	 * @param {HiddenCaseRecord} hiddenCaseRecord
+	 */
 	const handleUnhideCase = async (hiddenCaseRecord) => {
 		setCaseToUnhide(hiddenCaseRecord);
 		setShowUnhideDialog(true);
 	};
 
+	/**
+	 * Confirms unhide action for the selected hidden-case record.
+	 * @returns {Promise<void>}
+	 */
 	const confirmUnhideCase = async () => {
 		if (!caseToUnhide) return;
-		
+
 		setSubmitting(true);
 		await unhideCase(caseToUnhide.id);
 		setSubmitting(false);
-		
+
 		setShowUnhideDialog(false);
 		setCaseToUnhide(null);
 	};
 
-	// Filter hidden cases by search term
-	const filteredHiddenCases = hiddenCases.filter(hc => {
+	/** Filter hidden cases by the search input. */
+	const filteredHiddenCases = hiddenCases.filter((hc) => {
 		const searchLower = searchTerm.toLowerCase();
 		const caseName = getCaseName(hc.case_id, hc.table_type);
 		const userEmail = hc.hidden_from_user?.email || "";
 		const userName = hc.hidden_from_user?.full_name || "";
-		
+
 		return (
 			caseName.toLowerCase().includes(searchLower) ||
 			userEmail.toLowerCase().includes(searchLower) ||
@@ -223,38 +302,43 @@ export default function HiddenCasesManager() {
 		);
 	});
 
-	// Filter cases for selection dialog (with wildcard search and case type filter)
-	const filteredCasesForSelection = cases.filter(c => {
+	/**
+	 * Filter cases for the selection dialog.
+	 * Supports wildcard search via `*` and an optional table filter.
+	 */
+	const filteredCasesForSelection = cases.filter((c) => {
 		// Search filter - supports wildcard with *
 		const searchLower = caseSearchTerm.toLowerCase().trim();
 		const caseName = (c.identifying_name || "").toLowerCase();
 		const caseManager = (c.case_manager || "").toLowerCase();
-		
+
 		let matchesSearch = true;
 		if (searchLower) {
-			if (searchLower.includes('*')) {
+			if (searchLower.includes("*")) {
 				// Wildcard search - convert * to regex
-				const pattern = searchLower.replace(/\*/g, '.*');
-				const regex = new RegExp(pattern, 'i');
+				const pattern = searchLower.replace(/\*/g, ".*");
+				const regex = new RegExp(pattern, "i");
 				matchesSearch = regex.test(caseName) || regex.test(caseManager);
 			} else {
 				// Regular contains search
-				matchesSearch = caseName.includes(searchLower) || caseManager.includes(searchLower);
+				matchesSearch =
+					caseName.includes(searchLower) ||
+					caseManager.includes(searchLower);
 			}
 		}
-		
+
 		// Case type filter
-		const matchesCaseType = caseTypeFilter === "all" || c.table_type === caseTypeFilter;
-		
+		const matchesCaseType =
+			caseTypeFilter === "all" || c.table_type === caseTypeFilter;
+
 		return matchesSearch && matchesCaseType;
 	});
 
-	// Define available table types
+	/** Table type options shown in the filter dropdown. */
 	const tableTypes = ["Cases", "CICL/CAR", "Incidence on VAC"];
 
 	return (
 		<div className="space-y-4">
-			{/* Header */}
 			<Card>
 				<CardHeader>
 					<div className="flex items-center justify-between">
@@ -264,7 +348,8 @@ export default function HiddenCasesManager() {
 								Hidden Cases Management
 							</CardTitle>
 							<CardDescription>
-								Hide sensitive case records from specific case managers
+								Hide sensitive case records from specific case
+								managers
 							</CardDescription>
 						</div>
 						<Button onClick={() => setShowHideDialog(true)}>
@@ -275,12 +360,12 @@ export default function HiddenCasesManager() {
 				</CardHeader>
 			</Card>
 
-			{/* Hidden Cases List */}
 			<Card>
 				<CardHeader>
 					<div className="flex items-center justify-between">
 						<CardTitle className="text-base">
-							Currently Hidden Cases ({filteredHiddenCases.length})
+							Currently Hidden Cases ({filteredHiddenCases.length}
+							)
 						</CardTitle>
 						<div className="relative w-64">
 							<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -300,7 +385,9 @@ export default function HiddenCasesManager() {
 						</div>
 					) : filteredHiddenCases.length === 0 ? (
 						<div className="text-center py-8 text-muted-foreground">
-							{searchTerm ? "No hidden cases match your search" : "No cases are currently hidden"}
+							{searchTerm
+								? "No hidden cases match your search"
+								: "No cases are currently hidden"}
 						</div>
 					) : (
 						<div className="rounded-md border">
@@ -312,14 +399,19 @@ export default function HiddenCasesManager() {
 										<TableHead>Hidden From</TableHead>
 										<TableHead>Reason</TableHead>
 										<TableHead>Hidden At</TableHead>
-										<TableHead className="text-right">Actions</TableHead>
+										<TableHead className="text-right">
+											Actions
+										</TableHead>
 									</TableRow>
 								</TableHeader>
 								<TableBody>
 									{filteredHiddenCases.map((hc) => (
 										<TableRow key={hc.id}>
 											<TableCell className="font-medium">
-												{getCaseName(hc.case_id, hc.table_type)}
+												{getCaseName(
+													hc.case_id,
+													hc.table_type,
+												)}
 											</TableCell>
 											<TableCell>
 												<Badge variant="outline">
@@ -329,26 +421,39 @@ export default function HiddenCasesManager() {
 											<TableCell>
 												<div>
 													<p className="text-sm font-medium">
-														{hc.hidden_from_user?.full_name || "Unknown"}
+														{hc.hidden_from_user
+															?.full_name ||
+															"Unknown"}
 													</p>
 													<p className="text-xs text-muted-foreground">
-														{hc.hidden_from_user?.email}
+														{
+															hc.hidden_from_user
+																?.email
+														}
 													</p>
 												</div>
 											</TableCell>
 											<TableCell className="max-w-xs">
 												<p className="text-sm truncate">
-													{hc.reason || <span className="text-muted-foreground italic">No reason provided</span>}
+													{hc.reason || (
+														<span className="text-muted-foreground italic">
+															No reason provided
+														</span>
+													)}
 												</p>
 											</TableCell>
 											<TableCell className="text-sm text-muted-foreground">
-												{new Date(hc.hidden_at).toLocaleDateString()}
+												{new Date(
+													hc.hidden_at,
+												).toLocaleDateString()}
 											</TableCell>
 											<TableCell className="text-right">
 												<Button
 													variant="ghost"
 													size="sm"
-													onClick={() => handleUnhideCase(hc)}
+													onClick={() =>
+														handleUnhideCase(hc)
+													}
 												>
 													<Eye className="mr-2 h-4 w-4" />
 													Unhide
@@ -363,13 +468,13 @@ export default function HiddenCasesManager() {
 				</CardContent>
 			</Card>
 
-			{/* Hide Case Dialog */}
 			<Dialog open={showHideDialog} onOpenChange={setShowHideDialog}>
 				<DialogContent className="max-w-2xl">
 					<DialogHeader>
 						<DialogTitle>Hide Case from User</DialogTitle>
 						<DialogDescription>
-							Select a case and a case manager to hide this sensitive record from their view
+							Select a case and a case manager to hide this
+							sensitive record from their view
 						</DialogDescription>
 					</DialogHeader>
 
@@ -383,16 +488,23 @@ export default function HiddenCasesManager() {
 									<Input
 										placeholder="Search by name or case manager (use * for wildcard)..."
 										value={caseSearchTerm}
-										onChange={(e) => setCaseSearchTerm(e.target.value)}
+										onChange={(e) =>
+											setCaseSearchTerm(e.target.value)
+										}
 										className="pl-10"
 									/>
 								</div>
-								<Select value={caseTypeFilter} onValueChange={setCaseTypeFilter}>
+								<Select
+									value={caseTypeFilter}
+									onValueChange={setCaseTypeFilter}
+								>
 									<SelectTrigger className="w-[200px]">
 										<SelectValue placeholder="Filter by table..." />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="all">All Tables</SelectItem>
+										<SelectItem value="all">
+											All Tables
+										</SelectItem>
 										{tableTypes.map((type) => (
 											<SelectItem key={type} value={type}>
 												{type}
@@ -402,13 +514,19 @@ export default function HiddenCasesManager() {
 								</Select>
 							</div>
 							<p className="text-xs text-muted-foreground">
-								Tip: Use * as wildcard (e.g., "John*" or "*Smith") • Showing {filteredCasesForSelection.length} of {cases.length} cases
+								Tip: Use * as wildcard (e.g., "John*" or
+								"*Smith") • Showing{" "}
+								{filteredCasesForSelection.length} of{" "}
+								{cases.length} cases
 							</p>
 						</div>
 
 						<div className="space-y-2">
 							<Label>Select Case *</Label>
-							<Select value={selectedCase} onValueChange={setSelectedCase}>
+							<Select
+								value={selectedCase}
+								onValueChange={setSelectedCase}
+							>
 								<SelectTrigger>
 									<SelectValue placeholder="Choose a case..." />
 								</SelectTrigger>
@@ -419,16 +537,34 @@ export default function HiddenCasesManager() {
 										</div>
 									) : (
 										filteredCasesForSelection.map((c) => {
-											const isHidden = isCaseHiddenFromUser(c.id, selectedUser);
+											const isHidden =
+												isCaseHiddenFromUser(
+													c.id,
+													selectedUser,
+												);
 											return (
-												<SelectItem 
-													key={c.id} 
+												<SelectItem
+													key={c.id}
 													value={c.id}
 													disabled={isHidden}
 												>
-													<span className="font-medium">[{c.table_type}]</span> {c.identifying_name || "Unnamed Case"}
-													{c.case_manager && <span className="text-muted-foreground"> • CM: {c.case_manager}</span>}
-													{isHidden && <span className="ml-2 text-xs text-orange-600">• Already Hidden</span>}
+													<span className="font-medium">
+														[{c.table_type}]
+													</span>{" "}
+													{c.identifying_name ||
+														"Unnamed Case"}
+													{c.case_manager && (
+														<span className="text-muted-foreground">
+															{" "}
+															• CM:{" "}
+															{c.case_manager}
+														</span>
+													)}
+													{isHidden && (
+														<span className="ml-2 text-xs text-orange-600">
+															• Already Hidden
+														</span>
+													)}
 												</SelectItem>
 											);
 										})
@@ -439,7 +575,10 @@ export default function HiddenCasesManager() {
 
 						<div className="space-y-2">
 							<Label>Hide From (Case Manager) *</Label>
-							<Select value={selectedUser} onValueChange={setSelectedUser}>
+							<Select
+								value={selectedUser}
+								onValueChange={setSelectedUser}
+							>
 								<SelectTrigger>
 									<SelectValue placeholder="Choose a case manager..." />
 								</SelectTrigger>
@@ -484,8 +623,10 @@ export default function HiddenCasesManager() {
 				</DialogContent>
 			</Dialog>
 
-			{/* Unhide Case Confirmation Dialog */}
-			<AlertDialog open={showUnhideDialog} onOpenChange={setShowUnhideDialog}>
+			<AlertDialog
+				open={showUnhideDialog}
+				onOpenChange={setShowUnhideDialog}
+			>
 				<AlertDialogContent className="max-w-lg">
 					<AlertDialogHeader>
 						<div className="flex items-center gap-3">
@@ -495,7 +636,8 @@ export default function HiddenCasesManager() {
 							<div>
 								<AlertDialogTitle>Unhide Case</AlertDialogTitle>
 								<AlertDialogDescription className="mt-1">
-									This will make the case visible to the case manager again
+									This will make the case visible to the case
+									manager again
 								</AlertDialogDescription>
 							</div>
 						</div>
@@ -506,20 +648,31 @@ export default function HiddenCasesManager() {
 							<div className="rounded-lg bg-muted p-4 space-y-2">
 								<div className="flex items-start justify-between">
 									<div className="space-y-1">
-										<p className="text-sm font-medium">Case</p>
-										<p className="text-sm text-muted-foreground">
-											{getCaseName(caseToUnhide.case_id, caseToUnhide.table_type)}
+										<p className="text-sm font-medium">
+											Case
 										</p>
-										<Badge variant="outline" className="text-xs">
+										<p className="text-sm text-muted-foreground">
+											{getCaseName(
+												caseToUnhide.case_id,
+												caseToUnhide.table_type,
+											)}
+										</p>
+										<Badge
+											variant="outline"
+											className="text-xs"
+										>
 											{caseToUnhide.table_type}
 										</Badge>
 									</div>
 								</div>
 
 								<div className="pt-2 border-t">
-									<p className="text-sm font-medium">Currently Hidden From</p>
+									<p className="text-sm font-medium">
+										Currently Hidden From
+									</p>
 									<p className="text-sm text-muted-foreground">
-										{caseToUnhide.hidden_from_user?.full_name || "Unknown User"}
+										{caseToUnhide.hidden_from_user
+											?.full_name || "Unknown User"}
 									</p>
 									<p className="text-xs text-muted-foreground">
 										{caseToUnhide.hidden_from_user?.email}
@@ -528,7 +681,9 @@ export default function HiddenCasesManager() {
 
 								{caseToUnhide.reason && (
 									<div className="pt-2 border-t">
-										<p className="text-sm font-medium">Reason</p>
+										<p className="text-sm font-medium">
+											Reason
+										</p>
 										<p className="text-sm text-muted-foreground italic">
 											"{caseToUnhide.reason}"
 										</p>
@@ -537,12 +692,15 @@ export default function HiddenCasesManager() {
 
 								<div className="pt-2 border-t">
 									<p className="text-xs text-muted-foreground">
-										Hidden on {new Date(caseToUnhide.hidden_at).toLocaleDateString('en-US', {
-											year: 'numeric',
-											month: 'long',
-											day: 'numeric',
-											hour: '2-digit',
-											minute: '2-digit'
+										Hidden on{" "}
+										{new Date(
+											caseToUnhide.hidden_at,
+										).toLocaleDateString("en-US", {
+											year: "numeric",
+											month: "long",
+											day: "numeric",
+											hour: "2-digit",
+											minute: "2-digit",
 										})}
 									</p>
 								</div>
@@ -551,15 +709,18 @@ export default function HiddenCasesManager() {
 							<div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 border border-blue-200">
 								<Eye className="h-4 w-4 text-blue-600 mt-0.5" />
 								<p className="text-sm text-blue-900">
-									After unhiding, this case will appear in the case manager's view immediately.
+									After unhiding, this case will appear in the
+									case manager's view immediately.
 								</p>
 							</div>
 						</div>
 					)}
 
 					<AlertDialogFooter>
-						<AlertDialogCancel disabled={submitting}>Cancel</AlertDialogCancel>
-						<AlertDialogAction 
+						<AlertDialogCancel disabled={submitting}>
+							Cancel
+						</AlertDialogCancel>
+						<AlertDialogAction
 							onClick={confirmUnhideCase}
 							disabled={submitting}
 							className="bg-blue-600 hover:bg-blue-700"

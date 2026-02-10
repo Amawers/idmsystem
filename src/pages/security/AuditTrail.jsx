@@ -1,11 +1,32 @@
 /**
- * @file AuditTrail.jsx
- * @description Audit Trail / Activity Log - Display and filter user actions with real-time updates
- * @module pages/security/AuditTrail
+ * Audit Trail / Activity Log page.
+ *
+ * Responsibilities:
+ * - Display audit log entries returned from `useAuditLogs`.
+ * - Provide client-side search, server-side filters (category/severity/date range), and pagination.
+ * - Poll for updates while online (no realtime subscription).
+ * - Offer a CSV export of the currently loaded dataset.
+ *
+ * Notes:
+ * - This view is intentionally online-only; when offline it shows a focused message instead of stale data.
  */
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
-import { WifiOff } from "lucide-react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import {
+	Activity,
+	AlertCircle,
+	Calendar,
+	ChevronLeft,
+	ChevronRight,
+	Download,
+	Info,
+	RefreshCw,
+	Search,
+	Shield,
+	TrendingUp,
+	WifiOff,
+	X,
+} from "lucide-react";
 import { useAuditLogs } from "@/hooks/useAuditLogs";
 import { AUDIT_CATEGORIES, AUDIT_SEVERITY } from "@/lib/auditLog";
 import {
@@ -42,25 +63,41 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
-import {
-	ChevronLeft,
-	ChevronRight,
-	RefreshCw,
-	Search,
-	AlertCircle,
-	Shield,
-	Info,
-	Download,
-	Calendar,
-	TrendingUp,
-	Activity,
-	X,
-} from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 
+/**
+ * @typedef {Object} AuditLog
+ * @property {string} id
+ * @property {string} created_at
+ * @property {string} user_email
+ * @property {string} [user_role]
+ * @property {string} user_id
+ * @property {string} action_type
+ * @property {string} action_category
+ * @property {string} description
+ * @property {"critical"|"warning"|"info"} severity
+ * @property {string} [resource_type]
+ * @property {string} [resource_id]
+ * @property {Record<string, unknown>} [metadata]
+ */
+
+/**
+ * @typedef {Object} AuditTrailFilters
+ * @property {string|null} actionCategory
+ * @property {string|null} severity
+ * @property {Date|null} startDate
+ * @property {Date|null} endDate
+ * @property {number} limit
+ * @property {number} offset
+ */
+
+/**
+ * Audit trail page.
+ * @returns {JSX.Element}
+ */
 export default function AuditTrail() {
-	// Filter state
+	/** @type {[AuditTrailFilters, import("react").Dispatch<import("react").SetStateAction<AuditTrailFilters>>]} */
 	const [filterState, setFilterState] = useState({
 		actionCategory: null,
 		severity: null,
@@ -70,17 +107,21 @@ export default function AuditTrail() {
 		offset: 0,
 	});
 
-	// Search and UI state
+	// Search + UI state (purely client-side).
 	const [searchTerm, setSearchTerm] = useState("");
 	const [selectedLog, setSelectedLog] = useState(null);
 	const [dateRange, setDateRange] = useState("all");
 	const [showStats, setShowStats] = useState(true);
 
-	// Use audit logs hook
-	const { data, count, loading, error, reload, setFilters } = useAuditLogs(filterState);
+	// Load audit logs with server-side filtering + pagination.
+	const { data, count, loading, error, reload, setFilters } =
+		useAuditLogs(filterState);
 
-	// Online state
-	const [isOnline, setIsOnline] = useState(typeof navigator !== "undefined" ? navigator.onLine : true);
+	// Online/offline state gates polling and avoids showing stale data.
+	const [isOnline, setIsOnline] = useState(
+		typeof navigator !== "undefined" ? navigator.onLine : true,
+	);
+	/** @type {import("react").MutableRefObject<number | null>} */
 	const pollRef = useRef(null);
 
 	useEffect(() => {
@@ -96,7 +137,7 @@ export default function AuditTrail() {
 		};
 	}, []);
 
-	// Poll audit logs while online (no Supabase realtime)
+	// Poll audit logs while online (there is no Supabase realtime subscription here).
 	useEffect(() => {
 		if (pollRef.current) {
 			clearInterval(pollRef.current);
@@ -117,7 +158,7 @@ export default function AuditTrail() {
 		};
 	}, [reload, isOnline]);
 
-	// Handle date range preset changes
+	// Map preset date ranges to explicit start/end Date values.
 	useEffect(() => {
 		let startDate = null;
 		let endDate = null;
@@ -145,12 +186,12 @@ export default function AuditTrail() {
 		setFilterState((prev) => ({ ...prev, startDate, endDate, offset: 0 }));
 	}, [dateRange]);
 
-	// Apply filters to hook
+	// Push current filter state into the data hook.
 	useEffect(() => {
 		setFilters(filterState);
 	}, [filterState, setFilters]);
 
-	// Client-side search filtering
+	// Client-side text search runs on the currently loaded page of results.
 	const filteredData = useMemo(() => {
 		if (!searchTerm) return data;
 
@@ -160,11 +201,11 @@ export default function AuditTrail() {
 				log.user_email?.toLowerCase().includes(search) ||
 				log.action_type?.toLowerCase().includes(search) ||
 				log.resource_type?.toLowerCase().includes(search) ||
-				log.description?.toLowerCase().includes(search)
+				log.description?.toLowerCase().includes(search),
 		);
 	}, [data, searchTerm]);
 
-	// Calculate statistics
+	// Lightweight statistics for the currently loaded page (not necessarily global totals).
 	const stats = useMemo(() => {
 		if (!data || data.length === 0) {
 			return {
@@ -188,7 +229,7 @@ export default function AuditTrail() {
 		};
 	}, [data, count]);
 
-	// Pagination
+	// Pagination is server-driven via `offset` and `limit`.
 	const totalPages = Math.ceil(count / filterState.limit) || 1;
 	const currentPage = Math.floor(filterState.offset / filterState.limit) + 1;
 
@@ -225,7 +266,10 @@ export default function AuditTrail() {
 		}));
 	};
 
-	// Export to CSV
+	/**
+	 * Export the currently loaded audit logs to CSV.
+	 * @returns {void}
+	 */
 	const exportToCSV = useCallback(() => {
 		if (!data || data.length === 0) {
 			toast.error("No data to export");
@@ -257,17 +301,21 @@ export default function AuditTrail() {
 		const csvContent = [
 			headers.join(","),
 			...rows.map((row) =>
-				row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")
+				row
+					.map((cell) => `"${String(cell).replace(/"/g, '""')}"`)
+					.join(","),
 			),
 		].join("\n");
 
-		const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+		const blob = new Blob([csvContent], {
+			type: "text/csv;charset=utf-8;",
+		});
 		const link = document.createElement("a");
 		const url = URL.createObjectURL(blob);
 		link.setAttribute("href", url);
 		link.setAttribute(
 			"download",
-			`audit_trail_${format(new Date(), "yyyyMMdd_HHmmss")}.csv`
+			`audit_trail_${format(new Date(), "yyyyMMdd_HHmmss")}.csv`,
 		);
 		link.style.visibility = "hidden";
 		document.body.appendChild(link);
@@ -277,20 +325,35 @@ export default function AuditTrail() {
 		toast.success("Audit trail exported successfully");
 	}, [data]);
 
-	// Get severity badge variant
+	/**
+	 * Render a severity badge.
+	 * @param {AuditLog["severity"]} severity
+	 * @returns {JSX.Element}
+	 */
 	const getSeverityBadge = (severity) => {
 		switch (severity) {
 			case "critical":
 				return <Badge variant="destructive">Critical</Badge>;
 			case "warning":
-				return <Badge variant="outline" className="border-orange-500 text-orange-600">Warning</Badge>;
+				return (
+					<Badge
+						variant="outline"
+						className="border-orange-500 text-orange-600"
+					>
+						Warning
+					</Badge>
+				);
 			case "info":
 			default:
 				return <Badge variant="secondary">Info</Badge>;
 		}
 	};
 
-	// Get category badge color
+	/**
+	 * Render a category badge using shadcn badge variants.
+	 * @param {string} category
+	 * @returns {JSX.Element}
+	 */
 	const getCategoryBadge = (category) => {
 		const variants = {
 			auth: "default",
@@ -301,7 +364,9 @@ export default function AuditTrail() {
 			partner: "default",
 			system: "default",
 		};
-		return <Badge variant={variants[category] || "default"}>{category}</Badge>;
+		return (
+			<Badge variant={variants[category] || "default"}>{category}</Badge>
+		);
 	};
 
 	const hasNextPage = currentPage < totalPages;
@@ -316,8 +381,13 @@ export default function AuditTrail() {
 						<WifiOff className="h-10 w-10 text-muted-foreground" />
 					</div>
 					<h2 className="text-lg font-semibold">You’re offline</h2>
-					<p className="text-sm text-muted-foreground">Audit Trail requires an internet connection.</p>
-					<p className="text-sm text-muted-foreground">Viewing will resume automatically when you are back online.</p>
+					<p className="text-sm text-muted-foreground">
+						Audit Trail requires an internet connection.
+					</p>
+					<p className="text-sm text-muted-foreground">
+						Viewing will resume automatically when you are back
+						online.
+					</p>
 				</div>
 			</div>
 		);
@@ -325,12 +395,14 @@ export default function AuditTrail() {
 
 	return (
 		<>
-			{/* ================= HEADER ================= */}
 			<div className="flex items-center justify-between px-4 lg:px-6 pb-4">
 				<div>
-					<h2 className="text-base font-bold tracking-tight">Audit Trail</h2>
+					<h2 className="text-base font-bold tracking-tight">
+						Audit Trail
+					</h2>
 					<p className="text-muted-foreground text-[11px]">
-						Track and monitor all user activities and system events in real-time
+						Track and monitor all user activities and system events
+						in real-time
 					</p>
 				</div>
 				<div className="flex gap-2">
@@ -342,30 +414,41 @@ export default function AuditTrail() {
 						<TrendingUp className="h-4 w-4 mr-2" />
 						{showStats ? "Hide" : "Show"} Stats
 					</Button>
-					<Button variant="outline" size="sm" onClick={exportToCSV} disabled={loading || !data?.length}>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={exportToCSV}
+						disabled={loading || !data?.length}
+					>
 						<Download className="h-4 w-4 mr-2" />
 						Export CSV
 					</Button>
-					<Button variant="outline" size="sm" onClick={() => window.location.reload()} disabled={loading}>
-						<RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => window.location.reload()}
+						disabled={loading}
+					>
+						<RefreshCw
+							className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+						/>
 						Refresh
 					</Button>
 				</div>
 			</div>
 
-			{/* ================= ERROR ALERT ================= */}
 			{error && (
 				<div className="px-4 lg:px-6 mb-4">
 					<Alert variant="destructive">
 						<AlertCircle className="h-4 w-4" />
 						<AlertDescription>
-							Failed to load audit logs: {error.message || "Unknown error"}
+							Failed to load audit logs:{" "}
+							{error.message || "Unknown error"}
 						</AlertDescription>
 					</Alert>
 				</div>
 			)}
 
-			{/* ================= STATISTICS CARDS ================= */}
 			{showStats && (
 				<div className="px-4 lg:px-6 mb-4">
 					<div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -375,7 +458,9 @@ export default function AuditTrail() {
 									<Activity className="h-4 w-4" />
 									Total Activities
 								</CardDescription>
-								<CardTitle className="text-2xl">{stats.total.toLocaleString()}</CardTitle>
+								<CardTitle className="text-2xl">
+									{stats.total.toLocaleString()}
+								</CardTitle>
 							</CardHeader>
 						</Card>
 						<Card>
@@ -384,7 +469,9 @@ export default function AuditTrail() {
 									<AlertCircle className="h-4 w-4 text-red-500" />
 									Critical
 								</CardDescription>
-								<CardTitle className="text-2xl text-red-600">{stats.critical}</CardTitle>
+								<CardTitle className="text-2xl text-red-600">
+									{stats.critical}
+								</CardTitle>
 							</CardHeader>
 						</Card>
 						<Card>
@@ -393,7 +480,9 @@ export default function AuditTrail() {
 									<AlertCircle className="h-4 w-4 text-orange-500" />
 									Warning
 								</CardDescription>
-								<CardTitle className="text-2xl text-orange-600">{stats.warning}</CardTitle>
+								<CardTitle className="text-2xl text-orange-600">
+									{stats.warning}
+								</CardTitle>
 							</CardHeader>
 						</Card>
 						<Card>
@@ -402,33 +491,37 @@ export default function AuditTrail() {
 									<Info className="h-4 w-4 text-blue-500" />
 									Info
 								</CardDescription>
-								<CardTitle className="text-2xl text-blue-600">{stats.info}</CardTitle>
+								<CardTitle className="text-2xl text-blue-600">
+									{stats.info}
+								</CardTitle>
 							</CardHeader>
 						</Card>
 					</div>
 				</div>
 			)}
 
-			{/* ================= FILTERS & SEARCH ================= */}
 			<div className="px-4 lg:px-6 space-y-4">
 				<Card>
 					<CardHeader className="pb-3">
 						<div className="flex items-center justify-between">
 							<div className="flex items-center gap-2">
 								<Shield className="h-5 w-5" />
-								<CardTitle className="text-lg">Activity Log</CardTitle>
+								<CardTitle className="text-lg">
+									Activity Log
+								</CardTitle>
 							</div>
 						</div>
 					</CardHeader>
 					<CardContent className="pt-0">
 						<div className="flex flex-wrap gap-2 mb-4">
-							{/* Search Bar */}
 							<div className="relative w-[280px]">
 								<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 								<Input
 									placeholder="Search user, action, resource..."
 									value={searchTerm}
-									onChange={(e) => setSearchTerm(e.target.value)}
+									onChange={(e) =>
+										setSearchTerm(e.target.value)
+									}
 									className="pl-10 h-9"
 								/>
 								{searchTerm && (
@@ -441,27 +534,35 @@ export default function AuditTrail() {
 								)}
 							</div>
 
-							{/* Date Range Filter */}
-							<Select value={dateRange} onValueChange={setDateRange}>
+							<Select
+								value={dateRange}
+								onValueChange={setDateRange}
+							>
 								<SelectTrigger className="w-[140px] h-9">
 									<Calendar className="h-4 w-4 mr-2" />
 									<SelectValue />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="all">All Time</SelectItem>
+									<SelectItem value="all">
+										All Time
+									</SelectItem>
 									<SelectItem value="today">Today</SelectItem>
-									<SelectItem value="week">Last 7 Days</SelectItem>
-									<SelectItem value="month">Last 30 Days</SelectItem>
+									<SelectItem value="week">
+										Last 7 Days
+									</SelectItem>
+									<SelectItem value="month">
+										Last 30 Days
+									</SelectItem>
 								</SelectContent>
 							</Select>
 
-							{/* Category Filter */}
 							<Select
 								value={filterState.actionCategory || "all"}
 								onValueChange={(value) =>
 									setFilterState((prev) => ({
 										...prev,
-										actionCategory: value === "all" ? null : value,
+										actionCategory:
+											value === "all" ? null : value,
 										offset: 0,
 									}))
 								}
@@ -470,22 +571,30 @@ export default function AuditTrail() {
 									<SelectValue placeholder="Category" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="all">All Categories</SelectItem>
-									{Object.entries(AUDIT_CATEGORIES).map(([key, value]) => (
-										<SelectItem key={value} value={value}>
-											{key.charAt(0) + key.slice(1).toLowerCase()}
-										</SelectItem>
-									))}
+									<SelectItem value="all">
+										All Categories
+									</SelectItem>
+									{Object.entries(AUDIT_CATEGORIES).map(
+										([key, value]) => (
+											<SelectItem
+												key={value}
+												value={value}
+											>
+												{key.charAt(0) +
+													key.slice(1).toLowerCase()}
+											</SelectItem>
+										),
+									)}
 								</SelectContent>
 							</Select>
 
-							{/* Severity Filter */}
 							<Select
 								value={filterState.severity || "all"}
 								onValueChange={(value) =>
 									setFilterState((prev) => ({
 										...prev,
-										severity: value === "all" ? null : value,
+										severity:
+											value === "all" ? null : value,
 										offset: 0,
 									}))
 								}
@@ -494,17 +603,27 @@ export default function AuditTrail() {
 									<SelectValue placeholder="Severity" />
 								</SelectTrigger>
 								<SelectContent>
-									<SelectItem value="all">All Severities</SelectItem>
-									{Object.entries(AUDIT_SEVERITY).map(([key, value]) => (
-										<SelectItem key={value} value={value}>
-											{key.charAt(0) + key.slice(1).toLowerCase()}
-										</SelectItem>
-									))}
+									<SelectItem value="all">
+										All Severities
+									</SelectItem>
+									{Object.entries(AUDIT_SEVERITY).map(
+										([key, value]) => (
+											<SelectItem
+												key={value}
+												value={value}
+											>
+												{key.charAt(0) +
+													key.slice(1).toLowerCase()}
+											</SelectItem>
+										),
+									)}
 								</SelectContent>
 							</Select>
 
-							{/* Active Filters Indicator */}
-							{(filterState.actionCategory || filterState.severity || searchTerm || dateRange !== "all") && (
+							{(filterState.actionCategory ||
+								filterState.severity ||
+								searchTerm ||
+								dateRange !== "all") && (
 								<Button
 									variant="ghost"
 									size="sm"
@@ -527,7 +646,6 @@ export default function AuditTrail() {
 								</Button>
 							)}
 						</div>
-						{/* ================= TABLE ================= */}
 						{loading ? (
 							<div className="space-y-2">
 								{[...Array(5)].map((_, i) => (
@@ -537,12 +655,19 @@ export default function AuditTrail() {
 						) : filteredData.length === 0 ? (
 							<div className="flex flex-col items-center justify-center p-8 text-muted-foreground border rounded-lg">
 								<Info className="h-12 w-12 mb-4 opacity-50" />
-								<p className="text-lg font-medium">No audit logs found</p>
-								<p className="text-sm">Try adjusting your filters or search terms</p>
+								<p className="text-lg font-medium">
+									No audit logs found
+								</p>
+								<p className="text-sm">
+									Try adjusting your filters or search terms
+								</p>
 							</div>
 						) : (
 							<div className="border rounded-lg overflow-hidden">
-								<div className="overflow-y-auto" style={{ maxHeight: "400px" }}>
+								<div
+									className="overflow-y-auto"
+									style={{ maxHeight: "400px" }}
+								>
 									<Table>
 										<TableHeader className="sticky top-0 z-10 bg-muted/80 backdrop-blur">
 											<TableRow>
@@ -550,9 +675,13 @@ export default function AuditTrail() {
 												<TableHead>User</TableHead>
 												<TableHead>Action</TableHead>
 												<TableHead>Category</TableHead>
-												<TableHead>Description</TableHead>
+												<TableHead>
+													Description
+												</TableHead>
 												<TableHead>Severity</TableHead>
-												<TableHead className="text-right">Details</TableHead>
+												<TableHead className="text-right">
+													Details
+												</TableHead>
 											</TableRow>
 										</TableHeader>
 										<TableBody>
@@ -560,39 +689,69 @@ export default function AuditTrail() {
 												<TableRow
 													key={log.id}
 													className="cursor-pointer hover:bg-muted/50"
-													onClick={() => setSelectedLog(log)}
+													onClick={() =>
+														setSelectedLog(log)
+													}
 												>
 													<TableCell className="font-mono text-xs">
-														{format(new Date(log.created_at), "MMM dd, HH:mm:ss")}
+														{format(
+															new Date(
+																log.created_at,
+															),
+															"MMM dd, HH:mm:ss",
+														)}
 													</TableCell>
 													<TableCell>
 														<div className="flex flex-col">
-															<span className="text-sm font-medium">{log.user_email}</span>
+															<span className="text-sm font-medium">
+																{log.user_email}
+															</span>
 															{log.user_role && (
-																<span className="text-xs text-muted-foreground">{log.user_role}</span>
+																<span className="text-xs text-muted-foreground">
+																	{
+																		log.user_role
+																	}
+																</span>
 															)}
 														</div>
 													</TableCell>
 													<TableCell className="font-mono text-xs">
 														{log.action_type}
 													</TableCell>
-													<TableCell>{getCategoryBadge(log.action_category)}</TableCell>
+													<TableCell>
+														{getCategoryBadge(
+															log.action_category,
+														)}
+													</TableCell>
 													<TableCell className="max-w-md">
-														<p className="truncate text-sm">{log.description}</p>
+														<p className="truncate text-sm">
+															{log.description}
+														</p>
 														{log.resource_type && (
 															<p className="text-xs text-muted-foreground truncate">
-																{log.resource_type}: {log.resource_id || "N/A"}
+																{
+																	log.resource_type
+																}
+																:{" "}
+																{log.resource_id ||
+																	"N/A"}
 															</p>
 														)}
 													</TableCell>
-													<TableCell>{getSeverityBadge(log.severity)}</TableCell>
+													<TableCell>
+														{getSeverityBadge(
+															log.severity,
+														)}
+													</TableCell>
 													<TableCell className="text-right">
 														<Button
 															variant="ghost"
 															size="sm"
 															onClick={(e) => {
 																e.stopPropagation();
-																setSelectedLog(log);
+																setSelectedLog(
+																	log,
+																);
 															}}
 														>
 															View
@@ -605,16 +764,18 @@ export default function AuditTrail() {
 								</div>
 							</div>
 						)}
-						
-						{/* ================= PAGINATION ================= */}
+
 						{!loading && filteredData.length > 0 && (
 							<div className="flex items-center justify-between mt-4 pt-4 border-t">
 								<div className="flex items-center gap-4">
 									<div className="text-sm text-muted-foreground">
-										Showing {filteredData.length} of {count.toLocaleString()} total entries
+										Showing {filteredData.length} of{" "}
+										{count.toLocaleString()} total entries
 									</div>
 									<div className="flex items-center gap-2">
-										<span className="text-sm text-muted-foreground">Rows per page:</span>
+										<span className="text-sm text-muted-foreground">
+											Rows per page:
+										</span>
 										<Select
 											value={String(filterState.limit)}
 											onValueChange={(value) =>
@@ -629,11 +790,21 @@ export default function AuditTrail() {
 												<SelectValue />
 											</SelectTrigger>
 											<SelectContent>
-												<SelectItem value="5">5</SelectItem>
-												<SelectItem value="10">10</SelectItem>
-												<SelectItem value="25">25</SelectItem>
-												<SelectItem value="50">50</SelectItem>
-												<SelectItem value="100">100</SelectItem>
+												<SelectItem value="5">
+													5
+												</SelectItem>
+												<SelectItem value="10">
+													10
+												</SelectItem>
+												<SelectItem value="25">
+													25
+												</SelectItem>
+												<SelectItem value="50">
+													50
+												</SelectItem>
+												<SelectItem value="100">
+													100
+												</SelectItem>
 											</SelectContent>
 										</Select>
 									</div>
@@ -689,8 +860,10 @@ export default function AuditTrail() {
 				</Card>
 			</div>
 
-			{/* ================= DETAILS DIALOG ================= */}
-			<Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
+			<Dialog
+				open={!!selectedLog}
+				onOpenChange={() => setSelectedLog(null)}
+			>
 				<DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
 					<DialogHeader>
 						<DialogTitle className="flex items-center gap-2">
@@ -709,48 +882,67 @@ export default function AuditTrail() {
 										Timestamp
 									</label>
 									<p className="text-sm font-mono mt-1">
-										{format(new Date(selectedLog.created_at), "PPpp")}
+										{format(
+											new Date(selectedLog.created_at),
+											"PPpp",
+										)}
 									</p>
 								</div>
 								<div>
 									<label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
 										User
 									</label>
-									<p className="text-sm mt-1">{selectedLog.user_email}</p>
+									<p className="text-sm mt-1">
+										{selectedLog.user_email}
+									</p>
 									{selectedLog.user_role && (
-										<p className="text-xs text-muted-foreground">{selectedLog.user_role}</p>
+										<p className="text-xs text-muted-foreground">
+											{selectedLog.user_role}
+										</p>
 									)}
 								</div>
 								<div>
 									<label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
 										Action Type
 									</label>
-									<p className="text-sm font-mono mt-1">{selectedLog.action_type}</p>
+									<p className="text-sm font-mono mt-1">
+										{selectedLog.action_type}
+									</p>
 								</div>
 								<div>
 									<label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
 										Category
 									</label>
-									<div className="mt-1">{getCategoryBadge(selectedLog.action_category)}</div>
+									<div className="mt-1">
+										{getCategoryBadge(
+											selectedLog.action_category,
+										)}
+									</div>
 								</div>
 								<div>
 									<label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
 										Severity
 									</label>
-									<div className="mt-1">{getSeverityBadge(selectedLog.severity)}</div>
+									<div className="mt-1">
+										{getSeverityBadge(selectedLog.severity)}
+									</div>
 								</div>
 								<div>
 									<label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
 										User ID
 									</label>
-									<p className="text-xs font-mono mt-1 break-all">{selectedLog.user_id}</p>
+									<p className="text-xs font-mono mt-1 break-all">
+										{selectedLog.user_id}
+									</p>
 								</div>
 								{selectedLog.resource_type && (
 									<div>
 										<label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
 											Resource Type
 										</label>
-										<p className="text-sm mt-1">{selectedLog.resource_type}</p>
+										<p className="text-sm mt-1">
+											{selectedLog.resource_type}
+										</p>
 									</div>
 								)}
 								{selectedLog.resource_id && (
@@ -758,7 +950,9 @@ export default function AuditTrail() {
 										<label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
 											Resource ID
 										</label>
-										<p className="text-sm font-mono mt-1 break-all">{selectedLog.resource_id}</p>
+										<p className="text-sm font-mono mt-1 break-all">
+											{selectedLog.resource_id}
+										</p>
 									</div>
 								)}
 							</div>
@@ -767,22 +961,33 @@ export default function AuditTrail() {
 								<label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
 									Description
 								</label>
-								<p className="text-sm mt-1 p-3 bg-muted rounded-lg">{selectedLog.description}</p>
+								<p className="text-sm mt-1 p-3 bg-muted rounded-lg">
+									{selectedLog.description}
+								</p>
 							</div>
 
-							{selectedLog.metadata && Object.keys(selectedLog.metadata).length > 0 && (
-								<div>
-									<label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">
-										Additional Metadata
-									</label>
-									<pre className="text-xs bg-muted p-4 rounded-lg overflow-auto max-h-64 border">
-										{JSON.stringify(selectedLog.metadata, null, 2)}
-									</pre>
-								</div>
-							)}
+							{selectedLog.metadata &&
+								Object.keys(selectedLog.metadata).length >
+									0 && (
+									<div>
+										<label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 block">
+											Additional Metadata
+										</label>
+										<pre className="text-xs bg-muted p-4 rounded-lg overflow-auto max-h-64 border">
+											{JSON.stringify(
+												selectedLog.metadata,
+												null,
+												2,
+											)}
+										</pre>
+									</div>
+								)}
 
 							<div className="flex justify-end pt-4 border-t">
-								<Button variant="outline" onClick={() => setSelectedLog(null)}>
+								<Button
+									variant="outline"
+									onClick={() => setSelectedLog(null)}
+								>
 									Close
 								</Button>
 							</div>

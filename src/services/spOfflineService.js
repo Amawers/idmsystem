@@ -1,3 +1,17 @@
+/**
+ * Offline-first Single Parent (SP) case service.
+ *
+ * Responsibilities:
+ * - Maintain a local IndexedDB cache of SP cases (Dexie table `sp_cases`).
+ * - Queue create/update/delete operations while offline (Dexie table `sp_queue`).
+ * - Reconcile queued operations to Supabase (`sp_case`) when online.
+ *
+ * Notes:
+ * - `localId` is the local primary key used to address rows consistently even
+ *   before Supabase assigns an `id`.
+ * - `hasPendingWrites` prevents remote snapshots from overwriting local edits.
+ */
+
 import { liveQuery } from "dexie";
 import supabase from "@/../config/supabase";
 import offlineCaseDb from "@/db/offlineCaseDb";
@@ -5,6 +19,11 @@ import offlineCaseDb from "@/db/offlineCaseDb";
 const TABLE_NAME = "sp_case";
 const CASE_TABLE = offlineCaseDb.table("sp_cases");
 const QUEUE_TABLE = offlineCaseDb.table("sp_queue");
+
+/**
+ * Local-only bookkeeping fields that must never be persisted back to Supabase.
+ * @type {string[]}
+ */
 const LOCAL_META_FIELDS = [
 	"localId",
 	"hasPendingWrites",
@@ -13,10 +32,45 @@ const LOCAL_META_FIELDS = [
 	"lastLocalChange",
 ];
 
+/** @returns {number} Epoch milliseconds. */
 const nowTs = () => Date.now();
+
+/** @returns {boolean} True when the browser reports network connectivity. */
 const browserOnline = () =>
 	typeof navigator !== "undefined" ? navigator.onLine : true;
 
+/**
+ * @typedef {object} SpLocalMeta
+ * @property {number} localId
+ * @property {boolean} hasPendingWrites
+ * @property {"create"|"update"|"delete"|null} pendingAction
+ * @property {string|null} syncError
+ * @property {number|null} lastLocalChange Epoch milliseconds
+ */
+
+/**
+ * Minimal shape used throughout the cache/queue. The service intentionally keeps
+ * this loose because the underlying SP case schema may evolve.
+ * @typedef {Record<string, any> & Partial<SpLocalMeta> & { id?: string|null }} SpCaseRecord
+ */
+
+/**
+ * Queue row shape used by `sp_queue`.
+ * @typedef {object} SpQueueOp
+ * @property {number} queueId
+ * @property {"create"|"update"|"delete"} operationType
+ * @property {number} targetLocalId
+ * @property {string|null} targetId Supabase row id (required for update/delete)
+ * @property {any|null} payload
+ * @property {number} createdAt Epoch milliseconds
+ */
+
+/**
+ * Removes duplicate cached rows that reference the same Supabase `id`.
+ *
+ * This can happen if older cache versions inserted without first checking for
+ * an existing row; keeping only the earliest `localId` stabilizes updates.
+ */
 async function removeDuplicateServerRows() {
 	const rows = await CASE_TABLE.orderBy("localId").toArray();
 	const seen = new Map();
@@ -35,6 +89,11 @@ async function removeDuplicateServerRows() {
 }
 
 let localIdSetupPromise;
+
+/**
+ * Backfills `localId` on existing rows (and then de-dupes).
+ * @returns {Promise<void>}
+ */
 function ensureLocalIdField() {
 	if (!localIdSetupPromise) {
 		localIdSetupPromise = (async () => {
@@ -51,12 +110,23 @@ function ensureLocalIdField() {
 
 const localIdReady = ensureLocalIdField();
 
+/**
+ * Strips local-only metadata from a payload before syncing to Supabase.
+ * @param {Record<string, any>} [payload]
+ * @returns {Record<string, any>}
+ */
 function sanitizeCasePayload(payload = {}) {
 	const clone = { ...payload };
 	LOCAL_META_FIELDS.forEach((key) => delete clone[key]);
 	return clone;
 }
 
+/**
+ * Ensures local metadata fields have stable defaults.
+ * @param {Record<string, any>} [base]
+ * @param {Partial<SpLocalMeta> & Record<string, any>} [overrides]
+ * @returns {SpCaseRecord}
+ */
 function buildLocalRecord(base = {}, overrides = {}) {
 	return {
 		...base,
@@ -68,6 +138,10 @@ function buildLocalRecord(base = {}, overrides = {}) {
 	};
 }
 
+/**
+ * LiveQuery stream of cached SP cases (newest first).
+ * @returns {import('dexie').Observable<SpCaseRecord[]>}
+ */
 export const spLiveQuery = () =>
 	liveQuery(async () => {
 		await localIdReady;
@@ -76,22 +150,40 @@ export const spLiveQuery = () =>
 		return rows.map((row) => ({ ...row }));
 	});
 
+/** @returns {Promise<number>} Number of queued operations awaiting sync. */
 export async function getSpPendingOperationCount() {
 	return QUEUE_TABLE.count();
 }
 
+/**
+ * Fetches a cached SP case by Supabase `id`.
+ * @param {string|null|undefined} targetId
+ * @returns {Promise<SpCaseRecord|null>}
+ */
 export async function getSpCaseById(targetId) {
 	if (!targetId) return null;
 	await localIdReady;
 	return CASE_TABLE.where("id").equals(targetId).first();
 }
 
+/**
+ * Fetches a cached SP case by local Dexie primary key.
+ * @param {number|null|undefined} localId
+ * @returns {Promise<SpCaseRecord|null>}
+ */
 export async function getSpCaseByLocalId(localId) {
 	if (localId == null) return null;
 	await localIdReady;
 	return CASE_TABLE.get(localId);
 }
 
+/**
+ * Upserts a Supabase snapshot into the local cache.
+ *
+ * Policy: rows with `hasPendingWrites` are not overwritten.
+ * @param {SpCaseRecord[]} [rows]
+ * @returns {Promise<void>}
+ */
 export async function upsertLocalFromSupabase(rows = []) {
 	await localIdReady;
 	await offlineCaseDb.transaction("rw", CASE_TABLE, async () => {
@@ -133,6 +225,10 @@ export async function upsertLocalFromSupabase(rows = []) {
 	});
 }
 
+/**
+ * Loads the latest SP snapshot from Supabase into the local cache.
+ * @returns {Promise<number>} Number of remote rows loaded.
+ */
 export async function loadSpRemoteSnapshotIntoCache() {
 	const { data, error } = await supabase
 		.from(TABLE_NAME)
@@ -144,6 +240,18 @@ export async function loadSpRemoteSnapshotIntoCache() {
 	return data?.length ?? 0;
 }
 
+/**
+ * Creates/updates a local SP case row and enqueues a sync operation.
+ *
+ * Prefer using `localId` when editing a draft that might not yet have a
+ * Supabase `id`.
+ * @param {object} params
+ * @param {Record<string, any>} params.casePayload
+ * @param {string|null} [params.targetId]
+ * @param {number|null} [params.localId]
+ * @param {"create"|"update"} [params.mode]
+ * @returns {Promise<{ localId: number }>}
+ */
 export async function createOrUpdateLocalSpCase({
 	casePayload,
 	targetId = null,
@@ -204,6 +312,13 @@ export async function createOrUpdateLocalSpCase({
 	);
 }
 
+/**
+ * Marks a cached row as pending delete and enqueues the delete operation.
+ * @param {object} params
+ * @param {string|null} [params.targetId]
+ * @param {number|null} [params.localId]
+ * @returns {Promise<{ success: boolean }>}
+ */
 export async function markSpLocalDelete({ targetId = null, localId = null }) {
 	await localIdReady;
 	return offlineCaseDb.transaction(
@@ -237,6 +352,16 @@ export async function markSpLocalDelete({ targetId = null, localId = null }) {
 	);
 }
 
+/**
+ * Deletes immediately when online; otherwise marks local delete and queues sync.
+ *
+ * When a remote delete succeeds, any queued ops for the same `localId` are
+ * removed to avoid replaying stale work.
+ * @param {object} params
+ * @param {string|null} [params.targetId]
+ * @param {number|null} [params.localId]
+ * @returns {Promise<{ success: boolean, queued: boolean }>}
+ */
 export async function deleteSpCaseNow({ targetId = null, localId = null }) {
 	await localIdReady;
 	const isOnline = browserOnline();
@@ -287,6 +412,13 @@ export async function deleteSpCaseNow({ targetId = null, localId = null }) {
 
 let spSyncInFlight = null;
 
+/**
+ * Replays queued operations to Supabase in FIFO order.
+ *
+ * Returns the in-flight promise if sync is already running.
+ * @param {(info: { current: SpQueueOp, synced: number }) => void} [statusCb]
+ * @returns {Promise<{ synced: number, error?: any }|{ synced: 0 }|{ synced: number }>}
+ */
 export function syncSpQueue(statusCb) {
 	if (spSyncInFlight) {
 		return spSyncInFlight;

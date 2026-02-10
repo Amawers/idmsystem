@@ -1,4 +1,18 @@
 "use client";
+
+/**
+ * Single Parent (SP) intake sheet dialog.
+ *
+ * Responsibilities:
+ * - Collect multi-step intake data across tabs and build a case payload.
+ * - Stage the case locally via the offline service, then optionally trigger a sync flow.
+ * - Reset both local form state and the shared intake store when closing.
+ *
+ * Notes:
+ * - When saving while online, this view triggers a reload with sessionStorage flags to
+ *   restore the Case Management tab context and prompt syncing.
+ */
+
 import { useState, useEffect } from "react";
 import {
 	Dialog,
@@ -24,6 +38,39 @@ import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { buildSPCasePayload } from "@/lib/spSubmission";
 import { createOrUpdateLocalSpCase } from "@/services/spOfflineService";
 
+/**
+ * @typedef {Object} IntakeSheetSpProps
+ * @property {boolean} open
+ * @property {(open: boolean) => void} setOpen
+ * @property {() => void} [onSuccess]
+ */
+
+/**
+ * @typedef {Object} SpIntakeFormState
+ * @property {string} name
+ * @property {string} age
+ * @property {string} address
+ * @property {string} birthDate
+ * @property {string} birthPlace
+ * @property {string} civilStatus
+ * @property {string} educationalAttainment
+ * @property {string} occupation
+ * @property {string} monthlyIncome
+ * @property {string} religion
+ * @property {string} interviewDate
+ * @property {string} yearMember
+ * @property {string} skills
+ * @property {string} soloParentDuration
+ * @property {boolean|null} fourPs
+ * @property {string} parentsWhereabouts
+ * @property {string} backgroundInformation
+ * @property {string} assessment
+ * @property {string} cellphoneNumber
+ * @property {string} emergencyContactPerson
+ * @property {string} emergencyContactNumber
+ * @property {string} notes
+ */
+
 const tabOrder = ["identification", "familyComposition", "other"];
 
 const tabLabels = {
@@ -32,8 +79,19 @@ const tabLabels = {
 	other: "Other",
 };
 
+/**
+ * Read the browser's online state.
+ * @returns {boolean}
+ */
 const isBrowserOnline = () =>
 	typeof navigator !== "undefined" ? navigator.onLine : true;
+
+/**
+ * Force the Case Management UI back to the SP tab after save.
+ *
+ * Uses sessionStorage flags + reload to reset downstream hook state and encourage a sync.
+ * @returns {void}
+ */
 const forceSpTabReload = () => {
 	if (typeof window === "undefined") return;
 	sessionStorage.setItem("caseManagement.activeTab", "SP");
@@ -42,8 +100,14 @@ const forceSpTabReload = () => {
 	window.location.reload();
 };
 
+/**
+ * SP intake dialog.
+ * @param {IntakeSheetSpProps} props
+ * @returns {JSX.Element}
+ */
 export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 	const [currentTabIndex, setCurrentTabIndex] = useState(0);
+	/** @type {[SpIntakeFormState, import("react").Dispatch<import("react").SetStateAction<SpIntakeFormState>>]} */
 	const [formState, setFormState] = useState({
 		name: "",
 		age: "",
@@ -107,6 +171,11 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 	const isFirstTab = currentTabIndex === 0;
 	const isLastTab = currentTabIndex === tabOrder.length - 1;
 
+	/**
+	 * Create a controlled-input `onChange` handler.
+	 * @param {keyof SpIntakeFormState} field
+	 * @returns {(event: import("react").ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void}
+	 */
 	const handleChange = (field) => (event) => {
 		setFormState((prev) => ({
 			...prev,
@@ -114,6 +183,11 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 		}));
 	};
 
+	/**
+	 * Build and stage the SP case locally, then optionally trigger a sync flow.
+	 * @param {import("react").FormEvent} event
+	 * @returns {Promise<void>}
+	 */
 	const handleSubmit = async (event) => {
 		event.preventDefault();
 		setIsSubmitting(true);
@@ -187,7 +261,6 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 							className="space-y-6"
 						>
 							<div className="grid gap-6 lg:grid-cols-2">
-								{/* Left column */}
 								<div className="space-y-4">
 									<div className="grid gap-4 md:grid-cols-2">
 										<div className="grid gap-2">
@@ -301,7 +374,6 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 									</div>
 								</div>
 
-								{/* Right column */}
 								<div className="space-y-4">
 									<div className="grid gap-4 md:grid-cols-2">
 										<div className="grid gap-2">

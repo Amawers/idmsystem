@@ -1,100 +1,93 @@
-// =============================================
-// User Management Store (Zustand)
-// ---------------------------------------------
-// Purpose: Centralized state management for user account
-// operations including create, edit, ban/suspend, and view users.
-//
-// Key Responsibilities:
-// - Fetch and cache list of all users
-// - Create new user accounts via Supabase Admin API
-// - Update user details (name, email, role, status)
-// - Ban/suspend and reactivate user accounts
-// - Search, filter, and sort user lists
-// - Handle password reset for users
-//
-// Store State:
-// - users: Array of user objects with profile details
-// - loading: Boolean for async operations
-// - error: Error message string
-// - searchQuery: Current search filter
-// - statusFilter: Filter by status (all/active/inactive/banned)
-//
-// Public Methods:
-// - fetchUsers(): Load all users from database
-// - createUser({ fullName, email, password, role, status }): Create new user account
-// - updateUser(userId, updates): Update user details
-// - banUser(userId): Ban/suspend a user account
-// - unbanUser(userId): Reactivate a banned account
-// - deleteUser(userId): Permanently delete user (use with caution)
-// - resetUserPassword(userId, newPassword): Reset user password
-// - setSearchQuery(query): Update search filter
-// - setStatusFilter(status): Update status filter
-// - getFilteredUsers(): Get users matching current filters
-//
-// Dependencies:
-// - zustand: State management
-// - @supabase/supabase-js: Database operations
-//
-// Example Usage:
-// ```javascript
-// const { users, loading, fetchUsers, createUser, banUser } = useUserManagementStore();
-// 
-// // Fetch all users on component mount
-// useEffect(() => { fetchUsers(); }, []);
-//
-// // Create new user
-// await createUser({ 
-//   fullName: 'Juan Dela Cruz',
-//   email: 'newuser@example.com', 
-//   role: 'social_worker',
-//   status: 'active'
-// });
-//
-// // Ban a user
-// await banUser(userId);
-// ```
-// =============================================
+/**
+ * User management store (Zustand).
+ *
+ * This module centralizes state and operations used by the user administration UI
+ * (list users, create, update, ban/unban, delete).
+ *
+ * Notes / constraints:
+ * - Prefer `user_management_view` when available (includes email). When the view
+ *   is missing (e.g., migrations not run), it falls back to the `profile` table
+ *   and uses placeholder emails for display.
+ * - `supabase.auth.signUp()` creates a user but also swaps the current session
+ *   to the new user; the admin session is restored immediately after sign-up.
+ */
+
+/** @typedef {"all" | "active" | "inactive" | "banned"} UserStatusFilter */
+/** @typedef {"active" | "inactive" | "banned"} UserAccountStatus */
+/** @typedef {"social_worker"} UserRole */
+/**
+ * @typedef {Object} ManagedUser
+ * @property {string} id
+ * @property {string} [email]
+ * @property {string} [role]
+ * @property {string} [status]
+ * @property {string|null} [avatar_url]
+ * @property {string|null} [banned_at]
+ * @property {string|null} [banned_by]
+ * @property {string|null} [created_by]
+ * @property {string} [created_at]
+ * @property {string} [updated_at]
+ */
 
 import { create } from "zustand";
 import supabase from "@/../config/supabase";
 
+/**
+ * Hook-style access to the user management store.
+ *
+ * @returns {{
+ *   users: ManagedUser[],
+ *   loading: boolean,
+ *   error: string | null,
+ *   searchQuery: string,
+ *   statusFilter: UserStatusFilter,
+ *   fetchUsers: () => Promise<void>,
+ *   createUser: (userData: { fullName: string, email: string, password?: string, role?: string, status?: UserAccountStatus }) => Promise<{ user: any, password: string }>,
+ *   updateUser: (userId: string, updates: { role?: string, status?: UserAccountStatus, email?: string }) => Promise<void>,
+ *   banUser: (userId: string) => Promise<void>,
+ *   unbanUser: (userId: string) => Promise<void>,
+ *   deleteUser: (userId: string) => Promise<void>,
+ *   resetUserPassword: (userId: string, newPassword: string) => Promise<void>,
+ *   setSearchQuery: (query: string) => void,
+ *   setStatusFilter: (status: UserStatusFilter) => void,
+ *   getFilteredUsers: () => ManagedUser[],
+ *   clearError: () => void
+ * }}
+ */
 export const useUserManagementStore = create((set, get) => ({
-	// ===============================
-	// STATE
-	// ===============================
 	users: [],
 	loading: false,
 	error: null,
 	searchQuery: "",
-	statusFilter: "all", // all | active | inactive | banned
+	/** @type {UserStatusFilter} */
+	statusFilter: "all",
 
-	// ===============================
-	// FETCH ALL USERS
-	// ===============================
 	/**
-	 * Fetches all users with their profile data from the database.
-	 * Only accessible by heads due to RLS policies.
+	 * Fetches all users with profile data.
+	 *
+	 * Prefer `user_management_view` (includes email). If it is unavailable, fall
+	 * back to `profile` and use placeholder emails so the UI remains usable.
 	 * @returns {Promise<void>}
 	 */
 	fetchUsers: async () => {
 		set({ loading: true, error: null });
 		try {
-			// Try to fetch from user_management_view first (has emails)
+			// View is expected to expose email + profile fields in one place.
 			const { data: viewData, error: viewError } = await supabase
 				.from("user_management_view")
 				.select("*")
 				.order("created_at", { ascending: false });
 
-			// If view exists and works, use it
 			if (!viewError && viewData) {
 				set({ users: viewData, loading: false });
 				return;
 			}
 
-			// Fallback: If view doesn't exist or fails, fetch from profile directly
-			// Note: This won't include email addresses without the view
-			console.warn("user_management_view not available, using profile table directly");
-			
+			// Fallback: `profile` does not include email without the view.
+			console.warn(
+				"user_management_view not available, using profile table directly",
+			);
+
 			const { data: profileData, error: profileError } = await supabase
 				.from("profile")
 				.select(
@@ -108,47 +101,46 @@ export const useUserManagementStore = create((set, get) => ({
 					created_by,
 					created_at,
 					updated_at
-				`
+				`,
 				)
 				.order("created_at", { ascending: false });
 
 			if (profileError) throw profileError;
 
-			// Add a note that emails are missing
-			const usersWithNote = (profileData || []).map(user => ({
+			const usersWithNote = (profileData || []).map((user) => ({
 				...user,
-				email: `user-${user.id.slice(0, 8)}@unknown.com`, // Placeholder email
+				email: `user-${user.id.slice(0, 8)}@unknown.com`,
 			}));
 
-			set({ 
-				users: usersWithNote, 
+			set({
+				users: usersWithNote,
 				loading: false,
-				error: "Migration not run: Email addresses unavailable. Please run database migration."
+				error: "Migration not run: Email addresses unavailable. Please run database migration.",
 			});
 		} catch (error) {
 			console.error("Error fetching users:", error);
-			set({ 
+			set({
 				error: `Failed to load users: ${error.message}. Please ensure you've run the database migration.`,
 				loading: false,
-				users: []
+				users: [],
 			});
 		}
 	},
 
-	// ===============================
-	// CREATE NEW USER
-	// ===============================
 	/**
 	 * Creates a new user account with specified details.
-	 * In the single-role system, all created users are `social_worker`.
-	 * 
+	 * In the current single-role system, all created users are forced to `social_worker`.
+	 *
+	 * Important: `supabase.auth.signUp()` will switch the current session to the
+	 * newly created user. This function captures and restores the admin session.
+	 *
 	 * @param {Object} userData - User data object
 	 * @param {string} userData.fullName - User's full name
 	 * @param {string} userData.email - User's email address (unique)
 	 * @param {string} userData.password - User's password (optional, auto-generated if not provided)
 	 * @param {string} userData.role - Ignored (forced to social_worker)
 	 * @param {string} userData.status - Account status (active/inactive)
-	 * @returns {Promise<Object>} Created user object or error
+	 * @returns {Promise<{ user: any, password: string }>} Created user and the generated password.
 	 */
 	createUser: async (userData) => {
 		set({ loading: true, error: null });
@@ -156,16 +148,16 @@ export const useUserManagementStore = create((set, get) => ({
 			const { fullName, email, password, status = "active" } = userData;
 			const role = "social_worker";
 
-			// Get current user (the admin creating this account)
 			const {
 				data: { user: currentUser },
 			} = await supabase.auth.getUser();
 			if (!currentUser) throw new Error("Not authenticated");
 
-			// Store current session before creating new user
-			const { data: { session: currentSession } } = await supabase.auth.getSession();
+			// Capture session so the admin stays logged in after sign-up.
+			const {
+				data: { session: currentSession },
+			} = await supabase.auth.getSession();
 
-			// Check if email already exists
 			const { data: existingUser } = await supabase
 				.from("user_management_view")
 				.select("email")
@@ -176,13 +168,12 @@ export const useUserManagementStore = create((set, get) => ({
 				throw new Error("A user with this email already exists");
 			}
 
-			// Generate password if not provided (8 chars, random)
+			// Generate a password if not provided (UI can display/copy it).
 			const userPassword =
 				password || Math.random().toString(36).slice(-8) + "X1!";
 
-			// Create auth user using Supabase Admin API
-			// Note: This requires SUPABASE_SERVICE_ROLE_KEY in production
-			// For now, we'll use the standard signup which creates both auth.users and profile
+			// Uses standard sign-up (client-side). In production, creating users typically
+			// belongs behind a server-side endpoint using the Admin API.
 			const { data: newUser, error: signUpError } =
 				await supabase.auth.signUp({
 					email,
@@ -197,24 +188,27 @@ export const useUserManagementStore = create((set, get) => ({
 
 			if (signUpError) throw signUpError;
 
-			// IMPORTANT: signUp automatically logs in the new user, replacing the admin's session
-			// We need to restore the admin's session immediately
+			// Restore the admin session (signUp swaps the session to the new user).
 			const newUserId = newUser.user.id;
-			
-			// Restore the admin's session
+
 			if (currentSession) {
 				const { error: sessionError } = await supabase.auth.setSession({
 					access_token: currentSession.access_token,
 					refresh_token: currentSession.refresh_token,
 				});
-				
+
 				if (sessionError) {
-					console.error("Failed to restore admin session:", sessionError);
-					throw new Error("Account created but session restoration failed. Please refresh the page.");
+					console.error(
+						"Failed to restore admin session:",
+						sessionError,
+					);
+					throw new Error(
+						"Account created but session restoration failed. Please refresh the page.",
+					);
 				}
 			}
 
-			// Update profile with additional fields (status, created_by)
+			// Ensure profile has the fields expected by the app.
 			const { error: profileError } = await supabase
 				.from("profile")
 				.update({
@@ -226,7 +220,6 @@ export const useUserManagementStore = create((set, get) => ({
 
 			if (profileError) throw profileError;
 
-			// Refresh user list
 			await get().fetchUsers();
 
 			set({ loading: false });
@@ -238,12 +231,9 @@ export const useUserManagementStore = create((set, get) => ({
 		}
 	},
 
-	// ===============================
-	// UPDATE USER DETAILS
-	// ===============================
 	/**
 	 * Updates user profile information.
-	 * 
+	 *
 	 * @param {string} userId - UUID of user to update
 	 * @param {Object} updates - Fields to update
 	 * @param {string} [updates.role] - Ignored (forced to social_worker)
@@ -254,7 +244,7 @@ export const useUserManagementStore = create((set, get) => ({
 	updateUser: async (userId, updates) => {
 		set({ loading: true, error: null });
 		try {
-			// Separate profile updates from auth updates
+			// Separate `profile` fields from auth-only fields.
 			const profileUpdates = {};
 			if (updates.role) profileUpdates.role = "social_worker";
 			if (updates.status) profileUpdates.status = updates.status;
@@ -269,12 +259,10 @@ export const useUserManagementStore = create((set, get) => ({
 				if (profileError) throw profileError;
 			}
 
-			// Update email in auth.users (requires admin API in production)
+			// Updating email in auth requires Admin API in most setups.
 			if (updates.email) {
-				// Note: In production, this requires server-side Admin API call
-				// For now, we'll skip this as it requires elevated privileges
 				console.warn(
-					"Email updates require Supabase Admin API - implement server-side endpoint"
+					"Email updates require Supabase Admin API - implement server-side endpoint",
 				);
 			}
 
@@ -289,12 +277,9 @@ export const useUserManagementStore = create((set, get) => ({
 		}
 	},
 
-	// ===============================
-	// BAN USER
-	// ===============================
 	/**
 	 * Bans/suspends a user account. User cannot log in until unbanned.
-	 * 
+	 *
 	 * @param {string} userId - UUID of user to ban
 	 * @returns {Promise<void>}
 	 */
@@ -328,12 +313,9 @@ export const useUserManagementStore = create((set, get) => ({
 		}
 	},
 
-	// ===============================
-	// UNBAN USER
-	// ===============================
 	/**
 	 * Reactivates a banned user account.
-	 * 
+	 *
 	 * @param {string} userId - UUID of user to unban
 	 * @returns {Promise<void>}
 	 */
@@ -362,20 +344,16 @@ export const useUserManagementStore = create((set, get) => ({
 		}
 	},
 
-	// ===============================
-	// DELETE USER (PERMANENT)
-	// ===============================
 	/**
 	 * Permanently deletes a user account.
 	 * USE WITH CAUTION - This is irreversible.
-	 * 
+	 *
 	 * @param {string} userId - UUID of user to delete
 	 * @returns {Promise<void>}
 	 */
 	deleteUser: async (userId) => {
 		set({ loading: true, error: null });
 		try {
-			// Delete profile (auth.users will be handled by cascade or manually)
 			const { error } = await supabase
 				.from("profile")
 				.delete()
@@ -383,10 +361,7 @@ export const useUserManagementStore = create((set, get) => ({
 
 			if (error) throw error;
 
-			// Note: Deleting from auth.users requires Admin API
-			// This should be done server-side in production
-
-			// Refresh user list
+			// Refresh user list.
 			await get().fetchUsers();
 
 			set({ loading: false });
@@ -397,23 +372,22 @@ export const useUserManagementStore = create((set, get) => ({
 		}
 	},
 
-	// ===============================
-	// RESET USER PASSWORD
-	// ===============================
 	/**
-	 * Resets a user's password. Requires Admin API.
-	 * 
+	 * Resets a user's password.
+	 *
+	 * Not implemented client-side: should be performed via a server-side endpoint
+	 * that uses Supabase Admin API.
+	 *
 	 * @param {string} userId - UUID of user
 	 * @param {string} newPassword - New password to set
 	 * @returns {Promise<void>}
+	 * @throws {Error} Always throws until implemented.
 	 */
 	resetUserPassword: async (_userId, _newPassword) => {
 		set({ loading: true, error: null });
 		try {
-			// Note: This requires Supabase Admin API
-			// Should be implemented as a server-side endpoint
 			console.warn(
-				"Password reset requires Supabase Admin API - implement server-side endpoint"
+				"Password reset requires Supabase Admin API - implement server-side endpoint",
 			);
 
 			// Placeholder for actual implementation:
@@ -422,7 +396,7 @@ export const useUserManagementStore = create((set, get) => ({
 
 			set({ loading: false });
 			throw new Error(
-				"Password reset not yet implemented - requires admin API"
+				"Password reset not yet implemented - requires admin API",
 			);
 		} catch (error) {
 			console.error("Error resetting password:", error);
@@ -431,16 +405,10 @@ export const useUserManagementStore = create((set, get) => ({
 		}
 	},
 
-	// ===============================
-	// SEARCH & FILTER HELPERS
-	// ===============================
 	setSearchQuery: (query) => set({ searchQuery: query }),
 	setStatusFilter: (status) => set({ statusFilter: status }),
 
-	/**
-	 * Returns filtered and searched user list based on current filters.
-	 * @returns {Array} Filtered users array
-	 */
+	/** @returns {ManagedUser[]} */
 	getFilteredUsers: () => {
 		const { users, searchQuery, statusFilter } = get();
 
@@ -458,15 +426,12 @@ export const useUserManagementStore = create((set, get) => ({
 				(user) =>
 					user.email?.toLowerCase().includes(query) ||
 					user.role?.toLowerCase().includes(query) ||
-					user.id?.toLowerCase().includes(query)
+					user.id?.toLowerCase().includes(query),
 			);
 		}
 
 		return filtered;
 	},
 
-	// ===============================
-	// CLEAR ERROR
-	// ===============================
 	clearError: () => set({ error: null }),
 }));

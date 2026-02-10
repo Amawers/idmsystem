@@ -1,3 +1,17 @@
+/**
+ * Offline-first Senior Citizen (SC) case service.
+ *
+ * Responsibilities:
+ * - Maintain a local IndexedDB cache of SC cases (Dexie table `sc_cases`).
+ * - Queue create/update/delete operations while offline (Dexie table `sc_queue`).
+ * - Reconcile queued operations to Supabase (`sc_case`) when online.
+ *
+ * Notes:
+ * - `localId` is the local primary key used to address rows consistently even
+ *   before Supabase assigns an `id`.
+ * - `hasPendingWrites` prevents remote snapshots from overwriting local edits.
+ */
+
 import { liveQuery } from "dexie";
 import supabase from "@/../config/supabase";
 import offlineCaseDb from "@/db/offlineCaseDb";
@@ -5,6 +19,11 @@ import offlineCaseDb from "@/db/offlineCaseDb";
 const TABLE_NAME = "sc_case";
 const CASE_TABLE = offlineCaseDb.table("sc_cases");
 const QUEUE_TABLE = offlineCaseDb.table("sc_queue");
+
+/**
+ * Local-only bookkeeping fields that must never be persisted back to Supabase.
+ * @type {string[]}
+ */
 const LOCAL_META_FIELDS = [
 	"localId",
 	"hasPendingWrites",
@@ -13,10 +32,45 @@ const LOCAL_META_FIELDS = [
 	"lastLocalChange",
 ];
 
+/** @returns {number} Epoch milliseconds. */
 const nowTs = () => Date.now();
+
+/** @returns {boolean} True when the browser reports network connectivity. */
 const browserOnline = () =>
 	typeof navigator !== "undefined" ? navigator.onLine : true;
 
+/**
+ * @typedef {object} ScLocalMeta
+ * @property {number} localId
+ * @property {boolean} hasPendingWrites
+ * @property {"create"|"update"|"delete"|null} pendingAction
+ * @property {string|null} syncError
+ * @property {number|null} lastLocalChange Epoch milliseconds
+ */
+
+/**
+ * Minimal shape used throughout the cache/queue.
+ * The SC schema may evolve, so this is intentionally loose.
+ * @typedef {Record<string, any> & Partial<ScLocalMeta> & { id?: string|null }} ScCaseRecord
+ */
+
+/**
+ * Queue row shape used by `sc_queue`.
+ * @typedef {object} ScQueueOp
+ * @property {number} queueId
+ * @property {"create"|"update"|"delete"} operationType
+ * @property {number} targetLocalId
+ * @property {string|null} targetId Supabase row id (required for update/delete)
+ * @property {any|null} payload
+ * @property {number} createdAt Epoch milliseconds
+ */
+
+/**
+ * Removes duplicate cached rows that reference the same Supabase `id`.
+ *
+ * This can happen if older cache versions inserted without first checking for
+ * an existing row; keeping only the earliest `localId` stabilizes updates.
+ */
 async function removeDuplicateServerRows() {
 	const rows = await CASE_TABLE.orderBy("localId").toArray();
 	const seen = new Map();
@@ -35,6 +89,11 @@ async function removeDuplicateServerRows() {
 }
 
 let localIdSetupPromise;
+
+/**
+ * Backfills `localId` on existing rows (and then de-dupes).
+ * @returns {Promise<void>}
+ */
 function ensureLocalIdField() {
 	if (!localIdSetupPromise) {
 		localIdSetupPromise = (async () => {
@@ -51,12 +110,23 @@ function ensureLocalIdField() {
 
 const localIdReady = ensureLocalIdField();
 
+/**
+ * Strips local-only metadata from a payload before syncing to Supabase.
+ * @param {Record<string, any>} [payload]
+ * @returns {Record<string, any>}
+ */
 function sanitizeCasePayload(payload = {}) {
 	const clone = { ...payload };
 	LOCAL_META_FIELDS.forEach((key) => delete clone[key]);
 	return clone;
 }
 
+/**
+ * Ensures local metadata fields have stable defaults.
+ * @param {Record<string, any>} [base]
+ * @param {Partial<ScLocalMeta> & Record<string, any>} [overrides]
+ * @returns {ScCaseRecord}
+ */
 function buildLocalRecord(base = {}, overrides = {}) {
 	return {
 		...base,
@@ -68,6 +138,11 @@ function buildLocalRecord(base = {}, overrides = {}) {
 	};
 }
 
+/**
+ * LiveQuery stream of cached SC cases (newest first).
+ * Consumers should treat returned rows as immutable.
+ * @returns {import('dexie').Observable<ScCaseRecord[]>}
+ */
 export const scLiveQuery = () =>
 	liveQuery(async () => {
 		await localIdReady;
@@ -76,22 +151,40 @@ export const scLiveQuery = () =>
 		return rows.map((row) => ({ ...row }));
 	});
 
+/** @returns {Promise<number>} Number of queued operations awaiting sync. */
 export async function getScPendingOperationCount() {
 	return QUEUE_TABLE.count();
 }
 
+/**
+ * Fetches a cached SC case by Supabase `id`.
+ * @param {string|null|undefined} targetId
+ * @returns {Promise<ScCaseRecord|null>}
+ */
 export async function getScCaseById(targetId) {
 	if (!targetId) return null;
 	await localIdReady;
 	return CASE_TABLE.where("id").equals(targetId).first();
 }
 
+/**
+ * Fetches a cached SC case by local Dexie primary key.
+ * @param {number|null|undefined} localId
+ * @returns {Promise<ScCaseRecord|null>}
+ */
 export async function getScCaseByLocalId(localId) {
 	if (localId == null) return null;
 	await localIdReady;
 	return CASE_TABLE.get(localId);
 }
 
+/**
+ * Upserts a Supabase snapshot into the local cache.
+ *
+ * Policy: rows with `hasPendingWrites` are not overwritten.
+ * @param {ScCaseRecord[]} [rows]
+ * @returns {Promise<void>}
+ */
 export async function upsertLocalFromSupabase(rows = []) {
 	await localIdReady;
 	await offlineCaseDb.transaction("rw", CASE_TABLE, async () => {
@@ -133,6 +226,10 @@ export async function upsertLocalFromSupabase(rows = []) {
 	});
 }
 
+/**
+ * Loads the latest SC snapshot from Supabase into the local cache.
+ * @returns {Promise<number>} Number of remote rows loaded.
+ */
 export async function loadScRemoteSnapshotIntoCache() {
 	const { data, error } = await supabase
 		.from(TABLE_NAME)
@@ -144,6 +241,18 @@ export async function loadScRemoteSnapshotIntoCache() {
 	return data?.length ?? 0;
 }
 
+/**
+ * Creates/updates a local SC case row and enqueues a sync operation.
+ *
+ * Prefer using `localId` when editing a draft that might not yet have a
+ * Supabase `id`.
+ * @param {object} params
+ * @param {Record<string, any>} params.casePayload
+ * @param {string|null} [params.targetId]
+ * @param {number|null} [params.localId]
+ * @param {"create"|"update"} [params.mode]
+ * @returns {Promise<{ localId: number }>}
+ */
 export async function createOrUpdateLocalScCase({
 	casePayload,
 	targetId = null,
@@ -204,6 +313,13 @@ export async function createOrUpdateLocalScCase({
 	);
 }
 
+/**
+ * Marks a cached row as pending delete and enqueues the delete operation.
+ * @param {object} params
+ * @param {string|null} [params.targetId]
+ * @param {number|null} [params.localId]
+ * @returns {Promise<{ success: boolean }>}
+ */
 export async function markScLocalDelete({ targetId = null, localId = null }) {
 	await localIdReady;
 	return offlineCaseDb.transaction(
@@ -237,6 +353,16 @@ export async function markScLocalDelete({ targetId = null, localId = null }) {
 	);
 }
 
+/**
+ * Deletes immediately when online; otherwise marks local delete and queues sync.
+ *
+ * When a remote delete succeeds, any queued ops for the same `localId` are
+ * removed to avoid replaying stale work.
+ * @param {object} params
+ * @param {string|null} [params.targetId]
+ * @param {number|null} [params.localId]
+ * @returns {Promise<{ success: boolean, queued: boolean }>}
+ */
 export async function deleteScCaseNow({ targetId = null, localId = null }) {
 	await localIdReady;
 	const isOnline = browserOnline();
@@ -287,6 +413,13 @@ export async function deleteScCaseNow({ targetId = null, localId = null }) {
 
 let scSyncInFlight = null;
 
+/**
+ * Replays queued operations to Supabase in FIFO order.
+ *
+ * Returns the in-flight promise if sync is already running.
+ * @param {(info: { current: ScQueueOp, synced: number }) => void} [statusCb]
+ * @returns {Promise<{ synced: number, error?: any }|{ synced: 0 }|{ synced: number }>}
+ */
 export function syncScQueue(statusCb) {
 	if (scSyncInFlight) {
 		return scSyncInFlight;

@@ -1,32 +1,15 @@
-// =============================================
-// User Management Page
-// ---------------------------------------------
-// Purpose: Main page for heads to manage user accounts.
-// Displays user list with search, filter, sort, and CRUD operations.
-//
-// Features:
-// - View all users in a data table
-// - Search by email or role
-// - Filter by status (all/active/inactive/banned)
-// - Sort by various columns
-// - Create new users
-// =============================================
-//
-// 
-// ```jsx
-// // In App.jsx
-// <Route
-//   path="/account"
-//   element={
-//     <ProtectedRoute allowedRoles={["social_worker"]}>
-//       <Layout>
-//         <UserManagement />
-//       </Layout>
-//     </ProtectedRoute>
-//   }
-// />
-// ```
-// =============================================
+/**
+ * User Management page.
+ *
+ * Responsibilities:
+ * - Fetch and display user accounts (via `useUserManagementStore`).
+ * - Provide client-side search and status filtering (delegated to the store selectors).
+ * - Present create/edit/ban dialogs that refresh the list on success.
+ * - Gate the experience when offline (online-only view).
+ *
+ * Notes:
+ * - Pagination in this view is client-side over `getFilteredUsers()`.
+ */
 
 import { useEffect, useState } from "react";
 import { useUserManagementStore } from "@/store/useUserManagementStore";
@@ -59,7 +42,13 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+	Card,
+	CardContent,
+	CardDescription,
+	CardHeader,
+	CardTitle,
+} from "@/components/ui/card";
 import {
 	UserPlus,
 	Search,
@@ -76,6 +65,24 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+/**
+ * @typedef {"active"|"inactive"|"banned"} UserStatus
+ */
+
+/**
+ * @typedef {Object} ManagedUser
+ * @property {string} id
+ * @property {string} email
+ * @property {string} [role]
+ * @property {UserStatus} status
+ * @property {string} [created_at]
+ * @property {string} [updated_at]
+ */
+
+/**
+ * Head-only user management view.
+ * @returns {JSX.Element}
+ */
 export default function UserManagement() {
 	const {
 		users,
@@ -89,14 +96,14 @@ export default function UserManagement() {
 		statusFilter,
 	} = useUserManagementStore();
 
-	// Dialog states
+	// Dialog state
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [editUser, setEditUser] = useState(null);
 	const [banAction, setBanAction] = useState(null);
 
-	// Online state: show offline message when navigator is offline
+	// Online state gates network-backed operations.
 	const [isOnline, setIsOnline] = useState(
-		typeof navigator !== "undefined" ? navigator.onLine : true
+		typeof navigator !== "undefined" ? navigator.onLine : true,
 	);
 
 	useEffect(() => {
@@ -112,7 +119,7 @@ export default function UserManagement() {
 		};
 	}, []);
 
-	// Pagination state
+	// Pagination state (client-side).
 	const [currentPage, setCurrentPage] = useState(1);
 	const itemsPerPage = 3;
 
@@ -123,7 +130,7 @@ export default function UserManagement() {
 		}
 	}, [fetchUsers, isOnline]);
 
-	// Show error toast if error occurs
+	// Surface store fetch errors.
 	useEffect(() => {
 		if (error) {
 			toast.error("Error loading users", {
@@ -132,7 +139,7 @@ export default function UserManagement() {
 		}
 	}, [error]);
 
-	// Get filtered users
+	/** @type {ManagedUser[]} */
 	const filteredUsers = getFilteredUsers();
 
 	// Pagination calculations
@@ -146,7 +153,7 @@ export default function UserManagement() {
 		setCurrentPage(1);
 	}, [searchQuery, statusFilter]);
 
-	// Statistics
+	// Summary stats are computed from the raw `users` list.
 	const stats = {
 		total: users.length,
 		active: users.filter((u) => u.status === "active").length,
@@ -154,17 +161,27 @@ export default function UserManagement() {
 		banned: users.filter((u) => u.status === "banned").length,
 	};
 
-	// Handle search
+	/**
+	 * Update the store search query.
+	 * @param {import("react").ChangeEvent<HTMLInputElement>} e
+	 */
 	const handleSearch = (e) => {
 		setSearchQuery(e.target.value);
 	};
 
-	// Handle status filter
+	/**
+	 * Update the store status filter.
+	 * @param {string} value
+	 */
 	const handleStatusFilter = (value) => {
 		setStatusFilter(value);
 	};
 
-	// Format date
+	/**
+	 * Format an ISO timestamp for display.
+	 * @param {string | undefined | null} dateString
+	 * @returns {string}
+	 */
 	const formatDate = (dateString) => {
 		if (!dateString) return "N/A";
 		return new Date(dateString).toLocaleDateString("en-US", {
@@ -174,7 +191,11 @@ export default function UserManagement() {
 		});
 	};
 
-	// Get status badge
+	/**
+	 * Render a user status badge.
+	 * @param {UserStatus} status
+	 * @returns {JSX.Element}
+	 */
 	const getStatusBadge = (status) => {
 		const variants = {
 			active: "bg-green-500/10 text-green-700 border-green-200",
@@ -202,7 +223,8 @@ export default function UserManagement() {
 						User management requires an internet connection.
 					</p>
 					<p className="text-sm text-muted-foreground">
-						Viewing will resume automatically when you are back online.
+						Viewing will resume automatically when you are back
+						online.
 					</p>
 				</div>
 			</div>
@@ -211,10 +233,11 @@ export default function UserManagement() {
 
 	return (
 		<div className="container mx-auto px-6 space-y-6">
-			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold tracking-tight">User Management</h1>
+					<h1 className="text-2xl font-bold tracking-tight">
+						User Management
+					</h1>
 					<p className="text-sm text-muted-foreground mt-1">
 						Manage social worker accounts
 					</p>
@@ -225,11 +248,12 @@ export default function UserManagement() {
 				</Button>
 			</div>
 
-			{/* Statistics Cards */}
 			<div className="grid gap-4 md:grid-cols-4">
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 py-3">
-						<CardTitle className="text-sm font-medium">Total Users</CardTitle>
+						<CardTitle className="text-sm font-medium">
+							Total Users
+						</CardTitle>
 						<Users className="h-4 w-4 text-muted-foreground" />
 					</CardHeader>
 					<CardContent className="pb-3">
@@ -239,36 +263,47 @@ export default function UserManagement() {
 
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 py-3">
-						<CardTitle className="text-sm font-medium">Active</CardTitle>
+						<CardTitle className="text-sm font-medium">
+							Active
+						</CardTitle>
 						<UserCheck className="h-4 w-4 text-green-600" />
 					</CardHeader>
 					<CardContent className="pb-3">
-						<div className="text-2xl font-bold text-green-600">{stats.active}</div>
+						<div className="text-2xl font-bold text-green-600">
+							{stats.active}
+						</div>
 					</CardContent>
 				</Card>
 
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 py-3">
-						<CardTitle className="text-sm font-medium">Inactive</CardTitle>
+						<CardTitle className="text-sm font-medium">
+							Inactive
+						</CardTitle>
 						<UserX className="h-4 w-4 text-gray-600" />
 					</CardHeader>
 					<CardContent className="pb-3">
-						<div className="text-2xl font-bold text-gray-600">{stats.inactive}</div>
+						<div className="text-2xl font-bold text-gray-600">
+							{stats.inactive}
+						</div>
 					</CardContent>
 				</Card>
 
 				<Card>
 					<CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2 py-3">
-						<CardTitle className="text-sm font-medium">Banned</CardTitle>
+						<CardTitle className="text-sm font-medium">
+							Banned
+						</CardTitle>
 						<ShieldAlert className="h-4 w-4 text-red-600" />
 					</CardHeader>
 					<CardContent className="pb-3">
-						<div className="text-2xl font-bold text-red-600">{stats.banned}</div>
+						<div className="text-2xl font-bold text-red-600">
+							{stats.banned}
+						</div>
 					</CardContent>
 				</Card>
 			</div>
 
-			{/* Filters and Search */}
 			<Card>
 				<CardHeader>
 					<CardTitle>User List</CardTitle>
@@ -278,7 +313,6 @@ export default function UserManagement() {
 				</CardHeader>
 				<CardContent>
 					<div className="flex flex-col md:flex-row gap-4 mb-4">
-						{/* Search */}
 						<div className="flex-1 relative">
 							<Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 							<Input
@@ -289,20 +323,23 @@ export default function UserManagement() {
 							/>
 						</div>
 
-						{/* Status Filter */}
-						<Select value={statusFilter} onValueChange={handleStatusFilter}>
+						<Select
+							value={statusFilter}
+							onValueChange={handleStatusFilter}
+						>
 							<SelectTrigger className="w-full md:w-[180px]">
 								<SelectValue placeholder="Filter by status" />
 							</SelectTrigger>
 							<SelectContent>
 								<SelectItem value="all">All Status</SelectItem>
 								<SelectItem value="active">Active</SelectItem>
-								<SelectItem value="inactive">Inactive</SelectItem>
+								<SelectItem value="inactive">
+									Inactive
+								</SelectItem>
 								<SelectItem value="banned">Banned</SelectItem>
 							</SelectContent>
 						</Select>
 
-						{/* Refresh Button */}
 						<Button
 							variant="outline"
 							onClick={() => fetchUsers()}
@@ -324,16 +361,34 @@ export default function UserManagement() {
 					) : (
 						<>
 							<div className="rounded-md border">
-								<div className={paginatedUsers.length > 3 ? "max-h-[400px] overflow-y-auto" : ""}>
+								<div
+									className={
+										paginatedUsers.length > 3
+											? "max-h-[400px] overflow-y-auto"
+											: ""
+									}
+								>
 									<Table>
 										<TableHeader className="sticky top-0 bg-background z-10">
 											<TableRow>
-												<TableHead className="bg-background">Email</TableHead>
-												<TableHead className="bg-background">Role</TableHead>
-												<TableHead className="bg-background">Status</TableHead>
-												<TableHead className="bg-background">Created</TableHead>
-												<TableHead className="bg-background">Last Updated</TableHead>
-												<TableHead className="text-right bg-background">Actions</TableHead>
+												<TableHead className="bg-background">
+													Email
+												</TableHead>
+												<TableHead className="bg-background">
+													Role
+												</TableHead>
+												<TableHead className="bg-background">
+													Status
+												</TableHead>
+												<TableHead className="bg-background">
+													Created
+												</TableHead>
+												<TableHead className="bg-background">
+													Last Updated
+												</TableHead>
+												<TableHead className="text-right bg-background">
+													Actions
+												</TableHead>
 											</TableRow>
 										</TableHeader>
 										<TableBody>
@@ -353,57 +408,90 @@ export default function UserManagement() {
 															{user.email}
 														</TableCell>
 														<TableCell>
-															<Badge variant="outline" className="capitalize">
-																{user.role?.replace("_", " ")}
+															<Badge
+																variant="outline"
+																className="capitalize"
+															>
+																{user.role?.replace(
+																	"_",
+																	" ",
+																)}
 															</Badge>
 														</TableCell>
-														<TableCell>{getStatusBadge(user.status)}</TableCell>
-														<TableCell className="text-sm text-muted-foreground">
-															{formatDate(user.created_at)}
+														<TableCell>
+															{getStatusBadge(
+																user.status,
+															)}
 														</TableCell>
 														<TableCell className="text-sm text-muted-foreground">
-															{formatDate(user.updated_at)}
+															{formatDate(
+																user.created_at,
+															)}
+														</TableCell>
+														<TableCell className="text-sm text-muted-foreground">
+															{formatDate(
+																user.updated_at,
+															)}
 														</TableCell>
 														<TableCell className="text-right">
 															<DropdownMenu>
-																<DropdownMenuTrigger asChild>
-																	<Button variant="ghost" size="icon">
+																<DropdownMenuTrigger
+																	asChild
+																>
+																	<Button
+																		variant="ghost"
+																		size="icon"
+																	>
 																		<MoreVertical className="h-4 w-4" />
 																	</Button>
 																</DropdownMenuTrigger>
 																<DropdownMenuContent align="end">
-																	<DropdownMenuLabel>Actions</DropdownMenuLabel>
+																	<DropdownMenuLabel>
+																		Actions
+																	</DropdownMenuLabel>
 																	<DropdownMenuSeparator />
 																	<DropdownMenuItem
-																		onClick={() => setEditUser(user)}
+																		onClick={() =>
+																			setEditUser(
+																				user,
+																			)
+																		}
 																	>
 																		<Edit className="mr-2 h-4 w-4" />
-																		Edit User
+																		Edit
+																		User
 																	</DropdownMenuItem>
-																	{user.status === "banned" ? (
+																	{user.status ===
+																	"banned" ? (
 																		<DropdownMenuItem
 																			onClick={() =>
-																				setBanAction({
-																					user,
-																					action: "unban",
-																				})
+																				setBanAction(
+																					{
+																						user,
+																						action: "unban",
+																					},
+																				)
 																			}
 																		>
 																			<CheckCircle className="mr-2 h-4 w-4" />
-																			Unban User
+																			Unban
+																			User
 																		</DropdownMenuItem>
 																	) : (
 																		<DropdownMenuItem
 																			onClick={() =>
-																				setBanAction({
-																					user,
-																					action: "ban",
-																				})
+																				setBanAction(
+																					{
+																						user,
+																						action: "ban",
+																					},
+																				)
 																			}
 																			className="text-destructive"
 																		>
 																			<Ban className="mr-2 h-4 w-4" />
-																			Ban User
+																			Ban
+																			User
 																		</DropdownMenuItem>
 																	)}
 																</DropdownMenuContent>
@@ -417,19 +505,22 @@ export default function UserManagement() {
 								</div>
 							</div>
 
-							{/* Pagination */}
 							<div className="flex items-center justify-between mt-4 pt-4 border-t">
 								<p className="text-sm text-muted-foreground">
 									Showing {startIndex + 1} to{" "}
-									{Math.min(endIndex, filteredUsers.length)} of{" "}
-									{filteredUsers.length} users
+									{Math.min(endIndex, filteredUsers.length)}{" "}
+									of {filteredUsers.length} users
 								</p>
 								{totalPages > 1 && (
 									<div className="flex gap-2">
 										<Button
 											variant="outline"
 											size="sm"
-											onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+											onClick={() =>
+												setCurrentPage((p) =>
+													Math.max(1, p - 1),
+												)
+											}
 											disabled={currentPage === 1}
 										>
 											Previous
@@ -441,9 +532,13 @@ export default function UserManagement() {
 											variant="outline"
 											size="sm"
 											onClick={() =>
-												setCurrentPage((p) => Math.min(totalPages, p + 1))
+												setCurrentPage((p) =>
+													Math.min(totalPages, p + 1),
+												)
 											}
-											disabled={currentPage === totalPages}
+											disabled={
+												currentPage === totalPages
+											}
 										>
 											Next
 										</Button>
@@ -455,7 +550,6 @@ export default function UserManagement() {
 				</CardContent>
 			</Card>
 
-			{/* Dialogs */}
 			<CreateUserDialog
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}

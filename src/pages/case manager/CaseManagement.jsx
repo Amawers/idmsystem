@@ -1,7 +1,11 @@
 /**
- * @file CaseManagement.jsx
- * @description Case Management - Main table view for managing cases
- * @module pages/case-manager/CaseManagement
+ * Case Management page.
+ *
+ * Responsibilities:
+ * - Aggregates case datasets (CASE, CICL/CAR, FAC, FAR, IVAC, SP, FA, PWD, SC) via offline-capable hooks.
+ * - Applies role-based visibility filtering for case managers.
+ * - Coordinates tab persistence and post-reload auto-sync using `sessionStorage` flags.
+ * - Auto-triggers sync when coming back online and there are pending offline operations.
  */
 
 import { DataTable } from "@/components/cases/data-table";
@@ -19,6 +23,16 @@ import { useScCases } from "@/hooks/useScCases";
 import { useHiddenCases } from "@/hooks/useHiddenCases";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
+/**
+ * @typedef {"CASE"|"CICLCAR"|"FAC"|"FAR"|"IVAC"|"SP"|"FA"|"PWD"|"SC"} CaseManagementTabId
+ */
+
+/**
+ * Key used to force a specific tab selection after a full reload.
+ *
+ * This is separate from `caseManagement.activeTab` so callers can temporarily override tab selection
+ * (e.g., after create/update flows) without permanently changing user preference.
+ */
 const FORCED_TAB_AFTER_RELOAD_KEY = "caseManagement.forceTabAfterReload";
 
 export default function CaseManagement() {
@@ -128,10 +142,16 @@ export default function CaseManagement() {
 	// Filter hidden cases for case managers
 	const { filterVisibleCases } = useHiddenCases();
 	const isOnline = useNetworkStatus();
+	/** @type {[CaseManagementTabId, (t: CaseManagementTabId) => void]} */
 	const [initialTab, setInitialTab] = useState("CASE");
+	/** @type {[CaseManagementTabId | null, (t: CaseManagementTabId | null) => void]} */
 	const [autoSyncAfterReloadTab, setAutoSyncAfterReloadTab] = useState(null);
 	const hasBootstrappedTab = useRef(false);
 	const previousOnline = useRef(isOnline);
+	/**
+	 * Used as a simple in-memory lock map to prevent overlapping auto-sync attempts per tab.
+	 * @type {React.MutableRefObject<Record<CaseManagementTabId, boolean>>}
+	 */
 	const autoSyncTriggeredRef = useRef({
 		CASE: false,
 		CICLCAR: false,
@@ -144,11 +164,23 @@ export default function CaseManagement() {
 		SC: false,
 	});
 
+	/**
+	 * Persists the user-selected tab so the view can restore it after refresh.
+	 * @param {CaseManagementTabId} tabValue
+	 */
 	const persistActiveTab = useCallback((tabValue) => {
 		if (typeof window === "undefined") return;
 		sessionStorage.setItem("caseManagement.activeTab", tabValue);
 	}, []);
 
+	/**
+	 * Bootstraps the initial tab selection on first mount.
+	 *
+	 * Priority order:
+	 * 1) A forced tab override (`FORCED_TAB_AFTER_RELOAD_KEY`)
+	 * 2) A one-shot sync flag (e.g., `caseManagement.forceCaseSync`)
+	 * 3) Previously persisted tab (`caseManagement.activeTab`)
+	 */
 	useEffect(() => {
 		if (hasBootstrappedTab.current) return;
 		hasBootstrappedTab.current = true;
@@ -229,11 +261,16 @@ export default function CaseManagement() {
 		}
 	}, []);
 
+	/** Mirrors `initialTab` into sessionStorage so other flows can read it. */
 	useEffect(() => {
 		if (typeof window === "undefined") return;
 		sessionStorage.setItem("caseManagement.activeTab", initialTab);
 	}, [initialTab]);
 
+	/**
+	 * When the app transitions from offline -> online and there are pending operations,
+	 * trigger a reload that lands the user on the most relevant tab and forces a sync.
+	 */
 	useEffect(() => {
 		if (!previousOnline.current && isOnline) {
 			if (typeof window !== "undefined") {
@@ -346,6 +383,10 @@ export default function CaseManagement() {
 		scPendingCount,
 	]);
 
+	/**
+	 * If a create/update flow forced a reload with a specific sync flag, run that sync once.
+	 * The actual sync function is selected based on `autoSyncAfterReloadTab`.
+	 */
 	useEffect(() => {
 		if (!autoSyncAfterReloadTab) return;
 		if (!isOnline) return;
@@ -387,6 +428,10 @@ export default function CaseManagement() {
 		runFaSync,
 	]);
 
+	/**
+	 * While online, opportunistically auto-sync pending queues per case type.
+	 * Uses `autoSyncTriggeredRef` as a lightweight guard against overlapping sync attempts.
+	 */
 	useEffect(() => {
 		if (!isOnline) {
 			autoSyncTriggeredRef.current = {
@@ -487,6 +532,9 @@ export default function CaseManagement() {
 		runFarSync,
 		runIvacSync,
 		runSpSync,
+		runPwdSync,
+		runScSync,
+		runFaSync,
 		casePendingCount,
 		ciclcarPendingCount,
 		facPendingCount,
@@ -507,7 +555,7 @@ export default function CaseManagement() {
 		scSyncing,
 	]);
 
-	// Apply filtering to all case data
+	/** Applies visibility filtering to each dataset before handing to the table UI. */
 	const filteredCaseRows = React.useMemo(
 		() => filterVisibleCases(caseRows || []),
 		[caseRows, filterVisibleCases],
@@ -547,7 +595,6 @@ export default function CaseManagement() {
 
 	return (
 		<>
-			{/* ================= HEADER ================= */}
 			<div className="flex items-start justify-between gap-4 px-4 lg:px-6 pb-4">
 				<div>
 					<h2 className="text-base font-bold tracking-tight">
@@ -574,7 +621,6 @@ export default function CaseManagement() {
 				</div>
 			</div>
 
-			{/* ================= DATA TABLE ================= */}
 			<div className="px-4 lg:px-6">
 				<Card>
 					<CardContent className="pt-4">

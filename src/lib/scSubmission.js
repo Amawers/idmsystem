@@ -1,10 +1,125 @@
 /**
- * @file scSubmission.js
- * @description Senior Citizen case submission helpers
- * Maps intake form data to Supabase `sc_case` table.
+ * Senior Citizen (SC) case submission helpers.
  *
- * @author IDM System
- * @date 2026-02-04
+ * Maps intake form state into a payload compatible with the Supabase `sc_case` table.
+ */
+
+/**
+ * @typedef {Object} ScFormState
+ * @property {string} [case_manager]
+ * @property {string} [status]
+ * @property {string} [priority]
+ * @property {string} [visibility]
+ * @property {string} [senior_name]
+ * @property {string} [region]
+ * @property {string} [province]
+ * @property {string} [city_municipality]
+ * @property {string} [barangay]
+ * @property {string|Date|null} [date_of_birth]
+ * @property {string} [place_of_birth]
+ * @property {string} [marital_status]
+ * @property {string} [gender]
+ * @property {string} [contact_number]
+ * @property {string} [email_address]
+ * @property {string} [religion]
+ * @property {string} [ethnic_origin]
+ * @property {string} [language_spoken_written]
+ * @property {string} [osca_id_number]
+ * @property {string} [gsis]
+ * @property {string} [tin]
+ * @property {string} [philhealth]
+ * @property {string} [sc_association]
+ * @property {string} [other_gov_id]
+ * @property {string} [capability_to_travel]
+ * @property {string} [service_business_employment]
+ * @property {string} [current_pension]
+ * @property {string} [name_of_spouse]
+ * @property {string} [fathers_name]
+ * @property {string} [mothers_maiden_name]
+ * @property {unknown[]} [children]
+ * @property {string} [other_dependents]
+ * @property {unknown[]} [educational_attainment]
+ * @property {unknown[]} [technical_skills]
+ * @property {unknown[]} [community_service_involvement]
+ * @property {unknown[]} [living_with]
+ * @property {unknown[]} [household_condition]
+ * @property {unknown[]} [source_of_income_assistance]
+ * @property {unknown[]} [assets_real_immovable]
+ * @property {unknown[]} [assets_personal_movable]
+ * @property {unknown[]} [needs_commonly_encountered]
+ * @property {unknown[]} [medical_concern]
+ * @property {unknown[]} [dental_concern]
+ * @property {unknown[]} [optical]
+ * @property {unknown[]} [hearing]
+ * @property {unknown[]} [social]
+ * @property {unknown[]} [difficulty]
+ * @property {unknown[]} [medicines_for_maintenance]
+ * @property {string} [scheduled_checkup]
+ * @property {string} [checkup_frequency]
+ * @property {string} [assisting_person]
+ * @property {string} [relation_to_senior]
+ * @property {string} [interviewer]
+ * @property {string|Date|null} [date_of_interview]
+ * @property {string} [place_of_interview]
+ */
+
+/**
+ * @typedef {Object} ScCasePayload
+ * @property {string|null} case_manager
+ * @property {string|null} status
+ * @property {string|null} priority
+ * @property {string|null} visibility
+ * @property {string|null} senior_name
+ * @property {string|null} region
+ * @property {string|null} province
+ * @property {string|null} city_municipality
+ * @property {string|null} barangay
+ * @property {string|null} date_of_birth
+ * @property {string|null} place_of_birth
+ * @property {string|null} marital_status
+ * @property {string|null} gender
+ * @property {string|null} contact_number
+ * @property {string|null} email_address
+ * @property {string|null} religion
+ * @property {string|null} ethnic_origin
+ * @property {string|null} language_spoken_written
+ * @property {string|null} osca_id_number
+ * @property {string|null} gsis
+ * @property {string|null} tin
+ * @property {string|null} philhealth
+ * @property {string|null} sc_association
+ * @property {string|null} other_gov_id
+ * @property {string|null} capability_to_travel
+ * @property {string|null} service_business_employment
+ * @property {string|null} current_pension
+ * @property {string|null} name_of_spouse
+ * @property {string|null} fathers_name
+ * @property {string|null} mothers_maiden_name
+ * @property {unknown[]} children
+ * @property {string|null} other_dependents
+ * @property {unknown[]} educational_attainment
+ * @property {unknown[]} technical_skills
+ * @property {unknown[]} community_service_involvement
+ * @property {unknown[]} living_with
+ * @property {unknown[]} household_condition
+ * @property {unknown[]} source_of_income_assistance
+ * @property {unknown[]} assets_real_immovable
+ * @property {unknown[]} assets_personal_movable
+ * @property {unknown[]} needs_commonly_encountered
+ * @property {unknown[]} medical_concern
+ * @property {unknown[]} dental_concern
+ * @property {unknown[]} optical
+ * @property {unknown[]} hearing
+ * @property {unknown[]} social
+ * @property {unknown[]} difficulty
+ * @property {unknown[]} medicines_for_maintenance
+ * @property {string|null} scheduled_checkup
+ * @property {string|null} checkup_frequency
+ * @property {string|null} assisting_person
+ * @property {string|null} relation_to_senior
+ * @property {string|null} interviewer
+ * @property {string|null} date_of_interview
+ * @property {string|null} place_of_interview
  */
 
 /**
@@ -20,9 +135,9 @@ const normalizeDate = (v) => {
 };
 
 /**
- * Build Senior Citizen case payload from intake form data
- * @param {object} formState - Local intake form state (IntakeSheetSeniorCitizen)
- * @returns {object} Payload suitable for Supabase `sc_case` insert
+ * Build Senior Citizen case payload from intake form data.
+ * @param {ScFormState} [formState] Local intake form state (IntakeSheetSeniorCitizen).
+ * @returns {ScCasePayload} Payload suitable for Supabase `sc_case` insert.
  */
 export function buildSCCasePayload(formState = {}) {
 	return {

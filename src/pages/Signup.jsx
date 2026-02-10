@@ -1,13 +1,16 @@
+/**
+ * Temporary signup page (development/testing only).
+ *
+ * This component provisions a Supabase Auth user and stores basic profile data
+ * in the auth user metadata. It is intended for local/dev environments and is
+ * commonly removed or gated behind an environment flag in production builds.
+ */
+
 import { useState } from "react";
 import supabase from "@/../config/supabase";
 import { useNavigate } from "react-router-dom";
-import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
-
-//! ==================================================>
-//! DEVELOPMENT PURPOSE COMPONENT, DELETED IN FINAL APP
-//! ==================================================>
 
 export default function Signup() {
 	const [fullName, setFullName] = useState("");
@@ -18,9 +21,14 @@ export default function Signup() {
 	const [showPassword, setShowPassword] = useState(false);
 	const navigate = useNavigate();
 
-	// Single-role system
+	/** Single-role system (matches current authStore role normalization). */
 	const role = "social_worker";
 
+	/**
+	 * Creates a Supabase Auth user.
+	 * @param {import('react').FormEvent<HTMLFormElement>} e
+	 * @returns {Promise<void>}
+	 */
 	const handleSignup = async (e) => {
 		e.preventDefault();
 		setError(null);
@@ -74,14 +82,13 @@ export default function Signup() {
 					<div className="relative">
 						<Input
 							id="password"
-							type={showPassword ? "text" : "password"} // toggle input type
+							type={showPassword ? "text" : "password"}
 							placeholder="Password"
 							required
 							value={password}
 							onChange={(e) => setPassword(e.target.value)}
-							className="pr-10" // space for eye icon
+							className="pr-10"
 						/>
-						{/* BUTTON TO SHOW/HIDE PASSWORD */}
 						<button
 							type="button"
 							onClick={() => setShowPassword(!showPassword)}

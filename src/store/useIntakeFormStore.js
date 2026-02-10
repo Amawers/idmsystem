@@ -1,34 +1,68 @@
 import { create } from "zustand";
 
+/**
+ * Intake form state (Zustand).
+ *
+ * Used by multi-step intake flows to persist per-section form values between
+ * screens and across React Hook Form (RHF) mounts.
+ */
+
+/** @typedef {Record<string, any>} IntakeSectionData */
+/** @typedef {Record<string, IntakeSectionData>} IntakeFormData */
+
+/**
+ * Hook-style access to the intake form store.
+ *
+ * @returns {{
+ *   data: IntakeFormData,
+ *   setSectionField: (
+ *     section: string,
+ *     fieldOrValues: string | Record<string, any>,
+ *     maybeValue?: any
+ *   ) => void,
+ *   resetAll: () => void,
+ *   getAllData: () => IntakeFormData
+ * }}
+ */
 export const useIntakeFormStore = create((set, get) => ({
-  data: {},
+	/** @type {IntakeFormData} */
+	data: {},
 
-  setSectionField: (section, fieldOrValues, maybeValue) =>
-    set((state) => {
-      const prev = state.data[section] || {};
+	/**
+	 * Sets data for a section.
+	 *
+	 * Supports two calling styles:
+	 * - `setSectionField(section, valuesObject)` merges an object of values (RHF `values`).
+	 * - `setSectionField(section, fieldName, value)` sets a single field.
+	 *
+	 * @param {string} section
+	 * @param {string | Record<string, any>} fieldOrValues
+	 * @param {any} [maybeValue]
+	 */
+	setSectionField: (section, fieldOrValues, maybeValue) =>
+		set((state) => {
+			const prev = state.data[section] || {};
 
-      // If second arg is an object → merge it (for RHF `values`)
-      if (typeof fieldOrValues === "object" && fieldOrValues !== null) {
-        return {
-          data: {
-            ...state.data,
-            [section]: { ...prev, ...fieldOrValues },
-          },
-        };
-      }
+			if (typeof fieldOrValues === "object" && fieldOrValues !== null) {
+				return {
+					data: {
+						...state.data,
+						[section]: { ...prev, ...fieldOrValues },
+					},
+				};
+			}
 
-      // Else → treat as (field, value)
-      return {
-        data: {
-          ...state.data,
-          [section]: { ...prev, [fieldOrValues]: maybeValue },
-        },
-      };
-    }),
+			return {
+				data: {
+					...state.data,
+					[section]: { ...prev, [fieldOrValues]: maybeValue },
+				},
+			};
+		}),
 
-  // Clear everything
-  resetAll: () => set({ data: {} }),
+	/** Clears all intake form data. */
+	resetAll: () => set({ data: {} }),
 
-  // Getter for all data (useful for final submit)
-  getAllData: () => get().data,
+	/** Returns the full intake payload (useful for final submit). */
+	getAllData: () => get().data,
 }));

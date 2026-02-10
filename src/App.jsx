@@ -1,3 +1,10 @@
+/**
+ * App shell + routing.
+ *
+ * Uses `HashRouter` so routing works reliably in Electron packaged builds where
+ * the renderer is loaded from a static file (e.g., `dist/index.html`).
+ * Authentication and role-based access are enforced via `ProtectedRoute`.
+ */
 import { useEffect } from "react";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/sidebar/Sidebar";
@@ -30,317 +37,324 @@ import AuditTrail from "./pages/security/AuditTrail";
 import RolePermissions from "./pages/security/RolePermissions";
 import DocumentManagement from "./pages/security/DocumentManagement";
 
-// Layout wrapper for all authenticated pages
-// Includes Sidebar + Logout button + main content area
+/**
+ * Layout wrapper for authenticated pages.
+ *
+ * @param {{ children: import('react').ReactNode }} props
+ */
 function Layout({ children }) {
-
-
-  return (
-    <div className="flex">
-      <SidebarProvider
-      style={
-        {
-          "--sidebar-width": "calc(var(--spacing) * 72)",
-          "--header-height": "calc(var(--spacing) * 12)",
-        }
-      }
-      >
-        {/* Sidebar always visible for logged-in users */}
-        <Sidebar  variant="inset"/>
-        <SidebarInset>
-        <SiteHeader />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-               {children}
-
-            </div>
-          </div>
-        </div>
-        </SidebarInset>
-      </SidebarProvider>
-    </div>
-  );
+	return (
+		<div className="flex">
+			<SidebarProvider
+				style={{
+					"--sidebar-width": "calc(var(--spacing) * 72)",
+					"--header-height": "calc(var(--spacing) * 12)",
+				}}
+			>
+				<Sidebar variant="inset" />
+				<SidebarInset>
+					<SiteHeader />
+					<div className="flex flex-1 flex-col">
+						<div className="@container/main flex flex-1 flex-col gap-2">
+							<div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
+								{children}
+							</div>
+						</div>
+					</div>
+				</SidebarInset>
+			</SidebarProvider>
+		</div>
+	);
 }
 
+/**
+ * Full-screen overlay shown while session/auth initialization is in progress.
+ */
 function AppLoadingOverlay() {
-  return (
-    <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-background/80 backdrop-blur-sm" role="status" aria-live="polite">
-      <div className="flex max-w-sm flex-col items-center gap-4 rounded-2xl border bg-background p-8 text-center shadow-xl">
-        <div className="rounded-full bg-muted p-4">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        </div>
-        <div className="space-y-1">
-          <p className="text-base font-medium">Refreshing workspace</p>
-          <p className="text-sm text-muted-foreground">
-            We're fetching your latest session and data. This only takes a moment.
-          </p>
-        </div>
-      </div>
-    </div>
-  );
+	return (
+		<div
+			className="fixed inset-0 z-[1000] flex items-center justify-center bg-background/80 backdrop-blur-sm"
+			role="status"
+			aria-live="polite"
+		>
+			<div className="flex max-w-sm flex-col items-center gap-4 rounded-2xl border bg-background p-8 text-center shadow-xl">
+				<div className="rounded-full bg-muted p-4">
+					<Loader2 className="h-6 w-6 animate-spin text-primary" />
+				</div>
+				<div className="space-y-1">
+					<p className="text-base font-medium">
+						Refreshing workspace
+					</p>
+					<p className="text-sm text-muted-foreground">
+						We're fetching your latest session and data. This only
+						takes a moment.
+					</p>
+				</div>
+			</div>
+		</div>
+	);
 }
 
+/**
+ * Root React component.
+ * Initializes auth state on first render, then renders routes.
+ */
 export default function App() {
-  const { init, loading } = useAuthStore();
+	const { init, loading } = useAuthStore();
 
-  useEffect(() => {
-    // Runs once on app load: check if user session exists
-    init();
-  }, [init]);
+	useEffect(() => {
+		// Bootstrap auth state (online session or offline fallback).
+		init();
+	}, [init]);
 
-  // Show loading overlay while checking auth session
-  if (loading) return <AppLoadingOverlay />;
+	if (loading) return <AppLoadingOverlay />;
 
-  return (
-    <HashRouter>
-    {/* SidebarProvider wraps everything that uses Sidebar */}
-      
-      <Routes>
-        {/* Temporary signup page (for dev/testing only) */}
-        <Route path="/signup" element={<Signup />} />
+	return (
+		<HashRouter>
+			<Routes>
+				{/* Temporary signup page (for dev/testing only) */}
+				<Route path="/signup" element={<Signup />} />
 
-        {/* Public route: Login page */}
-        <Route path="/login" element={<Login />} />
+				{/* Public route: Login page */}
+				<Route path="/login" element={<Login />} />
 
-        {/* Protected route: Case Management (social worker) */}
-        <Route
-          path="/case"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <Case />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Case Management (social worker) */}
+				<Route
+					path="/case"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<Case />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Protected route: Case Dashboard (social worker) */}
-        <Route
-          path="/case/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <CaseDashboard />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Case Dashboard (social worker) */}
+				<Route
+					path="/case/dashboard"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<CaseDashboard />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Protected route: Case Management Table (social worker) */}
-        <Route
-          path="/case/management"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <CaseManagement />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
-        
-        {/* Protected route: Program Management Dashboard (social worker) */}
-        <Route
-          path="/program/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <ProgramDashboardPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Case Management Table (social worker) */}
+				<Route
+					path="/case/management"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<CaseManagement />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Protected route: Program Catalog (social worker) */}
-        <Route
-          path="/program/catalog"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <ProgramCatalogPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Program Management Dashboard (social worker) */}
+				<Route
+					path="/program/dashboard"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<ProgramDashboardPage />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Protected route: Program Enrollments (social worker) */}
-        <Route
-          path="/program/enrollments"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <ProgramEnrollmentsPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Program Catalog (social worker) */}
+				<Route
+					path="/program/catalog"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<ProgramCatalogPage />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Protected route: Service Delivery (social worker) */}
-        <Route
-          path="/program/service-delivery"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <ServiceDeliveryPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Program Enrollments (social worker) */}
+				<Route
+					path="/program/enrollments"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<ProgramEnrollmentsPage />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Protected route: Partners (social worker) */}
-        <Route
-          path="/program/partners"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <PartnersPage />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Service Delivery (social worker) */}
+				<Route
+					path="/program/service-delivery"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<ServiceDeliveryPage />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Redirect /program to /program/dashboard */}
-        <Route
-          path="/program"
-          element={<Navigate to="/program/dashboard" replace />}
-        />
+				{/* Protected route: Partners (social worker) */}
+				<Route
+					path="/program/partners"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<PartnersPage />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Protected route: Resource Dashboard (social worker) */}
-        <Route
-          path="/resource/dashboard"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <ResourceDashboard />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Redirect /program to /program/dashboard */}
+				<Route
+					path="/program"
+					element={<Navigate to="/program/dashboard" replace />}
+				/>
 
-        {/* Protected route: Resource Stock (social worker) */}
-        <Route
-          path="/resource/stock"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <ResourceStock />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Resource Dashboard (social worker) */}
+				<Route
+					path="/resource/dashboard"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<ResourceDashboard />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Protected route: Resource Approvals (social worker) */}
-        <Route
-          path="/resource/approvals"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <ResourceApprovals />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Resource Stock (social worker) */}
+				<Route
+					path="/resource/stock"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<ResourceStock />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Protected route: Resource Staff (social worker) */}
-        <Route
-          path="/resource/staff"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <ResourceStaff />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Resource Approvals (social worker) */}
+				<Route
+					path="/resource/approvals"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<ResourceApprovals />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Protected route: Resource Programs (social worker) */}
-        <Route
-          path="/resource/programs"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <ResourcePrograms />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Resource Staff (social worker) */}
+				<Route
+					path="/resource/staff"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<ResourceStaff />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Redirect /resource to /resource/dashboard */}
-        <Route
-          path="/resource"
-          element={<Navigate to="/resource/dashboard" replace />}
-        />
+				{/* Protected route: Resource Programs (social worker) */}
+				<Route
+					path="/resource/programs"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<ResourcePrograms />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Protected route: Account Management (social worker) */}
-        <Route
-          path="/account"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <UserManagement />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Redirect /resource to /resource/dashboard */}
+				<Route
+					path="/resource"
+					element={<Navigate to="/resource/dashboard" replace />}
+				/>
 
-        {/* Protected route: Security & Audit (social worker) */}
-        <Route
-          path="/controls"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <SecurityAudit />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Account Management (social worker) */}
+				<Route
+					path="/account"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<UserManagement />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Protected route: Audit Trail (social worker) */}
-        <Route
-          path="/controls/audit"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <AuditTrail />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Security & Audit (social worker) */}
+				<Route
+					path="/controls"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<SecurityAudit />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Protected route: Role Permissions (social worker) */}
-        <Route
-          path="/controls/permissions"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <RolePermissions />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Audit Trail (social worker) */}
+				<Route
+					path="/controls/audit"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<AuditTrail />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Protected route: Document Management (social worker) */}
-        <Route
-          path="/controls/documents"
-          element={
-            <ProtectedRoute allowedRoles={["social_worker"]}>
-              <Layout>
-                <DocumentManagement />
-              </Layout>
-            </ProtectedRoute>
-          }
-        />
+				{/* Protected route: Role Permissions (social worker) */}
+				<Route
+					path="/controls/permissions"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<RolePermissions />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Unauthorized route (when role doesn’t match) */}
-        <Route path="/unauthorized" element={<UnauthorizedPage />} />
+				{/* Protected route: Document Management (social worker) */}
+				<Route
+					path="/controls/documents"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<DocumentManagement />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
 
-        {/* Catch-all: redirect unknown routes to dashboard */}
-        <Route path="*" element={<Navigate to="/case" />} />
-      </Routes>
+				{/* Unauthorized route (when role doesn’t match) */}
+				<Route path="/unauthorized" element={<UnauthorizedPage />} />
 
-      {/* Sonner toast system (global notifications) */}
-      <Toaster />
-      
-    </HashRouter>
-  );
+				{/* Catch-all: redirect unknown routes to dashboard */}
+				<Route path="*" element={<Navigate to="/case" />} />
+			</Routes>
+
+			{/* Sonner toast system (global notifications) */}
+			<Toaster />
+		</HashRouter>
+	);
 }

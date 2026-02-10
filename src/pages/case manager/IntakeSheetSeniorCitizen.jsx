@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Senior Citizen (SC) intake sheet dialog.
+ *
+ * Responsibilities:
+ * - Collect a multi-step intake form across tabs.
+ * - Build an SC case payload and stage it locally via the offline service.
+ * - When saving while online, trigger a reload with sessionStorage flags so the
+ *   Case Management view can restore context and prompt syncing.
+ */
+
 import { useEffect, useMemo, useState } from "react";
 import {
 	Dialog,
@@ -16,6 +26,77 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { buildSCCasePayload } from "@/lib/scSubmission";
 import { createOrUpdateLocalScCase } from "@/services/scOfflineService";
+
+/**
+ * @typedef {Object} IntakeSheetSeniorCitizenProps
+ * @property {boolean} open
+ * @property {(open: boolean) => void} setOpen
+ * @property {() => void} [onSuccess]
+ */
+
+/**
+ * @typedef {Object} SeniorChild
+ * @property {string} full_name
+ * @property {string} occupation
+ * @property {string} income
+ * @property {string} age
+ * @property {string} working_status
+ */
+
+/**
+ * @typedef {Object} ScIntakeFormState
+ * @property {string} senior_name
+ * @property {string} region
+ * @property {string} province
+ * @property {string} city_municipality
+ * @property {string} barangay
+ * @property {string} date_of_birth
+ * @property {string} place_of_birth
+ * @property {string} marital_status
+ * @property {string} gender
+ * @property {string} contact_number
+ * @property {string} email_address
+ * @property {string} religion
+ * @property {string} ethnic_origin
+ * @property {string} language_spoken_written
+ * @property {string} osca_id_number
+ * @property {string} gsis
+ * @property {string} tin
+ * @property {string} philhealth
+ * @property {string} sc_association
+ * @property {string} other_gov_id
+ * @property {string} capability_to_travel
+ * @property {string} service_business_employment
+ * @property {string} current_pension
+ * @property {string} name_of_spouse
+ * @property {string} fathers_name
+ * @property {string} mothers_maiden_name
+ * @property {SeniorChild[]} children
+ * @property {string} other_dependents
+ * @property {string[]} educational_attainment
+ * @property {string[]} technical_skills
+ * @property {string[]} community_service_involvement
+ * @property {string[]} living_with
+ * @property {string[]} household_condition
+ * @property {string[]} source_of_income_assistance
+ * @property {string[]} assets_real_immovable
+ * @property {string[]} assets_personal_movable
+ * @property {string[]} needs_commonly_encountered
+ * @property {string[]} medical_concern
+ * @property {string[]} dental_concern
+ * @property {string[]} optical
+ * @property {string[]} hearing
+ * @property {string[]} social
+ * @property {string[]} difficulty
+ * @property {string[]} medicines_for_maintenance
+ * @property {string} scheduled_checkup
+ * @property {string} checkup_frequency
+ * @property {string} assisting_person
+ * @property {string} relation_to_senior
+ * @property {string} interviewer
+ * @property {string} date_of_interview
+ * @property {string} place_of_interview
+ */
 
 const initialFormState = {
 	// Identifying Information
@@ -88,6 +169,12 @@ const initialFormState = {
 	place_of_interview: "",
 };
 
+/**
+ * Create a stable DOM id for checkbox labels/inputs.
+ * @param {string} prefix
+ * @param {unknown} value
+ * @returns {string}
+ */
 function toKebabId(prefix, value) {
 	return `${prefix}-${String(value)
 		.toLowerCase()
@@ -95,13 +182,30 @@ function toKebabId(prefix, value) {
 		.replace(/[^a-z0-9-]/g, "")}`;
 }
 
+/**
+ * Senior Citizen intake dialog.
+ * @param {IntakeSheetSeniorCitizenProps} props
+ * @returns {JSX.Element}
+ */
 export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
+	/** @type {[ScIntakeFormState, import("react").Dispatch<import("react").SetStateAction<ScIntakeFormState>>]} */
 	const [formState, setFormState] = useState(initialFormState);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [activeTab, setActiveTab] = useState("identifying");
 
+	/**
+	 * Read the browser's online state.
+	 * @returns {boolean}
+	 */
 	const isBrowserOnline = () =>
 		typeof navigator !== "undefined" ? navigator.onLine : true;
+
+	/**
+	 * Force the Case Management UI back to the SC tab after save.
+	 *
+	 * Uses sessionStorage flags + reload to reset downstream hook state and encourage a sync.
+	 * @returns {void}
+	 */
 	const forceScTabReload = () => {
 		if (typeof window === "undefined") return;
 		sessionStorage.setItem("caseManagement.activeTab", "SC");
@@ -118,6 +222,11 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 		}
 	}, [open]);
 
+	/**
+	 * Create a controlled-input `onChange` handler.
+	 * @param {keyof ScIntakeFormState} field
+	 * @returns {(event: import("react").ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void}
+	 */
 	const handleChange = (field) => (event) => {
 		setFormState((prev) => ({
 			...prev,
@@ -125,6 +234,12 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 		}));
 	};
 
+	/**
+	 * Toggle a checkbox-like single-value field ("" | value).
+	 * @param {keyof ScIntakeFormState} field
+	 * @param {string} value
+	 * @returns {void}
+	 */
 	const setSingleCheckboxValue = (field, value) => {
 		setFormState((prev) => ({
 			...prev,
@@ -132,6 +247,12 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 		}));
 	};
 
+	/**
+	 * Toggle an entry in an array-valued field.
+	 * @param {keyof ScIntakeFormState} field
+	 * @param {string} value
+	 * @returns {void}
+	 */
 	const toggleArrayValue = (field, value) => {
 		setFormState((prev) => {
 			const current = Array.isArray(prev[field]) ? prev[field] : [];
@@ -142,6 +263,13 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 		});
 	};
 
+	/**
+	 * Update a child entry.
+	 * @param {number} index
+	 * @param {keyof SeniorChild} field
+	 * @param {string} value
+	 * @returns {void}
+	 */
 	const updateChild = (index, field, value) => {
 		setFormState((prev) => {
 			const nextChildren = prev.children.map((child, i) =>
@@ -151,6 +279,10 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 		});
 	};
 
+	/**
+	 * Append a new blank child row.
+	 * @returns {void}
+	 */
 	const addChild = () => {
 		setFormState((prev) => ({
 			...prev,
@@ -167,6 +299,11 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 		}));
 	};
 
+	/**
+	 * Remove a child row, keeping at least one blank row.
+	 * @param {number} index
+	 * @returns {void}
+	 */
 	const removeChild = (index) => {
 		setFormState((prev) => {
 			const nextChildren = prev.children.filter((_, i) => i !== index);
@@ -187,6 +324,12 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 		});
 	};
 
+	/**
+	 * Update a medicine entry.
+	 * @param {number} index
+	 * @param {string} value
+	 * @returns {void}
+	 */
 	const updateMedicine = (index, value) => {
 		setFormState((prev) => {
 			const next = prev.medicines_for_maintenance.map((m, i) =>
@@ -196,6 +339,10 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 		});
 	};
 
+	/**
+	 * Append a new blank medicine entry.
+	 * @returns {void}
+	 */
 	const addMedicine = () => {
 		setFormState((prev) => ({
 			...prev,
@@ -203,6 +350,11 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 		}));
 	};
 
+	/**
+	 * Remove a medicine entry, keeping at least one blank row.
+	 * @param {number} index
+	 * @returns {void}
+	 */
 	const removeMedicine = (index) => {
 		setFormState((prev) => {
 			const next = prev.medicines_for_maintenance.filter(
@@ -215,6 +367,11 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 		});
 	};
 
+	/**
+	 * Small checkbox + label row.
+	 * @param {{ id: string, label: string, checked: boolean, onCheckedChange: (checked: boolean) => void }} props
+	 * @returns {JSX.Element}
+	 */
 	const CheckboxItem = ({ id, label, checked, onCheckedChange }) => (
 		<div className="flex items-center gap-2">
 			<Checkbox
@@ -398,6 +555,11 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 		[],
 	);
 
+	/**
+	 * Build and stage the SC case locally, then optionally trigger a sync flow.
+	 * @param {import("react").FormEvent | undefined} event
+	 * @returns {Promise<void>}
+	 */
 	const handleSubmit = async (event) => {
 		event?.preventDefault?.();
 		setIsSubmitting(true);
@@ -440,11 +602,13 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 	const isFirstTab = activeIndex <= 0;
 	const isLastTab = activeIndex === tabOrder.length - 1;
 
+	/** @returns {void} */
 	const handleNext = () => {
 		const next = tabOrder[activeIndex + 1];
 		if (next) setActiveTab(next);
 	};
 
+	/** @returns {void} */
 	const handleBack = () => {
 		const prev = tabOrder[activeIndex - 1];
 		if (prev) setActiveTab(prev);

@@ -1,4 +1,15 @@
 "use client";
+
+/**
+ * Persons With Disabilities (PWD) intake sheet dialog.
+ *
+ * Responsibilities:
+ * - Collect a multi-step intake form across tabs.
+ * - Build a PWD case payload and stage it locally via the offline service.
+ * - When saving while online, trigger a reload with sessionStorage flags so the
+ *   Case Management view can restore context and prompt syncing.
+ */
+
 import { useEffect, useState } from "react";
 import {
 	Dialog,
@@ -14,6 +25,61 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { buildPWDCasePayload } from "@/lib/pwdSubmission";
 import { createOrUpdateLocalPwdCase } from "@/services/pwdOfflineService";
+
+/**
+ * @typedef {Object} IntakeSheetPwdProps
+ * @property {boolean} open
+ * @property {(open: boolean) => void} setOpen
+ * @property {() => void} [onSuccess]
+ */
+
+/**
+ * @typedef {Object} PwdIntakeFormState
+ * @property {string} application_type
+ * @property {string} pwd_number
+ * @property {string} date_applied
+ * @property {string} last_name
+ * @property {string} first_name
+ * @property {string} middle_name
+ * @property {string} suffix
+ * @property {string} date_of_birth
+ * @property {string} sex
+ * @property {string} civil_status
+ * @property {string[]} type_of_disability
+ * @property {string[]} cause_of_disability
+ * @property {string} house_no_street
+ * @property {string} barangay
+ * @property {string} municipality
+ * @property {string} province
+ * @property {string} region
+ * @property {string} landline_number
+ * @property {string} mobile_no
+ * @property {string} email_address
+ * @property {string} educational_attainment
+ * @property {string} employment_status
+ * @property {string} employment_category
+ * @property {string} type_of_employment
+ * @property {string} occupation
+ * @property {string} organization_affiliated
+ * @property {string} contact_person
+ * @property {string} office_address
+ * @property {string} tel_no
+ * @property {string} sss
+ * @property {string} gsis
+ * @property {string} pag_ibig
+ * @property {string} psn
+ * @property {string} philhealth
+ * @property {string} fathers_name
+ * @property {string} mothers_name
+ * @property {string} accomplished_by
+ * @property {string} certifying_physician
+ * @property {string} license_no
+ * @property {string} processing_officer
+ * @property {string} approving_officer
+ * @property {string} encoder
+ * @property {string} reporting_unit
+ * @property {string} control_no
+ */
 
 const initialFormState = {
 	application_type: "", // new_applicant | renewal
@@ -62,8 +128,19 @@ const initialFormState = {
 	control_no: "",
 };
 
+/**
+ * Read the browser's online state.
+ * @returns {boolean}
+ */
 const isBrowserOnline = () =>
 	typeof navigator !== "undefined" ? navigator.onLine : true;
+
+/**
+ * Force the Case Management UI back to the PWD tab after save.
+ *
+ * Uses sessionStorage flags + reload to reset downstream hook state and encourage a sync.
+ * @returns {void}
+ */
 const forcePwdTabReload = () => {
 	if (typeof window === "undefined") return;
 	sessionStorage.setItem("caseManagement.activeTab", "PWD");
@@ -72,7 +149,13 @@ const forcePwdTabReload = () => {
 	window.location.reload();
 };
 
+/**
+ * PWD intake dialog.
+ * @param {IntakeSheetPwdProps} props
+ * @returns {JSX.Element}
+ */
 export default function IntakeSheetPWD({ open, setOpen, onSuccess }) {
+	/** @type {[PwdIntakeFormState, import("react").Dispatch<import("react").SetStateAction<PwdIntakeFormState>>]} */
 	const [formState, setFormState] = useState(initialFormState);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [activeTab, setActiveTab] = useState("first");
@@ -85,6 +168,11 @@ export default function IntakeSheetPWD({ open, setOpen, onSuccess }) {
 		}
 	}, [open]);
 
+	/**
+	 * Create a controlled-input `onChange` handler.
+	 * @param {keyof PwdIntakeFormState} field
+	 * @returns {(event: import("react").ChangeEvent<HTMLInputElement>) => void}
+	 */
 	const handleChange = (field) => (event) => {
 		setFormState((prev) => ({
 			...prev,
@@ -92,6 +180,12 @@ export default function IntakeSheetPWD({ open, setOpen, onSuccess }) {
 		}));
 	};
 
+	/**
+	 * Toggle a checkbox-like single-value field ("" | value).
+	 * @param {keyof PwdIntakeFormState} field
+	 * @param {string} value
+	 * @returns {void}
+	 */
 	const setSingleCheckboxValue = (field, value) => {
 		setFormState((prev) => ({
 			...prev,
@@ -99,6 +193,12 @@ export default function IntakeSheetPWD({ open, setOpen, onSuccess }) {
 		}));
 	};
 
+	/**
+	 * Toggle an entry in an array-valued field.
+	 * @param {keyof PwdIntakeFormState} field
+	 * @param {string} value
+	 * @returns {void}
+	 */
 	const toggleArrayValue = (field, value) => {
 		setFormState((prev) => {
 			const current = Array.isArray(prev[field]) ? prev[field] : [];
@@ -109,6 +209,11 @@ export default function IntakeSheetPWD({ open, setOpen, onSuccess }) {
 		});
 	};
 
+	/**
+	 * Small checkbox + label row.
+	 * @param {{ id: string, label: string, checked: boolean, onCheckedChange: (checked: boolean) => void }} props
+	 * @returns {JSX.Element}
+	 */
 	const CheckboxItem = ({ id, label, checked, onCheckedChange }) => (
 		<div className="flex items-center gap-2">
 			<Checkbox
@@ -122,6 +227,11 @@ export default function IntakeSheetPWD({ open, setOpen, onSuccess }) {
 		</div>
 	);
 
+	/**
+	 * Build and stage the PWD case locally, then optionally trigger a sync flow.
+	 * @param {import("react").FormEvent | undefined} event
+	 * @returns {Promise<void>}
+	 */
 	const handleSubmit = async (event) => {
 		event?.preventDefault?.();
 		setIsSubmitting(true);
@@ -158,11 +268,13 @@ export default function IntakeSheetPWD({ open, setOpen, onSuccess }) {
 	const isFirstTab = activeIndex <= 0;
 	const isLastTab = activeIndex === tabOrder.length - 1;
 
+	/** @returns {void} */
 	const handleNext = () => {
 		const next = tabOrder[activeIndex + 1];
 		if (next) setActiveTab(next);
 	};
 
+	/** @returns {void} */
 	const handleBack = () => {
 		const prev = tabOrder[activeIndex - 1];
 		if (prev) setActiveTab(prev);
