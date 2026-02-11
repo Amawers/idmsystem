@@ -13,6 +13,31 @@ import { Eye, EyeOff } from "lucide-react";
 import { Loader } from "lucide-react";
 import logo from "@/assets/logo.jpg";
 
+/**
+ * Login form component.
+ *
+ * Responsibilities:
+ * - Render a controlled email/password form.
+ * - Provide password visibility toggle.
+ * - Wrap `onSubmit` with a local loading state for UX feedback.
+ * - Support an offline-first "Remember me" toggle.
+ */
+
+/**
+ * @typedef {Object} LoginFormProps
+ * @property {(event: any) => Promise<any> | any} onSubmit
+ * @property {string} email
+ * @property {(value: string) => void} setEmail
+ * @property {string} password
+ * @property {(value: string) => void} setPassword
+ * @property {boolean} rememberMe
+ * @property {(next: boolean) => void} setRememberMe
+ * @property {string} [className]
+ */
+
+/**
+ * @param {LoginFormProps & Record<string, any>} props
+ */
 export function LoginForm({
 	onSubmit,
 	email,
@@ -24,17 +49,18 @@ export function LoginForm({
 	className,
 	...props
 }) {
-	// LOCAL STATE TO TOGGLE PASSWORD VISIBILITY (hidden by default)
 	const [showPassword, setShowPassword] = useState(false);
+	const [isLoading, setIsLoading] = useState(false);
 
-	// wrapper to handle loading
-	const [isLoading, setIsLoading] = useState(false); // loading state
-
+	/**
+	 * Local submit wrapper to provide a loading state.
+	 * Ensures `isLoading` is always reset even if `onSubmit` throws.
+	 */
 	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setIsLoading(true);
 		try {
-			await onSubmit(e); // call parent submit
+			await onSubmit(e);
 		} finally {
 			setIsLoading(false);
 		}
@@ -45,13 +71,10 @@ export function LoginForm({
 			className={cn("flex flex-col gap-6 items-center", className)}
 			{...props}
 		>
-			{/* MAIN LOGIN CARD */}
 			<Card className="overflow-hidden p-0 md:w-3/5">
 				<CardContent className="p-0">
-					{/* ================= LOGIN FORM SECTION ================= */}
 					<form onSubmit={handleSubmit} className="p-6 md:p-8">
 						<div className="flex flex-col gap-6">
-							{/* LOGIN HEADER */}
 							<div className="flex flex-col items-center text-center">
 								<img src={logo} className="h-16" />
 								<h1 className="text-2xl font-bold">
@@ -62,7 +85,6 @@ export function LoginForm({
 								</p>
 							</div>
 
-							{/* EMAIL FIELD */}
 							<div className="grid gap-3">
 								<Label htmlFor="email">Email</Label>
 								<Input
@@ -71,11 +93,10 @@ export function LoginForm({
 									placeholder="ex.JuanCruz04@gmail.com"
 									required
 									value={email}
-									onChange={(e) => setEmail(e.target.value)} // sync input to parent state
+									onChange={(e) => setEmail(e.target.value)}
 								/>
 							</div>
 
-							{/* PASSWORD FIELD + TOGGLE */}
 							<div className="grid gap-3">
 								<Label htmlFor="password">Password</Label>
 								<div className="relative">
@@ -83,15 +104,14 @@ export function LoginForm({
 										id="password"
 										type={
 											showPassword ? "text" : "password"
-										} // toggle input type
+										}
 										required
 										value={password}
 										onChange={(e) =>
 											setPassword(e.target.value)
 										}
-										className="pr-10" // space for eye icon
+										className="pr-10"
 									/>
-									{/* BUTTON TO SHOW/HIDE PASSWORD */}
 									<button
 										type="button"
 										onClick={() =>
@@ -108,15 +128,19 @@ export function LoginForm({
 								</div>
 							</div>
 
-							{/* REMEMBER ME + LOGIN BUTTON */}
 							<div className="flex items-center justify-between text-sm">
-								<label htmlFor="remember-me" className="flex items-center gap-2">
+								<label
+									htmlFor="remember-me"
+									className="flex items-center gap-2"
+								>
 									<input
 										type="checkbox"
 										id="remember-me"
 										className="h-4 w-4 accent-primary"
 										checked={rememberMe}
-										onChange={(event) => setRememberMe(event.target.checked)}
+										onChange={(event) =>
+											setRememberMe(event.target.checked)
+										}
 									/>
 									<span>Remember me for offline access</span>
 								</label>
@@ -136,14 +160,12 @@ export function LoginForm({
 								)}
 							</Button>
 
-							{/* DISCLAIMER DIVIDER */}
 							<div className="after:border-border relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t">
 								<span className="bg-card text-muted-foreground relative z-10 px-2">
 									Disclaimer
 								</span>
 							</div>
 
-							{/* TOOLTIP (EXPLAINS ACCOUNT CREATION POLICY) */}
 							<Tooltip>
 								<div className="text-center text-sm">
 									Login credentials are{" "}
@@ -160,11 +182,6 @@ export function LoginForm({
 							</Tooltip>
 						</div>
 					</form>
-
-					{/* ================= RIGHT SIDE LOGO IMAGE ================= */}
-					{/* <div className="h-full min-h-0 hidden md:flex items-center justify-center">
-						<img src={logo} className="h-72" />
-					</div> */}
 				</CardContent>
 			</Card>
 		</div>

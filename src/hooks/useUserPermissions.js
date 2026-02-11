@@ -111,7 +111,7 @@ function clearCachedPermissions(userId) {
  *
  * @example
  * const { hasPermission } = useUserPermissions();
- * if (hasPermission('create_case'))
+ * const canCreateCase = hasPermission('create_case');
  */
 export function useUserPermissions() {
 	const user = useAuthStore((state) => state.user);

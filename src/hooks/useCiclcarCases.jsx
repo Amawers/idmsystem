@@ -1,123 +1,196 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-    ciclcarLiveQuery,
-    getPendingOperationCount,
-    loadRemoteSnapshotIntoCache,
-    deleteCiclcarCaseNow,
-    syncCiclcarQueue,
+	ciclcarLiveQuery,
+	getPendingOperationCount,
+	loadRemoteSnapshotIntoCache,
+	deleteCiclcarCaseNow,
+	syncCiclcarQueue,
 } from "@/services/ciclcarOfflineService";
 import supabase from "@/../config/supabase";
 
-const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+/**
+ * CICL/CAR cases hook (offline-first).
+ *
+ * Responsibilities:
+ * - Subscribe to the local/offline cache via `ciclcarLiveQuery()`.
+ * - When online, refresh the cache from the remote snapshot.
+ * - Expose delete + sync helpers and a pending-operations count.
+ * - Enrich the UI by loading active program enrollments for the currently visible cases.
+ *
+ * Design notes:
+ * - Some operations use a reload-to-sync UX using `sessionStorage` flags + `window.location.reload()`
+ *   to restore the active tab and force sync after navigation.
+ */
+
+/**
+ * @typedef {Object} CiclcarCaseRow
+ * Cached CICL/CAR case row shape (loose).
+ * @property {string} [id]
+ * @property {string} [case_id]
+ * @property {string} [case_code]
+ * @property {string} [uuid]
+ * @property {string} [localId]
+ */
+
+/**
+ * @typedef {Object} ProgramEnrollmentRow
+ * Active program enrollment row as returned from Supabase (loose).
+ * @property {string} [id]
+ * @property {string} [case_id]
+ * @property {string} [program_id]
+ * @property {string} [status]
+ * @property {string} [enrollment_date]
+ * @property {any} [program]
+ */
+
+/**
+ * @typedef {Object} UseCiclcarCasesResult
+ * @property {CiclcarCaseRow[]} data
+ * @property {boolean} loading
+ * @property {any} error
+ * @property {() => Promise<any>} reload
+ * @property {(caseId: string) => Promise<{success: boolean, queued?: boolean, error?: any}>} deleteCiclcarCase
+ * @property {number} pendingCount
+ * @property {boolean} syncing
+ * @property {string|null} syncStatus
+ * @property {() => Promise<any>} runSync
+ * @property {Record<string, ProgramEnrollmentRow[]>} programEnrollments
+ * @property {boolean} programEnrollmentsLoading
+ */
+
+const isBrowserOnline = () =>
+	typeof navigator !== "undefined" ? navigator.onLine : true;
+
+/**
+ * Force the Case Management view back to the CICL/CAR tab after a queued operation.
+ * This is used as part of the reload-to-sync flow.
+ */
 const forceCiclcarTabReload = () => {
-    if (typeof window === "undefined") return;
-    sessionStorage.setItem("caseManagement.activeTab", "CICLCAR");
-    sessionStorage.setItem("caseManagement.forceTabAfterReload", "CICLCAR");
-    sessionStorage.setItem("caseManagement.forceCiclcarSync", "true");
-    window.location.reload();
+	if (typeof window === "undefined") return;
+	sessionStorage.setItem("caseManagement.activeTab", "CICLCAR");
+	sessionStorage.setItem("caseManagement.forceTabAfterReload", "CICLCAR");
+	sessionStorage.setItem("caseManagement.forceCiclcarSync", "true");
+	window.location.reload();
 };
 
+/**
+ * Subscribe to and manage CICL/CAR cases.
+ * @returns {UseCiclcarCasesResult}
+ */
 export function useCiclcarCases() {
-    const [data, setData] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [pendingCount, setPendingCount] = useState(0);
-    const [syncing, setSyncing] = useState(false);
-    const [syncStatus, setSyncStatus] = useState(null);
-    const [programEnrollments, setProgramEnrollments] = useState({});
-    const [programEnrollmentsLoading, setProgramEnrollmentsLoading] = useState(true);
-    const enrollmentCaseIdSignatureRef = useRef("");
+	/** @type {[CiclcarCaseRow[], (next: CiclcarCaseRow[]) => void]} */
+	const [data, setData] = useState([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
+	const [pendingCount, setPendingCount] = useState(0);
+	const [syncing, setSyncing] = useState(false);
+	const [syncStatus, setSyncStatus] = useState(null);
+	const [programEnrollments, setProgramEnrollments] = useState({});
+	const [programEnrollmentsLoading, setProgramEnrollmentsLoading] =
+		useState(true);
+	const enrollmentCaseIdSignatureRef = useRef("");
 
-    const hydratePendingCount = useCallback(async () => {
-        const count = await getPendingOperationCount();
-        setPendingCount(count);
-    }, []);
+	const hydratePendingCount = useCallback(async () => {
+		const count = await getPendingOperationCount();
+		setPendingCount(count);
+	}, []);
 
-    useEffect(() => {
-        const subscription = ciclcarLiveQuery().subscribe({
-            next: (rows) => {
-                setData((rows ?? []).map((row) => ({
-                    ...row,
-                    id: row?.id ?? row?.case_id ?? row?.case_code ?? row?.uuid ?? row?.localId,
-                })));
-                setLoading(false);
-                hydratePendingCount().catch(() => {
-                    // queue count refresh best-effort
-                });
-            },
-            error: (err) => {
-                setError(err);
-                setLoading(false);
-            },
-        });
+	useEffect(() => {
+		const subscription = ciclcarLiveQuery().subscribe({
+			next: (rows) => {
+				setData(
+					(rows ?? []).map((row) => ({
+						...row,
+						id:
+							row?.id ??
+							row?.case_id ??
+							row?.case_code ??
+							row?.uuid ??
+							row?.localId,
+					})),
+				);
+				setLoading(false);
+				hydratePendingCount().catch(() => {
+					// queue count refresh best-effort
+				});
+			},
+			error: (err) => {
+				setError(err);
+				setLoading(false);
+			},
+		});
 
-        hydratePendingCount();
+		hydratePendingCount();
 
-        return () => subscription.unsubscribe();
-    }, [hydratePendingCount]);
+		return () => subscription.unsubscribe();
+	}, [hydratePendingCount]);
 
-    const load = useCallback(async () => {
-        setError(null);
-        enrollmentCaseIdSignatureRef.current = "";
+	const load = useCallback(async () => {
+		setError(null);
+		enrollmentCaseIdSignatureRef.current = "";
 
-        try {
-            if (!isBrowserOnline()) {
-                await hydratePendingCount();
-                return { success: true, offline: true };
-            }
-            await loadRemoteSnapshotIntoCache();
-            await hydratePendingCount();
-            return { success: true };
-        } catch (err) {
-            setError(err);
-            return { success: false, error: err };
-        } finally {
-            // keep local data rendered; no loading toggle
-        }
-    }, [hydratePendingCount]);
+		try {
+			if (!isBrowserOnline()) {
+				await hydratePendingCount();
+				return { success: true, offline: true };
+			}
+			await loadRemoteSnapshotIntoCache();
+			await hydratePendingCount();
+			return { success: true };
+		} catch (err) {
+			setError(err);
+			return { success: false, error: err };
+		} finally {
+			// keep local data rendered; no loading toggle
+		}
+	}, [hydratePendingCount]);
 
-    useEffect(() => {
-        load();
-    }, [load]);
+	useEffect(() => {
+		load();
+	}, [load]);
 
-    useEffect(() => {
-        const currentRows = data ?? [];
-        const caseIds = Array.from(
-            new Set(
-                currentRows
-                    .map((row) => row?.id)
-                    .filter((caseId) => typeof caseId !== "undefined" && caseId !== null),
-            ),
-        );
+	useEffect(() => {
+		const currentRows = data ?? [];
+		const caseIds = Array.from(
+			new Set(
+				currentRows
+					.map((row) => row?.id)
+					.filter(
+						(caseId) =>
+							typeof caseId !== "undefined" && caseId !== null,
+					),
+			),
+		);
 
-        if (caseIds.length === 0) {
-            enrollmentCaseIdSignatureRef.current = "";
-            setProgramEnrollments({});
-            setProgramEnrollmentsLoading(false);
-            return;
-        }
+		if (caseIds.length === 0) {
+			enrollmentCaseIdSignatureRef.current = "";
+			setProgramEnrollments({});
+			setProgramEnrollmentsLoading(false);
+			return;
+		}
 
-        const signature = caseIds.join("|");
-        if (signature === enrollmentCaseIdSignatureRef.current) {
-            return;
-        }
+		const signature = caseIds.join("|");
+		if (signature === enrollmentCaseIdSignatureRef.current) {
+			return;
+		}
 
-        let isActive = true;
-        enrollmentCaseIdSignatureRef.current = signature;
-        setProgramEnrollmentsLoading(true);
+		let isActive = true;
+		enrollmentCaseIdSignatureRef.current = signature;
+		setProgramEnrollmentsLoading(true);
 
-        const loadEnrollments = async () => {
-            if (!isBrowserOnline()) {
-                if (!isActive) return;
-                setProgramEnrollments({});
-                setProgramEnrollmentsLoading(false);
-                return;
-            }
+		const loadEnrollments = async () => {
+			if (!isBrowserOnline()) {
+				if (!isActive) return;
+				setProgramEnrollments({});
+				setProgramEnrollmentsLoading(false);
+				return;
+			}
 
-            try {
-                const { data: rows, error } = await supabase
-                    .from("program_enrollments")
-                    .select(`
+			try {
+				const { data: rows, error } = await supabase
+					.from("program_enrollments")
+					.select(
+						`
                         *,
                         program:programs(
                             id,
@@ -128,104 +201,120 @@ export function useCiclcarCases() {
                             location,
                             schedule
                         )
-                    `)
-                    .in("case_id", caseIds)
-                    .eq("status", "active")
-                    .order("enrollment_date", { ascending: false });
+                    `,
+					)
+					.in("case_id", caseIds)
+					.eq("status", "active")
+					.order("enrollment_date", { ascending: false });
 
-                if (error) throw error;
-                if (!isActive) return;
+				if (error) throw error;
+				if (!isActive) return;
 
-                const grouped = (rows ?? []).reduce((acc, enrollment) => {
-                    const key = enrollment.case_id;
-                    if (!key) return acc;
-                    if (!acc[key]) acc[key] = [];
-                    acc[key].push(enrollment);
-                    return acc;
-                }, {});
+				const grouped = (rows ?? []).reduce((acc, enrollment) => {
+					const key = enrollment.case_id;
+					if (!key) return acc;
+					if (!acc[key]) acc[key] = [];
+					acc[key].push(enrollment);
+					return acc;
+				}, {});
 
-                setProgramEnrollments(grouped);
-            } catch (err) {
-                if (!isActive) return;
-                console.error("Error fetching CICL/CAR program enrollments:", err);
-                setProgramEnrollments({});
-            } finally {
-                if (isActive) {
-                    setProgramEnrollmentsLoading(false);
-                }
-            }
-        };
+				setProgramEnrollments(grouped);
+			} catch (err) {
+				if (!isActive) return;
+				console.error(
+					"Error fetching CICL/CAR program enrollments:",
+					err,
+				);
+				setProgramEnrollments({});
+			} finally {
+				if (isActive) {
+					setProgramEnrollmentsLoading(false);
+				}
+			}
+		};
 
-        loadEnrollments();
+		loadEnrollments();
 
-        return () => {
-            isActive = false;
-        };
-    }, [data]);
+		return () => {
+			isActive = false;
+		};
+	}, [data]);
 
-    const deleteCiclcarCase = useCallback(async (caseId) => {
-        try {
-            const result = await deleteCiclcarCaseNow({ targetId: caseId });
-            await hydratePendingCount();
-            if (result?.success && result?.queued === false && isBrowserOnline()) {
-                setTimeout(forceCiclcarTabReload, 0);
-            }
-            return { success: result?.success !== false, queued: result?.queued };
-        } catch (e) {
-            console.error("Error deleting CICL/CAR case:", e);
-            return { success: false, error: e };
-        }
-    }, [hydratePendingCount]);
+	const deleteCiclcarCase = useCallback(
+		async (caseId) => {
+			try {
+				const result = await deleteCiclcarCaseNow({ targetId: caseId });
+				await hydratePendingCount();
+				if (
+					result?.success &&
+					result?.queued === false &&
+					isBrowserOnline()
+				) {
+					setTimeout(forceCiclcarTabReload, 0);
+				}
+				return {
+					success: result?.success !== false,
+					queued: result?.queued,
+				};
+			} catch (e) {
+				console.error("Error deleting CICL/CAR case:", e);
+				return { success: false, error: e };
+			}
+		},
+		[hydratePendingCount],
+	);
 
-    const runSync = useCallback(async () => {
-        setSyncing(true);
-        setSyncStatus("Preparing sync…");
-        try {
-            const result = await syncCiclcarQueue(({ current, synced }) => {
-                if (!current) return;
-                const label = current.operationType ? current.operationType.toUpperCase() : "";
-                setSyncStatus(`Syncing ${label} (${synced + 1})`);
-            });
-            await load();
-            await hydratePendingCount();
-            setSyncStatus("All changes synced");
-            return result;
-        } catch (err) {
-            console.error("CICL/CAR sync failed:", err);
-            setSyncStatus(err.message ?? "Sync failed");
-            throw err;
-        } finally {
-            setTimeout(() => setSyncStatus(null), 2000);
-            setSyncing(false);
-        }
-    }, [hydratePendingCount, load]);
+	const runSync = useCallback(async () => {
+		setSyncing(true);
+		setSyncStatus("Preparing sync…");
+		try {
+			const result = await syncCiclcarQueue(({ current, synced }) => {
+				if (!current) return;
+				const label = current.operationType
+					? current.operationType.toUpperCase()
+					: "";
+				setSyncStatus(`Syncing ${label} (${synced + 1})`);
+			});
+			await load();
+			await hydratePendingCount();
+			setSyncStatus("All changes synced");
+			return result;
+		} catch (err) {
+			console.error("CICL/CAR sync failed:", err);
+			setSyncStatus(err.message ?? "Sync failed");
+			throw err;
+		} finally {
+			setTimeout(() => setSyncStatus(null), 2000);
+			setSyncing(false);
+		}
+	}, [hydratePendingCount, load]);
 
-    return useMemo(
-        () => ({
-            data,
-            loading,
-            error,
-            reload: load,
-            deleteCiclcarCase,
-            pendingCount,
-            syncing,
-            syncStatus,
-            runSync,
-            programEnrollments,
-            programEnrollmentsLoading,
-        }),
-        [
-            data,
-            loading,
-            error,
-            load,
-            deleteCiclcarCase,
-            pendingCount,
-            syncing,
-            syncStatus,
-            runSync,
-            programEnrollments,
-            programEnrollmentsLoading,
-        ],
-    );
+	return useMemo(
+		() => ({
+			data,
+			loading,
+			error,
+			reload: load,
+			deleteCiclcarCase,
+			pendingCount,
+			syncing,
+			syncStatus,
+			runSync,
+			programEnrollments,
+			programEnrollmentsLoading,
+		}),
+		[
+			data,
+			loading,
+			error,
+			load,
+			deleteCiclcarCase,
+			pendingCount,
+			syncing,
+			syncStatus,
+			runSync,
+			programEnrollments,
+			programEnrollmentsLoading,
+		],
+	);
 }

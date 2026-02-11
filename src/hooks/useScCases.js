@@ -1,9 +1,14 @@
 /**
- * @file useScCases.js
- * @description Custom React hook to fetch and manage Senior Citizen cases from Supabase
+ * Senior Citizen (SC) cases hook (offline-first).
  *
- * @author IDM System
- * @date 2026-02-04
+ * Responsibilities:
+ * - Subscribe to the local/offline cache via `scLiveQuery()`.
+ * - When online, refresh the cache from the remote snapshot.
+ * - Expose delete + sync helpers and a pending-operations count.
+ *
+ * Design notes:
+ * - Some operations trigger a reload-to-sync UX using `sessionStorage` flags + `window.location.reload()`
+ *   to restore the active tab and force sync after navigation.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -15,8 +20,34 @@ import {
 	syncScQueue,
 } from "@/services/scOfflineService";
 
+/**
+ * @typedef {Object} ScCaseRow
+ * Cached SC case row shape (loose).
+ * @property {string} [id]
+ * @property {string} [case_id]
+ * @property {string} [localId]
+ */
+
+/**
+ * @typedef {Object} UseScCasesResult
+ * @property {ScCaseRow[]} data
+ * @property {boolean} loading
+ * @property {any} error
+ * @property {() => Promise<any>} reload
+ * @property {(caseId: string) => Promise<{success: boolean, queued?: boolean, error?: any}>} deleteScCase
+ * @property {number} pendingCount
+ * @property {boolean} syncing
+ * @property {string|null} syncStatus
+ * @property {() => Promise<any>} runSync
+ */
+
 const isBrowserOnline = () =>
 	typeof navigator !== "undefined" ? navigator.onLine : true;
+
+/**
+ * Force the Case Management view back to the SC tab after a queued operation.
+ * This is used as part of the reload-to-sync flow.
+ */
 const forceScTabReload = () => {
 	if (typeof window === "undefined") return;
 	sessionStorage.setItem("caseManagement.activeTab", "SC");
@@ -26,11 +57,11 @@ const forceScTabReload = () => {
 };
 
 /**
- * useScCases - Custom hook to fetch Senior Citizen cases from Supabase
- *
- * @returns {Object} Hook state and methods
+ * Subscribe to and manage SC cases.
+ * @returns {UseScCasesResult}
  */
 export function useScCases() {
+	/** @type {[ScCaseRow[], (next: ScCaseRow[]) => void]} */
 	const [data, setData] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);

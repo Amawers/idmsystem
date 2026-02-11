@@ -1,64 +1,69 @@
 /**
- * @file usePermissions.js
- * @description Custom hook for managing user permissions
- * @module hooks/usePermissions
- * 
- * @overview
- * Manages individual user permissions (not role-based).
- * Fetches all available permissions and tracks which permissions
- * each user has been granted. Provides CRUD operations for 
- * granting and revoking permissions.
- * 
- * @dependencies
- * - Supabase client for database operations
- * - React hooks (useState, useEffect, useCallback)
+ * User permissions hook (direct grants).
+ *
+ * Responsibilities:
+ * - Fetch the catalog of available permissions from `permissions`.
+ * - Fetch per-user grants from `user_permissions` (joined with permission details).
+ * - Provide helpers to grant/revoke and to query a user's effective grants.
+ *
+ * Scope:
+ * - This hook manages individual grants (not role-based permissions).
  */
 
 import { useState, useEffect, useCallback } from "react";
 import supabase from "@/../config/supabase";
 
 /**
- * Custom hook for fetching and managing user permissions
- * 
- * @returns {Object} Hook state and methods
- * @property {Array} permissions - All available permissions from the permissions table
- * @property {Object} userPermissions - Permissions organized by user_id
- * @property {boolean} loading - Loading state for async operations
- * @property {Error|null} error - Error state if fetch fails
- * @property {Function} reload - Manually reload all permission data
- * @property {Function} grantPermission - Grant a permission to a user
- * @property {Function} revokePermission - Revoke a permission from a user
- * @property {Function} hasPermission - Check if a user has a specific permission
- * @property {Function} getPermissionsForUser - Get all permissions for a specific user
- * 
- * @example
- * const { 
- *   permissions, 
- *   userPermissions, 
- *   loading, 
- *   error, 
- *   reload, 
- *   grantPermission, 
- *   revokePermission,
- *   hasPermission,
- *   getPermissionsForUser
- * } = usePermissions();
- * 
- * // Grant permission to user
- * await grantPermission(userId, permissionId);
- * 
- * // Check if user has permission
- * const canEdit = hasPermission(userId, 'case:edit');
+ * @typedef {Object} PermissionRow
+ * @property {string} id
+ * @property {string} [name]
+ * @property {string} [display_name]
+ * @property {string} [description]
+ * @property {string} [category]
+ */
+
+/**
+ * @typedef {Object} UserPermissionRow
+ * @property {string} [id]
+ * @property {string} user_id
+ * @property {string} permission_id
+ * @property {string} [granted_at]
+ * @property {string|null} [granted_by]
+ * @property {PermissionRow} [permission]
+ */
+
+/**
+ * @typedef {Record<string, UserPermissionRow[]>} UserPermissionsByUserId
+ */
+
+/**
+ * @typedef {Object} UsePermissionsResult
+ * @property {PermissionRow[]} permissions
+ * @property {UserPermissionsByUserId} userPermissions
+ * @property {boolean} loading
+ * @property {Error|null} error
+ * @property {() => Promise<void>} reload
+ * @property {(userId: string, permissionId: string) => Promise<{success: boolean, error?: any}>} grantPermission
+ * @property {(userId: string, permissionId: string) => Promise<{success: boolean, error?: any}>} revokePermission
+ * @property {(userId: string, permissionName: string) => boolean} hasPermission
+ * @property {(userId: string) => UserPermissionRow[]} getPermissionsForUser
+ */
+
+/**
+ * Fetch and manage user permission grants.
+ * @returns {UsePermissionsResult}
  */
 export function usePermissions() {
+	/** @type {[PermissionRow[], (next: PermissionRow[]) => void]} */
 	const [permissions, setPermissions] = useState([]);
+	/** @type {[UserPermissionsByUserId, (next: UserPermissionsByUserId) => void]} */
 	const [userPermissions, setUserPermissions] = useState({});
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 
 	/**
-	 * Load all permissions and user permission mappings
-	 * Fetches from both 'permissions' and 'user_permissions' tables
+	 * Load the permission catalog and per-user grants.
+	 * @returns {Promise<void>}
 	 */
 	const loadPermissions = useCallback(async () => {
 		setLoading(true);
@@ -75,9 +80,8 @@ export function usePermissions() {
 			if (permsError) throw permsError;
 
 			// Fetch user permissions (which users have which permissions)
-			const { data: userPermsData, error: userPermsError } = await supabase
-				.from("user_permissions")
-				.select(`
+			const { data: userPermsData, error: userPermsError } =
+				await supabase.from("user_permissions").select(`
 					id,
 					user_id,
 					permission_id,
@@ -94,7 +98,7 @@ export function usePermissions() {
 
 			if (userPermsError) throw userPermsError;
 
-			// Organize user permissions by user_id
+			/** @type {UserPermissionsByUserId} */
 			const permsByUser = {};
 			userPermsData.forEach((up) => {
 				if (!permsByUser[up.user_id]) {
@@ -121,80 +125,94 @@ export function usePermissions() {
 	}, [loadPermissions]);
 
 	/**
-	 * Grant a permission to a user
-	 * @param {string} userId - The user's ID (from profile.id)
-	 * @param {string} permissionId - The permission ID (from permissions.id)
-	 * @returns {Promise<{success: boolean, error?: Error}>}
+	 * Grant a permission to a user.
+	 * @param {string} userId The user's ID (profile.id).
+	 * @param {string} permissionId The permission ID (permissions.id).
+	 * @returns {Promise<{success: boolean, error?: any}>}
 	 */
-	const grantPermission = useCallback(async (userId, permissionId) => {
-		try {
-			const {
-				data: { user },
-			} = await supabase.auth.getUser();
+	const grantPermission = useCallback(
+		async (userId, permissionId) => {
+			try {
+				const {
+					data: { user },
+				} = await supabase.auth.getUser();
 
-			const { error } = await supabase.from("user_permissions").insert({
-				user_id: userId,
-				permission_id: permissionId,
-				granted_by: user?.id || null,
-			});
+				const { error } = await supabase
+					.from("user_permissions")
+					.insert({
+						user_id: userId,
+						permission_id: permissionId,
+						granted_by: user?.id || null,
+					});
 
-			if (error) throw error;
+				if (error) throw error;
 
-			// Reload permissions
-			await loadPermissions();
-			return { success: true };
-		} catch (err) {
-			console.error("Error granting permission:", err);
-			return { success: false, error: err };
-		}
-	}, [loadPermissions]);
+				// Reload permissions
+				await loadPermissions();
+				return { success: true };
+			} catch (err) {
+				console.error("Error granting permission:", err);
+				return { success: false, error: err };
+			}
+		},
+		[loadPermissions],
+	);
 
 	/**
-	 * Revoke a permission from a user
-	 * @param {string} userId - The user's ID (from profile.id)
-	 * @param {string} permissionId - The permission ID (from permissions.id)
-	 * @returns {Promise<{success: boolean, error?: Error}>}
+	 * Revoke a permission from a user.
+	 * @param {string} userId The user's ID (profile.id).
+	 * @param {string} permissionId The permission ID (permissions.id).
+	 * @returns {Promise<{success: boolean, error?: any}>}
 	 */
-	const revokePermission = useCallback(async (userId, permissionId) => {
-		try {
-			const { error } = await supabase
-				.from("user_permissions")
-				.delete()
-				.eq("user_id", userId)
-				.eq("permission_id", permissionId);
+	const revokePermission = useCallback(
+		async (userId, permissionId) => {
+			try {
+				const { error } = await supabase
+					.from("user_permissions")
+					.delete()
+					.eq("user_id", userId)
+					.eq("permission_id", permissionId);
 
-			if (error) throw error;
+				if (error) throw error;
 
-			// Reload permissions
-			await loadPermissions();
-			return { success: true };
-		} catch (err) {
-			console.error("Error revoking permission:", err);
-			return { success: false, error: err };
-		}
-	}, [loadPermissions]);
+				// Reload permissions
+				await loadPermissions();
+				return { success: true };
+			} catch (err) {
+				console.error("Error revoking permission:", err);
+				return { success: false, error: err };
+			}
+		},
+		[loadPermissions],
+	);
 
 	/**
-	 * Check if a user has a specific permission by permission name
-	 * @param {string} userId - The user's ID
-	 * @param {string} permissionName - The permission name (e.g., 'case:edit')
-	 * @returns {boolean} True if user has the permission
+	 * Check if a user has a permission grant by permission name.
+	 * @param {string} userId
+	 * @param {string} permissionName
+	 * @returns {boolean}
 	 */
-	const hasPermission = useCallback((userId, permissionName) => {
-		if (!userPermissions[userId]) return false;
-		return userPermissions[userId].some(
-			(up) => up.permission?.name === permissionName
-		);
-	}, [userPermissions]);
+	const hasPermission = useCallback(
+		(userId, permissionName) => {
+			if (!userPermissions[userId]) return false;
+			return userPermissions[userId].some(
+				(up) => up.permission?.name === permissionName,
+			);
+		},
+		[userPermissions],
+	);
 
 	/**
-	 * Get all permissions for a specific user
-	 * @param {string} userId - The user's ID
-	 * @returns {Array} Array of user permission records with permission details
+	 * Get all permission grants for a user.
+	 * @param {string} userId
+	 * @returns {UserPermissionRow[]}
 	 */
-	const getPermissionsForUser = useCallback((userId) => {
-		return userPermissions[userId] || [];
-	}, [userPermissions]);
+	const getPermissionsForUser = useCallback(
+		(userId) => {
+			return userPermissions[userId] || [];
+		},
+		[userPermissions],
+	);
 
 	return {
 		permissions,

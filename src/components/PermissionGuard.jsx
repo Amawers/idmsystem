@@ -1,52 +1,29 @@
 /**
- * @file PermissionGuard.jsx
- * @description Component to conditionally render content based on user permissions
- * @module components/PermissionGuard
- * 
- * @overview
- * Wraps children components and only renders them if the user has
- * the required permission(s). Useful for hiding/showing entire sections,
- * buttons, or features based on permissions.
- * 
- * @example
- * // Single permission check
- * <PermissionGuard permission="create_case">
- *   <Button>Create New Case</Button>
- * </PermissionGuard>
- * 
- * @example
- * // Require ANY of multiple permissions
- * <PermissionGuard permissions={['edit_case', 'delete_case']} requireAny>
- *   <Button>Manage Case</Button>
- * </PermissionGuard>
- * 
- * @example
- * // Require ALL permissions
- * <PermissionGuard permissions={['view_reports', 'export_reports']}>
- *   <Button>Export Report</Button>
- * </PermissionGuard>
- * 
- * @example
- * // Show fallback content when permission is denied
- * <PermissionGuard permission="delete_case" fallback={<p>Access Denied</p>}>
- *   <Button>Delete Case</Button>
- * </PermissionGuard>
+ * Permission guard component.
+ *
+ * Responsibilities:
+ * - Conditionally render `children` based on the current user's permissions.
+ * - Support a single permission (`permission`) or multiple permissions (`permissions`).
+ * - Support "any" semantics via `requireAny` (default is "all").
+ * - Allow a `fallback` render when access is denied.
  */
 
-import React from "react";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 
 /**
- * Permission Guard Component
- * 
- * @param {Object} props
- * @param {string} [props.permission] - Single permission to check
- * @param {string[]} [props.permissions] - Multiple permissions to check
- * @param {boolean} [props.requireAny=false] - If true, user needs ANY permission. If false, needs ALL.
- * @param {React.ReactNode} props.children - Content to render when permission is granted
- * @param {React.ReactNode} [props.fallback=null] - Content to render when permission is denied
- * @param {boolean} [props.loading=null] - Custom loading component
- * @returns {React.ReactNode}
+ * @typedef {Object} PermissionGuardProps
+ * @property {string} [permission] Single permission to check.
+ * @property {string[]} [permissions] Multiple permissions to check.
+ * @property {boolean} [requireAny=false] If true, user needs ANY permission; otherwise needs ALL.
+ * @property {import('react').ReactNode} children Content to render when permission is granted.
+ * @property {import('react').ReactNode} [fallback=null] Content to render when permission is denied.
+ * @property {import('react').ReactNode} [loading=null] Content to render while permissions are loading.
+ */
+
+/**
+ * Render `children` only when the user meets the required permission(s).
+ * @param {PermissionGuardProps} props
+ * @returns {import('react').ReactNode}
  */
 export function PermissionGuard({
 	permission,

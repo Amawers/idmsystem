@@ -1,204 +1,300 @@
 /**
- * @file useInventoryOffline.js
- * @description Offline-first React hook for Resource Allocation stock management.
+ * Inventory hook (offline-first).
+ *
+ * Responsibilities:
+ * - Subscribe to the local/offline inventory cache via `inventoryLiveQuery()`.
+ * - Refresh the cache from the remote snapshot when online.
+ * - Queue create/update/adjust/delete operations and expose a sync runner.
+ * - Provide derived inventory statistics for dashboards.
+ *
+ * Design notes:
+ * - Uses a reload-to-sync pattern: when the app comes back online, a `sessionStorage` flag
+ *   is set and the page reloads to ensure the UI rehydrates from a fresh snapshot.
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import useNetworkStatus from "@/hooks/useNetworkStatus";
 import {
-  inventoryLiveQuery,
-  loadInventorySnapshotIntoCache,
-  createOrUpdateLocalInventoryItem,
-  adjustLocalInventoryStock,
-  deleteInventoryItemNow,
-  getPendingOperationCount,
-  syncInventoryQueue,
+	inventoryLiveQuery,
+	loadInventorySnapshotIntoCache,
+	createOrUpdateLocalInventoryItem,
+	adjustLocalInventoryStock,
+	deleteInventoryItemNow,
+	getPendingOperationCount,
+	syncInventoryQueue,
 } from "@/services/inventoryOfflineService";
+
+/**
+ * @typedef {Object} InventoryItemRow
+ * Loose cached inventory item row shape.
+ * @property {string} [id]
+ * @property {string|null} [pendingAction]
+ * @property {number} [current_stock]
+ * @property {number} [minimum_stock]
+ * @property {number} [unit_cost]
+ * @property {string} [status]
+ */
+
+/**
+ * @typedef {Object} InventoryStatistics
+ * @property {number} totalItems
+ * @property {number} totalValue
+ * @property {number} lowStock
+ * @property {number} criticalStock
+ * @property {number} available
+ * @property {number} depleted
+ */
+
+/**
+ * @typedef {Object} UseInventoryOfflineResult
+ * @property {InventoryItemRow[]} items
+ * @property {InventoryStatistics} statistics
+ * @property {boolean} loading
+ * @property {any} error
+ * @property {number} pendingCount
+ * @property {boolean} syncing
+ * @property {string|null} syncStatus
+ * @property {boolean} offline
+ * @property {() => Promise<any>} refreshInventory
+ * @property {(payload: any) => Promise<any>} createItem
+ * @property {(itemId: string, updates: any, meta?: {localId?: string|null}) => Promise<any>} updateItem
+ * @property {(options: any) => Promise<any>} adjustStock
+ * @property {(params?: {itemId?: string|null, localId?: string|null}) => Promise<any>} deleteItem
+ * @property {() => Promise<any>} runSync
+ */
 
 export const INVENTORY_FORCE_SYNC_KEY = "inventory.forceSync";
 
+/** @type {InventoryStatistics} */
 const baseStats = {
-  totalItems: 0,
-  totalValue: 0,
-  lowStock: 0,
-  criticalStock: 0,
-  available: 0,
-  depleted: 0,
+	totalItems: 0,
+	totalValue: 0,
+	lowStock: 0,
+	criticalStock: 0,
+	available: 0,
+	depleted: 0,
 };
 
-const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
+const isBrowserOnline = () =>
+	typeof navigator !== "undefined" ? navigator.onLine : true;
 
+/**
+ * Compute aggregate inventory statistics.
+ * @param {InventoryItemRow[]} [items]
+ * @returns {InventoryStatistics}
+ */
 const computeInventoryStats = (items = []) => {
-  if (!Array.isArray(items) || !items.length) return { ...baseStats };
-  return {
-    totalItems: items.length,
-    totalValue: items.reduce((sum, item) => sum + (item.current_stock ?? 0) * (item.unit_cost ?? 0), 0),
-    lowStock: items.filter((item) => item.current_stock <= item.minimum_stock && item.current_stock > 0).length,
-    criticalStock: items.filter((item) => item.status === "critical_stock" || item.current_stock === 0).length,
-    available: items.filter((item) => item.status === "available").length,
-    depleted: items.filter((item) => item.status === "depleted").length,
-  };
+	if (!Array.isArray(items) || !items.length) return { ...baseStats };
+	return {
+		totalItems: items.length,
+		totalValue: items.reduce(
+			(sum, item) =>
+				sum + (item.current_stock ?? 0) * (item.unit_cost ?? 0),
+			0,
+		),
+		lowStock: items.filter(
+			(item) =>
+				item.current_stock <= item.minimum_stock &&
+				item.current_stock > 0,
+		).length,
+		criticalStock: items.filter(
+			(item) =>
+				item.status === "critical_stock" || item.current_stock === 0,
+		).length,
+		available: items.filter((item) => item.status === "available").length,
+		depleted: items.filter((item) => item.status === "depleted").length,
+	};
 };
 
+/** Trigger a reload so the view can rehydrate + force sync. */
 const triggerForceSyncReload = () => {
-  if (typeof window === "undefined") return;
-  window.sessionStorage.setItem(INVENTORY_FORCE_SYNC_KEY, "true");
-  window.location.reload();
+	if (typeof window === "undefined") return;
+	window.sessionStorage.setItem(INVENTORY_FORCE_SYNC_KEY, "true");
+	window.location.reload();
 };
 
+/**
+ * Offline-first inventory management hook.
+ * @returns {UseInventoryOfflineResult}
+ */
 export function useInventoryOffline() {
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [pendingCount, setPendingCount] = useState(0);
-  const [syncing, setSyncing] = useState(false);
-  const [syncStatus, setSyncStatus] = useState(null);
-  const [usingOfflineData, setUsingOfflineData] = useState(!isBrowserOnline());
-  const isOnline = useNetworkStatus();
-  const wasOfflineRef = useRef(!isOnline);
+	/** @type {[InventoryItemRow[], (next: InventoryItemRow[]) => void]} */
+	const [items, setItems] = useState([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
+	const [pendingCount, setPendingCount] = useState(0);
+	const [syncing, setSyncing] = useState(false);
+	const [syncStatus, setSyncStatus] = useState(null);
+	const [usingOfflineData, setUsingOfflineData] =
+		useState(!isBrowserOnline());
+	const isOnline = useNetworkStatus();
+	const wasOfflineRef = useRef(!isOnline);
 
-  const hydratePendingCount = useCallback(async () => {
-    try {
-      const count = await getPendingOperationCount();
-      setPendingCount(count);
-    } catch (err) {
-      console.error("Failed to hydrate inventory pending count", err);
-    }
-  }, []);
+	const hydratePendingCount = useCallback(async () => {
+		try {
+			const count = await getPendingOperationCount();
+			setPendingCount(count);
+		} catch (err) {
+			console.error("Failed to hydrate inventory pending count", err);
+		}
+	}, []);
 
-  const refreshInventory = useCallback(async () => {
-    setError(null);
-    try {
-      const result = await loadInventorySnapshotIntoCache();
-      setUsingOfflineData(Boolean(result.offline));
-      await hydratePendingCount();
-      return result;
-    } catch (err) {
-      console.error("Failed to refresh inventory snapshot", err);
-      setError(err);
-      setUsingOfflineData(true);
-      return { success: false, error: err };
-    }
-  }, [hydratePendingCount]);
+	const refreshInventory = useCallback(async () => {
+		setError(null);
+		try {
+			const result = await loadInventorySnapshotIntoCache();
+			setUsingOfflineData(Boolean(result.offline));
+			await hydratePendingCount();
+			return result;
+		} catch (err) {
+			console.error("Failed to refresh inventory snapshot", err);
+			setError(err);
+			setUsingOfflineData(true);
+			return { success: false, error: err };
+		}
+	}, [hydratePendingCount]);
 
-  useEffect(() => {
-    const subscription = inventoryLiveQuery().subscribe({
-      next: (rows) => {
-        setItems(Array.isArray(rows) ? rows : []);
-        setLoading(false);
-      },
-      error: (err) => {
-        setError(err);
-        setLoading(false);
-      },
-    });
+	useEffect(() => {
+		const subscription = inventoryLiveQuery().subscribe({
+			next: (rows) => {
+				setItems(Array.isArray(rows) ? rows : []);
+				setLoading(false);
+			},
+			error: (err) => {
+				setError(err);
+				setLoading(false);
+			},
+		});
 
-    hydratePendingCount();
-    refreshInventory();
+		hydratePendingCount();
+		refreshInventory();
 
-    return () => subscription.unsubscribe();
-  }, [hydratePendingCount, refreshInventory]);
+		return () => subscription.unsubscribe();
+	}, [hydratePendingCount, refreshInventory]);
 
-  useEffect(() => {
-    if (!isOnline) setUsingOfflineData(true);
-  }, [isOnline]);
+	useEffect(() => {
+		if (!isOnline) setUsingOfflineData(true);
+	}, [isOnline]);
 
-  useEffect(() => {
-    if (!wasOfflineRef.current && !isOnline) {
-      wasOfflineRef.current = true;
-    } else if (wasOfflineRef.current && isOnline) {
-      wasOfflineRef.current = false;
-      if (typeof window !== "undefined") {
-        window.sessionStorage.setItem(INVENTORY_FORCE_SYNC_KEY, "true");
-        window.location.reload();
-      }
-    }
-  }, [isOnline]);
+	useEffect(() => {
+		if (!wasOfflineRef.current && !isOnline) {
+			wasOfflineRef.current = true;
+		} else if (wasOfflineRef.current && isOnline) {
+			wasOfflineRef.current = false;
+			if (typeof window !== "undefined") {
+				window.sessionStorage.setItem(INVENTORY_FORCE_SYNC_KEY, "true");
+				window.location.reload();
+			}
+		}
+	}, [isOnline]);
 
-  const hydratedItems = useMemo(
-    () => items.filter((item) => (item.pendingAction ?? null) !== "delete"),
-    [items],
-  );
+	const hydratedItems = useMemo(
+		() => items.filter((item) => (item.pendingAction ?? null) !== "delete"),
+		[items],
+	);
 
-  const statistics = useMemo(() => computeInventoryStats(hydratedItems), [hydratedItems]);
+	const statistics = useMemo(
+		() => computeInventoryStats(hydratedItems),
+		[hydratedItems],
+	);
 
-  const runQueuedOperation = useCallback(
-    async (operation, statusMessage) => {
-      const result = await operation();
-      await hydratePendingCount();
-      setSyncStatus(statusMessage);
-      if (isBrowserOnline()) {
-        triggerForceSyncReload();
-      }
-      return result;
-    },
-    [hydratePendingCount, triggerForceSyncReload],
-  );
+	const runQueuedOperation = useCallback(
+		async (operation, statusMessage) => {
+			const result = await operation();
+			await hydratePendingCount();
+			setSyncStatus(statusMessage);
+			if (isBrowserOnline()) {
+				triggerForceSyncReload();
+			}
+			return result;
+		},
+		[hydratePendingCount],
+	);
 
-  const createItem = useCallback(
-    async (payload) =>
-      runQueuedOperation(
-        () => createOrUpdateLocalInventoryItem({ ...payload, created_at: new Date().toISOString() }),
-        "Item queued for sync",
-      ),
-    [runQueuedOperation],
-  );
+	const createItem = useCallback(
+		async (payload) =>
+			runQueuedOperation(
+				() =>
+					createOrUpdateLocalInventoryItem({
+						...payload,
+						created_at: new Date().toISOString(),
+					}),
+				"Item queued for sync",
+			),
+		[runQueuedOperation],
+	);
 
-  const updateItem = useCallback(
-    async (itemId, updates, { localId = null } = {}) =>
-      runQueuedOperation(
-        () =>
-          createOrUpdateLocalInventoryItem({ ...updates, updated_at: new Date().toISOString() }, { itemId, localId }),
-        "Item update queued",
-      ),
-    [runQueuedOperation],
-  );
+	const updateItem = useCallback(
+		async (itemId, updates, { localId = null } = {}) =>
+			runQueuedOperation(
+				() =>
+					createOrUpdateLocalInventoryItem(
+						{ ...updates, updated_at: new Date().toISOString() },
+						{ itemId, localId },
+					),
+				"Item update queued",
+			),
+		[runQueuedOperation],
+	);
 
-  const adjustStock = useCallback(
-    async (options) =>
-      runQueuedOperation(() => adjustLocalInventoryStock(options), "Stock change queued"),
-    [runQueuedOperation],
-  );
+	const adjustStock = useCallback(
+		async (options) =>
+			runQueuedOperation(
+				() => adjustLocalInventoryStock(options),
+				"Stock change queued",
+			),
+		[runQueuedOperation],
+	);
 
-  const deleteItem = useCallback(
-    async ({ itemId = null, localId = null } = {}) =>
-      runQueuedOperation(() => deleteInventoryItemNow({ itemId, localId }), "Item delete queued"),
-    [runQueuedOperation],
-  );
+	const deleteItem = useCallback(
+		async ({ itemId = null, localId = null } = {}) =>
+			runQueuedOperation(
+				() => deleteInventoryItemNow({ itemId, localId }),
+				"Item delete queued",
+			),
+		[runQueuedOperation],
+	);
 
-  const runSync = useCallback(async () => {
-    if (syncing) return { success: false };
-    setSyncing(true);
-    setSyncStatus("Preparing sync…");
-    try {
-      const result = await syncInventoryQueue((message) => setSyncStatus(message));
-      await refreshInventory();
-      await hydratePendingCount();
-      setSyncStatus(result.success ? "All inventory changes synced" : "Sync completed with errors");
-      return result;
-    } catch (err) {
-      setSyncStatus(err?.message ?? "Sync failed");
-      throw err;
-    } finally {
-      setTimeout(() => setSyncStatus(null), 3000);
-      setSyncing(false);
-    }
-  }, [hydratePendingCount, refreshInventory, syncing]);
+	const runSync = useCallback(async () => {
+		if (syncing) return { success: false };
+		setSyncing(true);
+		setSyncStatus("Preparing sync…");
+		try {
+			const result = await syncInventoryQueue((message) =>
+				setSyncStatus(message),
+			);
+			await refreshInventory();
+			await hydratePendingCount();
+			setSyncStatus(
+				result.success
+					? "All inventory changes synced"
+					: "Sync completed with errors",
+			);
+			return result;
+		} catch (err) {
+			setSyncStatus(err?.message ?? "Sync failed");
+			throw err;
+		} finally {
+			setTimeout(() => setSyncStatus(null), 3000);
+			setSyncing(false);
+		}
+	}, [hydratePendingCount, refreshInventory, syncing]);
 
-  return {
-    items: hydratedItems,
-    statistics,
-    loading,
-    error,
-    pendingCount,
-    syncing,
-    syncStatus,
-    offline: usingOfflineData,
-    refreshInventory,
-    createItem,
-    updateItem,
-    adjustStock,
-    deleteItem,
-    runSync,
-  };
+	/** @type {UseInventoryOfflineResult} */
+	return {
+		items: hydratedItems,
+		statistics,
+		loading,
+		error,
+		pendingCount,
+		syncing,
+		syncStatus,
+		offline: usingOfflineData,
+		refreshInventory,
+		createItem,
+		updateItem,
+		adjustStock,
+		deleteItem,
+		runSync,
+	};
 }

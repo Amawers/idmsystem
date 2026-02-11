@@ -1,9 +1,14 @@
 /**
- * @file usePwdCases.js
- * @description Custom React hook to fetch and manage Persons with Disabilities cases from Supabase
+ * Persons With Disabilities (PWD) cases hook (offline-first).
  *
- * @author IDM System
- * @date 2026-02-04
+ * Responsibilities:
+ * - Subscribe to the local/offline cache via `pwdLiveQuery()`.
+ * - When online, refresh the cache from the remote snapshot.
+ * - Expose delete + sync helpers and a pending-operations count.
+ *
+ * Design notes:
+ * - Some operations use a reload-to-sync UX using `sessionStorage` flags + `window.location.reload()`
+ *   to restore the active tab and force sync after navigation.
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -15,8 +20,34 @@ import {
 	syncPwdQueue,
 } from "@/services/pwdOfflineService";
 
+/**
+ * @typedef {Object} PwdCaseRow
+ * Cached PWD case row shape (loose).
+ * @property {string} [id]
+ * @property {string} [case_id]
+ * @property {string} [localId]
+ */
+
+/**
+ * @typedef {Object} UsePwdCasesResult
+ * @property {PwdCaseRow[]} data
+ * @property {boolean} loading
+ * @property {any} error
+ * @property {() => Promise<any>} reload
+ * @property {(caseId: string) => Promise<{success: boolean, queued?: boolean, error?: any}>} deletePwdCase
+ * @property {number} pendingCount
+ * @property {boolean} syncing
+ * @property {string|null} syncStatus
+ * @property {() => Promise<any>} runSync
+ */
+
 const isBrowserOnline = () =>
 	typeof navigator !== "undefined" ? navigator.onLine : true;
+
+/**
+ * Force the Case Management view back to the PWD tab after a queued operation.
+ * This is used as part of the reload-to-sync flow.
+ */
 const forcePwdTabReload = () => {
 	if (typeof window === "undefined") return;
 	sessionStorage.setItem("caseManagement.activeTab", "PWD");
@@ -26,11 +57,11 @@ const forcePwdTabReload = () => {
 };
 
 /**
- * usePwdCases - Custom hook to fetch PWD cases from Supabase
- *
- * @returns {Object} Hook state and methods
+ * Subscribe to and manage PWD cases.
+ * @returns {UsePwdCasesResult}
  */
 export function usePwdCases() {
+	/** @type {[PwdCaseRow[], (next: PwdCaseRow[]) => void]} */
 	const [data, setData] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);

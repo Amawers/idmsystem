@@ -1,63 +1,76 @@
 import React from "react";
 import {
-  useReactTable,          // Main hook from TanStack Table
-  getCoreRowModel,        // Basic row model (core table rows)
-  getPaginationRowModel,  // Handles pagination logic
-  getSortedRowModel,      // Handles sorting logic
+	useReactTable,
+	getCoreRowModel,
+	getPaginationRowModel,
+	getSortedRowModel,
 } from "@tanstack/react-table";
 
-// Custom hook: builds a reusable table instance with state
+/**
+ * TanStack Table helper hook.
+ *
+ * Provides a small, reusable wrapper around `useReactTable` with common UI state
+ * (sorting, pagination, column filters/visibility, row selection) managed inside the hook.
+ *
+ * @template TData
+ * @typedef {Object} UseDataTableArgs
+ * @property {TData[]} initialData
+ * @property {any[]} columns
+ */
+
+/**
+ * @template TData
+ * @typedef {Object} UseDataTableResult
+ * @property {any} table TanStack Table instance
+ * @property {TData[]} data Current table data
+ * @property {React.Dispatch<React.SetStateAction<TData[]>>} setData Data setter
+ */
+
+/**
+ * Build a table instance and manage its common state.
+ * @template TData
+ * @param {UseDataTableArgs<TData>} params
+ * @returns {UseDataTableResult<TData>}
+ */
 export default function useDataTable({ initialData, columns }) {
-  // Table data state (rows)
-  const [data, setData] = React.useState(() => initialData);
+	const [data, setData] = React.useState(() => initialData);
 
-  // Sync internal data state when initialData prop changes
-  React.useEffect(() => {
-    setData(initialData);
-  }, [initialData]);
+	React.useEffect(() => {
+		setData(initialData);
+	}, [initialData]);
 
-  // Row selection state (checkboxes, highlights, etc.)
-  const [rowSelection, setRowSelection] = React.useState({});
+	const [rowSelection, setRowSelection] = React.useState({});
 
-  // Column visibility state (show/hide columns)
-  const [columnVisibility, setColumnVisibility] = React.useState({});
+	const [columnVisibility, setColumnVisibility] = React.useState({});
 
-  // Column filters state (for filtering rows)
-  const [columnFilters, setColumnFilters] = React.useState([]);
+	const [columnFilters, setColumnFilters] = React.useState([]);
 
-  // Sorting state (ASC/DESC per column)
-  const [sorting, setSorting] = React.useState([]);
+	const [sorting, setSorting] = React.useState([]);
 
-  // Pagination state (current page + rows per page)
-  const [pagination, setPagination] = React.useState({
-    pageIndex: 0,
-    pageSize: 10,
-  });
+	const [pagination, setPagination] = React.useState({
+		pageIndex: 0,
+		pageSize: 10,
+	});
 
-  // Build the table instance
-  const table = useReactTable({
-    data,
-    columns,
-    state: {
-      rowSelection,
-      columnVisibility,
-      columnFilters,
-      sorting,
-      pagination,
-    },
-    // Update state handlers (so React Table can control these states)
-    onRowSelectionChange: setRowSelection,
-    onColumnVisibilityChange: setColumnVisibility,
-    onColumnFiltersChange: setColumnFilters,
-    onSortingChange: setSorting,
-    onPaginationChange: setPagination,
+	const table = useReactTable({
+		data,
+		columns,
+		state: {
+			rowSelection,
+			columnVisibility,
+			columnFilters,
+			sorting,
+			pagination,
+		},
+		onRowSelectionChange: setRowSelection,
+		onColumnVisibilityChange: setColumnVisibility,
+		onColumnFiltersChange: setColumnFilters,
+		onSortingChange: setSorting,
+		onPaginationChange: setPagination,
+		getCoreRowModel: getCoreRowModel(),
+		getPaginationRowModel: getPaginationRowModel(),
+		getSortedRowModel: getSortedRowModel(),
+	});
 
-    // Row models for features
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-  });
-
-  // Return the table instance + state updater for data
-  return { table, data, setData };
+	return { table, data, setData };
 }

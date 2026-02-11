@@ -1,10 +1,21 @@
 import Dexie from "dexie";
 
 /**
- * Offline Case Management DB
- * - ciclcar_cases: stores local snapshot of CICL/CAR cases plus pending changes metadata
- * - ciclcar_queue: ordered queue of offline operations to replay against Supabase
- * - case_managers: cached list of case managers for offline dropdowns
+ * Offline Case Management database (Dexie/IndexedDB).
+ *
+ * This module defines the IndexedDB schema used by offline-first features.
+ * Tables generally fall into two categories:
+ * - `*_cases`, `inventory_items`, `partners`, etc: cached snapshots for offline viewing.
+ * - `*_queue`: ordered operation queues to replay against Supabase when connectivity returns.
+ *
+ * Versioning rules:
+ * - Only append new `offlineCaseDb.version(N).stores({...})` blocks. Do not edit older versions.
+ * - When adding a table or index, bump the version and repeat existing store definitions.
+ * - Keep queue tables ordered by a monotonic key (e.g. `++queueId`) to preserve replay order.
+ *
+ * Notes:
+ * - The offline services under `src/services/*OfflineService.js` own the sync rules and row shapes.
+ * - This file is intentionally declarative: schema only, no migration logic beyond Dexie versions.
  */
 export const offlineCaseDb = new Dexie("idms_case_management");
 

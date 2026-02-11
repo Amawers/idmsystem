@@ -1,115 +1,136 @@
 /**
- * @file useCaseManagers.js
- * @description Custom React hook for fetching case managers from Supabase
- * @module hooks/useCaseManagers
- * 
- * Features:
- * - Fetch all users with social_worker role
- * - Real-time updates via Supabase subscriptions
- * - Error handling and loading states
- * 
- * @returns {Object} Case managers data, loading state, and error state
+ * Case managers hook.
+ *
+ * Responsibilities:
+ * - Load active users with the `social_worker` role from the `profile` table.
+ * - Poll periodically while online to keep the list fresh.
+ * - Expose a `refetch` helper for manual refresh.
+ *
+ * Notes:
+ * - Despite the legacy header mentioning subscriptions, this hook currently uses polling.
+ * - The query attempts an "active" status filter first, then retries without it for compatibility.
  */
 
 import { useState, useEffect, useRef } from "react";
 import supabase from "@/../config/supabase";
 
 /**
- * Hook for fetching case managers
- * @returns {Object} { caseManagers, loading, error }
+ * @typedef {Object} CaseManagerRow
+ * @property {string} id
+ * @property {string|null} [full_name]
+ * @property {string|null} [email]
+ * @property {string|null} [role]
+ */
+
+/**
+ * @typedef {Object} UseCaseManagersResult
+ * @property {CaseManagerRow[]} caseManagers
+ * @property {boolean} loading
+ * @property {string|null} error
+ * @property {() => Promise<void>} refetch
+ */
+
+/**
+ * Fetch and maintain the list of case managers.
+ * @returns {UseCaseManagersResult}
  */
 export function useCaseManagers() {
-  const [caseManagers, setCaseManagers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const pollRef = useRef(null);
-  const [isOnline, setIsOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
+	const [caseManagers, setCaseManagers] = useState([]);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState(null);
+	const pollRef = useRef(null);
+	const [isOnline, setIsOnline] = useState(
+		typeof navigator === "undefined" ? true : navigator.onLine,
+	);
 
-  /**
-   * Fetch case managers from Supabase profile table
-   * @async
-   */
-  const fetchCaseManagers = async () => {
-    try {
-      setLoading(true);
-      setError(null);
+	/**
+	 * Fetch case managers from the Supabase `profile` table.
+	 *
+	 * Behavior:
+	 * - Tries `status = active` first.
+	 * - If that fails or returns empty, retries without the status filter.
+	 */
+	const fetchCaseManagers = async () => {
+		try {
+			setLoading(true);
+			setError(null);
 
-      // Try with status filter first
-      let { data, error: fetchError } = await supabase
-        .from('profile')
-        .select('id, full_name, email, role')
-        .eq('role', 'social_worker')
-        .eq('status', 'active')
-        .order('full_name', { ascending: true });
+			// Try with status filter first
+			let { data, error: fetchError } = await supabase
+				.from("profile")
+				.select("id, full_name, email, role")
+				.eq("role", "social_worker")
+				.eq("status", "active")
+				.order("full_name", { ascending: true });
 
-      // If no results or error, try without status filter
-      if (!data || data.length === 0 || fetchError) {
-        console.log('Retrying without status filter...');
-        const retry = await supabase
-          .from('profile')
-          .select('id, full_name, email, role')
-          .eq('role', 'social_worker')
-          .order('full_name', { ascending: true });
-        
-        data = retry.data;
-        fetchError = retry.error;
-      }
+			// If no results or error, try without status filter
+			if (!data || data.length === 0 || fetchError) {
+				console.log("Retrying without status filter...");
+				const retry = await supabase
+					.from("profile")
+					.select("id, full_name, email, role")
+					.eq("role", "social_worker")
+					.order("full_name", { ascending: true });
 
-      if (fetchError) throw fetchError;
+				data = retry.data;
+				fetchError = retry.error;
+			}
 
-      console.log('Case managers loaded:', data);
-      setCaseManagers(data || []);
-    } catch (err) {
-      console.error("Error fetching case managers:", err);
-      setError(err.message);
-      
-      // Fallback to empty array on error
-      setCaseManagers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
+			if (fetchError) throw fetchError;
 
-  // Initial fetch
-  useEffect(() => {
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
+			console.log("Case managers loaded:", data);
+			setCaseManagers(data || []);
+		} catch (err) {
+			console.error("Error fetching case managers:", err);
+			setError(err.message);
 
-    window.addEventListener("online", goOnline);
-    window.addEventListener("offline", goOffline);
+			// Fallback to empty array on error
+			setCaseManagers([]);
+		} finally {
+			setLoading(false);
+		}
+	};
 
-    return () => {
-      window.removeEventListener("online", goOnline);
-      window.removeEventListener("offline", goOffline);
-    };
-  }, []);
+	// Initial fetch
+	useEffect(() => {
+		const goOnline = () => setIsOnline(true);
+		const goOffline = () => setIsOnline(false);
 
-  useEffect(() => {
-    fetchCaseManagers();
+		window.addEventListener("online", goOnline);
+		window.addEventListener("offline", goOffline);
 
-    if (pollRef.current) {
-      clearInterval(pollRef.current);
-      pollRef.current = null;
-    }
+		return () => {
+			window.removeEventListener("online", goOnline);
+			window.removeEventListener("offline", goOffline);
+		};
+	}, []);
 
-    if (isOnline) {
-      pollRef.current = window.setInterval(() => {
-        fetchCaseManagers();
-      }, 5 * 60_000);
-    }
+	useEffect(() => {
+		fetchCaseManagers();
 
-    return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current);
-        pollRef.current = null;
-      }
-    };
-  }, [isOnline]);
+		if (pollRef.current) {
+			clearInterval(pollRef.current);
+			pollRef.current = null;
+		}
 
-  return {
-    caseManagers,
-    loading,
-    error,
-    refetch: fetchCaseManagers,
-  };
+		if (isOnline) {
+			pollRef.current = window.setInterval(() => {
+				fetchCaseManagers();
+			}, 5 * 60_000);
+		}
+
+		return () => {
+			if (pollRef.current) {
+				clearInterval(pollRef.current);
+				pollRef.current = null;
+			}
+		};
+	}, [isOnline]);
+
+	return {
+		caseManagers,
+		loading,
+		error,
+		refetch: fetchCaseManagers,
+	};
 }

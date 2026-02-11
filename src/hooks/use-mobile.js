@@ -1,31 +1,42 @@
-import * as React from "react"
+import * as React from "react";
 
-//* Custom hook: detect if screen width is below the mobile breakpoint
+/**
+ * Mobile breakpoint helper hook.
+ *
+ * Tracks whether the current viewport width is below the mobile breakpoint.
+ * Intended for browser/Electron renderer usage (relies on `window`).
+ *
+ * @typedef {Object} UseIsMobileResult
+ * @property {boolean} isMobile
+ */
 
-const MOBILE_BREAKPOINT = 768 // screen width threshold for mobile
+/**
+ * Screen width threshold for mobile.
+ * `useIsMobile()` returns `true` when `window.innerWidth < MOBILE_BREAKPOINT`.
+ */
+const MOBILE_BREAKPOINT = 768;
 
+/**
+ * Detect if the viewport is currently in the mobile breakpoint.
+ * @returns {boolean}
+ */
 export function useIsMobile() {
-  const [isMobile, setIsMobile] = React.useState(undefined) // track if current view is mobile
+	const [isMobile, setIsMobile] = React.useState(undefined);
 
-  React.useEffect(() => {
-    // create media query for mobile detection
-    const mql = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT - 1}px)`)
+	React.useEffect(() => {
+		const mql = window.matchMedia(
+			`(max-width: ${MOBILE_BREAKPOINT - 1}px)`,
+		);
 
-    // handler to update state on screen resize
-    const onChange = () => {
-      setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
-    }
+		const onChange = () => {
+			setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
+		};
 
-    // listen for changes
-    mql.addEventListener("change", onChange)
+		mql.addEventListener("change", onChange);
+		setIsMobile(window.innerWidth < MOBILE_BREAKPOINT);
 
-    // set initial value
-    setIsMobile(window.innerWidth < MOBILE_BREAKPOINT)
+		return () => mql.removeEventListener("change", onChange);
+	}, []);
 
-    // cleanup listener when unmounted
-    return () => mql.removeEventListener("change", onChange);
-  }, [])
-
-  return !!isMobile // always return boolean (true = mobile, false = desktop)
+	return !!isMobile;
 }
-

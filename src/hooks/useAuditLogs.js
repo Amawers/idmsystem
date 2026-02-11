@@ -1,20 +1,53 @@
 /**
- * @file useAuditLogs.js
- * @description Custom hook for managing audit logs with real-time updates
- * @module hooks/useAuditLogs
+ * Audit logs hook.
+ *
+ * Responsibilities:
+ * - Fetch audit log rows with pagination/filtering via `fetchAuditLogs()`.
+ * - Keep filter state in the hook and expose helpers for pagination and resets.
+ *
+ * Notes:
+ * - Despite the legacy header mentioning real-time updates, this hook currently fetches on demand
+ *   whenever `filters` change.
  */
 
 import { useState, useEffect, useCallback } from "react";
 import { fetchAuditLogs } from "@/lib/auditLog";
 
 /**
- * Custom hook for fetching and managing audit logs
- * 
- * @param {Object} initialFilters - Initial filter values
- * @returns {Object} Hook state and methods
- * 
- * @example
- * const { data, count, loading, error, reload, filters, setFilters } = useAuditLogs();
+ * @typedef {Object} AuditLogFilters
+ * @property {string|null} [userId]
+ * @property {string|null} [actionCategory]
+ * @property {string|null} [actionType]
+ * @property {string|null} [severity]
+ * @property {string|null} [startDate]
+ * @property {string|null} [endDate]
+ * @property {number} [limit]
+ * @property {number} [offset]
+ */
+
+/**
+ * @typedef {Object<string, any>} AuditLogRow
+ * Audit log row shape (loose).
+ */
+
+/**
+ * @typedef {Object} UseAuditLogsResult
+ * @property {AuditLogRow[]} data
+ * @property {number} count
+ * @property {boolean} loading
+ * @property {any} error
+ * @property {() => void} reload
+ * @property {AuditLogFilters} filters
+ * @property {(newFilters: Partial<AuditLogFilters>) => void} setFilters
+ * @property {() => void} resetFilters
+ * @property {() => void} nextPage
+ * @property {() => void} prevPage
+ */
+
+/**
+ * Fetch and manage audit logs using local filter state.
+ * @param {Partial<AuditLogFilters>} [initialFilters]
+ * @returns {UseAuditLogsResult}
  */
 export function useAuditLogs(initialFilters = {}) {
 	const [data, setData] = useState([]);
