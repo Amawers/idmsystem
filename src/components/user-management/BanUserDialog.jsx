@@ -1,40 +1,12 @@
-// =============================================
-// Ban User Dialog Component
-// ---------------------------------------------
-// Purpose: Confirmation dialog for heads to ban/suspend or unban user accounts.
-// Includes warning messages and action confirmation.
-//
-// Features:
-// - Ban (suspend) user accounts
-// - Unban (reactivate) banned accounts
-// - Confirmation step to prevent accidental actions
-// - Display user info for verification
-// - Toast notifications on success/error
-//
-// Props:
-// - open: Boolean to control dialog visibility
-// - onOpenChange: Callback when dialog open state changes
-// - user: User object to ban/unban
-// - action: "ban" or "unban" to determine action type
-// - onSuccess: Callback after successful action
-//
-// Dependencies:
-// - shadcn/ui: Dialog, Button components
-// - sonner: Toast notifications
-//
-// Example Usage:
-// ```jsx
-// const [banAction, setBanAction] = useState(null);
-// 
-// <BanUserDialog 
-//   open={!!banAction} 
-//   onOpenChange={(open) => !open && setBanAction(null)}
-//   user={banAction?.user}
-//   action={banAction?.action}
-//   onSuccess={() => setBanAction(null)}
-// />
-// ```
-// =============================================
+/**
+ * Confirmation dialog for banning (suspending) or unbanning a user account.
+ *
+ * Responsibilities:
+ * - Presents a high-friction confirmation UI for sensitive actions.
+ * - Delegates the mutation to `useUserManagementStore()`.
+ * - Emits an audit log entry for ban/unban actions.
+ * - Surfaces outcomes via `sonner` toasts.
+ */
 
 import {
 	Dialog,
@@ -48,14 +20,59 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { useUserManagementStore } from "@/store/useUserManagementStore";
 import { AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
-import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
+import {
+	createAuditLog,
+	AUDIT_ACTIONS,
+	AUDIT_CATEGORIES,
+} from "@/lib/auditLog";
 import { Badge } from "@/components/ui/badge";
 
-export function BanUserDialog({ open, onOpenChange, user, action = "ban", onSuccess }) {
+/**
+ * @typedef {"active" | "inactive" | "banned"} UserStatus
+ */
+
+/**
+ * Minimal user shape required by this dialog.
+ *
+ * @typedef {Object} ManagedUser
+ * @property {string} id
+ * @property {string} email
+ * @property {string=} role
+ * @property {string=} full_name
+ * @property {UserStatus=} status
+ * @property {string | Date | null=} banned_at
+ * @property {string | null=} banned_by_email
+ */
+
+/**
+ * @typedef {Object} BanUserDialogProps
+ * @property {boolean} open
+ * @property {(open: boolean) => void} onOpenChange
+ * @property {ManagedUser | null | undefined} user
+ * @property {"ban" | "unban"=} action
+ * @property {(() => void)=} onSuccess
+ */
+
+/**
+ * @param {BanUserDialogProps} props
+ * @returns {import("react").ReactNode}
+ */
+export function BanUserDialog({
+	open,
+	onOpenChange,
+	user,
+	action = "ban",
+	onSuccess,
+}) {
 	const { banUser, unbanUser, loading } = useUserManagementStore();
 
 	const isBanAction = action === "ban";
 
+	/**
+	 * Executes the selected action and logs it.
+	 *
+	 * Note: audit log severity is `critical` for banning and `info` for unbanning.
+	 */
 	const handleAction = async () => {
 		if (!user) return;
 
@@ -66,19 +83,18 @@ export function BanUserDialog({ open, onOpenChange, user, action = "ban", onSucc
 					description: `${user.email} can no longer log in`,
 				});
 
-				// Create audit log for user ban
 				await createAuditLog({
 					actionType: AUDIT_ACTIONS.BAN_USER,
 					actionCategory: AUDIT_CATEGORIES.USER,
 					description: `Banned user account ${user.email}`,
-					resourceType: 'user',
+					resourceType: "user",
 					resourceId: user.id,
 					metadata: {
 						email: user.email,
 						role: user.role,
-						fullName: user.full_name
+						fullName: user.full_name,
 					},
-					severity: 'critical'
+					severity: "critical",
 				});
 			} else {
 				await unbanUser(user.id);
@@ -86,19 +102,18 @@ export function BanUserDialog({ open, onOpenChange, user, action = "ban", onSucc
 					description: `${user.email} can now log in again`,
 				});
 
-				// Create audit log for user unban
 				await createAuditLog({
 					actionType: AUDIT_ACTIONS.UNBAN_USER,
 					actionCategory: AUDIT_CATEGORIES.USER,
 					description: `Unbanned user account ${user.email}`,
-					resourceType: 'user',
+					resourceType: "user",
 					resourceId: user.id,
 					metadata: {
 						email: user.email,
 						role: user.role,
-						fullName: user.full_name
+						fullName: user.full_name,
 					},
-					severity: 'info'
+					severity: "info",
 				});
 			}
 
@@ -147,7 +162,9 @@ export function BanUserDialog({ open, onOpenChange, user, action = "ban", onSucc
 				>
 					<div className="flex items-center justify-between">
 						<span className="text-sm font-medium">Email:</span>
-						<span className="text-sm font-semibold">{user.email}</span>
+						<span className="text-sm font-semibold">
+							{user.email}
+						</span>
 					</div>
 
 					<div className="flex items-center justify-between">
@@ -158,15 +175,17 @@ export function BanUserDialog({ open, onOpenChange, user, action = "ban", onSucc
 					</div>
 
 					<div className="flex items-center justify-between">
-						<span className="text-sm font-medium">Current Status:</span>
+						<span className="text-sm font-medium">
+							Current Status:
+						</span>
 						<Badge
 							variant="outline"
 							className={
 								user.status === "active"
 									? "bg-green-500/10 text-green-700 border-green-200"
 									: user.status === "banned"
-									? "bg-red-500/10 text-red-700 border-red-200"
-									: "bg-gray-500/10 text-gray-700 border-gray-200"
+										? "bg-red-500/10 text-red-700 border-red-200"
+										: "bg-gray-500/10 text-gray-700 border-gray-200"
 							}
 						>
 							{user.status}
@@ -183,7 +202,10 @@ export function BanUserDialog({ open, onOpenChange, user, action = "ban", onSucc
 							</p>
 							{user.banned_by_email && (
 								<p className="text-xs text-muted-foreground">
-									By: <span className="font-medium">{user.banned_by_email}</span>
+									By:{" "}
+									<span className="font-medium">
+										{user.banned_by_email}
+									</span>
 								</p>
 							)}
 						</div>
@@ -193,14 +215,18 @@ export function BanUserDialog({ open, onOpenChange, user, action = "ban", onSucc
 				{/* Warning/Info Message */}
 				<div
 					className={`rounded-lg p-3 ${
-						isBanAction ? "bg-yellow-50 border border-yellow-200" : "bg-blue-50 border border-blue-200"
+						isBanAction
+							? "bg-yellow-50 border border-yellow-200"
+							: "bg-blue-50 border border-blue-200"
 					}`}
 				>
 					<p className="text-sm font-medium flex items-center gap-2">
 						{isBanAction ? (
 							<>
 								<AlertTriangle className="h-4 w-4 text-yellow-600" />
-								<span className="text-yellow-900">Warning:</span>
+								<span className="text-yellow-900">
+									Warning:
+								</span>
 							</>
 						) : (
 							<>
@@ -231,7 +257,9 @@ export function BanUserDialog({ open, onOpenChange, user, action = "ban", onSucc
 						onClick={handleAction}
 						disabled={loading}
 					>
-						{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+						{loading && (
+							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+						)}
 						{isBanAction ? "Ban User" : "Unban User"}
 					</Button>
 				</DialogFooter>

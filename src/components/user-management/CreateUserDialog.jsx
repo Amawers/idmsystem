@@ -1,41 +1,16 @@
-// =============================================
-// Create User Dialog Component
-// ---------------------------------------------
-// Purpose: Dialog form to create new user accounts.
-// Includes form validation, duplicate email checking, and optional
-// password auto-generation.
-//
-// Features:
-// - Full name input field
-// - Email validation and duplicate checking
-// - Auto-generate or manual password entry
-// - Single role: social_worker
-// - Status selection (active/inactive)
-// - Form validation with Zod schema
-// - Toast notifications on success/error
-//
-// Props:
-// - open: Boolean to control dialog visibility
-// - onOpenChange: Callback when dialog open state changes
-// - onSuccess: Callback after successful user creation
-//
-// Dependencies:
-// - react-hook-form: Form state management
-// - zod: Schema validation
-// - shadcn/ui: Dialog, Form, Input, Select, Button components
-// - sonner: Toast notifications
-//
-// Example Usage:
-// ```jsx
-// const [open, setOpen] = useState(false);
-// 
-// <CreateUserDialog 
-//   open={open} 
-//   onOpenChange={setOpen}
-//   onSuccess={() => console.log('User created!')}
-// />
-// ```
-// =============================================
+/**
+ * Modal dialog for creating a new user account.
+ *
+ * Responsibilities:
+ * - Collects full name and email.
+ * - Allows entering a password manually, or generating one for a one-time copy.
+ * - Delegates creation to `useUserManagementStore().createUser`.
+ * - Emits an audit log entry on successful account creation.
+ *
+ * Notes:
+ * - Role is intentionally fixed to `social_worker` in this UI.
+ * - Status is currently forced to `active` on create.
+ */
 
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -60,19 +35,47 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-	Select,
-	SelectContent,
-	SelectItem,
-	SelectTrigger,
-	SelectValue,
-} from "@/components/ui/select";
 import { toast } from "sonner";
 import { useUserManagementStore } from "@/store/useUserManagementStore";
 import { Loader2, Eye, EyeOff, RefreshCw, Copy, Check } from "lucide-react";
-import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "@/lib/auditLog";
+import {
+	createAuditLog,
+	AUDIT_ACTIONS,
+	AUDIT_CATEGORIES,
+} from "@/lib/auditLog";
 
-// Validation schema
+/**
+ * @typedef {"social_worker"} UserRole
+ */
+
+/**
+ * @typedef {Object} CreateUserDialogProps
+ * @property {boolean} open
+ * @property {(open: boolean) => void} onOpenChange
+ * @property {(() => void)=} onSuccess
+ */
+
+/**
+ * Form values owned by this dialog.
+ *
+ * @typedef {Object} CreateUserFormValues
+ * @property {string} fullName
+ * @property {string} email
+ * @property {string=} password
+ * @property {boolean} autoGeneratePassword
+ */
+
+/**
+ * Result shape used by this component after creating a user.
+ *
+ * @typedef {Object} CreateUserResult
+ * @property {string} userId
+ * @property {string=} password
+ */
+
+/**
+ * Validation schema for the create-user form.
+ */
 const createUserSchema = z.object({
 	fullName: z.string().min(1, "Full name is required"),
 	email: z.string().email("Invalid email address"),
@@ -83,6 +86,10 @@ const createUserSchema = z.object({
 	autoGeneratePassword: z.boolean().default(false),
 });
 
+/**
+ * @param {CreateUserDialogProps} props
+ * @returns {import("react").ReactNode}
+ */
 export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 	const { createUser, loading } = useUserManagementStore();
 	const [showPassword, setShowPassword] = useState(false);
@@ -101,9 +108,13 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 
 	const autoGenerate = form.watch("autoGeneratePassword");
 
-	// Generate random password
+	/**
+	 * Generates a random password for display/copy and sets the form `password`.
+	 * This is used only when `autoGeneratePassword` is enabled.
+	 */
 	const generatePassword = () => {
-		const chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
+		const chars =
+			"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%";
 		let password = "";
 		for (let i = 0; i < 12; i++) {
 			password += chars.charAt(Math.floor(Math.random() * chars.length));
@@ -112,7 +123,10 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 		form.setValue("password", password);
 	};
 
-	// Auto-generate password when toggled on
+	/**
+	 * Toggles auto-generation and clears any generated password when disabled.
+	 * @param {boolean} checked
+	 */
 	const handleAutoGenerateToggle = (checked) => {
 		form.setValue("autoGeneratePassword", checked);
 		if (checked) {
@@ -123,7 +137,10 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 		}
 	};
 
-	// Copy password to clipboard
+	/**
+	 * Copies the generated password to the clipboard.
+	 * Safe no-op when no password is currently generated.
+	 */
 	const handleCopyPassword = async () => {
 		if (generatedPassword) {
 			try {
@@ -137,15 +154,23 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 		}
 	};
 
-	// Handle form submission
+	/**
+	 * Creates the user via the store and records an audit log entry.
+	 *
+	 * Note: role and status are intentionally fixed at creation.
+	 * @param {CreateUserFormValues} data
+	 */
 	const onSubmit = async (data) => {
 		try {
+			/** @type {CreateUserResult} */
 			const result = await createUser({
 				fullName: data.fullName,
 				email: data.email,
-				password: data.autoGeneratePassword ? generatedPassword : data.password,
-				role: "social_worker",
-				status: "active", // Always set to active when creating new accounts
+				password: data.autoGeneratePassword
+					? generatedPassword
+					: data.password,
+				role: /** @type {UserRole} */ ("social_worker"),
+				status: "active",
 			});
 
 			toast.success("User created successfully", {
@@ -154,20 +179,19 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 					: "User can now log in with their credentials",
 			});
 
-			// Create audit log for user creation
 			await createAuditLog({
 				actionType: AUDIT_ACTIONS.CREATE_USER,
 				actionCategory: AUDIT_CATEGORIES.USER,
 				description: `Created new user account for ${data.email}`,
-				resourceType: 'user',
+				resourceType: "user",
 				resourceId: result.userId,
 				metadata: {
 					fullName: data.fullName,
 					email: data.email,
 					role: "social_worker",
-					autoGeneratedPassword: data.autoGeneratePassword
+					autoGeneratedPassword: data.autoGeneratePassword,
 				},
-				severity: 'info'
+				severity: "info",
 			});
 
 			form.reset();
@@ -187,16 +211,18 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 				<DialogHeader>
 					<DialogTitle>Create New User Account</DialogTitle>
 					<DialogDescription>
-						Create a new social worker account. All fields are required.
+						Create a new social worker account. All fields are
+						required.
 					</DialogDescription>
 				</DialogHeader>
 
 				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+					<form
+						onSubmit={form.handleSubmit(onSubmit)}
+						className="space-y-6"
+					>
 						<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-							{/* LEFT SIDE - Full Name, Email */}
 							<div className="space-y-4">
-								{/* Full Name Field */}
 								<FormField
 									control={form.control}
 									name="fullName"
@@ -215,7 +241,6 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 									)}
 								/>
 
-								{/* Email Field */}
 								<FormField
 									control={form.control}
 									name="email"
@@ -239,27 +264,34 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 								</div>
 							</div>
 
-							{/* RIGHT SIDE - Password Settings */}
 							<div className="space-y-4">
-								{/* Auto-generate Password Toggle */}
 								<FormField
 									control={form.control}
 									name="autoGeneratePassword"
 									render={({ field }) => (
 										<FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
 											<div className="space-y-0.5">
-												<FormLabel>Auto-generate Password</FormLabel>
+												<FormLabel>
+													Auto-generate Password
+												</FormLabel>
 												<FormDescription className="text-xs">
-													Automatically create a secure password
+													Automatically create a
+													secure password
 												</FormDescription>
 											</div>
 											<FormControl>
 												<Button
 													type="button"
-													variant={field.value ? "default" : "outline"}
+													variant={
+														field.value
+															? "default"
+															: "outline"
+													}
 													size="sm"
 													onClick={() =>
-														handleAutoGenerateToggle(!field.value)
+														handleAutoGenerateToggle(
+															!field.value,
+														)
 													}
 												>
 													{field.value ? "ON" : "OFF"}
@@ -269,14 +301,19 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 									)}
 								/>
 
-								{/* Password Field (conditional) */}
 								{autoGenerate ? (
 									<div className="space-y-2">
-										<FormLabel>Generated Password</FormLabel>
+										<FormLabel>
+											Generated Password
+										</FormLabel>
 										<div className="flex gap-2">
 											<Input
 												value={generatedPassword}
-												type={showPassword ? "text" : "password"}
+												type={
+													showPassword
+														? "text"
+														: "password"
+												}
 												readOnly
 												placeholder="Click generate to create password"
 												className="font-mono"
@@ -299,7 +336,11 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 												type="button"
 												variant="outline"
 												size="icon"
-												onClick={() => setShowPassword(!showPassword)}
+												onClick={() =>
+													setShowPassword(
+														!showPassword,
+													)
+												}
 												title="Toggle password visibility"
 											>
 												{showPassword ? (
@@ -319,7 +360,9 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 											</Button>
 										</div>
 										<p className="text-xs text-muted-foreground">
-											Click the copy icon to copy the password - it will be shown only once after creation
+											Click the copy icon to copy the
+											password - it will be shown only
+											once after creation
 										</p>
 									</div>
 								) : (
@@ -332,7 +375,11 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 												<FormControl>
 													<div className="flex gap-2">
 														<Input
-															type={showPassword ? "text" : "password"}
+															type={
+																showPassword
+																	? "text"
+																	: "password"
+															}
 															placeholder="Enter password (min 6 characters)"
 															{...field}
 														/>
@@ -340,7 +387,11 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 															type="button"
 															variant="outline"
 															size="icon"
-															onClick={() => setShowPassword(!showPassword)}
+															onClick={() =>
+																setShowPassword(
+																	!showPassword,
+																)
+															}
 														>
 															{showPassword ? (
 																<EyeOff className="h-4 w-4" />
@@ -368,7 +419,9 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 								Cancel
 							</Button>
 							<Button type="submit" disabled={loading}>
-								{loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+								{loading && (
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								)}
 								Create User
 							</Button>
 						</DialogFooter>

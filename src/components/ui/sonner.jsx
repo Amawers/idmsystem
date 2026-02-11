@@ -1,24 +1,41 @@
-import { useTheme } from "next-themes"
+/**
+ * Sonner toaster wrapper.
+ *
+ * Centralizes toast rendering and styling so the rest of the app can call
+ * `toast.*` without needing to manage provider placement.
+ *
+ * Responsibilities:
+ * - Reads the active theme from `next-themes`.
+ * - Applies app CSS variables to Sonner's base styles.
+ * - Forwards remaining props to Sonner's `<Toaster />`.
+ */
+
+import { useTheme } from "next-themes";
 import { Toaster as Sonner } from "sonner";
 
-const Toaster = ({
-  ...props
-}) => {
-  const { theme = "system" } = useTheme()
+/**
+ * @typedef {import("react").ComponentPropsWithoutRef<typeof Sonner>} SonnerToasterProps
+ */
 
-  return (
-    <Sonner
-      theme={theme}
-      className="toaster group"
-      style={
-        {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)"
-        }
-      }
-      {...props} />
-  );
-}
+/**
+ * @param {SonnerToasterProps} props
+ * @returns {import("react").ReactNode}
+ */
+const Toaster = ({ ...props }) => {
+	const { theme = "system" } = useTheme();
 
-export { Toaster }
+	return (
+		<Sonner
+			theme={theme}
+			className="toaster group"
+			style={{
+				"--normal-bg": "var(--popover)",
+				"--normal-text": "var(--popover-foreground)",
+				"--normal-border": "var(--border)",
+			}}
+			{...props}
+		/>
+	);
+};
+
+export { Toaster };
