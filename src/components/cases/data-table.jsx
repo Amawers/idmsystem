@@ -1323,7 +1323,11 @@ const faColumns = (
 // =================================
 //* PWD Table COLUMN DEFINITIONS
 // =================================
-const pwdColumns = (handleDeleteClick, handleDocumentsClick) => [
+const pwdColumns = (
+	handleEditClick,
+	handleDeleteClick,
+	handleDocumentsClick,
+) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -1397,6 +1401,16 @@ const pwdColumns = (handleDeleteClick, handleDocumentsClick) => [
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
+					<PermissionGuard permission="edit_case">
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleEditClick(row.original, "PWD");
+							}}
+						>
+							Edit
+						</DropdownMenuItem>
+					</PermissionGuard>
 					<PermissionGuard permission="view_documents">
 						<DropdownMenuItem
 							onClick={(e) => {
@@ -1933,6 +1947,9 @@ export function DataTable({
 	const [openFaEditSheet, setOpenFaEditSheet] = useState(false);
 	const [editingFaRecord, setEditingFaRecord] = useState(null);
 
+	// Persons with Disabilities edit state
+	const [editingPwdRecord, setEditingPwdRecord] = useState(null);
+
 	// Tracks which tab is currently active
 	const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -2153,6 +2170,13 @@ export function DataTable({
 		console.log("Editing SP record:", record);
 		setEditingSpRecord(record);
 		setOpenSpEditSheet(true);
+	}
+
+	// Handle PWD row click for editing
+	function handleEditPwdRow(record) {
+		console.log("Editing PWD record:", record);
+		setEditingPwdRecord(record);
+		setOpenPwdIntakeSheet(true);
 	}
 
 	// Handle delete click - opens confirmation dialog
@@ -2636,7 +2660,12 @@ export function DataTable({
 	// Table instance for Persons with Disabilities tab with its own data and column definitions
 	const pwdTable = useDataTable({
 		initialData: pwdSortedData,
-		columns: pwdColumns(handleDeleteClick, handleDocumentsClick),
+		columns: pwdColumns(
+			handleEditPwdRow,
+			handleDeleteClick,
+			handleDocumentsClick,
+		),
+		onRowClick: handleEditPwdRow,
 	});
 
 	// Table instance for Senior Citizen tab with its own data and column definitions
@@ -4237,9 +4266,10 @@ export function DataTable({
 										<Button
 											variant="outline"
 											size="sm"
-											onClick={() =>
-												setOpenPwdIntakeSheet(true)
-											}
+											onClick={() => {
+												setEditingPwdRecord(null);
+												setOpenPwdIntakeSheet(true);
+											}}
 											className="cursor-pointer"
 										>
 											<IconPlus />
@@ -4252,7 +4282,13 @@ export function DataTable({
 									{/* PWD Create Modal */}
 									<IntakeSheetPWD
 										open={openPwdIntakeSheet}
-										setOpen={setOpenPwdIntakeSheet}
+										setOpen={(nextOpen) => {
+											setOpenPwdIntakeSheet(nextOpen);
+											if (!nextOpen) {
+												setEditingPwdRecord(null);
+											}
+										}}
+										editingRecord={editingPwdRecord}
 										onSuccess={reloadPwd}
 									/>
 
@@ -4930,9 +4966,11 @@ export function DataTable({
 						table={pwdTable.table}
 						setData={pwdTable.setData}
 						columns={pwdColumns(
+							handleEditPwdRow,
 							handleDeleteClick,
 							handleDocumentsClick,
 						)}
+						onRowClick={handleEditPwdRow}
 					/>
 					<PaginationControls table={pwdTable.table} />
 				</TabsContent>

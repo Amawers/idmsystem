@@ -31,6 +31,7 @@ import { createOrUpdateLocalPwdCase } from "@/services/pwdOfflineService";
  * @property {boolean} open
  * @property {(open: boolean) => void} setOpen
  * @property {() => void} [onSuccess]
+ * @property {Record<string, any> | null} [editingRecord]
  */
 
 /**
@@ -149,24 +150,114 @@ const forcePwdTabReload = () => {
 	window.location.reload();
 };
 
+const ARRAY_FIELDS = new Set(["type_of_disability", "cause_of_disability"]);
+
+function toDateInputValue(value) {
+	if (!value) return "";
+	const str = String(value);
+	if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+	const date = new Date(str);
+	if (Number.isNaN(date.getTime())) return "";
+	return date.toISOString().slice(0, 10);
+}
+
+function toArrayValue(value) {
+	if (Array.isArray(value)) {
+		return value.map((item) => String(item).trim()).filter(Boolean);
+	}
+	if (typeof value === "string") {
+		const trimmed = value.trim();
+		if (!trimmed) return [];
+		if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+			try {
+				const parsed = JSON.parse(trimmed);
+				if (Array.isArray(parsed)) {
+					return parsed
+						.map((item) => String(item).trim())
+						.filter(Boolean);
+				}
+			} catch {
+				// fallback to split parsing below
+			}
+		}
+		return trimmed
+			.split(",")
+			.map((item) => item.trim())
+			.filter(Boolean);
+	}
+	return [];
+}
+
+function mapRecordToPwdFormState(record) {
+	if (!record) return initialFormState;
+
+	const next = { ...initialFormState };
+
+	for (const key of Object.keys(initialFormState)) {
+		if (ARRAY_FIELDS.has(key)) {
+			next[key] = toArrayValue(record[key]);
+			continue;
+		}
+
+		if (key === "date_applied" || key === "date_of_birth") {
+			next[key] = toDateInputValue(record[key]);
+			continue;
+		}
+
+		next[key] = record[key] == null ? "" : String(record[key]);
+	}
+
+	if (!next.first_name && record.firstName) {
+		next.first_name = String(record.firstName);
+	}
+	if (!next.last_name && record.lastName) {
+		next.last_name = String(record.lastName);
+	}
+	if (!next.middle_name && record.middleName) {
+		next.middle_name = String(record.middleName);
+	}
+	if (!next.mobile_no && (record.contact_number || record.mobileNumber)) {
+		next.mobile_no = String(record.contact_number || record.mobileNumber);
+	}
+
+	if (!next.type_of_disability.length) {
+		next.type_of_disability = toArrayValue(record.disability_type);
+	}
+
+	return next;
+}
+
 /**
  * PWD intake dialog.
  * @param {IntakeSheetPwdProps} props
  * @returns {JSX.Element}
  */
-export default function IntakeSheetPWD({ open, setOpen, onSuccess }) {
+export default function IntakeSheetPWD({
+	open,
+	setOpen,
+	onSuccess,
+	editingRecord = null,
+}) {
 	/** @type {[PwdIntakeFormState, import("react").Dispatch<import("react").SetStateAction<PwdIntakeFormState>>]} */
 	const [formState, setFormState] = useState(initialFormState);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [activeTab, setActiveTab] = useState("first");
+	const isEditMode = Boolean(editingRecord);
 
 	useEffect(() => {
 		if (!open) {
 			setFormState(initialFormState);
 			setIsSubmitting(false);
 			setActiveTab("first");
+			return;
 		}
-	}, [open]);
+
+		if (isEditMode && editingRecord) {
+			setFormState(mapRecordToPwdFormState(editingRecord));
+		} else {
+			setFormState(initialFormState);
+		}
+	}, [open, isEditMode, editingRecord]);
 
 	/**
 	 * Create a controlled-input `onChange` handler.
@@ -239,15 +330,20 @@ export default function IntakeSheetPWD({ open, setOpen, onSuccess }) {
 			const casePayload = buildPWDCasePayload(formState);
 			await createOrUpdateLocalPwdCase({
 				casePayload,
-				mode: "create",
+				targetId: isEditMode ? (editingRecord?.id ?? null) : null,
+				localId: isEditMode ? (editingRecord?.localId ?? null) : null,
+				mode: isEditMode ? "update" : "create",
 			});
 
 			const online = isBrowserOnline();
-			toast.success("PWD case queued", {
-				description: online
-					? "Sync queued and will push shortly."
-					: "Stored locally. Sync once you're online.",
-			});
+			toast.success(
+				isEditMode ? "PWD case update queued" : "PWD case queued",
+				{
+					description: online
+						? "Sync queued and will push shortly."
+						: "Stored locally. Sync once you're online.",
+				},
+			);
 			setOpen(false);
 			onSuccess?.();
 
@@ -284,7 +380,11 @@ export default function IntakeSheetPWD({ open, setOpen, onSuccess }) {
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent className="min-w-6xl max-h-[85vh] overflow-y-auto">
 				<DialogHeader>
-					<DialogTitle>Persons with Disabilities Intake</DialogTitle>
+					<DialogTitle>
+						{isEditMode
+							? "Edit Persons with Disabilities"
+							: "Persons with Disabilities Intake"}
+					</DialogTitle>
 				</DialogHeader>
 				<div className="space-y-4">
 					<Tabs
@@ -1244,7 +1344,11 @@ export default function IntakeSheetPWD({ open, setOpen, onSuccess }) {
 								onClick={handleSubmit}
 								disabled={isSubmitting}
 							>
-								{isSubmitting ? "Saving..." : "Save"}
+								{isSubmitting
+									? "Saving..."
+									: isEditMode
+										? "Update"
+										: "Save"}
 							</Button>
 						) : (
 							<Button type="button" onClick={handleNext}>
