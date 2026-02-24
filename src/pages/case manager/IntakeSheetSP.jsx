@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { FamilyCompositionForm } from "@/components/intake sheet SP/FamilyCompositionForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
+import { useCaseManagerStore } from "@/store/useCaseManagerStore";
 import { buildSPCasePayload } from "@/lib/spSubmission";
 import { createOrUpdateLocalSpCase } from "@/services/spOfflineService";
 
@@ -65,6 +66,7 @@ import { createOrUpdateLocalSpCase } from "@/services/spOfflineService";
  * @property {string} parentsWhereabouts
  * @property {string} backgroundInformation
  * @property {string} assessment
+ * @property {string} caseManager
  * @property {string} cellphoneNumber
  * @property {string} emergencyContactPerson
  * @property {string} emergencyContactNumber
@@ -127,6 +129,7 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 		parentsWhereabouts: "",
 		backgroundInformation: "",
 		assessment: "",
+		caseManager: "",
 		cellphoneNumber: "",
 		emergencyContactPerson: "",
 		emergencyContactNumber: "",
@@ -134,6 +137,14 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 	});
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const { data: intakeData, resetAll } = useIntakeFormStore();
+	const caseManagers = useCaseManagerStore((state) => state.caseManagers);
+	const loadingCaseManagers = useCaseManagerStore((state) => state.loading);
+	const caseManagerError = useCaseManagerStore((state) => state.error);
+	const initCaseManagers = useCaseManagerStore((state) => state.init);
+
+	useEffect(() => {
+		initCaseManagers();
+	}, [initCaseManagers]);
 
 	useEffect(() => {
 		if (!open) {
@@ -158,6 +169,7 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 				parentsWhereabouts: "",
 				backgroundInformation: "",
 				assessment: "",
+				caseManager: "",
 				cellphoneNumber: "",
 				emergencyContactPerson: "",
 				emergencyContactNumber: "",
@@ -462,7 +474,7 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 
 						<TabsContent value="other" className="space-y-4">
 							<div className="grid gap-4">
-								<div className="grid gap-4 md:grid-cols-3">
+								<div className="grid gap-4 md:grid-cols-4">
 									<div className="grid gap-2">
 										<Label htmlFor="sp-solo-parent-duration">
 											No. years/months become solo parent
@@ -559,6 +571,72 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 												"emergencyContactNumber",
 											)}
 										/>
+									</div>
+
+									<div className="grid gap-2">
+										<Label htmlFor="sp-case-manager">
+											Case Manager
+										</Label>
+										<Select
+											value={formState.caseManager}
+											onValueChange={(value) =>
+												setFormState((prev) => ({
+													...prev,
+													caseManager: value,
+												}))
+											}
+										>
+											<SelectTrigger
+												id="sp-case-manager"
+												disabled={
+													loadingCaseManagers &&
+													caseManagers.length === 0
+												}
+											>
+												<SelectValue placeholder="Select case manager" />
+											</SelectTrigger>
+											<SelectContent>
+												{caseManagers.length > 0 ? (
+													caseManagers.map(
+														(manager) => (
+															<SelectItem
+																key={manager.id}
+																value={
+																	manager.full_name
+																}
+															>
+																{
+																	manager.full_name
+																}
+															</SelectItem>
+														),
+													)
+												) : loadingCaseManagers ? (
+													<SelectItem
+														value="loading"
+														disabled
+													>
+														Loading...
+													</SelectItem>
+												) : caseManagerError ? (
+													<SelectItem
+														value="fetch-error"
+														disabled
+													>
+														Unable to load case
+														managers
+													</SelectItem>
+												) : (
+													<SelectItem
+														value="no-managers"
+														disabled
+													>
+														No case managers
+														available
+													</SelectItem>
+												)}
+											</SelectContent>
+										</Select>
 									</div>
 								</div>
 

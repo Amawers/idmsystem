@@ -1095,29 +1095,14 @@ const spColumns = (handleDeleteClick, handleDocumentsClick) => [
 		},
 	},
 
-	//* CONTACT NUMBER
+	//* CASE MANAGER
 	{
-		accessorKey: "contact_number",
-		header: "Contact Number",
+		accessorKey: "case_manager",
+		header: "Case Manager",
 		cell: ({ row }) => {
-			const contact =
-				row.original.contact_number ||
-				row.original.contactNumber ||
-				row.original.phone ||
-				row.original.mobile ||
-				"-";
-			return <div>{contact}</div>;
-		},
-	},
-
-	//* EMAIL
-	{
-		accessorKey: "email",
-		header: "Email",
-		cell: ({ row }) => {
-			const email =
-				row.original.email || row.original.email_address || "-";
-			return <div>{email}</div>;
+			const caseManager =
+				row.original.case_manager || row.original.caseManager || "-";
+			return <div>{caseManager}</div>;
 		},
 	},
 
