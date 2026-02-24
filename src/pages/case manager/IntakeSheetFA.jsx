@@ -94,15 +94,51 @@ const forceFaTabReload = () => {
  * @property {boolean} open
  * @property {(open: boolean) => void} setOpen
  * @property {() => void} [onSuccess]
+ * @property {Record<string, any> | null} [editingRecord]
  */
 
 /**
  * @param {IntakeSheetFaProps} props
  * @returns {JSX.Element}
  */
-export default function IntakeSheetFA({ open, setOpen, onSuccess }) {
+function toDateInputValue(value) {
+	if (!value) return "";
+	const str = String(value);
+	if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+	const date = new Date(str);
+	if (Number.isNaN(date.getTime())) return "";
+	return date.toISOString().slice(0, 10);
+}
+
+function mapRecordToFaFormState(record) {
+	if (!record) return initialFormState;
+	return {
+		interview_date: toDateInputValue(record.interview_date),
+		date_recorded: toDateInputValue(record.date_recorded),
+		client_name: record.client_name || "",
+		address: record.address || "",
+		purpose: record.purpose || "",
+		benificiary_name: record.benificiary_name || "",
+		contact_number: record.contact_number || "",
+		prepared_by: record.prepared_by || "",
+		status_report: record.status_report || "",
+		client_category: record.client_category || "",
+		gender: record.gender || "",
+		four_ps_member: record.four_ps_member || "",
+		transaction: record.transaction || "",
+		notes: record.notes || "",
+	};
+}
+
+export default function IntakeSheetFA({
+	open,
+	setOpen,
+	onSuccess,
+	editingRecord = null,
+}) {
 	const [formState, setFormState] = useState(initialFormState);
 	const [isSubmitting, setIsSubmitting] = useState(false);
+	const isEditMode = Boolean(editingRecord);
 
 	/**
 	 * Resets local state when the dialog closes.
@@ -112,8 +148,15 @@ export default function IntakeSheetFA({ open, setOpen, onSuccess }) {
 		if (!open) {
 			setFormState(initialFormState);
 			setIsSubmitting(false);
+			return;
 		}
-	}, [open]);
+
+		if (isEditMode && editingRecord) {
+			setFormState(mapRecordToFaFormState(editingRecord));
+		} else {
+			setFormState(initialFormState);
+		}
+	}, [open, isEditMode, editingRecord]);
 
 	/**
 	 * Field-change handler factory for controlled inputs.
@@ -139,15 +182,22 @@ export default function IntakeSheetFA({ open, setOpen, onSuccess }) {
 			const casePayload = buildFACasePayload(formState);
 			await createOrUpdateLocalFaCase({
 				casePayload,
-				mode: "create",
+				targetId: isEditMode ? (editingRecord?.id ?? null) : null,
+				localId: isEditMode ? (editingRecord?.localId ?? null) : null,
+				mode: isEditMode ? "update" : "create",
 			});
 
 			const online = isBrowserOnline();
-			toast.success("Financial Assistance case queued", {
-				description: online
-					? "Sync queued and will push shortly."
-					: "Stored locally. Sync once you're online.",
-			});
+			toast.success(
+				isEditMode
+					? "Financial Assistance case update queued"
+					: "Financial Assistance case queued",
+				{
+					description: online
+						? "Sync queued and will push shortly."
+						: "Stored locally. Sync once you're online.",
+				},
+			);
 			setOpen(false);
 			onSuccess?.();
 
@@ -167,7 +217,11 @@ export default function IntakeSheetFA({ open, setOpen, onSuccess }) {
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent className="min-w-6xl">
 				<DialogHeader>
-					<DialogTitle>Financial Assistance Intake</DialogTitle>
+					<DialogTitle>
+						{isEditMode
+							? "Edit Financial Assistance"
+							: "Financial Assistance Intake"}
+					</DialogTitle>
 				</DialogHeader>
 				<form onSubmit={handleSubmit} className="space-y-4">
 					<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -369,7 +423,11 @@ export default function IntakeSheetFA({ open, setOpen, onSuccess }) {
 							Cancel
 						</Button>
 						<Button type="submit" disabled={isSubmitting}>
-							{isSubmitting ? "Saving..." : "Save"}
+							{isSubmitting
+								? "Saving..."
+								: isEditMode
+									? "Update"
+									: "Save"}
 						</Button>
 					</div>
 				</form>

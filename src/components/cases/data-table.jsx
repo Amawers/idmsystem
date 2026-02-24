@@ -1278,7 +1278,7 @@ const faColumns = (
 						<DropdownMenuItem
 							onClick={(e) => {
 								e.stopPropagation();
-								handleEditClick(row.original, "FAR");
+								handleEditClick(row.original, "FA");
 							}}
 						>
 							Edit
@@ -1288,7 +1288,7 @@ const faColumns = (
 						<DropdownMenuItem
 							onClick={(e) => {
 								e.stopPropagation();
-								handleDocumentsClick(row.original, "FAR");
+								handleDocumentsClick(row.original, "FA");
 							}}
 						>
 							Documents
@@ -1297,7 +1297,7 @@ const faColumns = (
 					<DropdownMenuItem
 						onClick={(e) => {
 							e.stopPropagation();
-							handleEnrollClick(row.original, "FAR");
+							handleEnrollClick(row.original, "FA");
 						}}
 					>
 						Enroll Program
@@ -1308,7 +1308,7 @@ const faColumns = (
 							variant="destructive"
 							onClick={(e) => {
 								e.stopPropagation();
-								handleDeleteClick(row.original, "FAR");
+								handleDeleteClick(row.original, "FA");
 							}}
 						>
 							Delete
@@ -1981,6 +1981,10 @@ export function DataTable({
 	const [openSpEditSheet, setOpenSpEditSheet] = useState(false);
 	const [editingSpRecord, setEditingSpRecord] = useState(null);
 
+	// Financial Assistance edit state
+	const [openFaEditSheet, setOpenFaEditSheet] = useState(false);
+	const [editingFaRecord, setEditingFaRecord] = useState(null);
+
 	// Tracks which tab is currently active
 	const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -2175,13 +2179,11 @@ export function DataTable({
 		setOpenFarEditSheet(true);
 	}
 
-	// Handle FA row click for editing (placeholder until FA edit form is added)
+	// Handle FA row click for editing
 	function handleEditFaRow(record) {
 		console.log("Editing FA record:", record);
-		toast.error("Edit Not Available", {
-			description:
-				"Financial Assistance edit form is not configured yet.",
-		});
+		setEditingFaRecord(record);
+		setOpenFaEditSheet(true);
 	}
 
 	// Handle FAC row click for editing
@@ -2680,6 +2682,7 @@ export function DataTable({
 			handleDeleteClick,
 			handleDocumentsClick,
 		),
+		onRowClick: handleEditFaRow,
 	});
 
 	// Table instance for Persons with Disabilities tab with its own data and column definitions
@@ -4109,6 +4112,18 @@ export function DataTable({
 										onSuccess={reloadFa}
 									/>
 
+									{/* FINANCIAL ASSISTANCE Edit Modal */}
+									<IntakeSheetFA
+										open={openFaEditSheet}
+										setOpen={(value) => {
+											setOpenFaEditSheet(value);
+											if (!value)
+												setEditingFaRecord(null);
+										}}
+										onSuccess={reloadFa}
+										editingRecord={editingFaRecord}
+									/>
+
 									{(faSyncing ||
 										faPending > 0 ||
 										faSyncStatus) && (
@@ -4949,6 +4964,7 @@ export function DataTable({
 							handleDeleteClick,
 							handleDocumentsClick,
 						)}
+						onRowClick={handleEditFaRow}
 					/>
 					<PaginationControls table={faTable.table} />
 				</TabsContent>
