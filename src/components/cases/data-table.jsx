@@ -1362,6 +1362,17 @@ const pwdColumns = (
 		},
 	},
 
+	//* CASE MANAGER
+	{
+		accessorKey: "case_manager",
+		header: "Case Manager",
+		cell: ({ row }) => {
+			const caseManager =
+				row.original.case_manager || row.original.caseManager || "-";
+			return <div>{caseManager}</div>;
+		},
+	},
+
 	//* DISABILITY TYPE
 	{
 		accessorKey: "disability_type",

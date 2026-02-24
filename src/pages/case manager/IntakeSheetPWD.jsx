@@ -22,9 +22,17 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+	Select,
+	SelectContent,
+	SelectItem,
+	SelectTrigger,
+	SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import { buildPWDCasePayload } from "@/lib/pwdSubmission";
 import { createOrUpdateLocalPwdCase } from "@/services/pwdOfflineService";
+import { useCaseManagers } from "@/store/useCaseManagerStore";
 
 /**
  * @typedef {Object} IntakeSheetPwdProps
@@ -36,6 +44,7 @@ import { createOrUpdateLocalPwdCase } from "@/services/pwdOfflineService";
 
 /**
  * @typedef {Object} PwdIntakeFormState
+ * @property {string} case_manager
  * @property {string} application_type
  * @property {string} pwd_number
  * @property {string} date_applied
@@ -83,6 +92,7 @@ import { createOrUpdateLocalPwdCase } from "@/services/pwdOfflineService";
  */
 
 const initialFormState = {
+	case_manager: "",
 	application_type: "", // new_applicant | renewal
 	pwd_number: "",
 	date_applied: "",
@@ -243,6 +253,11 @@ export default function IntakeSheetPWD({
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [activeTab, setActiveTab] = useState("first");
 	const isEditMode = Boolean(editingRecord);
+	const {
+		caseManagers,
+		loading: caseManagersLoading,
+		error: caseManagerError,
+	} = useCaseManagers();
 
 	useEffect(() => {
 		if (!open) {
@@ -454,6 +469,75 @@ export default function IntakeSheetPWD({
 									</div>
 
 									<div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+										<div className="space-y-1">
+											<Label htmlFor="pwd-case-manager">
+												Case Manager
+											</Label>
+											<Select
+												value={formState.case_manager}
+												onValueChange={(value) =>
+													setFormState((prev) => ({
+														...prev,
+														case_manager: value,
+													}))
+												}
+											>
+												<SelectTrigger
+													id="pwd-case-manager"
+													disabled={
+														caseManagersLoading &&
+														caseManagers.length ===
+															0
+													}
+												>
+													<SelectValue placeholder="Select case manager" />
+												</SelectTrigger>
+												<SelectContent>
+													{caseManagers.length > 0 ? (
+														caseManagers.map(
+															(manager) => (
+																<SelectItem
+																	key={
+																		manager.id
+																	}
+																	value={
+																		manager.full_name
+																	}
+																>
+																	{
+																		manager.full_name
+																	}
+																</SelectItem>
+															),
+														)
+													) : caseManagersLoading ? (
+														<SelectItem
+															value="loading"
+															disabled
+														>
+															Loading...
+														</SelectItem>
+													) : caseManagerError ? (
+														<SelectItem
+															value="fetch-error"
+															disabled
+														>
+															Unable to load case
+															managers
+														</SelectItem>
+													) : (
+														<SelectItem
+															value="no-managers"
+															disabled
+														>
+															No case managers
+															available
+														</SelectItem>
+													)}
+												</SelectContent>
+											</Select>
+										</div>
+
 										<div className="space-y-1">
 											<Label>
 												Persons with Disability Number
