@@ -1361,49 +1361,10 @@ const pwdColumns = (handleDeleteClick, handleDocumentsClick) => [
 	//* DISABILITY TYPE
 	{
 		accessorKey: "disability_type",
-		header: "Disability Type",
+		header: "Type of Disability",
 		cell: ({ row }) => {
 			const disabilityType = row.original.disability_type || "N/A";
 			return <div>{disabilityType}</div>;
-		},
-	},
-
-	//* CONTACT NUMBER
-	{
-		accessorKey: "contact_number",
-		header: "Contact Number",
-		cell: ({ row }) => {
-			const contact =
-				row.original.contact_number ||
-				row.original.contactNumber ||
-				row.original.phone ||
-				"-";
-			return <div>{contact}</div>;
-		},
-	},
-
-	//* ADDRESS
-	{
-		accessorKey: "address",
-		header: "Address",
-		cell: ({ row }) => {
-			const address =
-				row.original.address || row.original.location_address || "-";
-			return <div>{address}</div>;
-		},
-	},
-
-	//* STATUS
-	{
-		accessorKey: "status",
-		header: "Status",
-		cell: ({ row }) => {
-			const status = row.original.status || "N/A";
-			return (
-				<Badge variant="outline" className="capitalize">
-					{status}
-				</Badge>
-			);
 		},
 	},
 
@@ -1415,19 +1376,6 @@ const pwdColumns = (handleDeleteClick, handleDocumentsClick) => [
 			<div className="px-2">
 				{formatToMMDDYYYY(
 					row.original.created_at || row.original.date_created,
-				) || "-"}
-			</div>
-		),
-	},
-
-	//* UPDATED AT
-	{
-		accessorKey: "updated_at",
-		header: "Last Updated",
-		cell: ({ row }) => (
-			<div className="px-2">
-				{formatToMMDDYYYY(
-					row.original.updated_at || row.original.last_updated,
 				) || "-"}
 			</div>
 		),
