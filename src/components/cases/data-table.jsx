@@ -1477,18 +1477,6 @@ const scColumns = (handleDeleteClick, handleDocumentsClick) => [
 		},
 	},
 	{
-		accessorKey: "contact_number",
-		header: "Contact Number",
-		cell: ({ row }) => {
-			const contact =
-				row.original.contact_number ||
-				row.original.contactNumber ||
-				row.original.phone ||
-				"-";
-			return <div>{contact}</div>;
-		},
-	},
-	{
 		accessorKey: "address",
 		header: "Address",
 		cell: ({ row }) => {
@@ -1512,38 +1500,12 @@ const scColumns = (handleDeleteClick, handleDocumentsClick) => [
 		},
 	},
 	{
-		accessorKey: "status",
-		header: "Status",
+		accessorKey: "interviewer",
+		header: "Interviewer",
 		cell: ({ row }) => {
-			const status = row.original.status || "N/A";
-			return (
-				<Badge variant="outline" className="capitalize">
-					{status}
-				</Badge>
-			);
+			const interviewer = row.original.interviewer || "-";
+			return <div>{interviewer}</div>;
 		},
-	},
-	{
-		accessorKey: "created_at",
-		header: "Created",
-		cell: ({ row }) => (
-			<div className="px-2">
-				{formatToMMDDYYYY(
-					row.original.created_at || row.original.date_created,
-				) || "-"}
-			</div>
-		),
-	},
-	{
-		accessorKey: "updated_at",
-		header: "Last Updated",
-		cell: ({ row }) => (
-			<div className="px-2">
-				{formatToMMDDYYYY(
-					row.original.updated_at || row.original.last_updated,
-				) || "-"}
-			</div>
-		),
 	},
 	{
 		id: "actions",
