@@ -1117,20 +1117,6 @@ const spColumns = (handleDeleteClick, handleDocumentsClick) => [
 		},
 	},
 
-	//* STATUS
-	{
-		accessorKey: "status",
-		header: "Status",
-		cell: ({ row }) => {
-			const status = row.original.status || "N/A";
-			return (
-				<Badge variant="outline" className="capitalize">
-					{status}
-				</Badge>
-			);
-		},
-	},
-
 	//* CREATED AT
 	{
 		accessorKey: "created_at",
