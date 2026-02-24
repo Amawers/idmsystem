@@ -14,7 +14,13 @@
 // - Uses Supabase RLS for real enforcement; UI uses PermissionGuard for UX.
 // =============================================
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+	useCallback,
+	useEffect,
+	useMemo,
+	useRef,
+	useState,
+} from "react";
 import { toast } from "sonner";
 import { PermissionGuard } from "@/components/PermissionGuard";
 import { Button } from "@/components/ui/button";
@@ -106,7 +112,9 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 		e.target.value = "";
 		if (!file) return;
 		if (!isOnline) {
-			toast.error("Offline", { description: "Connect to the internet to upload documents." });
+			toast.error("Offline", {
+				description: "Connect to the internet to upload documents.",
+			});
 			return;
 		}
 
@@ -117,7 +125,9 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 			await reload();
 		} catch (err) {
 			console.error("Upload failed:", err);
-			toast.error("Upload failed", { description: err?.message || "Please try again." });
+			toast.error("Upload failed", {
+				description: err?.message || "Please try again.",
+			});
 		} finally {
 			setUploading(false);
 		}
@@ -126,17 +136,24 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 	const onDownload = async (row) => {
 		if (!row?.storage_path) return;
 		if (!isOnline) {
-			toast.error("Offline", { description: "Connect to the internet to download documents." });
+			toast.error("Offline", {
+				description: "Connect to the internet to download documents.",
+			});
 			return;
 		}
 
 		try {
-			const signedUrl = await createDocumentSignedUrl({ storagePath: row.storage_path, expiresInSeconds: 300 });
+			const signedUrl = await createDocumentSignedUrl({
+				storagePath: row.storage_path,
+				expiresInSeconds: 300,
+			});
 			if (!signedUrl) throw new Error("Failed to create download link");
 			window.open(signedUrl, "_blank", "noopener,noreferrer");
 		} catch (err) {
 			console.error("Download failed:", err);
-			toast.error("Download failed", { description: err?.message || "Please try again." });
+			toast.error("Download failed", {
+				description: err?.message || "Please try again.",
+			});
 		}
 	};
 
@@ -148,19 +165,25 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 	const confirmDelete = async () => {
 		if (!rowToDelete) return;
 		if (!isOnline) {
-			toast.error("Offline", { description: "Connect to the internet to delete documents." });
+			toast.error("Offline", {
+				description: "Connect to the internet to delete documents.",
+			});
 			return;
 		}
 
 		try {
 			await deleteDocument({ documentRow: rowToDelete });
-			toast.success("Deleted", { description: rowToDelete.original_filename });
+			toast.success("Deleted", {
+				description: rowToDelete.original_filename,
+			});
 			setDeleteDialogOpen(false);
 			setRowToDelete(null);
 			await reload();
 		} catch (err) {
 			console.error("Delete failed:", err);
-			toast.error("Delete failed", { description: err?.message || "Please try again." });
+			toast.error("Delete failed", {
+				description: err?.message || "Please try again.",
+			});
 		}
 	};
 
@@ -175,12 +198,22 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 						className="hidden"
 						onChange={onUploadSelected}
 					/>
-					<PermissionGuard permission="upload_documents" fallback={null}>
-						<Button onClick={onPickFile} disabled={!isOnline || uploading}>
+					<PermissionGuard
+						permission="upload_documents"
+						fallback={null}
+					>
+						<Button
+							onClick={onPickFile}
+							disabled={!isOnline || uploading}
+						>
 							{uploading ? "Uploading..." : "Upload"}
 						</Button>
 					</PermissionGuard>
-					<Button variant="outline" onClick={reload} disabled={loading}>
+					<Button
+						variant="outline"
+						onClick={reload}
+						disabled={loading}
+					>
 						Refresh
 					</Button>
 				</div>
@@ -199,49 +232,77 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 							<TableHead>Type</TableHead>
 							<TableHead>Size</TableHead>
 							<TableHead>Date</TableHead>
-							<TableHead className="text-right">Actions</TableHead>
+							<TableHead className="text-right">
+								Actions
+							</TableHead>
 						</TableRow>
 					</TableHeader>
 					<TableBody>
 						{loading ? (
 							<TableRow>
-								<TableCell colSpan={5} className="text-sm text-muted-foreground">
+								<TableCell
+									colSpan={5}
+									className="text-sm text-muted-foreground"
+								>
 									Loading...
 								</TableCell>
 							</TableRow>
 						) : rows.length === 0 ? (
 							<TableRow>
-								<TableCell colSpan={5} className="text-sm text-muted-foreground">
+								<TableCell
+									colSpan={5}
+									className="text-sm text-muted-foreground"
+								>
 									No documents found.
 								</TableCell>
 							</TableRow>
 						) : (
 							rows.map((row) => (
 								<TableRow key={row.id}>
-									<TableCell className="font-medium">{row.original_filename}</TableCell>
-									<TableCell className="text-sm text-muted-foreground">{row.mime_type || "—"}</TableCell>
-									<TableCell className="text-sm text-muted-foreground">{formatBytes(row.size_bytes)}</TableCell>
+									<TableCell className="font-medium">
+										{row.original_filename}
+									</TableCell>
 									<TableCell className="text-sm text-muted-foreground">
-										{row.created_at ? new Date(row.created_at).toLocaleString() : "—"}
+										{row.mime_type || "—"}
+									</TableCell>
+									<TableCell className="text-sm text-muted-foreground">
+										{formatBytes(row.size_bytes)}
+									</TableCell>
+									<TableCell className="text-sm text-muted-foreground">
+										{row.created_at
+											? new Date(
+													row.created_at,
+												).toLocaleString()
+											: "—"}
 									</TableCell>
 									<TableCell className="text-right">
 										<div className="flex items-center justify-end gap-2">
-											<PermissionGuard permission="view_documents" fallback={null}>
+											<PermissionGuard
+												permission="view_documents"
+												fallback={null}
+											>
 												<Button
 													variant="outline"
 													size="sm"
-													onClick={() => onDownload(row)}
+													onClick={() =>
+														onDownload(row)
+													}
 													disabled={!isOnline}
 												>
 													Download
 												</Button>
 											</PermissionGuard>
 
-											<PermissionGuard permission="delete_documents" fallback={null}>
+											<PermissionGuard
+												permission="delete_documents"
+												fallback={null}
+											>
 												<Button
 													variant="destructive"
 													size="sm"
-													onClick={() => requestDelete(row)}
+													onClick={() =>
+														requestDelete(row)
+													}
 													disabled={!isOnline}
 												>
 													Delete
@@ -251,23 +312,30 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 									</TableCell>
 								</TableRow>
 							))
-						)
-						}
+						)}
 					</TableBody>
 				</Table>
 			</CardContent>
 
-			<AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+			<AlertDialog
+				open={deleteDialogOpen}
+				onOpenChange={setDeleteDialogOpen}
+			>
 				<AlertDialogContent>
 					<AlertDialogHeader>
 						<AlertDialogTitle>Delete document?</AlertDialogTitle>
 						<AlertDialogDescription>
-							This will permanently delete the file and its record.
+							This will permanently delete the file and its
+							record.
 						</AlertDialogDescription>
 					</AlertDialogHeader>
 					<AlertDialogFooter>
-						<AlertDialogCancel onClick={() => setRowToDelete(null)}>Cancel</AlertDialogCancel>
-						<AlertDialogAction onClick={confirmDelete}>Delete</AlertDialogAction>
+						<AlertDialogCancel onClick={() => setRowToDelete(null)}>
+							Cancel
+						</AlertDialogCancel>
+						<AlertDialogAction onClick={confirmDelete}>
+							Delete
+						</AlertDialogAction>
 					</AlertDialogFooter>
 				</AlertDialogContent>
 			</AlertDialog>
