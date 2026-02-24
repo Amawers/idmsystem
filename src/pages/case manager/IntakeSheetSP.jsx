@@ -44,6 +44,7 @@ import { createOrUpdateLocalSpCase } from "@/services/spOfflineService";
  * @property {boolean} open
  * @property {(open: boolean) => void} setOpen
  * @property {() => void} [onSuccess]
+ * @property {Record<string, any> | null} [editingRecord]
  */
 
 /**
@@ -81,6 +82,76 @@ const tabLabels = {
 	other: "Other",
 };
 
+const createDefaultFormState = () => ({
+	name: "",
+	age: "",
+	address: "",
+	birthDate: "",
+	birthPlace: "",
+	civilStatus: "",
+	educationalAttainment: "",
+	occupation: "",
+	monthlyIncome: "",
+	religion: "",
+	interviewDate: "",
+	yearMember: "",
+	skills: "",
+	soloParentDuration: "",
+	fourPs: null,
+	parentsWhereabouts: "",
+	backgroundInformation: "",
+	assessment: "",
+	caseManager: "",
+	cellphoneNumber: "",
+	emergencyContactPerson: "",
+	emergencyContactNumber: "",
+	notes: "",
+});
+
+const toDateInputValue = (value) => {
+	if (!value) return "";
+	const str = String(value);
+	if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+	const date = new Date(str);
+	if (Number.isNaN(date.getTime())) return "";
+	return date.toISOString().slice(0, 10);
+};
+
+const mapRecordToSpFormState = (record) => {
+	if (!record) return createDefaultFormState();
+	const derivedName =
+		record.full_name ||
+		`${record.first_name || ""} ${record.last_name || ""}`.trim();
+
+	return {
+		name: derivedName || "",
+		age: record.age != null ? String(record.age) : "",
+		address: record.address || "",
+		birthDate: toDateInputValue(record.birth_date),
+		birthPlace: record.birth_place || "",
+		civilStatus: record.civil_status || "",
+		educationalAttainment: record.educational_attainment || "",
+		occupation: record.occupation || "",
+		monthlyIncome:
+			record.monthly_income != null ? String(record.monthly_income) : "",
+		religion: record.religion || "",
+		interviewDate: toDateInputValue(record.interview_date),
+		yearMember:
+			record.year_member != null ? String(record.year_member) : "",
+		skills: record.skills || "",
+		soloParentDuration: record.solo_parent_duration || "",
+		fourPs: typeof record.four_ps === "boolean" ? record.four_ps : null,
+		parentsWhereabouts: record.parents_whereabouts || "",
+		backgroundInformation: record.background_information || "",
+		assessment: record.assessment || "",
+		caseManager: record.case_manager || "",
+		cellphoneNumber: record.contact_number || "",
+		emergencyContactPerson: record.emergency_contact_person || "",
+		emergencyContactNumber: record.emergency_contact_number || "",
+		notes: record.notes || "",
+	};
+};
+
 /**
  * Read the browser's online state.
  * @returns {boolean}
@@ -107,40 +178,26 @@ const forceSpTabReload = () => {
  * @param {IntakeSheetSpProps} props
  * @returns {JSX.Element}
  */
-export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
+export default function IntakeSheetSP({
+	open,
+	setOpen,
+	onSuccess,
+	editingRecord = null,
+}) {
 	const [currentTabIndex, setCurrentTabIndex] = useState(0);
 	/** @type {[SpIntakeFormState, import("react").Dispatch<import("react").SetStateAction<SpIntakeFormState>>]} */
-	const [formState, setFormState] = useState({
-		name: "",
-		age: "",
-		address: "",
-		birthDate: "",
-		birthPlace: "",
-		civilStatus: "",
-		educationalAttainment: "",
-		occupation: "",
-		monthlyIncome: "",
-		religion: "",
-		interviewDate: "",
-		yearMember: "",
-		skills: "",
-		soloParentDuration: "",
-		fourPs: null,
-		parentsWhereabouts: "",
-		backgroundInformation: "",
-		assessment: "",
-		caseManager: "",
-		cellphoneNumber: "",
-		emergencyContactPerson: "",
-		emergencyContactNumber: "",
-		notes: "",
-	});
+	const [formState, setFormState] = useState(createDefaultFormState);
 	const [isSubmitting, setIsSubmitting] = useState(false);
-	const { data: intakeData, resetAll } = useIntakeFormStore();
+	const {
+		data: intakeData,
+		resetAll,
+		setSectionField,
+	} = useIntakeFormStore();
 	const caseManagers = useCaseManagerStore((state) => state.caseManagers);
 	const loadingCaseManagers = useCaseManagerStore((state) => state.loading);
 	const caseManagerError = useCaseManagerStore((state) => state.error);
 	const initCaseManagers = useCaseManagerStore((state) => state.init);
+	const isEditMode = Boolean(editingRecord);
 
 	useEffect(() => {
 		initCaseManagers();
@@ -150,34 +207,23 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 		if (!open) {
 			setCurrentTabIndex(0);
 			setIsSubmitting(false);
-			setFormState({
-				name: "",
-				age: "",
-				address: "",
-				birthDate: "",
-				birthPlace: "",
-				civilStatus: "",
-				educationalAttainment: "",
-				occupation: "",
-				monthlyIncome: "",
-				religion: "",
-				interviewDate: "",
-				yearMember: "",
-				skills: "",
-				soloParentDuration: "",
-				fourPs: null,
-				parentsWhereabouts: "",
-				backgroundInformation: "",
-				assessment: "",
-				caseManager: "",
-				cellphoneNumber: "",
-				emergencyContactPerson: "",
-				emergencyContactNumber: "",
-				notes: "",
+			setFormState(createDefaultFormState());
+			resetAll();
+			return;
+		}
+
+		if (isEditMode && editingRecord) {
+			setFormState(mapRecordToSpFormState(editingRecord));
+			setSectionField("familyComposition", {
+				members: Array.isArray(editingRecord.family_members)
+					? editingRecord.family_members
+					: [],
 			});
+		} else {
+			setFormState(createDefaultFormState());
 			resetAll();
 		}
-	}, [open, resetAll]);
+	}, [open, resetAll, isEditMode, editingRecord, setSectionField]);
 
 	const currentTab = tabOrder[currentTabIndex];
 	const isFirstTab = currentTabIndex === 0;
@@ -207,15 +253,22 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 			const casePayload = buildSPCasePayload(formState, intakeData);
 			await createOrUpdateLocalSpCase({
 				casePayload,
-				mode: "create",
+				targetId: isEditMode ? (editingRecord?.id ?? null) : null,
+				localId: isEditMode ? (editingRecord?.localId ?? null) : null,
+				mode: isEditMode ? "update" : "create",
 			});
 
 			const online = isBrowserOnline();
-			toast.success("Single Parent case queued", {
-				description: online
-					? "Sync queued and will push shortly."
-					: "Stored locally. Sync once you're online.",
-			});
+			toast.success(
+				isEditMode
+					? "Single Parent case update queued"
+					: "Single Parent case queued",
+				{
+					description: online
+						? "Sync queued and will push shortly."
+						: "Stored locally. Sync once you're online.",
+				},
+			);
 
 			resetAll();
 			setOpen(false);
@@ -225,7 +278,7 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 				setTimeout(forceSpTabReload, 0);
 			}
 		} catch (err) {
-			toast.error("Signup failed", {
+			toast.error("Save failed", {
 				description: err?.message || "Please try again.",
 			});
 		} finally {
@@ -245,7 +298,11 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent className="min-w-4/5 min-h-4/5 flex flex-col">
 				<DialogHeader>
-					<DialogTitle>Single Parent Signup</DialogTitle>
+					<DialogTitle>
+						{isEditMode
+							? "Edit Single Parent Case"
+							: "Single Parent Signup"}
+					</DialogTitle>
 				</DialogHeader>
 
 				<Tabs
@@ -703,7 +760,11 @@ export default function IntakeSheetSP({ open, setOpen, onSuccess }) {
 									disabled={isSubmitting}
 									className="cursor-pointer"
 								>
-									{isSubmitting ? "Saving..." : "Save"}
+									{isSubmitting
+										? "Saving..."
+										: isEditMode
+											? "Update"
+											: "Save"}
 								</Button>
 							) : (
 								<Button

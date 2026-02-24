@@ -1059,7 +1059,11 @@ const ivacColumns = (
 // =================================
 //* SINGLE PARENTS Table COLUMN DEFINITIONS
 // =================================
-const spColumns = (handleDeleteClick, handleDocumentsClick) => [
+const spColumns = (
+	handleEditClick,
+	handleDeleteClick,
+	handleDocumentsClick,
+) => [
 	//* =====================
 	//* START OF DATA COLUMNS
 	//* =====================
@@ -1159,6 +1163,16 @@ const spColumns = (handleDeleteClick, handleDocumentsClick) => [
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
+					<PermissionGuard permission="edit_case">
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleEditClick(row.original, "SP");
+							}}
+						>
+							Edit
+						</DropdownMenuItem>
+					</PermissionGuard>
 					<PermissionGuard permission="view_documents">
 						<DropdownMenuItem
 							onClick={(e) => {
@@ -2064,6 +2078,10 @@ export function DataTable({
 	const [openIvacEditSheet, setOpenIvacEditSheet] = useState(false);
 	const [editingIvacRecord, setEditingIvacRecord] = useState(null);
 
+	// Single Parents edit state
+	const [openSpEditSheet, setOpenSpEditSheet] = useState(false);
+	const [editingSpRecord, setEditingSpRecord] = useState(null);
+
 	// Tracks which tab is currently active
 	const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -2279,6 +2297,13 @@ export function DataTable({
 		console.log("Editing IVAC record:", record);
 		setEditingIvacRecord(record);
 		setOpenIvacEditSheet(true);
+	}
+
+	// Handle Single Parent row click for editing
+	function handleEditSpRow(record) {
+		console.log("Editing SP record:", record);
+		setEditingSpRecord(record);
+		setOpenSpEditSheet(true);
 	}
 
 	// Handle delete click - opens confirmation dialog
@@ -2740,7 +2765,11 @@ export function DataTable({
 	// Table instance for Single Parents tab with its own data and column definitions
 	const spTable = useDataTable({
 		initialData: spSortedData,
-		columns: spColumns(handleDeleteClick, handleDocumentsClick),
+		columns: spColumns(
+			handleEditSpRow,
+			handleDeleteClick,
+			handleDocumentsClick,
+		),
 	});
 
 	// Table instance for Financial Assistance tab with its own data and column definitions
@@ -3985,6 +4014,18 @@ export function DataTable({
 										onSuccess={reloadSp}
 									/>
 
+									{/* SINGLE PARENT Edit Modal */}
+									<IntakeSheetSP
+										open={openSpEditSheet}
+										setOpen={(value) => {
+											setOpenSpEditSheet(value);
+											if (!value)
+												setEditingSpRecord(null);
+										}}
+										onSuccess={reloadSp}
+										editingRecord={editingSpRecord}
+									/>
+
 									{(spSyncing ||
 										spPending > 0 ||
 										spSyncStatus) && (
@@ -4982,9 +5023,11 @@ export function DataTable({
 						table={spTable.table}
 						setData={spTable.setData}
 						columns={spColumns(
+							handleEditSpRow,
 							handleDeleteClick,
 							handleDocumentsClick,
 						)}
+						onRowClick={handleEditSpRow}
 					/>
 					<PaginationControls table={spTable.table} />
 				</TabsContent>

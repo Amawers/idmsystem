@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Trash2, Pencil } from "lucide-react";
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
 	Select,
 	SelectContent,
@@ -52,6 +52,13 @@ export function FamilyCompositionForm({ sectionKey }) {
 			? data[sectionKey].members
 			: [],
 	);
+
+	useEffect(() => {
+		const nextMembers = Array.isArray(data[sectionKey]?.members)
+			? data[sectionKey].members
+			: [];
+		setMembers(nextMembers);
+	}, [data, sectionKey]);
 
 	const form = useForm({
 		defaultValues: {
