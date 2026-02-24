@@ -4834,58 +4834,58 @@ export function DataTable({
          // ================
          */}
 						<div className="hidden items-center gap-2 @4xl/main:flex">
-							<TabsList>
+							<TabsList className="h-auto w-full flex-wrap justify-start gap-1 p-1">
 								<TabsTrigger
 									value="CASE"
-									className="cursor-pointer"
+									className="h-auto whitespace-normal break-words px-3 py-1.5 text-center leading-tight cursor-pointer"
 								>
 									Cases
 								</TabsTrigger>
 								<TabsTrigger
 									value="CICLCAR"
-									className="cursor-pointer"
+									className="h-auto whitespace-normal break-words px-3 py-1.5 text-center leading-tight cursor-pointer"
 								>
 									CICL/CAR
 								</TabsTrigger>
 								<TabsTrigger
 									value="IVAC"
-									className="cursor-pointer"
+									className="h-auto whitespace-normal break-words px-3 py-1.5 text-center leading-tight cursor-pointer"
 								>
 									Incidence on VAC
 								</TabsTrigger>
 								<TabsTrigger
 									value="FAC"
-									className="cursor-pointer"
+									className="h-auto whitespace-normal break-words px-3 py-1.5 text-center leading-tight cursor-pointer"
 								>
 									Family Assistance Card
 								</TabsTrigger>
 								<TabsTrigger
 									value="FAR"
-									className="cursor-pointer"
+									className="h-auto whitespace-normal break-words px-3 py-1.5 text-center leading-tight cursor-pointer"
 								>
 									Family Assistance Record
 								</TabsTrigger>
 								<TabsTrigger
 									value="SP"
-									className="cursor-pointer"
+									className="h-auto whitespace-normal break-words px-3 py-1.5 text-center leading-tight cursor-pointer"
 								>
 									Single Parents
 								</TabsTrigger>
 								<TabsTrigger
 									value="FA"
-									className="cursor-pointer"
+									className="h-auto whitespace-normal break-words px-3 py-1.5 text-center leading-tight cursor-pointer"
 								>
 									Financial Assistance
 								</TabsTrigger>
 								<TabsTrigger
 									value="PWD"
-									className="cursor-pointer"
+									className="h-auto whitespace-normal break-words px-3 py-1.5 text-center leading-tight cursor-pointer"
 								>
 									Persons with Disabilities
 								</TabsTrigger>
 								<TabsTrigger
 									value="SC"
-									className="cursor-pointer"
+									className="h-auto whitespace-normal break-words px-3 py-1.5 text-center leading-tight cursor-pointer"
 								>
 									Senior Citizen
 								</TabsTrigger>
