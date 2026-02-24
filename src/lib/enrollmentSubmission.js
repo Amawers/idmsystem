@@ -12,7 +12,7 @@ import supabase from "@/../config/supabase";
 import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "./auditLog";
 
 /**
- * @typedef {"CICL/CAR"|"VAC"|"FAC"|"FAR"|"IVAC"} EnrollmentCaseType
+ * @typedef {"CICL/CAR"|"VAC"|"FAC"|"FAR"|"FA"|"IVAC"} EnrollmentCaseType
  */
 
 /**
@@ -109,6 +109,7 @@ export function validateEnrollmentData(enrollmentData) {
 		"VAC",
 		"FAC",
 		"FAR",
+		"FA",
 		"IVAC",
 	]);
 	if (
@@ -496,6 +497,10 @@ export async function fetchCaseDetails(caseId, caseType) {
 			case "FAR":
 				tableName = "far_case";
 				selectFields = "id, receiving_member, case_manager, status";
+				break;
+			case "FA":
+				tableName = "fa_case";
+				selectFields = "id, client_name, case_manager, status";
 				break;
 			case "IVAC":
 				tableName = "ivac_cases";

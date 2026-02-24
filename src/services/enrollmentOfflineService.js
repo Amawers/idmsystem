@@ -51,7 +51,7 @@ import offlineCaseDb from "@/db/offlineCaseDb";
  */
 
 /**
- * @typedef {"CICL/CAR"|"VAC"|"FAC"|"FAR"|"IVAC"} EnrollmentCaseType
+ * @typedef {"CICL/CAR"|"VAC"|"FAC"|"FAR"|"FA"|"IVAC"} EnrollmentCaseType
  */
 
 const ENROLLMENTS_TABLE_NAME = "program_enrollments";
@@ -64,6 +64,7 @@ const CICLCAR_CASES_TABLE = offlineCaseDb.table("ciclcar_cases");
 const VAC_CASES_TABLE = offlineCaseDb.table("cached_vac_cases");
 const FAC_CASES_TABLE = offlineCaseDb.table("fac_cases");
 const FAR_CASES_TABLE = offlineCaseDb.table("cached_far_cases");
+const FA_CASES_TABLE = offlineCaseDb.table("fa_cases");
 const IVAC_CASES_TABLE = offlineCaseDb.table("ivac_cases");
 
 const ENROLLMENT_SELECT = `
@@ -575,6 +576,8 @@ export async function getCachedCasesByType(caseType) {
 			return FAC_CASES_TABLE.toArray();
 		case "FAR":
 			return FAR_CASES_TABLE.toArray();
+		case "FA":
+			return FA_CASES_TABLE.toArray();
 		case "IVAC":
 			return IVAC_CASES_TABLE.toArray();
 		default:
@@ -642,6 +645,14 @@ export async function fetchAndCacheCasesByType(caseType) {
 					.order("date", { ascending: false })
 					.limit(100);
 				break;
+			case "FA":
+				tableName = "fa_case";
+				query = supabase
+					.from(tableName)
+					.select("id, client_name, case_manager, status")
+					.order("created_at", { ascending: false })
+					.limit(100);
+				break;
 			case "IVAC":
 				tableName = "ivac_cases";
 				query = supabase
@@ -676,6 +687,17 @@ export async function fetchAndCacheCasesByType(caseType) {
 		} else if (caseType === "FAR") {
 			await cacheFarCases(data || []);
 			console.log(`[Enrollment] Cached ${data?.length || 0} FAR cases`);
+		} else if (caseType === "FA") {
+			// Cache FA cases to the existing fa_cases table
+			await offlineCaseDb.transaction("rw", FA_CASES_TABLE, async () => {
+				await FA_CASES_TABLE.clear();
+				if (data?.length) {
+					await FA_CASES_TABLE.bulkPut(
+						data.map((c) => ({ ...c, hasPendingWrites: false })),
+					);
+				}
+			});
+			console.log(`[Enrollment] Cached ${data?.length || 0} FA cases`);
 		} else if (caseType === "FAC") {
 			// Cache FAC cases to the existing fac_cases table
 			await offlineCaseDb.transaction("rw", FAC_CASES_TABLE, async () => {
