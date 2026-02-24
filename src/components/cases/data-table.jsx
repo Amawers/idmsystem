@@ -1228,17 +1228,6 @@ const faColumns = (
 		enableHiding: false,
 	},
 
-	//* DATE OF INTERVIEW
-	{
-		accessorKey: "interview_date",
-		header: "Interview Date",
-		cell: ({ row }) => (
-			<div className="px-2">
-				{formatToMMDDYYYY(row.original.interview_date) || "-"}
-			</div>
-		),
-	},
-
 	//* DATE RECORDED
 	{
 		accessorKey: "date_recorded",
@@ -1246,36 +1235,6 @@ const faColumns = (
 		cell: ({ row }) => {
 			const dateRecorded = row.original.date_recorded || "N/A";
 			return <div>{dateRecorded}</div>;
-		},
-	},
-
-	//* CLIENT NAME
-	{
-		accessorKey: "client_name",
-		header: "Client Name",
-		cell: ({ row }) => {
-			const clientName = row.original.client_name || "N/A";
-			return <div>{clientName}</div>;
-		},
-	},
-
-	//* ADDRESS
-	{
-		accessorKey: "address",
-		header: "Address",
-		cell: ({ row }) => {
-			const address = row.original.address || "N/A";
-			return <div>{address}</div>;
-		},
-	},
-
-	//* PURPOSE
-	{
-		accessorKey: "purpose",
-		header: "Purpose",
-		cell: ({ row }) => {
-			const purpose = row.original.purpose || "N/A";
-			return <div>{purpose}</div>;
 		},
 	},
 
@@ -1289,73 +1248,13 @@ const faColumns = (
 		},
 	},
 
-	//* CONTACT NUMBER
-	{
-		accessorKey: "contact_number",
-		header: "Contact Number",
-		cell: ({ row }) => {
-			const contactNumber = row.original.contact_number || "N/A";
-			return <div>{contactNumber}</div>;
-		},
-	},
-
-	//* SOCIAL CASE STUDY REPORT PREPARED BY
+	//* PREPARED BY
 	{
 		accessorKey: "prepared_by",
-		header: "Social Case Study Report Prepared By",
+		header: "Prepared By",
 		cell: ({ row }) => {
 			const preparedBy = row.original.prepared_by || "N/A";
 			return <div>{preparedBy}</div>;
-		},
-	},
-
-	//* SOCIAL CASE STUDY REPORT STATUS
-	{
-		accessorKey: "status_report",
-		header: "Social Case Study Report Status",
-		cell: ({ row }) => {
-			const statusReport = row.original.status_report || "-";
-			return <div>{statusReport}</div>;
-		},
-	},
-
-	//* CLIENT CATEGORY
-	{
-		accessorKey: "client_category",
-		header: "Client Category",
-		cell: ({ row }) => {
-			const clientCategory = row.original.client_category || "-";
-			return <div>{clientCategory}</div>;
-		},
-	},
-
-	//* GENDER
-	{
-		accessorKey: "gender",
-		header: "Gender",
-		cell: ({ row }) => {
-			const gender = row.original.gender || "-";
-			return <div>{gender}</div>;
-		},
-	},
-
-	//* 4P's Member
-	{
-		accessorKey: "four_ps_member",
-		header: "4P's Member",
-		cell: ({ row }) => {
-			const fourPsMember = row.original.four_ps_member || "-";
-			return <div>{fourPsMember}</div>;
-		},
-	},
-
-	//* TRANSACTION
-	{
-		accessorKey: "transaction",
-		header: "Transaction",
-		cell: ({ row }) => {
-			const transaction = row.original.transaction || "-";
-			return <div>{transaction}</div>;
 		},
 	},
 
