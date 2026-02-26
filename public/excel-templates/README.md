@@ -5,6 +5,7 @@ Place case export Excel templates in this folder.
 Current supported template:
 
 - `sp-case-template.xlsx` → used by Single Parent (`SP`) record export.
+- `fa-case-template.xlsx` → used by Financial Assistance (`FA`) record export.
 
 ## Best setup (recommended)
 
@@ -84,3 +85,48 @@ Then repeat for rows 2..15 (for example `FAMILY_2_NAME`, `FAMILY_3_NAME`, etc.).
 - Occupation column: `{{FAMILY_1_OCCUPATION}}`
 
 Copy that row down and change `1` to `2`, `3`, etc.
+
+## Financial Assistance template fields
+
+For `FA`, use either named ranges or inline placeholders with these names:
+
+- `CASE_ID`
+- `CASE_MANAGER`
+- `STATUS`
+- `PRIORITY`
+- `VISIBILITY`
+- `INTERVIEW_DATE`
+- `DATE_RECORDED`
+- `CLIENT_NAME`
+- `ADDRESS`
+- `PURPOSE`
+- `BENIFICIARY_NAME`
+- `CONTACT_NUMBER`
+- `PREPARED_BY`
+- `STATUS_REPORT`
+- `CLIENT_CATEGORY`
+- `GENDER`
+- `FOUR_PS_MEMBER`
+- `                                                                                                                                                                                                         `
+- `NOTES`
+
+Example inline tokens in Google Sheets:
+
+- `Client: {{CLIENT_NAME}}`
+- `Beneficiary: {{BENIFICIARY_NAME}}`
+- `Date Recorded: {{DATE_RECORDED}}`
+
+### FA bulk export (one click for all rows)
+
+In the FA tab, use **EXPORT ALL FA** to export all currently visible FA records (after filters/search).
+
+To make bulk export work, create **one template row** in `fa-case-template.xlsx` with inline tokens, for example:
+
+- `{{CASE_ID}}`
+- `{{DATE_RECORDED}}`
+- `{{CLIENT_NAME}}`
+- `{{BENIFICIARY_NAME}}`
+- `{{PURPOSE}}`
+- `{{STATUS}}`
+
+The exporter duplicates that row once per record and fills each row with the corresponding values.

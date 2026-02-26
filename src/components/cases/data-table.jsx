@@ -109,7 +109,10 @@ import EnrollCaseDialog from "@/components/cases/EnrollCaseDialog";
 import ProgramEnrollmentBadge from "@/components/cases/ProgramEnrollmentBadge";
 import { useCaseManagers } from "@/store/useCaseManagerStore";
 import DocumentManager from "@/components/documents/DocumentManager";
-import { exportCaseRecordToExcel } from "@/lib/caseExcelExport";
+import {
+	exportCaseRecordToExcel,
+	exportCaseRecordsToExcel,
+} from "@/lib/caseExcelExport";
 import {
 	Dialog,
 	DialogContent,
@@ -2174,6 +2177,35 @@ export function DataTable({
 		}
 	}
 
+	async function handleExportAllFaRows() {
+		try {
+			const records = Array.isArray(faSortedData) ? faSortedData : [];
+			if (!records.length) {
+				toast.error("Excel export failed", {
+					description:
+						"No Financial Assistance records to export for the current filters.",
+				});
+				return;
+			}
+
+			const { filledCount } = await exportCaseRecordsToExcel({
+				caseType: "FA",
+				records,
+			});
+
+			toast.success("FA Excel exported", {
+				description: `Exported ${records.length} record${records.length === 1 ? "" : "s"} (${filledCount} template replacements).`,
+			});
+		} catch (error) {
+			toast.error("FA Excel export failed", {
+				description:
+					error instanceof Error
+						? error.message
+						: "Unable to export Financial Assistance records.",
+			});
+		}
+	}
+
 	// Handle PWD row click for editing
 	function handleEditPwdRow(record) {
 		console.log("Editing PWD record:", record);
@@ -4026,6 +4058,18 @@ export function DataTable({
 										</span>
 									</Button>
 
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleExportAllFaRows}
+										className="cursor-pointer"
+									>
+										<span className="hidden lg:inline">
+											EXPORT ALL FA
+										</span>
+										<span className="lg:hidden">EXPORT</span>
+									</Button>
+
 									{/* Customize Columns Dropdown */}
 									<DropdownMenu>
 										<DropdownMenuTrigger asChild>
@@ -4925,6 +4969,7 @@ export function DataTable({
 						setData={spTable.setData}
 						columns={spColumns(
 							handleEditSpRow,
+							handleExportCaseRow,
 							handleDeleteClick,
 							handleDocumentsClick,
 						)}

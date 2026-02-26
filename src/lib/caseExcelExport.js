@@ -6,6 +6,11 @@ const EXCEL_TEMPLATE_BY_CASE_TYPE = {
 		filenamePrefix: "single-parent",
 		worksheetName: "SP",
 	},
+	FA: {
+		templateUrl: "/excel-templates/fa-case-template.xlsx",
+		filenamePrefix: "financial-assistance",
+		worksheetName: "FA",
+	},
 };
 
 const SP_FALLBACK_CELL_MAP = {
@@ -13,6 +18,13 @@ const SP_FALLBACK_CELL_MAP = {
 	// Example:
 	// FULL_NAME: "B5",
 	// AGE: "B6",
+};
+
+const FA_FALLBACK_CELL_MAP = {
+	// Optional fallback if you do not use named ranges in the template.
+	// Example:
+	// CLIENT_NAME: "B6",
+	// ADDRESS: "B7",
 };
 
 function safeString(value) {
@@ -132,10 +144,52 @@ function buildSpExcelValues(record = {}) {
 	};
 }
 
+function buildFaExcelValues(record = {}) {
+	return {
+		CASE_ID: safeString(record.id),
+		CASE_MANAGER: safeString(record.case_manager || record.caseManager),
+		STATUS: safeString(record.status),
+		PRIORITY: safeString(record.priority),
+		VISIBILITY: safeString(record.visibility),
+		INTERVIEW_DATE: formatDateForTemplate(
+			record.interview_date || record.interviewDate,
+		),
+		DATE_RECORDED: formatDateForTemplate(
+			record.date_recorded || record.dateRecorded,
+		),
+		CLIENT_NAME: safeString(record.client_name || record.clientName),
+		ADDRESS: safeString(record.address),
+		PURPOSE: safeString(record.purpose),
+		BENIFICIARY_NAME: safeString(
+			record.benificiary_name || record.beneficiary_name,
+		),
+		CONTACT_NUMBER: safeString(record.contact_number || record.contactNumber),
+		PREPARED_BY: safeString(record.prepared_by || record.preparedBy),
+		STATUS_REPORT: safeString(record.status_report || record.statusReport),
+		CLIENT_CATEGORY: safeString(
+			record.client_category || record.clientCategory,
+		),
+		GENDER: safeString(record.gender),
+		FOUR_PS_MEMBER: safeString(record.four_ps_member || record.fourPsMember),
+		TRANSACTION: safeString(record.transaction),
+		NOTES: safeString(record.notes),
+	};
+}
+
+function buildFaBulkRowValues(record = {}) {
+	const base = buildFaExcelValues(record);
+	return {
+		...base,
+		BENEFICIARY_NAME: base.BENIFICIARY_NAME,
+	};
+}
+
 function getCaseExcelValues(caseType, record) {
 	switch (caseType) {
 		case "SP":
 			return buildSpExcelValues(record);
+		case "FA":
+			return buildFaExcelValues(record);
 		default:
 			return {};
 	}
@@ -145,6 +199,8 @@ function getCaseCellMap(caseType) {
 	switch (caseType) {
 		case "SP":
 			return SP_FALLBACK_CELL_MAP;
+		case "FA":
+			return FA_FALLBACK_CELL_MAP;
 		default:
 			return {};
 	}
@@ -269,6 +325,101 @@ function applyInlineTokenReplacements(workbook, valueMap) {
 	return filled;
 }
 
+function replaceInlineTokens(text, valueMap) {
+	let next = safeString(text);
+	let replaced = 0;
+	for (const [field, rawValue] of Object.entries(valueMap)) {
+		const token = `{{${field}}}`;
+		if (!next.includes(token)) continue;
+		next = next.split(token).join(safeString(rawValue));
+		replaced += 1;
+	}
+	return { text: next, replaced };
+}
+
+function cloneCellStyle(targetCell, templateStyle) {
+	if (!templateStyle || typeof templateStyle !== "object") return;
+	targetCell.style = JSON.parse(JSON.stringify(templateStyle));
+}
+
+function applyFaRepeatingTemplateRows(workbook, records = []) {
+	const tokenKeys = Object.keys(buildFaBulkRowValues({}));
+	const tokenSet = new Set(tokenKeys.map((key) => `{{${key}}}`));
+
+	for (const worksheet of workbook.worksheets || []) {
+		let templateRowNumber = null;
+		let templateMaxColumn = 0;
+
+		worksheet.eachRow((row) => {
+			if (templateRowNumber !== null) return;
+			const maxColumn = Math.max(row.cellCount, row.actualCellCount, 1);
+			for (let col = 1; col <= maxColumn; col += 1) {
+				const value = row.getCell(col).value;
+				if (typeof value !== "string") continue;
+				for (const token of tokenSet) {
+					if (value.includes(token)) {
+						templateRowNumber = row.number;
+						templateMaxColumn = maxColumn;
+						return;
+					}
+				}
+			}
+		});
+
+		if (templateRowNumber === null) continue;
+
+		const templateRow = worksheet.getRow(templateRowNumber);
+		const templateCells = [];
+		for (let col = 1; col <= templateMaxColumn; col += 1) {
+			const cell = templateRow.getCell(col);
+			templateCells.push({
+				value: cell.value,
+				style: cell.style,
+			});
+		}
+
+		if (!records.length) {
+			for (let col = 1; col <= templateMaxColumn; col += 1) {
+				const targetCell = templateRow.getCell(col);
+				targetCell.value = "";
+			}
+			return 1;
+		}
+
+		let replacedCount = 0;
+		for (let index = 0; index < records.length; index += 1) {
+			const targetRowNumber = templateRowNumber + index;
+			if (index > 0) {
+				worksheet.insertRow(targetRowNumber, []);
+			}
+
+			const targetRow = worksheet.getRow(targetRowNumber);
+			const rowValues = buildFaBulkRowValues(records[index]);
+
+			for (let col = 1; col <= templateMaxColumn; col += 1) {
+				const templateCell = templateCells[col - 1];
+				const targetCell = targetRow.getCell(col);
+				cloneCellStyle(targetCell, templateCell.style);
+
+				if (typeof templateCell.value === "string") {
+					const { text, replaced } = replaceInlineTokens(
+						templateCell.value,
+						rowValues,
+					);
+					targetCell.value = text;
+					replacedCount += replaced;
+				} else {
+					targetCell.value = templateCell.value;
+				}
+			}
+		}
+
+		return replacedCount;
+	}
+
+	return 0;
+}
+
 function triggerDownload(bytes, fileName) {
 	const blob = new Blob([bytes], {
 		type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -330,5 +481,42 @@ export async function exportCaseRecordToExcel({ caseType, record }) {
 
 	const out = await workbook.xlsx.writeBuffer();
 	triggerDownload(out, getOutputFilename(caseType, record));
+	return { filledCount };
+}
+
+export async function exportCaseRecordsToExcel({ caseType, records = [] }) {
+	const templateConfig = EXCEL_TEMPLATE_BY_CASE_TYPE[caseType];
+	if (!templateConfig) {
+		throw new Error(`No Excel template configured for case type: ${caseType}`);
+	}
+	if (!Array.isArray(records) || records.length === 0) {
+		throw new Error("No records to export.");
+	}
+
+	const response = await fetch(templateConfig.templateUrl, { cache: "no-store" });
+	if (!response.ok) {
+		throw new Error(
+			`Template not found (${templateConfig.templateUrl}). Add your template under public/excel-templates.`,
+		);
+	}
+
+	const templateBytes = await response.arrayBuffer();
+	const workbook = new ExcelJS.Workbook();
+	await workbook.xlsx.load(templateBytes);
+
+	let filledCount = 0;
+	if (caseType === "FA") {
+		filledCount = applyFaRepeatingTemplateRows(workbook, records);
+	}
+
+	if (!filledCount) {
+		throw new Error(
+			"No bulk row template found. Add one row in your FA template with tokens like {{CLIENT_NAME}}, {{DATE_RECORDED}}, {{PURPOSE}}.",
+		);
+	}
+
+	const out = await workbook.xlsx.writeBuffer();
+	const filename = `${templateConfig.filenamePrefix}-bulk-export.xlsx`;
+	triggerDownload(out, filename);
 	return { filledCount };
 }
