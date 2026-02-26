@@ -890,6 +890,7 @@ const facColumns = (
 // =================================
 const ivacColumns = (
 	handleEditClick,
+	handleExportClick,
 	handleDeleteClick,
 	handleDocumentsClick,
 ) => [
@@ -1032,6 +1033,14 @@ const ivacColumns = (
 							Edit
 						</DropdownMenuItem>
 					</PermissionGuard>
+					<DropdownMenuItem
+						onClick={(e) => {
+							e.stopPropagation();
+							handleExportClick(row.original, "IVAC");
+						}}
+					>
+						Export Excel
+					</DropdownMenuItem>
 					<PermissionGuard permission="view_documents">
 						<DropdownMenuItem
 							onClick={(e) => {
@@ -2663,6 +2672,7 @@ export function DataTable({
 		initialData: ivacSortedData,
 		columns: ivacColumns(
 			handleEditIvacRow,
+			handleExportCaseRow,
 			handleDeleteClick,
 			handleDocumentsClick,
 		),
@@ -4926,6 +4936,7 @@ export function DataTable({
 						setData={ivacTable.setData}
 						columns={ivacColumns(
 							handleEditIvacRow,
+							handleExportCaseRow,
 							handleDeleteClick,
 							handleDocumentsClick,
 						)}

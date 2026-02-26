@@ -11,6 +11,11 @@ const EXCEL_TEMPLATE_BY_CASE_TYPE = {
 		filenamePrefix: "financial-assistance",
 		worksheetName: "FA",
 	},
+	IVAC: {
+		templateUrl: "/excel-templates/ivac-case-template.xlsx",
+		filenamePrefix: "ivac",
+		worksheetName: "IVAC",
+	},
 };
 
 const SP_FALLBACK_CELL_MAP = {
@@ -25,6 +30,13 @@ const FA_FALLBACK_CELL_MAP = {
 	// Example:
 	// CLIENT_NAME: "B6",
 	// ADDRESS: "B7",
+};
+
+const IVAC_FALLBACK_CELL_MAP = {
+	// Optional fallback if you do not use named ranges in the template.
+	// Example:
+	// PROVINCE: "B6",
+	// MUNICIPALITY: "C6",
 };
 
 function safeString(value) {
@@ -184,12 +196,128 @@ function buildFaBulkRowValues(record = {}) {
 	};
 }
 
+function toNumber(value) {
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function getIvacRecordsArray(record = {}) {
+	if (Array.isArray(record.records)) return record.records;
+	if (typeof record.records === "string") {
+		try {
+			const parsed = JSON.parse(record.records);
+			return Array.isArray(parsed) ? parsed : [];
+		} catch {
+			return [];
+		}
+	}
+	return [];
+}
+
+function getIvacCaseManagers(record = {}) {
+	if (Array.isArray(record.case_managers)) return record.case_managers;
+	if (Array.isArray(record.caseManagers)) return record.caseManagers;
+	if (typeof record.case_manager === "string") return [record.case_manager];
+	if (typeof record.caseManager === "string") return [record.caseManager];
+	return [];
+}
+
+const IVAC_RECORD_FIELD_TOKEN_MAP = {
+	barangay: "BARANGAY",
+	vacVictims: "VAC_VICTIMS",
+	genderMale: "GENDER_MALE",
+	genderFemale: "GENDER_FEMALE",
+	age0to4: "AGE_0_TO_4",
+	age5to9: "AGE_5_TO_9",
+	age10to14: "AGE_10_TO_14",
+	age15to17: "AGE_15_TO_17",
+	age18Plus: "AGE_18_PLUS",
+	physicalAbuse: "PHYSICAL_ABUSE",
+	sexualAbuse: "SEXUAL_ABUSE",
+	psychologicalAbuse: "PSYCHOLOGICAL_ABUSE",
+	neglect: "NEGLECT",
+	violenceOthers: "VIOLENCE_OTHERS",
+	perpImmediateFamily: "PERP_IMMEDIATE_FAMILY",
+	perpCloseRelative: "PERP_CLOSE_RELATIVE",
+	perpAcquaintance: "PERP_ACQUAINTANCE",
+	perpStranger: "PERP_STRANGER",
+	perpLocalOfficial: "PERP_LOCAL_OFFICIAL",
+	perpLawOfficer: "PERP_LAW_OFFICER",
+	perpOthers: "PERP_OTHERS",
+	actionLSWDO: "ACTION_LSWDO",
+	actionPNP: "ACTION_PNP",
+	actionNBI: "ACTION_NBI",
+	actionMedical: "ACTION_MEDICAL",
+	actionLegal: "ACTION_LEGAL",
+	actionOthers: "ACTION_OTHERS",
+};
+
+function buildIvacRecordsInternalValues(rows = [], maxRows = 15) {
+	const values = {};
+
+	for (let index = 0; index < maxRows; index += 1) {
+		const row = rows[index] || {};
+		const rowNumber = index + 1;
+
+		for (const [sourceKey, tokenKey] of Object.entries(
+			IVAC_RECORD_FIELD_TOKEN_MAP,
+		)) {
+			values[`REC_${rowNumber}_${tokenKey}`] = safeString(row[sourceKey]);
+		}
+	}
+
+	return values;
+}
+
+function buildIvacExcelValues(record = {}) {
+	const rows = getIvacRecordsArray(record);
+	const totalVacVictims = rows.reduce(
+		(sum, row) => sum + toNumber(row?.vacVictims),
+		0,
+	);
+	const totalMale = rows.reduce((sum, row) => sum + toNumber(row?.genderMale), 0);
+	const totalFemale = rows.reduce(
+		(sum, row) => sum + toNumber(row?.genderFemale),
+		0,
+	);
+
+	const values = {
+		CASE_ID: safeString(record.id),
+		PROVINCE: safeString(record.province),
+		MUNICIPALITY: safeString(record.municipality),
+		STATUS: safeString(record.status),
+		REPORTING_PERIOD: safeString(
+			record.reporting_period || record.reportingPeriod,
+		),
+		CASE_MANAGERS: getIvacCaseManagers(record).join(", "),
+		TOTAL_VAC_VICTIMS: safeString(totalVacVictims),
+		TOTAL_MALE: safeString(totalMale),
+		TOTAL_FEMALE: safeString(totalFemale),
+		BARANGAY_COUNT: safeString(rows.length),
+		RECORDS_JSON: safeString(rows),
+		NOTES: safeString(record.notes),
+		CREATED_AT: formatDateForTemplate(record.created_at),
+		UPDATED_AT: formatDateForTemplate(record.updated_at),
+	};
+
+	return {
+		...values,
+		...buildIvacRecordsInternalValues(rows, 15),
+	};
+}
+
+function buildIvacBulkRowValues(record = {}) {
+	return buildIvacExcelValues(record);
+}
+
 function getCaseExcelValues(caseType, record) {
 	switch (caseType) {
 		case "SP":
 			return buildSpExcelValues(record);
 		case "FA":
 			return buildFaExcelValues(record);
+		case "IVAC":
+			return buildIvacExcelValues(record);
 		default:
 			return {};
 	}
@@ -201,6 +329,8 @@ function getCaseCellMap(caseType) {
 			return SP_FALLBACK_CELL_MAP;
 		case "FA":
 			return FA_FALLBACK_CELL_MAP;
+		case "IVAC":
+			return IVAC_FALLBACK_CELL_MAP;
 		default:
 			return {};
 	}
@@ -420,6 +550,76 @@ function applyFaRepeatingTemplateRows(workbook, records = []) {
 	return 0;
 }
 
+function applyIvacRepeatingTemplateRows(workbook, records = []) {
+	const tokenKeys = Object.keys(buildIvacBulkRowValues({}));
+	const tokenSet = new Set(tokenKeys.map((key) => `{{${key}}}`));
+
+	for (const worksheet of workbook.worksheets || []) {
+		let templateRowNumber = null;
+		let templateMaxColumn = 0;
+
+		worksheet.eachRow((row) => {
+			if (templateRowNumber !== null) return;
+			const maxColumn = Math.max(row.cellCount, row.actualCellCount, 1);
+			for (let col = 1; col <= maxColumn; col += 1) {
+				const value = row.getCell(col).value;
+				if (typeof value !== "string") continue;
+				for (const token of tokenSet) {
+					if (value.includes(token)) {
+						templateRowNumber = row.number;
+						templateMaxColumn = maxColumn;
+						return;
+					}
+				}
+			}
+		});
+
+		if (templateRowNumber === null) continue;
+
+		const templateRow = worksheet.getRow(templateRowNumber);
+		const templateCells = [];
+		for (let col = 1; col <= templateMaxColumn; col += 1) {
+			const cell = templateRow.getCell(col);
+			templateCells.push({
+				value: cell.value,
+				style: cell.style,
+			});
+		}
+
+		let replacedCount = 0;
+		for (let index = 0; index < records.length; index += 1) {
+			const targetRowNumber = templateRowNumber + index;
+			if (index > 0) {
+				worksheet.insertRow(targetRowNumber, []);
+			}
+
+			const targetRow = worksheet.getRow(targetRowNumber);
+			const rowValues = buildIvacBulkRowValues(records[index]);
+
+			for (let col = 1; col <= templateMaxColumn; col += 1) {
+				const templateCell = templateCells[col - 1];
+				const targetCell = targetRow.getCell(col);
+				cloneCellStyle(targetCell, templateCell.style);
+
+				if (typeof templateCell.value === "string") {
+					const { text, replaced } = replaceInlineTokens(
+						templateCell.value,
+						rowValues,
+					);
+					targetCell.value = text;
+					replacedCount += replaced;
+				} else {
+					targetCell.value = templateCell.value;
+				}
+			}
+		}
+
+		return replacedCount;
+	}
+
+	return 0;
+}
+
 function triggerDownload(bytes, fileName) {
 	const blob = new Blob([bytes], {
 		type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -507,11 +707,13 @@ export async function exportCaseRecordsToExcel({ caseType, records = [] }) {
 	let filledCount = 0;
 	if (caseType === "FA") {
 		filledCount = applyFaRepeatingTemplateRows(workbook, records);
+	} else if (caseType === "IVAC") {
+		filledCount = applyIvacRepeatingTemplateRows(workbook, records);
 	}
 
 	if (!filledCount) {
 		throw new Error(
-			"No bulk row template found. Add one row in your FA template with tokens like {{CLIENT_NAME}}, {{DATE_RECORDED}}, {{PURPOSE}}.",
+			"No bulk row template found. Add one row in your template with inline tokens for the selected case type.",
 		);
 	}
 
