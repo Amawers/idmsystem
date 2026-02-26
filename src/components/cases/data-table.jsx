@@ -109,6 +109,7 @@ import EnrollCaseDialog from "@/components/cases/EnrollCaseDialog";
 import ProgramEnrollmentBadge from "@/components/cases/ProgramEnrollmentBadge";
 import { useCaseManagers } from "@/store/useCaseManagerStore";
 import DocumentManager from "@/components/documents/DocumentManager";
+import { exportCaseRecordToExcel } from "@/lib/caseExcelExport";
 import {
 	Dialog,
 	DialogContent,
@@ -1061,6 +1062,7 @@ const ivacColumns = (
 // =================================
 const spColumns = (
 	handleEditClick,
+	handleExportClick,
 	handleDeleteClick,
 	handleDocumentsClick,
 ) => [
@@ -1173,6 +1175,14 @@ const spColumns = (
 							Edit
 						</DropdownMenuItem>
 					</PermissionGuard>
+					<DropdownMenuItem
+						onClick={(e) => {
+							e.stopPropagation();
+							handleExportClick(row.original, "SP");
+						}}
+					>
+						Export Excel
+					</DropdownMenuItem>
 					<PermissionGuard permission="view_documents">
 						<DropdownMenuItem
 							onClick={(e) => {
@@ -2145,6 +2155,25 @@ export function DataTable({
 		setOpenSpEditSheet(true);
 	}
 
+	async function handleExportCaseRow(record, caseType) {
+		try {
+			const { filledCount } = await exportCaseRecordToExcel({
+				caseType,
+				record,
+			});
+			toast.success("Excel exported", {
+				description: `Filled ${filledCount} template field${filledCount === 1 ? "" : "s"}.`,
+			});
+		} catch (error) {
+			toast.error("Excel export failed", {
+				description:
+					error instanceof Error
+						? error.message
+						: "Unable to export this record to Excel.",
+			});
+		}
+	}
+
 	// Handle PWD row click for editing
 	function handleEditPwdRow(record) {
 		console.log("Editing PWD record:", record);
@@ -2613,6 +2642,7 @@ export function DataTable({
 		initialData: spSortedData,
 		columns: spColumns(
 			handleEditSpRow,
+			handleExportCaseRow,
 			handleDeleteClick,
 			handleDocumentsClick,
 		),
