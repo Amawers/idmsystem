@@ -1475,7 +1475,11 @@ const pwdColumns = (
 // =================================
 //* SENIOR CITIZEN Table COLUMN DEFINITIONS
 // =================================
-const scColumns = (handleDeleteClick, handleDocumentsClick) => [
+const scColumns = (
+	handleExportClick,
+	handleDeleteClick,
+	handleDocumentsClick,
+) => [
 	{
 		accessorKey: "id",
 		header: "Case ID",
@@ -1554,6 +1558,14 @@ const scColumns = (handleDeleteClick, handleDocumentsClick) => [
 							Documents
 						</DropdownMenuItem>
 					</PermissionGuard>
+					<DropdownMenuItem
+						onClick={(e) => {
+							e.stopPropagation();
+							handleExportClick(row.original, "SC");
+						}}
+					>
+						Export Excel
+					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<PermissionGuard permission="delete_case">
 						<DropdownMenuItem
@@ -2745,7 +2757,11 @@ export function DataTable({
 	// Table instance for Senior Citizen tab with its own data and column definitions
 	const scTable = useDataTable({
 		initialData: scSortedData,
-		columns: scColumns(handleDeleteClick, handleDocumentsClick),
+		columns: scColumns(
+			handleExportCaseRow,
+			handleDeleteClick,
+			handleDocumentsClick,
+		),
 	});
 
 	React.useEffect(() => {
@@ -5092,6 +5108,7 @@ export function DataTable({
 						table={scTable.table}
 						setData={scTable.setData}
 						columns={scColumns(
+							handleExportCaseRow,
 							handleDeleteClick,
 							handleDocumentsClick,
 						)}

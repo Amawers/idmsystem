@@ -16,6 +16,11 @@ const EXCEL_TEMPLATE_BY_CASE_TYPE = {
 		filenamePrefix: "family-assistance-record",
 		worksheetName: "FAR",
 	},
+	SC: {
+		templateUrl: "/excel-templates/sc-case-template.xlsx",
+		filenamePrefix: "senior-citizen",
+		worksheetName: "SC",
+	},
 	IVAC: {
 		templateUrl: "/excel-templates/ivac-case-template.xlsx",
 		filenamePrefix: "ivac",
@@ -42,6 +47,13 @@ const FAR_FALLBACK_CELL_MAP = {
 	// Example:
 	// RECEIVING_MEMBER: "B6",
 	// ASSISTANCE: "E6",
+};
+
+const SC_FALLBACK_CELL_MAP = {
+	// Optional fallback if you do not use named ranges in the template.
+	// Example:
+	// SENIOR_NAME: "B6",
+	// BARANGAY: "E6",
 };
 
 const IVAC_FALLBACK_CELL_MAP = {
@@ -72,6 +84,24 @@ function formatDateForTemplate(value) {
 	const dd = String(d.getDate()).padStart(2, "0");
 	const yyyy = d.getFullYear();
 	return `${mm}-${dd}-${yyyy}`;
+}
+
+function parseNameParts(fullNameValue = "") {
+	const cleaned = safeString(fullNameValue).replace(/\s+/g, " ").trim();
+	if (!cleaned) {
+		return { firstName: "", middleName: "", lastName: "" };
+	}
+
+	const tokens = cleaned.split(" ").filter(Boolean);
+	if (tokens.length === 1) {
+		return { firstName: tokens[0], middleName: "", lastName: "" };
+	}
+
+	const firstName = tokens.shift() || "";
+	const lastName = tokens.length ? tokens.pop() || "" : "";
+	const middleName = tokens.join(" ");
+
+	return { firstName, middleName, lastName };
 }
 
 function normalizeFamilyMembers(rawMembers) {
@@ -244,6 +274,124 @@ function buildFarBulkRowValues(record = {}) {
 	return buildFarExcelValues(record);
 }
 
+function normalizeStringArray(rawValue) {
+	if (Array.isArray(rawValue)) {
+		return rawValue;
+	}
+	if (typeof rawValue === "string") {
+		const trimmed = rawValue.trim();
+		if (!trimmed) return [];
+		if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+			try {
+				const parsed = JSON.parse(trimmed);
+				if (Array.isArray(parsed)) {
+					return parsed;
+				}
+			} catch {
+				// fallback to comma split below
+			}
+		}
+		return trimmed
+			.split(",")
+			.map((item) => item.trim())
+			.filter(Boolean);
+	}
+	return [];
+}
+
+function buildScExcelValues(record = {}) {
+	const seniorNameParts = parseNameParts(record.senior_name);
+	const children = normalizeStringArray(record.children)
+		.map((entry) => {
+			if (entry && typeof entry === "object") {
+				return safeString(entry.full_name || entry.name || "");
+			}
+			return safeString(entry);
+		})
+		.filter(Boolean);
+
+	const listText = (value) =>
+		normalizeStringArray(value)
+			.map((entry) => {
+				if (entry && typeof entry === "object") {
+					return safeString(entry.name || entry.full_name || "");
+				}
+				return safeString(entry);
+			})
+			.filter(Boolean)
+			.join(", ");
+
+	return {
+		CASE_ID: safeString(record.id),
+		CASE_MANAGER: safeString(record.case_manager || record.caseManager),
+		STATUS: safeString(record.status),
+		PRIORITY: safeString(record.priority),
+		VISIBILITY: safeString(record.visibility),
+		SENIOR_NAME: safeString(record.senior_name),
+		SENIOR_FIRST_NAME: seniorNameParts.firstName,
+		SENIOR_MIDDLE_NAME: seniorNameParts.middleName,
+		SENIOR_LAST_NAME: seniorNameParts.lastName,
+		REGION: safeString(record.region),
+		PROVINCE: safeString(record.province),
+		CITY_MUNICIPALITY: safeString(record.city_municipality),
+		BARANGAY: safeString(record.barangay),
+		DATE_OF_BIRTH: formatDateForTemplate(record.date_of_birth),
+		PLACE_OF_BIRTH: safeString(record.place_of_birth),
+		MARITAL_STATUS: safeString(record.marital_status),
+		GENDER: safeString(record.gender),
+		CONTACT_NUMBER: safeString(record.contact_number),
+		EMAIL_ADDRESS: safeString(record.email_address),
+		RELIGION: safeString(record.religion),
+		ETHNIC_ORIGIN: safeString(record.ethnic_origin),
+		LANGUAGE_SPOKEN_WRITTEN: safeString(record.language_spoken_written),
+		OSCA_ID_NUMBER: safeString(record.osca_id_number),
+		GSIS: safeString(record.gsis),
+		TIN: safeString(record.tin),
+		PHILHEALTH: safeString(record.philhealth),
+		SC_ASSOCIATION: safeString(record.sc_association),
+		OTHER_GOV_ID: safeString(record.other_gov_id),
+		CAPABILITY_TO_TRAVEL: safeString(record.capability_to_travel),
+		SERVICE_BUSINESS_EMPLOYMENT: safeString(
+			record.service_business_employment,
+		),
+		CURRENT_PENSION: safeString(record.current_pension),
+		NAME_OF_SPOUSE: safeString(record.name_of_spouse),
+		FATHERS_NAME: safeString(record.fathers_name),
+		MOTHERS_MAIDEN_NAME: safeString(record.mothers_maiden_name),
+		CHILDREN: children.join(", "),
+		OTHER_DEPENDENTS: safeString(record.other_dependents),
+		EDUCATIONAL_ATTAINMENT: listText(record.educational_attainment),
+		TECHNICAL_SKILLS: listText(record.technical_skills),
+		COMMUNITY_SERVICE_INVOLVEMENT: listText(
+			record.community_service_involvement,
+		),
+		LIVING_WITH: listText(record.living_with),
+		HOUSEHOLD_CONDITION: listText(record.household_condition),
+		SOURCE_OF_INCOME_ASSISTANCE: listText(
+			record.source_of_income_assistance,
+		),
+		ASSETS_REAL_IMMOVABLE: listText(record.assets_real_immovable),
+		ASSETS_PERSONAL_MOVABLE: listText(record.assets_personal_movable),
+		NEEDS_COMMONLY_ENCOUNTERED: listText(record.needs_commonly_encountered),
+		MEDICAL_CONCERN: listText(record.medical_concern),
+		DENTAL_CONCERN: listText(record.dental_concern),
+		OPTICAL: listText(record.optical),
+		HEARING: listText(record.hearing),
+		SOCIAL: listText(record.social),
+		DIFFICULTY: listText(record.difficulty),
+		MEDICINES_FOR_MAINTENANCE: listText(record.medicines_for_maintenance),
+		SCHEDULED_CHECKUP: safeString(record.scheduled_checkup),
+		CHECKUP_FREQUENCY: safeString(record.checkup_frequency),
+		ASSISTING_PERSON: safeString(record.assisting_person),
+		RELATION_TO_SENIOR: safeString(record.relation_to_senior),
+		INTERVIEWER: safeString(record.interviewer),
+		DATE_OF_INTERVIEW: formatDateForTemplate(record.date_of_interview),
+		PLACE_OF_INTERVIEW: safeString(record.place_of_interview),
+		CREATED_AT: formatDateForTemplate(record.created_at),
+		UPDATED_AT: formatDateForTemplate(record.updated_at),
+	};
+}
+
 function toNumber(value) {
 	const parsed = Number(value);
 	return Number.isFinite(parsed) ? parsed : 0;
@@ -369,6 +517,8 @@ function getCaseExcelValues(caseType, record) {
 			return buildFaExcelValues(record);
 		case "FAR":
 			return buildFarExcelValues(record);
+		case "SC":
+			return buildScExcelValues(record);
 		case "IVAC":
 			return buildIvacExcelValues(record);
 		default:
@@ -384,6 +534,8 @@ function getCaseCellMap(caseType) {
 			return FA_FALLBACK_CELL_MAP;
 		case "FAR":
 			return FAR_FALLBACK_CELL_MAP;
+		case "SC":
+			return SC_FALLBACK_CELL_MAP;
 		case "IVAC":
 			return IVAC_FALLBACK_CELL_MAP;
 		default:

@@ -7,7 +7,8 @@ Current supported template:
 - `sp-case-template.xlsx` → used by Single Parent (`SP`) record export.
 - `fa-case-template.xlsx` → used by Financial Assistance (`FA`) record export.
 - `far-case-template.xlsx` → used by Family Assistance Record (`FAR`) bulk export.
-- `ivac-case-template.xlsx` → used by Incidence on VAC (`IVAC`) bulk export.
+- `sc-case-template.xlsx` → used by Senior Citizen (`SC`) record export.
+- `ivac-case-template.xlsx` → used by Incidence on VAC (`IVAC`) export.
 
 ## Best setup (recommended)
 
@@ -153,6 +154,79 @@ To make bulk export work, create **one template row** in `far-case-template.xlsx
 - `{{PRIORITY}}`
 
 The exporter duplicates that row once per record and fills each row with the corresponding values.
+
+## Senior Citizen template fields (per record export)
+
+Senior Citizen export is **per row/record** only.
+
+- Use the row action menu in SC table
+- Click **Export Excel** for the specific record
+
+Create `sc-case-template.xlsx` and use named ranges or inline placeholders.
+
+### SC text/date placeholders
+
+- `{{ASSETS_PERSONAL_MOVABLE}}`
+- `{{ASSETS_REAL_IMMOVABLE}}`
+- `{{ASSISTING_PERSON}}`
+- `{{BARANGAY}}`
+- `{{CAPABILITY_TO_TRAVEL}}`
+- `{{CASE_ID}}`
+- `{{CASE_MANAGER}}`
+- `{{CHECKUP_FREQUENCY}}`
+- `{{CHILDREN}}`
+- `{{CITY_MUNICIPALITY}}`
+- `{{COMMUNITY_SERVICE_INVOLVEMENT}}`
+- `{{CONTACT_NUMBER}}`
+- `{{CURRENT_PENSION}}`
+- `{{CREATED_AT}}`
+- `{{DATE_OF_BIRTH}}`
+- `{{DATE_OF_INTERVIEW}}`
+- `{{DENTAL_CONCERN}}`
+- `{{DIFFICULTY}}`
+- `{{EDUCATIONAL_ATTAINMENT}}`
+- `{{EMAIL_ADDRESS}}`
+- `{{ETHNIC_ORIGIN}}`
+- `{{FATHERS_NAME}}`
+- `{{GENDER}}`
+- `{{GSIS}}`
+- `{{HEARING}}`
+- `{{HOUSEHOLD_CONDITION}}`
+- `{{INTERVIEWER}}`
+- `{{LANGUAGE_SPOKEN_WRITTEN}}`
+- `{{LIVING_WITH}}`
+- `{{MARITAL_STATUS}}`
+- `{{MEDICAL_CONCERN}}`
+- `{{MEDICINES_FOR_MAINTENANCE}}`
+- `{{MOTHERS_MAIDEN_NAME}}`
+- `{{NAME_OF_SPOUSE}}`
+- `{{NEEDS_COMMONLY_ENCOUNTERED}}`
+- `{{OPTICAL}}`
+- `{{OSCA_ID_NUMBER}}`
+- `{{OTHER_DEPENDENTS}}`
+- `{{OTHER_GOV_ID}}`
+- `{{PHILHEALTH}}`
+- `{{PLACE_OF_BIRTH}}`
+- `{{PLACE_OF_INTERVIEW}}`
+- `{{PRIORITY}}`
+- `{{PROVINCE}}`
+- `{{REGION}}`
+- `{{RELATION_TO_SENIOR}}`
+- `{{RELIGION}}`
+- `{{SC_ASSOCIATION}}`
+- `{{SCHEDULED_CHECKUP}}`
+- `{{SENIOR_FIRST_NAME}}`
+- `{{SENIOR_LAST_NAME}}`
+- `{{SENIOR_MIDDLE_NAME}}`
+- `{{SENIOR_NAME}}`
+- `{{SERVICE_BUSINESS_EMPLOYMENT}}`
+- `{{SOCIAL}}`
+- `{{SOURCE_OF_INCOME_ASSISTANCE}}`
+- `{{STATUS}}`
+- `{{TECHNICAL_SKILLS}}`
+- `{{TIN}}`
+- `{{UPDATED_AT}}`
+- `{{VISIBILITY}}`
 
 ### IVAC internal `records` (jsonb) mapping
 
