@@ -2812,7 +2812,7 @@ export function DataTable({
 								records across different categories
 							</p>
 						</div>
-						<div className="flex items-center gap-2">
+						<div className="flex flex-wrap items-center justify-end gap-2">
 							{!isOnline && (
 								<Badge
 									variant="destructive"
@@ -4077,7 +4077,9 @@ export function DataTable({
 										<span className="hidden lg:inline">
 											EXPORT ALL FA
 										</span>
-										<span className="lg:hidden">EXPORT</span>
+										<span className="lg:hidden">
+											EXPORT
+										</span>
 									</Button>
 
 									{/* Customize Columns Dropdown */}
