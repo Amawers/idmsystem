@@ -6,6 +6,7 @@ Current supported template:
 
 - `sp-case-template.xlsx` → used by Single Parent (`SP`) record export.
 - `fa-case-template.xlsx` → used by Financial Assistance (`FA`) record export.
+- `ciclcar-case-template.xlsx` → used by CICL/CAR (`CICLCAR`) record export.
 - `fac-case-template.xlsx` → used by Family Assistance Card (`FAC`) record export.
 - `far-case-template.xlsx` → used by Family Assistance Record (`FAR`) bulk export.
 - `sc-case-template.xlsx` → used by Senior Citizen (`SC`) record export.
@@ -155,6 +156,79 @@ To make bulk export work, create **one template row** in `far-case-template.xlsx
 - `{{PRIORITY}}`
 
 The exporter duplicates that row once per record and fills each row with the corresponding values.
+
+## CICL/CAR template fields (per record export)
+
+CICL/CAR export is **per row/record** only.
+
+- Use the row action menu in CICL/CAR table
+- Click **Export Excel** for the specific record
+
+Create `ciclcar-case-template.xlsx` and use named ranges or inline placeholders.
+
+### CICL/CAR placeholders
+
+- `{{CASE_ID}}`
+- `{{CASE_MANAGER}}`
+- `{{CREATED_AT}}`
+- `{{COMPLAINANT_ADDRESS}}`
+- `{{COMPLAINANT_ALIAS}}`
+- `{{COMPLAINANT_BIRTH_DATE}}`
+- `{{COMPLAINANT_CONTACT_NUMBER}}`
+- `{{COMPLAINANT_NAME}}`
+- `{{COMPLAINANT_RELATIONSHIP}}`
+- `{{COMPLAINANT_SEX}}`
+- `{{COMPLAINANT_VICTIM}}`
+- `{{FAMILY_BACKGROUND_COUNT}}`
+- `{{FAMILY_BACKGROUND_JSON}}`
+- `{{PRIORITY}}`
+- `{{PROFILE_ADDRESS}}`
+- `{{PROFILE_AGE}}`
+- `{{PROFILE_ALIAS}}`
+- `{{PROFILE_BIRTH_DATE}}`
+- `{{PROFILE_CLIENT_CATEGORY}}`
+- `{{PROFILE_CONTACT_NUMBER}}`
+- `{{PROFILE_DISABILITY}}`
+- `{{PROFILE_EDUCATIONAL_ATTAINMENT}}`
+- `{{PROFILE_EDUCATIONAL_STATUS}}`
+- `{{PROFILE_FIRST_NAME}}`
+- `{{PROFILE_GENDER}}`
+- `{{PROFILE_IP_GROUP}}`
+- `{{PROFILE_LAST_NAME}}`
+- `{{PROFILE_MIDDLE_NAME}}`
+- `{{PROFILE_NAME}}`
+- `{{PROFILE_NATIONALITY}}`
+- `{{PROFILE_RELIGION}}`
+- `{{PROFILE_SEX}}`
+- `{{PROFILE_STATUS}}`
+- `{{RECORD_DETAILS}}`
+- `{{REFERRAL_BARANGAY}}`
+- `{{REFERRAL_CITY}}`
+- `{{REFERRAL_DATE_REFERRED}}`
+- `{{REFERRAL_PROVINCE}}`
+- `{{REFERRAL_REASON}}`
+- `{{REFERRAL_REFERRED_TO}}`
+- `{{REFERRAL_REGION}}`
+- `{{REMARKS}}`
+- `{{REPEAT_OFFENDER}}`
+- `{{SPECIFIC_VIOLATION}}`
+- `{{STATUS}}`
+- `{{UPDATED_AT}}`
+- `{{VIOLATION}}`
+- `{{VIOLATION_ADMISSION_DATE}}`
+- `{{VIOLATION_DATE_TIME_COMMITTED}}`
+- `{{VIOLATION_PLACE_COMMITTED}}`
+- `{{VIOLATION_PREVIOUS_OFFENSE}}`
+- `{{VIOLATION_STATUS}}`
+- `{{VISIBILITY}}`
+
+### CICL/CAR family background per-row tokens
+
+Family background entries are available up to 15 rows:
+
+- `{{CICLCAR_FAMILY_1_NAME}}`, `{{CICLCAR_FAMILY_1_RELATIONSHIP}}`, `{{CICLCAR_FAMILY_1_AGE}}`, `{{CICLCAR_FAMILY_1_SEX}}`, `{{CICLCAR_FAMILY_1_STATUS}}`, `{{CICLCAR_FAMILY_1_CONTACT_NUMBER}}`, `{{CICLCAR_FAMILY_1_EDUCATIONAL_ATTAINMENT}}`, `{{CICLCAR_FAMILY_1_EMPLOYMENT}}`
+- `{{CICLCAR_FAMILY_2_NAME}}`, `{{CICLCAR_FAMILY_2_RELATIONSHIP}}`, ...
+- ... up to `{{CICLCAR_FAMILY_15_*}}`
 
 ## Family Assistance Card template fields (per record export)
 

@@ -359,6 +359,7 @@ const createCaseColumns = (
 const ciclcarColumns = (
 	handleEnrollClick,
 	handleEditClick,
+	handleExportClick,
 	handleDeleteClick,
 	getPrefetchedEnrollments,
 	handleDocumentsClick,
@@ -491,6 +492,14 @@ const ciclcarColumns = (
 							Documents
 						</DropdownMenuItem>
 					</PermissionGuard>
+					<DropdownMenuItem
+						onClick={(e) => {
+							e.stopPropagation();
+							handleExportClick(row.original, "CICLCAR");
+						}}
+					>
+						Export Excel
+					</DropdownMenuItem>
 					<DropdownMenuItem
 						onClick={(e) => {
 							e.stopPropagation();
@@ -2708,6 +2717,7 @@ export function DataTable({
 		columns: ciclcarColumns(
 			handleEnrollClick,
 			handleEditCiclcarRow,
+			handleExportCaseRow,
 			handleDeleteClick,
 			getCiclcarPrefetchedEnrollments,
 			handleDocumentsClick,
@@ -4992,6 +5002,7 @@ export function DataTable({
 						columns={ciclcarColumns(
 							handleEnrollClick,
 							handleEditCiclcarRow,
+							handleExportCaseRow,
 							handleDeleteClick,
 							getCiclcarPrefetchedEnrollments,
 							handleDocumentsClick,

@@ -11,6 +11,11 @@ const EXCEL_TEMPLATE_BY_CASE_TYPE = {
 		filenamePrefix: "financial-assistance",
 		worksheetName: "FA",
 	},
+	CICLCAR: {
+		templateUrl: "/excel-templates/ciclcar-case-template.xlsx",
+		filenamePrefix: "cicl-car",
+		worksheetName: "CICLCAR",
+	},
 	FAC: {
 		templateUrl: "/excel-templates/fac-case-template.xlsx",
 		filenamePrefix: "family-assistance-card",
@@ -45,6 +50,13 @@ const FA_FALLBACK_CELL_MAP = {
 	// Example:
 	// CLIENT_NAME: "B6",
 	// ADDRESS: "B7",
+};
+
+const CICLCAR_FALLBACK_CELL_MAP = {
+	// Optional fallback if you do not use named ranges in the template.
+	// Example:
+	// CASE_ID: "B6",
+	// PROFILE_NAME: "B7",
 };
 
 const FAC_FALLBACK_CELL_MAP = {
@@ -259,6 +271,161 @@ function buildFaBulkRowValues(record = {}) {
 	return {
 		...base,
 		BENEFICIARY_NAME: base.BENIFICIARY_NAME,
+	};
+}
+
+function normalizeCiclcarFamilyBackground(rawValue) {
+	if (Array.isArray(rawValue)) return rawValue;
+	if (typeof rawValue === "string") {
+		try {
+			const parsed = JSON.parse(rawValue);
+			return Array.isArray(parsed) ? parsed : [];
+		} catch {
+			return [];
+		}
+	}
+	return [];
+}
+
+function buildCiclcarFamilyBackgroundValues(members = [], maxRows = 15) {
+	const values = {};
+
+	for (let index = 0; index < maxRows; index += 1) {
+		const member = members[index] || {};
+		const rowNumber = index + 1;
+
+		values[`CICLCAR_FAMILY_${rowNumber}_NAME`] = safeString(member.name);
+		values[`CICLCAR_FAMILY_${rowNumber}_RELATIONSHIP`] = safeString(
+			member.relationship,
+		);
+		values[`CICLCAR_FAMILY_${rowNumber}_AGE`] = safeString(member.age);
+		values[`CICLCAR_FAMILY_${rowNumber}_SEX`] = safeString(member.sex);
+		values[`CICLCAR_FAMILY_${rowNumber}_STATUS`] = safeString(
+			member.status,
+		);
+		values[`CICLCAR_FAMILY_${rowNumber}_CONTACT_NUMBER`] = safeString(
+			member.contactNumber || member.contact_number,
+		);
+		values[`CICLCAR_FAMILY_${rowNumber}_EDUCATIONAL_ATTAINMENT`] =
+			safeString(
+				member.educationalAttainment || member.educational_attainment,
+			);
+		values[`CICLCAR_FAMILY_${rowNumber}_EMPLOYMENT`] = safeString(
+			member.employment,
+		);
+	}
+
+	return values;
+}
+
+function buildCiclcarExcelValues(record = {}) {
+	const familyBackground = normalizeCiclcarFamilyBackground(
+		record.family_background,
+	);
+	const rawProfileName = safeString(record.profile_name).trim();
+	let parsedProfileName = parseNameParts(rawProfileName);
+
+	if (rawProfileName.includes(",")) {
+		const [lastNameRaw, firstMiddleRaw = ""] = rawProfileName
+			.split(",")
+			.map((part) => part.trim());
+		const firstMiddle = parseNameParts(firstMiddleRaw);
+		parsedProfileName = {
+			firstName: firstMiddle.firstName,
+			middleName: firstMiddle.middleName,
+			lastName: lastNameRaw,
+		};
+	}
+
+	const profileFirstName = safeString(
+		record.profile_first_name ||
+			record.profileFirstName ||
+			parsedProfileName.firstName,
+	);
+	const profileMiddleName = safeString(
+		record.profile_middle_name ||
+			record.profileMiddleName ||
+			parsedProfileName.middleName,
+	);
+	const profileLastName = safeString(
+		record.profile_last_name ||
+			record.profileLastName ||
+			parsedProfileName.lastName,
+	);
+
+	return {
+		CASE_ID: safeString(record.id || record["case ID"]),
+		CASE_MANAGER: safeString(record.case_manager || record["case manager"]),
+		STATUS: safeString(record.status),
+		PRIORITY: safeString(record.priority),
+		VISIBILITY: safeString(record.visibility),
+		PROFILE_NAME: safeString(record.profile_name),
+		PROFILE_ALIAS: safeString(record.profile_alias),
+		PROFILE_SEX: safeString(record.profile_sex),
+		PROFILE_GENDER: safeString(record.profile_gender),
+		PROFILE_BIRTH_DATE: formatDateForTemplate(record.profile_birth_date),
+		PROFILE_AGE: safeString(record.profile_age),
+		PROFILE_STATUS: safeString(record.profile_status),
+		PROFILE_RELIGION: safeString(record.profile_religion),
+		PROFILE_ADDRESS: safeString(record.profile_address),
+		PROFILE_CLIENT_CATEGORY: safeString(record.profile_client_category),
+		PROFILE_IP_GROUP: safeString(record.profile_ip_group),
+		PROFILE_NATIONALITY: safeString(record.profile_nationality),
+		PROFILE_DISABILITY: safeString(record.profile_disability),
+		PROFILE_CONTACT_NUMBER: safeString(record.profile_contact_number),
+		PROFILE_EDUCATIONAL_ATTAINMENT: safeString(
+			record.profile_educational_attainment,
+		),
+		PROFILE_EDUCATIONAL_STATUS: safeString(
+			record.profile_educational_status,
+		),
+		PROFILE_FIRST_NAME: profileFirstName,
+		PROFILE_MIDDLE_NAME: profileMiddleName,
+		PROFILE_LAST_NAME: profileLastName,
+		VIOLATION: safeString(record.violation),
+		VIOLATION_DATE_TIME_COMMITTED: formatDateForTemplate(
+			record.violation_date_time_committed,
+		),
+		SPECIFIC_VIOLATION: safeString(record.specific_violation),
+		VIOLATION_PLACE_COMMITTED: safeString(
+			record.violation_place_committed,
+		),
+		VIOLATION_STATUS: safeString(record.violation_status),
+		VIOLATION_ADMISSION_DATE: formatDateForTemplate(
+			record.violation_admission_date,
+		),
+		REPEAT_OFFENDER: safeString(record.repeat_offender),
+		VIOLATION_PREVIOUS_OFFENSE: safeString(
+			record.violation_previous_offense,
+		),
+		RECORD_DETAILS: safeString(record.record_details),
+		COMPLAINANT_NAME: safeString(record.complainant_name),
+		COMPLAINANT_ALIAS: safeString(record.complainant_alias),
+		COMPLAINANT_VICTIM: safeString(record.complainant_victim),
+		COMPLAINANT_RELATIONSHIP: safeString(record.complainant_relationship),
+		COMPLAINANT_CONTACT_NUMBER: safeString(
+			record.complainant_contact_number,
+		),
+		COMPLAINANT_SEX: safeString(record.complainant_sex),
+		COMPLAINANT_BIRTH_DATE: formatDateForTemplate(
+			record.complainant_birth_date,
+		),
+		COMPLAINANT_ADDRESS: safeString(record.complainant_address),
+		REMARKS: safeString(record.remarks),
+		REFERRAL_REGION: safeString(record.referral_region),
+		REFERRAL_PROVINCE: safeString(record.referral_province),
+		REFERRAL_CITY: safeString(record.referral_city),
+		REFERRAL_BARANGAY: safeString(record.referral_barangay),
+		REFERRAL_REFERRED_TO: safeString(record.referral_referred_to),
+		REFERRAL_DATE_REFERRED: formatDateForTemplate(
+			record.referral_date_referred,
+		),
+		REFERRAL_REASON: safeString(record.referral_reason),
+		FAMILY_BACKGROUND_COUNT: safeString(familyBackground.length),
+		FAMILY_BACKGROUND_JSON: safeString(familyBackground),
+		CREATED_AT: formatDateForTemplate(record.created_at),
+		UPDATED_AT: formatDateForTemplate(record.updated_at),
+		...buildCiclcarFamilyBackgroundValues(familyBackground, 15),
 	};
 }
 
@@ -728,6 +895,8 @@ function getCaseExcelValues(caseType, record) {
 			return buildSpExcelValues(record);
 		case "FA":
 			return buildFaExcelValues(record);
+		case "CICLCAR":
+			return buildCiclcarExcelValues(record);
 		case "FAC":
 			return buildFacExcelValues(record);
 		case "FAR":
@@ -747,6 +916,8 @@ function getCaseCellMap(caseType) {
 			return SP_FALLBACK_CELL_MAP;
 		case "FA":
 			return FA_FALLBACK_CELL_MAP;
+		case "CICLCAR":
+			return CICLCAR_FALLBACK_CELL_MAP;
 		case "FAC":
 			return FAC_FALLBACK_CELL_MAP;
 		case "FAR":
