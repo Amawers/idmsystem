@@ -299,9 +299,66 @@ function normalizeStringArray(rawValue) {
 	return [];
 }
 
+function formatWorkingStatus(value) {
+	const raw = safeString(value).trim().toLowerCase();
+	if (!raw) return "";
+	if (raw === "working") return "Working";
+	if (raw === "not_working" || raw === "not working") {
+		return "Not Working";
+	}
+	return safeString(value);
+}
+
+function formatScOptionLabel(value) {
+	const raw = safeString(value).trim();
+	if (!raw) return "";
+
+	const normalized = raw.replace(/[_-]+/g, " ").replace(/\s+/g, " ").trim();
+	if (!normalized) return "";
+
+	return normalized
+		.split(" ")
+		.map((word) => {
+			const lower = word.toLowerCase();
+			if (lower === "sc") return "SC";
+			if (lower === "osca") return "OSCA";
+			if (lower === "gsis") return "GSIS";
+			if (lower === "tin") return "TIN";
+			return lower.charAt(0).toUpperCase() + lower.slice(1);
+		})
+		.join(" ");
+}
+
+function buildScChildrenValues(children = [], maxRows = 15) {
+	const values = {};
+
+	for (let index = 0; index < maxRows; index += 1) {
+		const child = children[index] || {};
+		const rowNumber = index + 1;
+
+		values[`CHILD_${rowNumber}_NAME`] = safeString(
+			child.full_name || child.name || child.child_name || child.childName,
+		);
+		values[`CHILD_${rowNumber}_OCCUPATION`] = safeString(
+			child.occupation,
+		);
+		values[`CHILD_${rowNumber}_INCOME`] = safeString(child.income);
+		values[`CHILD_${rowNumber}_AGE`] = safeString(child.age);
+		values[`CHILD_${rowNumber}_WORKING_STATUS`] = formatWorkingStatus(
+			child.working_status || child.workingStatus,
+		);
+	}
+
+	return values;
+}
+
 function buildScExcelValues(record = {}) {
 	const seniorNameParts = parseNameParts(record.senior_name);
-	const children = normalizeStringArray(record.children)
+	const spouseNameParts = parseNameParts(record.name_of_spouse);
+	const fatherNameParts = parseNameParts(record.fathers_name);
+	const motherMaidenNameParts = parseNameParts(record.mothers_maiden_name);
+	const childrenRaw = normalizeStringArray(record.children);
+	const children = childrenRaw
 		.map((entry) => {
 			if (entry && typeof entry === "object") {
 				return safeString(entry.full_name || entry.name || "");
@@ -309,6 +366,7 @@ function buildScExcelValues(record = {}) {
 			return safeString(entry);
 		})
 		.filter(Boolean);
+	const childValues = buildScChildrenValues(childrenRaw, 15);
 
 	const listText = (value) =>
 		normalizeStringArray(value)
@@ -316,7 +374,7 @@ function buildScExcelValues(record = {}) {
 				if (entry && typeof entry === "object") {
 					return safeString(entry.name || entry.full_name || "");
 				}
-				return safeString(entry);
+				return formatScOptionLabel(entry);
 			})
 			.filter(Boolean)
 			.join(", ");
@@ -356,8 +414,17 @@ function buildScExcelValues(record = {}) {
 		),
 		CURRENT_PENSION: safeString(record.current_pension),
 		NAME_OF_SPOUSE: safeString(record.name_of_spouse),
+		SPOUSE_FIRST_NAME: spouseNameParts.firstName,
+		SPOUSE_MIDDLE_NAME: spouseNameParts.middleName,
+		SPOUSE_LAST_NAME: spouseNameParts.lastName,
 		FATHERS_NAME: safeString(record.fathers_name),
+		FATHER_FIRST_NAME: fatherNameParts.firstName,
+		FATHER_MIDDLE_NAME: fatherNameParts.middleName,
+		FATHER_LAST_NAME: fatherNameParts.lastName,
 		MOTHERS_MAIDEN_NAME: safeString(record.mothers_maiden_name),
+		MOTHER_MAIDEN_FIRST_NAME: motherMaidenNameParts.firstName,
+		MOTHER_MAIDEN_MIDDLE_NAME: motherMaidenNameParts.middleName,
+		MOTHER_MAIDEN_LAST_NAME: motherMaidenNameParts.lastName,
 		CHILDREN: children.join(", "),
 		OTHER_DEPENDENTS: safeString(record.other_dependents),
 		EDUCATIONAL_ATTAINMENT: listText(record.educational_attainment),
@@ -389,6 +456,7 @@ function buildScExcelValues(record = {}) {
 		PLACE_OF_INTERVIEW: safeString(record.place_of_interview),
 		CREATED_AT: formatDateForTemplate(record.created_at),
 		UPDATED_AT: formatDateForTemplate(record.updated_at),
+		...childValues,
 	};
 }
 

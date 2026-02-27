@@ -188,6 +188,9 @@ Create `sc-case-template.xlsx` and use named ranges or inline placeholders.
 - `{{EMAIL_ADDRESS}}`
 - `{{ETHNIC_ORIGIN}}`
 - `{{FATHERS_NAME}}`
+- `{{FATHER_LAST_NAME}}`
+- `{{FATHER_FIRST_NAME}}`
+- `{{FATHER_MIDDLE_NAME}}`
 - `{{GENDER}}`
 - `{{GSIS}}`
 - `{{HEARING}}`
@@ -199,7 +202,13 @@ Create `sc-case-template.xlsx` and use named ranges or inline placeholders.
 - `{{MEDICAL_CONCERN}}`
 - `{{MEDICINES_FOR_MAINTENANCE}}`
 - `{{MOTHERS_MAIDEN_NAME}}`
+- `{{MOTHER_MAIDEN_LAST_NAME}}`
+- `{{MOTHER_MAIDEN_FIRST_NAME}}`
+- `{{MOTHER_MAIDEN_MIDDLE_NAME}}`
 - `{{NAME_OF_SPOUSE}}`
+- `{{SPOUSE_LAST_NAME}}`
+- `{{SPOUSE_FIRST_NAME}}`
+- `{{SPOUSE_MIDDLE_NAME}}`
 - `{{NEEDS_COMMONLY_ENCOUNTERED}}`
 - `{{OPTICAL}}`
 - `{{OSCA_ID_NUMBER}}`
@@ -227,6 +236,82 @@ Create `sc-case-template.xlsx` and use named ranges or inline placeholders.
 - `{{TIN}}`
 - `{{UPDATED_AT}}`
 - `{{VISIBILITY}}`
+
+### SC children per-token mapping
+
+Children are available as per-row tokens up to 15 items:
+
+- `{{CHILD_1_NAME}}`, `{{CHILD_1_OCCUPATION}}`, `{{CHILD_1_INCOME}}`, `{{CHILD_1_AGE}}`, `{{CHILD_1_WORKING_STATUS}}`
+- `{{CHILD_2_NAME}}`, `{{CHILD_2_OCCUPATION}}`, `{{CHILD_2_INCOME}}`, `{{CHILD_2_AGE}}`, `{{CHILD_2_WORKING_STATUS}}`
+- ... up to `{{CHILD_15_*}}`
+
+`CHILD_n_WORKING_STATUS` outputs `Working` or `Not Working`.
+
+### SC checkbox setup in Excel (recommended)
+
+For SC, checkbox-type values are exported as text (examples: `Working`, `Not Working`, `Yes`, `No`, or comma-separated lists).
+
+Use this pattern in your template:
+
+1. Put the raw token in a hidden/helper cell (example `Z2: {{CAPABILITY_TO_TRAVEL}}`).
+2. In the visible checkbox cell, use a formula to show checked/unchecked symbol.
+
+Example formulas:
+
+- Capability to travel = Yes  
+	`=IF(LOWER(TRIM($Z$2))="yes","☑","☐")`
+- Capability to travel = No  
+	`=IF(LOWER(TRIM($Z$2))="no","☑","☐")`
+
+For child working status:
+
+- Put `{{CHILD_1_WORKING_STATUS}}` in a helper cell (example `Z10`).
+- Working checkbox cell: `=IF(LOWER(TRIM($Z$10))="working","☑","☐")`
+- Not Working checkbox cell: `=IF(LOWER(TRIM($Z$10))="not working","☑","☐")`
+
+For multi-select SC fields (like `EDUCATIONAL_ATTAINMENT`, `TECHNICAL_SKILLS`, etc.), values are comma-separated text.  
+Use `SEARCH` to check if a label exists in the list:
+
+- Example for `Elementary` in helper cell `Z20`:
+	`=IF(ISNUMBER(SEARCH("Elementary",$Z$20)),"☑","☐")`
+
+#### Educational Attainment checkbox example (SC)
+
+1. Put `{{EDUCATIONAL_ATTAINMENT}}` in helper cell `Z20`.
+2. For each checkbox row, use one formula based on the exact label.
+
+Examples:
+
+- Elementary Level: `=IF(ISNUMBER(SEARCH("Elementary Level",$Z$20)),"☑","☐")`
+- Elementary Graduate: `=IF(ISNUMBER(SEARCH("Elementary Graduate",$Z$20)),"☑","☐")`
+- High School Level: `=IF(ISNUMBER(SEARCH("High School Level",$Z$20)),"☑","☐")`
+- Highschool Graduate: `=IF(ISNUMBER(SEARCH("Highschool Graduate",$Z$20)),"☑","☐")`
+- College Level: `=IF(ISNUMBER(SEARCH("College Level",$Z$20)),"☑","☐")`
+- College Graduate: `=IF(ISNUMBER(SEARCH("College Graduate",$Z$20)),"☑","☐")`
+- Vocational: `=IF(ISNUMBER(SEARCH("Vocational",$Z$20)),"☑","☐")`
+- Post Graduate: `=IF(ISNUMBER(SEARCH("Post Graduate",$Z$20)),"☑","☐")`
+- Not Attended School: `=IF(ISNUMBER(SEARCH("Not Attended School",$Z$20)),"☑","☐")`
+
+#### Very simple setup (copy this)
+
+If you want the easiest possible setup:
+
+1. In cell `Z20`, type: `{{EDUCATIONAL_ATTAINMENT}}`
+2. In your visible checkbox cells, paste these formulas:
+
+- `B30` (Elementary Level): `=IF(ISNUMBER(SEARCH("Elementary Level",$Z$20)),"☑","☐")`
+- `B31` (Elementary Graduate): `=IF(ISNUMBER(SEARCH("Elementary Graduate",$Z$20)),"☑","☐")`
+- `B32` (High School Level): `=IF(ISNUMBER(SEARCH("High School Level",$Z$20)),"☑","☐")`
+- `B33` (Highschool Graduate): `=IF(ISNUMBER(SEARCH("Highschool Graduate",$Z$20)),"☑","☐")`
+- `B34` (College Level): `=IF(ISNUMBER(SEARCH("College Level",$Z$20)),"☑","☐")`
+- `B35` (College Graduate): `=IF(ISNUMBER(SEARCH("College Graduate",$Z$20)),"☑","☐")`
+- `B36` (Vocational): `=IF(ISNUMBER(SEARCH("Vocational",$Z$20)),"☑","☐")`
+- `B37` (Post Graduate): `=IF(ISNUMBER(SEARCH("Post Graduate",$Z$20)),"☑","☐")`
+- `B38` (Not Attended School): `=IF(ISNUMBER(SEARCH("Not Attended School",$Z$20)),"☑","☐")`
+
+3. Hide column `Z` (optional).
+
+Done. When you export SC, the checkboxes in `B30:B38` will auto-check.
 
 ### IVAC internal `records` (jsonb) mapping
 
