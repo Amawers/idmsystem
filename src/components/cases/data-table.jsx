@@ -719,6 +719,7 @@ const farColumns = (
 // =================================
 const facColumns = (
 	handleEditClick,
+	handleExportClick,
 	handleDeleteClick,
 	handleDocumentsClick,
 ) => [
@@ -867,6 +868,14 @@ const facColumns = (
 							Documents
 						</DropdownMenuItem>
 					</PermissionGuard>
+					<DropdownMenuItem
+						onClick={(e) => {
+							e.stopPropagation();
+							handleExportClick(row.original, "FAC");
+						}}
+					>
+						Export Excel
+					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<PermissionGuard permission="delete_case">
 						<DropdownMenuItem
@@ -2723,6 +2732,7 @@ export function DataTable({
 		initialData: facSortedData,
 		columns: facColumns(
 			handleEditFacRow,
+			handleExportCaseRow,
 			handleDeleteClick,
 			handleDocumentsClick,
 		),
@@ -5049,6 +5059,7 @@ export function DataTable({
 						setData={facTable.setData}
 						columns={facColumns(
 							handleEditFacRow,
+							handleExportCaseRow,
 							handleDeleteClick,
 							handleDocumentsClick,
 						)}

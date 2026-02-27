@@ -11,6 +11,11 @@ const EXCEL_TEMPLATE_BY_CASE_TYPE = {
 		filenamePrefix: "financial-assistance",
 		worksheetName: "FA",
 	},
+	FAC: {
+		templateUrl: "/excel-templates/fac-case-template.xlsx",
+		filenamePrefix: "family-assistance-card",
+		worksheetName: "FAC",
+	},
 	FAR: {
 		templateUrl: "/excel-templates/far-case-template.xlsx",
 		filenamePrefix: "family-assistance-record",
@@ -40,6 +45,13 @@ const FA_FALLBACK_CELL_MAP = {
 	// Example:
 	// CLIENT_NAME: "B6",
 	// ADDRESS: "B7",
+};
+
+const FAC_FALLBACK_CELL_MAP = {
+	// Optional fallback if you do not use named ranges in the template.
+	// Example:
+	// HEAD_FULL_NAME: "B6",
+	// LOCATION_BARANGAY: "E6",
 };
 
 const FAR_FALLBACK_CELL_MAP = {
@@ -247,6 +259,139 @@ function buildFaBulkRowValues(record = {}) {
 	return {
 		...base,
 		BENEFICIARY_NAME: base.BENIFICIARY_NAME,
+	};
+}
+
+function normalizeFacFamilyMembers(rawMembers) {
+	if (Array.isArray(rawMembers)) return rawMembers;
+	if (typeof rawMembers === "string") {
+		try {
+			const parsed = JSON.parse(rawMembers);
+			return Array.isArray(parsed) ? parsed : [];
+		} catch {
+			return [];
+		}
+	}
+	return [];
+}
+
+function formatYesNo(value) {
+	if (typeof value === "boolean") return value ? "Yes" : "No";
+	const normalized = safeString(value).trim().toLowerCase();
+	if (!normalized) return "";
+	if (["true", "yes", "y", "1"].includes(normalized)) return "Yes";
+	if (["false", "no", "n", "0"].includes(normalized)) return "No";
+	return safeString(value);
+}
+
+function buildFacFamilyCompositionValues(members = [], maxRows = 15) {
+	const values = {};
+
+	for (let index = 0; index < maxRows; index += 1) {
+		const member = members[index] || {};
+		const rowNumber = index + 1;
+
+		values[`FAC_FAMILY_${rowNumber}_NAME`] = safeString(
+			member.familyMember || member.family_member_name,
+		);
+		values[`FAC_FAMILY_${rowNumber}_RELATION_TO_HEAD`] = safeString(
+			member.relationToHead || member.relation_to_head,
+		);
+		values[`FAC_FAMILY_${rowNumber}_BIRTHDATE`] = formatDateForTemplate(
+			member.birthdate,
+		);
+		values[`FAC_FAMILY_${rowNumber}_AGE`] = safeString(member.age);
+		values[`FAC_FAMILY_${rowNumber}_SEX`] = safeString(member.sex);
+		values[`FAC_FAMILY_${rowNumber}_EDUCATIONAL_ATTAINMENT`] = safeString(
+			member.educationalAttainment || member.educational_attainment,
+		);
+		values[`FAC_FAMILY_${rowNumber}_OCCUPATION`] = safeString(
+			member.occupation,
+		);
+		values[`FAC_FAMILY_${rowNumber}_REMARKS`] = safeString(member.remarks);
+	}
+
+	return values;
+}
+
+function buildFacExcelValues(record = {}) {
+	const headFirstName = safeString(record.head_first_name || record.headFirstName);
+	const headMiddleName = safeString(
+		record.head_middle_name || record.headMiddleName,
+	);
+	const headLastName = safeString(record.head_last_name || record.headLastName);
+	const headFullName = `${headFirstName} ${headMiddleName} ${headLastName}`
+		.replace(/\s+/g, " ")
+		.trim();
+
+	const familyMembers = normalizeFacFamilyMembers(record.family_members);
+
+	return {
+		CASE_ID: safeString(record.id),
+		CASE_MANAGER: safeString(record.case_manager || record.caseManager),
+		STATUS: safeString(record.status),
+		PRIORITY: safeString(record.priority),
+		VISIBILITY: safeString(record.visibility),
+		LOCATION_REGION: safeString(record.location_region),
+		LOCATION_PROVINCE: safeString(record.location_province),
+		LOCATION_DISTRICT: safeString(record.location_district),
+		LOCATION_CITY_MUNICIPALITY: safeString(
+			record.location_city_municipality,
+		),
+		LOCATION_BARANGAY: safeString(record.location_barangay),
+		LOCATION_EVACUATION_CENTER: safeString(
+			record.location_evacuation_center,
+		),
+		HEAD_FIRST_NAME: headFirstName,
+		HEAD_MIDDLE_NAME: headMiddleName,
+		HEAD_LAST_NAME: headLastName,
+		HEAD_NAME_EXTENSION: safeString(
+			record.head_name_extension || record.headNameExtension,
+		),
+		HEAD_FULL_NAME: headFullName,
+		HEAD_BIRTHDATE: formatDateForTemplate(record.head_birthdate),
+		HEAD_AGE: safeString(record.head_age),
+		HEAD_BIRTHPLACE: safeString(record.head_birthplace),
+		HEAD_SEX: safeString(record.head_sex),
+		HEAD_CIVIL_STATUS: safeString(record.head_civil_status),
+		HEAD_MOTHERS_MAIDEN_NAME: safeString(
+			record.head_mothers_maiden_name,
+		),
+		HEAD_RELIGION: safeString(record.head_religion),
+		HEAD_OCCUPATION: safeString(record.head_occupation),
+		HEAD_MONTHLY_INCOME: safeString(record.head_monthly_income),
+		HEAD_ID_CARD_PRESENTED: safeString(record.head_id_card_presented),
+		HEAD_ID_CARD_NUMBER: safeString(record.head_id_card_number),
+		HEAD_CONTACT_NUMBER: safeString(record.head_contact_number),
+		HEAD_PERMANENT_ADDRESS: safeString(record.head_permanent_address),
+		HEAD_ALTERNATE_CONTACT_NUMBER: safeString(
+			record.head_alternate_contact_number,
+		),
+		HEAD_4PS_BENEFICIARY: formatYesNo(record.head_4ps_beneficiary),
+		HEAD_IP_ETHNICITY: formatYesNo(record.head_ip_ethnicity),
+		HEAD_IP_ETHNICITY_TYPE: safeString(record.head_ip_ethnicity_type),
+		VULNERABLE_OLDER_PERSONS: safeString(
+			record.vulnerable_older_persons,
+		),
+		VULNERABLE_PREGNANT_WOMEN: safeString(
+			record.vulnerable_pregnant_women,
+		),
+		VULNERABLE_LACTATING_WOMEN: safeString(
+			record.vulnerable_lactating_women,
+		),
+		VULNERABLE_PWDS: safeString(record.vulnerable_pwds),
+		HOUSE_OWNERSHIP: safeString(record.house_ownership),
+		SHELTER_DAMAGE: safeString(record.shelter_damage),
+		BARANGAY_CAPTAIN: safeString(record.barangay_captain),
+		DATE_REGISTERED: formatDateForTemplate(record.date_registered),
+		LSWDO_NAME: safeString(record.lswdo_name),
+		FAMILY_MEMBER_COUNT: safeString(
+			record.family_member_count ?? familyMembers.length,
+		),
+		FAMILY_MEMBERS_JSON: safeString(familyMembers),
+		CREATED_AT: formatDateForTemplate(record.created_at),
+		UPDATED_AT: formatDateForTemplate(record.updated_at),
+		...buildFacFamilyCompositionValues(familyMembers, 15),
 	};
 }
 
@@ -583,6 +728,8 @@ function getCaseExcelValues(caseType, record) {
 			return buildSpExcelValues(record);
 		case "FA":
 			return buildFaExcelValues(record);
+		case "FAC":
+			return buildFacExcelValues(record);
 		case "FAR":
 			return buildFarExcelValues(record);
 		case "SC":
@@ -600,6 +747,8 @@ function getCaseCellMap(caseType) {
 			return SP_FALLBACK_CELL_MAP;
 		case "FA":
 			return FA_FALLBACK_CELL_MAP;
+		case "FAC":
+			return FAC_FALLBACK_CELL_MAP;
 		case "FAR":
 			return FAR_FALLBACK_CELL_MAP;
 		case "SC":

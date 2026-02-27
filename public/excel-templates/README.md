@@ -6,6 +6,7 @@ Current supported template:
 
 - `sp-case-template.xlsx` → used by Single Parent (`SP`) record export.
 - `fa-case-template.xlsx` → used by Financial Assistance (`FA`) record export.
+- `fac-case-template.xlsx` → used by Family Assistance Card (`FAC`) record export.
 - `far-case-template.xlsx` → used by Family Assistance Record (`FAR`) bulk export.
 - `sc-case-template.xlsx` → used by Senior Citizen (`SC`) record export.
 - `ivac-case-template.xlsx` → used by Incidence on VAC (`IVAC`) export.
@@ -154,6 +155,72 @@ To make bulk export work, create **one template row** in `far-case-template.xlsx
 - `{{PRIORITY}}`
 
 The exporter duplicates that row once per record and fills each row with the corresponding values.
+
+## Family Assistance Card template fields (per record export)
+
+FAC export is **per row/record** only.
+
+- Use the row action menu in FAC table
+- Click **Export Excel** for the specific record
+
+Create `fac-case-template.xlsx` and use named ranges or inline placeholders.
+
+### FAC text/date placeholders
+
+- `{{BARANGAY_CAPTAIN}}`
+- `{{CASE_ID}}`
+- `{{CASE_MANAGER}}`
+- `{{CREATED_AT}}`
+- `{{DATE_REGISTERED}}`
+- `{{FAMILY_MEMBER_COUNT}}`
+- `{{FAMILY_MEMBERS_JSON}}`
+- `{{HEAD_4PS_BENEFICIARY}}` (Yes/No)
+- `{{HEAD_AGE}}`
+- `{{HEAD_ALTERNATE_CONTACT_NUMBER}}`
+- `{{HEAD_BIRTHDATE}}`
+- `{{HEAD_BIRTHPLACE}}`
+- `{{HEAD_CIVIL_STATUS}}`
+- `{{HEAD_CONTACT_NUMBER}}`
+- `{{HEAD_FIRST_NAME}}`
+- `{{HEAD_FULL_NAME}}`
+- `{{HEAD_ID_CARD_NUMBER}}`
+- `{{HEAD_ID_CARD_PRESENTED}}`
+- `{{HEAD_IP_ETHNICITY}}` (Yes/No)
+- `{{HEAD_IP_ETHNICITY_TYPE}}`
+- `{{HEAD_LAST_NAME}}`
+- `{{HEAD_MIDDLE_NAME}}`
+- `{{HEAD_MONTHLY_INCOME}}`
+- `{{HEAD_MOTHERS_MAIDEN_NAME}}`
+- `{{HEAD_NAME_EXTENSION}}`
+- `{{HEAD_OCCUPATION}}`
+- `{{HEAD_PERMANENT_ADDRESS}}`
+- `{{HEAD_RELIGION}}`
+- `{{HEAD_SEX}}`
+- `{{HOUSE_OWNERSHIP}}`
+- `{{LOCATION_BARANGAY}}`
+- `{{LOCATION_CITY_MUNICIPALITY}}`
+- `{{LOCATION_DISTRICT}}`
+- `{{LOCATION_EVACUATION_CENTER}}`
+- `{{LOCATION_PROVINCE}}`
+- `{{LOCATION_REGION}}`
+- `{{LSWDO_NAME}}`
+- `{{PRIORITY}}`
+- `{{SHELTER_DAMAGE}}`
+- `{{STATUS}}`
+- `{{UPDATED_AT}}`
+- `{{VISIBILITY}}`
+- `{{VULNERABLE_LACTATING_WOMEN}}`
+- `{{VULNERABLE_OLDER_PERSONS}}`
+- `{{VULNERABLE_PREGNANT_WOMEN}}`
+- `{{VULNERABLE_PWDS}}`
+
+### FAC family member per-row tokens
+
+Family members are available up to 15 rows:
+
+- `{{FAC_FAMILY_1_NAME}}`, `{{FAC_FAMILY_1_RELATION_TO_HEAD}}`, `{{FAC_FAMILY_1_BIRTHDATE}}`, `{{FAC_FAMILY_1_AGE}}`, `{{FAC_FAMILY_1_SEX}}`, `{{FAC_FAMILY_1_EDUCATIONAL_ATTAINMENT}}`, `{{FAC_FAMILY_1_OCCUPATION}}`, `{{FAC_FAMILY_1_REMARKS}}`
+- `{{FAC_FAMILY_2_NAME}}`, `{{FAC_FAMILY_2_RELATION_TO_HEAD}}`, ...
+- ... up to `{{FAC_FAMILY_15_*}}`
 
 ## Senior Citizen template fields (per record export)
 
