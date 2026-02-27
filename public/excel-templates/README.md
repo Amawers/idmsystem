@@ -6,6 +6,7 @@ Current supported template:
 
 - `sp-case-template.xlsx` → used by Single Parent (`SP`) record export.
 - `fa-case-template.xlsx` → used by Financial Assistance (`FA`) record export.
+- `far-case-template.xlsx` → used by Family Assistance Record (`FAR`) bulk export.
 - `ivac-case-template.xlsx` → used by Incidence on VAC (`IVAC`) bulk export.
 
 ## Best setup (recommended)
@@ -129,6 +130,27 @@ To make bulk export work, create **one template row** in `fa-case-template.xlsx`
 - `{{BENIFICIARY_NAME}}`
 - `{{PURPOSE}}`
 - `{{STATUS}}`
+
+The exporter duplicates that row once per record and fills each row with the corresponding values.
+
+### FAR bulk export (one click for all rows)
+
+In the FAR tab, use **EXPORT ALL FAR** to export all currently visible FAR records (after filters/search).
+
+To make bulk export work, create **one template row** in `far-case-template.xlsx` with inline tokens, for example:
+
+- `{{CASE_ID}}`
+- `{{DATE}}`
+- `{{RECEIVING_MEMBER}}`
+- `{{EMERGENCY}}`
+- `{{ASSISTANCE}}`
+- `{{UNIT}}`
+- `{{QUANTITY}}`
+- `{{COST}}`
+- `{{PROVIDER}}`
+- `{{PROVIDER}}`
+- `{{STATUS}}`
+- `{{PRIORITY}}`
 
 The exporter duplicates that row once per record and fills each row with the corresponding values.
 

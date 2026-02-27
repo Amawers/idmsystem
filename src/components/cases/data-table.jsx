@@ -2215,6 +2215,35 @@ export function DataTable({
 		}
 	}
 
+	async function handleExportAllFarRows() {
+		try {
+			const records = Array.isArray(farSortedData) ? farSortedData : [];
+			if (!records.length) {
+				toast.error("Excel export failed", {
+					description:
+						"No Family Assistance Record records to export for the current filters.",
+				});
+				return;
+			}
+
+			const { filledCount } = await exportCaseRecordsToExcel({
+				caseType: "FAR",
+				records,
+			});
+
+			toast.success("FAR Excel exported", {
+				description: `Exported ${records.length} record${records.length === 1 ? "" : "s"} (${filledCount} template replacements).`,
+			});
+		} catch (error) {
+			toast.error("FAR Excel export failed", {
+				description:
+					error instanceof Error
+						? error.message
+						: "Unable to export Family Assistance Record records.",
+			});
+		}
+	}
+
 	// Handle PWD row click for editing
 	function handleEditPwdRow(record) {
 		console.log("Editing PWD record:", record);
@@ -3290,6 +3319,20 @@ export function DataTable({
 										/>
 										<span className="hidden lg:inline">
 											{farSyncing ? "SYNCING..." : "SYNC"}
+										</span>
+									</Button>
+
+									<Button
+										variant="outline"
+										size="sm"
+										onClick={handleExportAllFarRows}
+										className="cursor-pointer"
+									>
+										<span className="hidden lg:inline">
+											EXPORT ALL FAR
+										</span>
+										<span className="lg:hidden">
+											EXPORT
 										</span>
 									</Button>
 

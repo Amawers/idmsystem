@@ -11,6 +11,11 @@ const EXCEL_TEMPLATE_BY_CASE_TYPE = {
 		filenamePrefix: "financial-assistance",
 		worksheetName: "FA",
 	},
+	FAR: {
+		templateUrl: "/excel-templates/far-case-template.xlsx",
+		filenamePrefix: "family-assistance-record",
+		worksheetName: "FAR",
+	},
 	IVAC: {
 		templateUrl: "/excel-templates/ivac-case-template.xlsx",
 		filenamePrefix: "ivac",
@@ -30,6 +35,13 @@ const FA_FALLBACK_CELL_MAP = {
 	// Example:
 	// CLIENT_NAME: "B6",
 	// ADDRESS: "B7",
+};
+
+const FAR_FALLBACK_CELL_MAP = {
+	// Optional fallback if you do not use named ranges in the template.
+	// Example:
+	// RECEIVING_MEMBER: "B6",
+	// ASSISTANCE: "E6",
 };
 
 const IVAC_FALLBACK_CELL_MAP = {
@@ -94,7 +106,9 @@ function buildFamilyCompositionValues(members = [], maxRows = 15) {
 		values[`FAMILY_${rowNumber}_EDUCATIONAL_ATTAINMENT`] = safeString(
 			member.educationalAttainment,
 		);
-		values[`FAMILY_${rowNumber}_OCCUPATION`] = safeString(member.occupation);
+		values[`FAMILY_${rowNumber}_OCCUPATION`] = safeString(
+			member.occupation,
+		);
 	}
 
 	return values;
@@ -111,13 +125,17 @@ function buildSpExcelValues(record = {}) {
 		FULL_NAME: fullName,
 		AGE: safeString(record.age),
 		ADDRESS: safeString(record.address || record.location_address),
-		BIRTH_DATE: formatDateForTemplate(record.birth_date || record.birthDate),
+		BIRTH_DATE: formatDateForTemplate(
+			record.birth_date || record.birthDate,
+		),
 		STATUS: safeString(record.status),
 		EDUCATIONAL_ATTAINMENT: safeString(
 			record.educational_attainment || record.educationalAttainment,
 		),
 		OCCUPATION: safeString(record.occupation),
-		MONTHLY_INCOME: safeString(record.monthly_income || record.monthlyIncome),
+		MONTHLY_INCOME: safeString(
+			record.monthly_income || record.monthlyIncome,
+		),
 		RELIGION: safeString(record.religion),
 		INTERVIEW_DATE: formatDateForTemplate(
 			record.interview_date || record.interviewDate,
@@ -140,7 +158,9 @@ function buildSpExcelValues(record = {}) {
 			record.background_information || record.backgroundInformation,
 		),
 		ASSESSMENT: safeString(record.assessment),
-		CONTACT_NUMBER: safeString(record.contact_number || record.cellphoneNumber),
+		CONTACT_NUMBER: safeString(
+			record.contact_number || record.cellphoneNumber,
+		),
 		EMERGENCY_CONTACT_PERSON: safeString(
 			record.emergency_contact_person || record.emergencyContactPerson,
 		),
@@ -175,14 +195,18 @@ function buildFaExcelValues(record = {}) {
 		BENIFICIARY_NAME: safeString(
 			record.benificiary_name || record.beneficiary_name,
 		),
-		CONTACT_NUMBER: safeString(record.contact_number || record.contactNumber),
+		CONTACT_NUMBER: safeString(
+			record.contact_number || record.contactNumber,
+		),
 		PREPARED_BY: safeString(record.prepared_by || record.preparedBy),
 		STATUS_REPORT: safeString(record.status_report || record.statusReport),
 		CLIENT_CATEGORY: safeString(
 			record.client_category || record.clientCategory,
 		),
 		GENDER: safeString(record.gender),
-		FOUR_PS_MEMBER: safeString(record.four_ps_member || record.fourPsMember),
+		FOUR_PS_MEMBER: safeString(
+			record.four_ps_member || record.fourPsMember,
+		),
 		TRANSACTION: safeString(record.transaction),
 		NOTES: safeString(record.notes),
 	};
@@ -194,6 +218,30 @@ function buildFaBulkRowValues(record = {}) {
 		...base,
 		BENEFICIARY_NAME: base.BENIFICIARY_NAME,
 	};
+}
+
+function buildFarExcelValues(record = {}) {
+	return {
+		CASE_ID: safeString(record.id),
+		DATE: formatDateForTemplate(record.date),
+		RECEIVING_MEMBER: safeString(record.receiving_member),
+		EMERGENCY: safeString(record.emergency),
+		ASSISTANCE: safeString(record.assistance),
+		UNIT: safeString(record.unit),
+		QUANTITY: safeString(record.quantity),
+		COST: safeString(record.cost),
+		PROVIDER: safeString(record.provider),
+		CASE_MANAGER: safeString(record.case_manager || record.caseManager),
+		STATUS: safeString(record.status),
+		PRIORITY: safeString(record.priority),
+		VISIBILITY: safeString(record.visibility),
+		CREATED_AT: formatDateForTemplate(record.created_at),
+		UPDATED_AT: formatDateForTemplate(record.updated_at),
+	};
+}
+
+function buildFarBulkRowValues(record = {}) {
+	return buildFarExcelValues(record);
 }
 
 function toNumber(value) {
@@ -275,7 +323,10 @@ function buildIvacExcelValues(record = {}) {
 		(sum, row) => sum + toNumber(row?.vacVictims),
 		0,
 	);
-	const totalMale = rows.reduce((sum, row) => sum + toNumber(row?.genderMale), 0);
+	const totalMale = rows.reduce(
+		(sum, row) => sum + toNumber(row?.genderMale),
+		0,
+	);
 	const totalFemale = rows.reduce(
 		(sum, row) => sum + toNumber(row?.genderFemale),
 		0,
@@ -316,6 +367,8 @@ function getCaseExcelValues(caseType, record) {
 			return buildSpExcelValues(record);
 		case "FA":
 			return buildFaExcelValues(record);
+		case "FAR":
+			return buildFarExcelValues(record);
 		case "IVAC":
 			return buildIvacExcelValues(record);
 		default:
@@ -329,6 +382,8 @@ function getCaseCellMap(caseType) {
 			return SP_FALLBACK_CELL_MAP;
 		case "FA":
 			return FA_FALLBACK_CELL_MAP;
+		case "FAR":
+			return FAR_FALLBACK_CELL_MAP;
 		case "IVAC":
 			return IVAC_FALLBACK_CELL_MAP;
 		default:
@@ -337,10 +392,7 @@ function getCaseCellMap(caseType) {
 }
 
 function normalizeRangeAddress(rangeAddress) {
-	return safeString(rangeAddress)
-		.replace(/\$/g, "")
-		.split(":")[0]
-		.trim();
+	return safeString(rangeAddress).replace(/\$/g, "").split(":")[0].trim();
 }
 
 function parseDefinedNameReference(reference) {
@@ -408,9 +460,15 @@ function applyNamedRangeValues(workbook, valueMap, preferredWorksheetName) {
 	return filled;
 }
 
-function applyFallbackCellMap(workbook, valueMap, cellMap, preferredWorksheetName) {
+function applyFallbackCellMap(
+	workbook,
+	valueMap,
+	cellMap,
+	preferredWorksheetName,
+) {
 	const worksheet =
-		workbook.getWorksheet(preferredWorksheetName) || workbook.worksheets?.[0];
+		workbook.getWorksheet(preferredWorksheetName) ||
+		workbook.worksheets?.[0];
 	if (!worksheet) return 0;
 
 	let filled = 0;
@@ -550,6 +608,84 @@ function applyFaRepeatingTemplateRows(workbook, records = []) {
 	return 0;
 }
 
+function applyFarRepeatingTemplateRows(workbook, records = []) {
+	const tokenKeys = Object.keys(buildFarBulkRowValues({}));
+	const tokenSet = new Set(tokenKeys.map((key) => `{{${key}}}`));
+
+	for (const worksheet of workbook.worksheets || []) {
+		let templateRowNumber = null;
+		let templateMaxColumn = 0;
+
+		worksheet.eachRow((row) => {
+			if (templateRowNumber !== null) return;
+			const maxColumn = Math.max(row.cellCount, row.actualCellCount, 1);
+			for (let col = 1; col <= maxColumn; col += 1) {
+				const value = row.getCell(col).value;
+				if (typeof value !== "string") continue;
+				for (const token of tokenSet) {
+					if (value.includes(token)) {
+						templateRowNumber = row.number;
+						templateMaxColumn = maxColumn;
+						return;
+					}
+				}
+			}
+		});
+
+		if (templateRowNumber === null) continue;
+
+		const templateRow = worksheet.getRow(templateRowNumber);
+		const templateCells = [];
+		for (let col = 1; col <= templateMaxColumn; col += 1) {
+			const cell = templateRow.getCell(col);
+			templateCells.push({
+				value: cell.value,
+				style: cell.style,
+			});
+		}
+
+		if (!records.length) {
+			for (let col = 1; col <= templateMaxColumn; col += 1) {
+				const targetCell = templateRow.getCell(col);
+				targetCell.value = "";
+			}
+			return 1;
+		}
+
+		let replacedCount = 0;
+		for (let index = 0; index < records.length; index += 1) {
+			const targetRowNumber = templateRowNumber + index;
+			if (index > 0) {
+				worksheet.insertRow(targetRowNumber, []);
+			}
+
+			const targetRow = worksheet.getRow(targetRowNumber);
+			const rowValues = buildFarBulkRowValues(records[index]);
+
+			for (let col = 1; col <= templateMaxColumn; col += 1) {
+				const templateCell = templateCells[col - 1];
+				const targetCell = targetRow.getCell(col);
+				cloneCellStyle(targetCell, templateCell.style);
+
+				if (typeof templateCell.value === "string") {
+					const { text, replaced } = replaceInlineTokens(
+						templateCell.value,
+						rowValues,
+					);
+					targetCell.value = text;
+					replacedCount += replaced;
+				} else {
+					targetCell.value = templateCell.value;
+				}
+			}
+		}
+
+		return replacedCount;
+	}
+
+	return 0;
+}
+
 function applyIvacRepeatingTemplateRows(workbook, records = []) {
 	const tokenKeys = Object.keys(buildIvacBulkRowValues({}));
 	const tokenSet = new Set(tokenKeys.map((key) => `{{${key}}}`));
@@ -644,10 +780,14 @@ function getOutputFilename(caseType, record) {
 export async function exportCaseRecordToExcel({ caseType, record }) {
 	const templateConfig = EXCEL_TEMPLATE_BY_CASE_TYPE[caseType];
 	if (!templateConfig) {
-		throw new Error(`No Excel template configured for case type: ${caseType}`);
+		throw new Error(
+			`No Excel template configured for case type: ${caseType}`,
+		);
 	}
 
-	const response = await fetch(templateConfig.templateUrl, { cache: "no-store" });
+	const response = await fetch(templateConfig.templateUrl, {
+		cache: "no-store",
+	});
 	if (!response.ok) {
 		throw new Error(
 			`Template not found (${templateConfig.templateUrl}). Add your template under public/excel-templates.`,
@@ -687,13 +827,17 @@ export async function exportCaseRecordToExcel({ caseType, record }) {
 export async function exportCaseRecordsToExcel({ caseType, records = [] }) {
 	const templateConfig = EXCEL_TEMPLATE_BY_CASE_TYPE[caseType];
 	if (!templateConfig) {
-		throw new Error(`No Excel template configured for case type: ${caseType}`);
+		throw new Error(
+			`No Excel template configured for case type: ${caseType}`,
+		);
 	}
 	if (!Array.isArray(records) || records.length === 0) {
 		throw new Error("No records to export.");
 	}
 
-	const response = await fetch(templateConfig.templateUrl, { cache: "no-store" });
+	const response = await fetch(templateConfig.templateUrl, {
+		cache: "no-store",
+	});
 	if (!response.ok) {
 		throw new Error(
 			`Template not found (${templateConfig.templateUrl}). Add your template under public/excel-templates.`,
@@ -707,6 +851,8 @@ export async function exportCaseRecordsToExcel({ caseType, records = [] }) {
 	let filledCount = 0;
 	if (caseType === "FA") {
 		filledCount = applyFaRepeatingTemplateRows(workbook, records);
+	} else if (caseType === "FAR") {
+		filledCount = applyFarRepeatingTemplateRows(workbook, records);
 	} else if (caseType === "IVAC") {
 		filledCount = applyIvacRepeatingTemplateRows(workbook, records);
 	}
