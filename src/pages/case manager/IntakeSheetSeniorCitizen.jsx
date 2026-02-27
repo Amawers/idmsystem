@@ -32,6 +32,7 @@ import { createOrUpdateLocalScCase } from "@/services/scOfflineService";
  * @property {boolean} open
  * @property {(open: boolean) => void} setOpen
  * @property {() => void} [onSuccess]
+ * @property {Record<string, any> | null} [editingRecord]
  */
 
 /**
@@ -169,6 +170,154 @@ const initialFormState = {
 	place_of_interview: "",
 };
 
+const ARRAY_FIELDS = new Set([
+	"educational_attainment",
+	"technical_skills",
+	"community_service_involvement",
+	"living_with",
+	"household_condition",
+	"source_of_income_assistance",
+	"assets_real_immovable",
+	"assets_personal_movable",
+	"needs_commonly_encountered",
+	"medical_concern",
+	"dental_concern",
+	"optical",
+	"hearing",
+	"social",
+	"difficulty",
+	"medicines_for_maintenance",
+]);
+
+const DATE_FIELDS = new Set(["date_of_birth", "date_of_interview"]);
+
+function toDateInputValue(value) {
+	if (!value) return "";
+	const str = String(value);
+	if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+	const date = new Date(str);
+	if (Number.isNaN(date.getTime())) return "";
+	return date.toISOString().slice(0, 10);
+}
+
+function toStringArray(value) {
+	if (Array.isArray(value)) {
+		return value
+			.map((item) => {
+				if (item && typeof item === "object") {
+					return String(item.name || item.full_name || "").trim();
+				}
+				return String(item ?? "").trim();
+			})
+			.filter(Boolean);
+	}
+	if (typeof value === "string") {
+		const trimmed = value.trim();
+		if (!trimmed) return [];
+		if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+			try {
+				const parsed = JSON.parse(trimmed);
+				if (Array.isArray(parsed)) {
+					return parsed
+						.map((item) => {
+							if (item && typeof item === "object") {
+								return String(
+									item.name || item.full_name || "",
+								).trim();
+							}
+							return String(item ?? "").trim();
+						})
+						.filter(Boolean);
+				}
+			} catch {
+				// fallback below
+			}
+		}
+		return trimmed
+			.split(",")
+			.map((item) => item.trim())
+			.filter(Boolean);
+	}
+	return [];
+}
+
+function toChildrenArray(value) {
+	if (Array.isArray(value)) {
+		const normalized = value.map((child) => ({
+			full_name: String(
+				child?.full_name || child?.name || child?.child_name || "",
+			),
+			occupation: String(child?.occupation || ""),
+			income: String(child?.income || ""),
+			age: String(child?.age || ""),
+			working_status: String(
+				child?.working_status || child?.workingStatus || "",
+			),
+		}));
+		return normalized.length
+			? normalized
+			: [
+					{
+						full_name: "",
+						occupation: "",
+						income: "",
+						age: "",
+						working_status: "",
+					},
+				];
+	}
+
+	if (typeof value === "string") {
+		const parsed = toStringArray(value);
+		if (parsed.length) {
+			return parsed.map((name) => ({
+				full_name: name,
+				occupation: "",
+				income: "",
+				age: "",
+				working_status: "",
+			}));
+		}
+	}
+
+	return [
+		{
+			full_name: "",
+			occupation: "",
+			income: "",
+			age: "",
+			working_status: "",
+		},
+	];
+}
+
+function mapRecordToScFormState(record) {
+	if (!record) return initialFormState;
+
+	const next = { ...initialFormState };
+
+	for (const key of Object.keys(initialFormState)) {
+		if (key === "children") {
+			next.children = toChildrenArray(record.children);
+			continue;
+		}
+
+		if (ARRAY_FIELDS.has(key)) {
+			next[key] = toStringArray(record[key]);
+			continue;
+		}
+
+		if (DATE_FIELDS.has(key)) {
+			next[key] = toDateInputValue(record[key]);
+			continue;
+		}
+
+		next[key] = record[key] == null ? "" : String(record[key]);
+	}
+
+	return next;
+}
+
 /**
  * Create a stable DOM id for checkbox labels/inputs.
  * @param {string} prefix
@@ -187,11 +336,17 @@ function toKebabId(prefix, value) {
  * @param {IntakeSheetSeniorCitizenProps} props
  * @returns {JSX.Element}
  */
-export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
+export default function IntakeSheetSeniorCitizen({
+	open,
+	setOpen,
+	onSuccess,
+	editingRecord = null,
+}) {
 	/** @type {[ScIntakeFormState, import("react").Dispatch<import("react").SetStateAction<ScIntakeFormState>>]} */
 	const [formState, setFormState] = useState(initialFormState);
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [activeTab, setActiveTab] = useState("identifying");
+	const isEditMode = Boolean(editingRecord);
 
 	/**
 	 * Read the browser's online state.
@@ -219,8 +374,15 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 			setFormState(initialFormState);
 			setIsSubmitting(false);
 			setActiveTab("identifying");
+			return;
 		}
-	}, [open]);
+
+		if (isEditMode && editingRecord) {
+			setFormState(mapRecordToScFormState(editingRecord));
+		} else {
+			setFormState(initialFormState);
+		}
+	}, [open, isEditMode, editingRecord]);
 
 	/**
 	 * Create a controlled-input `onChange` handler.
@@ -567,15 +729,22 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 			const casePayload = buildSCCasePayload(formState);
 			await createOrUpdateLocalScCase({
 				casePayload,
-				mode: "create",
+				targetId: isEditMode ? (editingRecord?.id ?? null) : null,
+				localId: isEditMode ? (editingRecord?.localId ?? null) : null,
+				mode: isEditMode ? "update" : "create",
 			});
 
 			const online = isBrowserOnline();
-			toast.success("Senior Citizen case queued", {
+			toast.success(
+				isEditMode
+					? "Senior Citizen case update queued"
+					: "Senior Citizen case queued",
+				{
 				description: online
 					? "Sync queued and will push shortly."
 					: "Stored locally. Sync once you're online.",
-			});
+				},
+			);
 			setOpen(false);
 			onSuccess?.();
 
@@ -618,7 +787,11 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 		<Dialog open={open} onOpenChange={setOpen}>
 			<DialogContent className="min-w-6xl max-h-[85vh] overflow-y-auto">
 				<DialogHeader>
-					<DialogTitle>Senior Citizen Intake</DialogTitle>
+					<DialogTitle>
+						{isEditMode
+							? "Edit Senior Citizen Case"
+							: "Senior Citizen Intake"}
+					</DialogTitle>
 				</DialogHeader>
 
 				<div className="space-y-4">
@@ -1876,7 +2049,11 @@ export default function IntakeSheetSeniorCitizen({ open, setOpen, onSuccess }) {
 								onClick={handleSubmit}
 								disabled={isSubmitting}
 							>
-								{isSubmitting ? "Saving..." : "Save"}
+								{isSubmitting
+									? "Saving..."
+									: isEditMode
+										? "Update"
+										: "Save"}
 							</Button>
 						) : (
 							<Button type="button" onClick={handleNext}>

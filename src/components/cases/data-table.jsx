@@ -1476,6 +1476,7 @@ const pwdColumns = (
 //* SENIOR CITIZEN Table COLUMN DEFINITIONS
 // =================================
 const scColumns = (
+	handleEditClick,
 	handleExportClick,
 	handleDeleteClick,
 	handleDocumentsClick,
@@ -1548,6 +1549,16 @@ const scColumns = (
 					</Button>
 				</DropdownMenuTrigger>
 				<DropdownMenuContent align="end" className="w-40">
+					<PermissionGuard permission="edit_case">
+						<DropdownMenuItem
+							onClick={(e) => {
+								e.stopPropagation();
+								handleEditClick(row.original, "SC");
+							}}
+						>
+							Edit
+						</DropdownMenuItem>
+					</PermissionGuard>
 					<PermissionGuard permission="view_documents">
 						<DropdownMenuItem
 							onClick={(e) => {
@@ -1957,6 +1968,9 @@ export function DataTable({
 	// Persons with Disabilities edit state
 	const [editingPwdRecord, setEditingPwdRecord] = useState(null);
 
+	// Senior Citizen edit state
+	const [editingScRecord, setEditingScRecord] = useState(null);
+
 	// Tracks which tab is currently active
 	const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -2261,6 +2275,13 @@ export function DataTable({
 		console.log("Editing PWD record:", record);
 		setEditingPwdRecord(record);
 		setOpenPwdIntakeSheet(true);
+	}
+
+	// Handle SC row click for editing
+	function handleEditScRow(record) {
+		console.log("Editing SC record:", record);
+		setEditingScRecord(record);
+		setOpenScIntakeSheet(true);
 	}
 
 	// Handle delete click - opens confirmation dialog
@@ -2758,10 +2779,12 @@ export function DataTable({
 	const scTable = useDataTable({
 		initialData: scSortedData,
 		columns: scColumns(
+			handleEditScRow,
 			handleExportCaseRow,
 			handleDeleteClick,
 			handleDocumentsClick,
 		),
+		onRowClick: handleEditScRow,
 	});
 
 	React.useEffect(() => {
@@ -4575,9 +4598,10 @@ export function DataTable({
 										<Button
 											variant="outline"
 											size="sm"
-											onClick={() =>
-												setOpenScIntakeSheet(true)
-											}
+											onClick={() => {
+												setEditingScRecord(null);
+												setOpenScIntakeSheet(true);
+											}}
 											className="cursor-pointer"
 										>
 											<IconPlus />
@@ -4590,7 +4614,13 @@ export function DataTable({
 									{/* Senior Citizen Create Modal */}
 									<IntakeSheetSeniorCitizen
 										open={openScIntakeSheet}
-										setOpen={setOpenScIntakeSheet}
+										setOpen={(nextOpen) => {
+											setOpenScIntakeSheet(nextOpen);
+											if (!nextOpen) {
+												setEditingScRecord(null);
+											}
+										}}
+										editingRecord={editingScRecord}
 										onSuccess={reloadSc}
 									/>
 
@@ -5108,10 +5138,12 @@ export function DataTable({
 						table={scTable.table}
 						setData={scTable.setData}
 						columns={scColumns(
+							handleEditScRow,
 							handleExportCaseRow,
 							handleDeleteClick,
 							handleDocumentsClick,
 						)}
+						onRowClick={handleEditScRow}
 					/>
 					<PaginationControls table={scTable.table} />
 				</TabsContent>
