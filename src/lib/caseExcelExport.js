@@ -1,6 +1,11 @@
 import ExcelJS from "exceljs";
 
 const EXCEL_TEMPLATE_BY_CASE_TYPE = {
+	CASE: {
+		templateUrl: "/excel-templates/case-template.xlsx",
+		filenamePrefix: "case",
+		worksheetName: "CASE",
+	},
 	SP: {
 		templateUrl: "/excel-templates/sp-case-template.xlsx",
 		filenamePrefix: "single-parent",
@@ -10,6 +15,11 @@ const EXCEL_TEMPLATE_BY_CASE_TYPE = {
 		templateUrl: "/excel-templates/fa-case-template.xlsx",
 		filenamePrefix: "financial-assistance",
 		worksheetName: "FA",
+	},
+	PWD: {
+		templateUrl: "/excel-templates/pwd-case-template.xlsx",
+		filenamePrefix: "pwd",
+		worksheetName: "PWD",
 	},
 	CICLCAR: {
 		templateUrl: "/excel-templates/ciclcar-case-template.xlsx",
@@ -45,11 +55,25 @@ const SP_FALLBACK_CELL_MAP = {
 	// AGE: "B6",
 };
 
+const CASE_FALLBACK_CELL_MAP = {
+	// Optional fallback if you do not use named ranges in the template.
+	// Example:
+	// CASE_ID: "B6",
+	// IDENTIFYING_NAME: "B7",
+};
+
 const FA_FALLBACK_CELL_MAP = {
 	// Optional fallback if you do not use named ranges in the template.
 	// Example:
 	// CLIENT_NAME: "B6",
 	// ADDRESS: "B7",
+};
+
+const PWD_FALLBACK_CELL_MAP = {
+	// Optional fallback if you do not use named ranges in the template.
+	// Example:
+	// FULL_NAME: "B6",
+	// DISABILITY_TYPE: "B7",
 };
 
 const CICLCAR_FALLBACK_CELL_MAP = {
@@ -116,6 +140,16 @@ function parseNameParts(fullNameValue = "") {
 		return { firstName: "", middleName: "", lastName: "" };
 	}
 
+	if (cleaned.includes(",")) {
+		const [lastRaw, restRaw] = cleaned.split(/,(.+)/);
+		const lastName = safeString(lastRaw).trim();
+		const restTokens = safeString(restRaw).split(" ").filter(Boolean);
+		const firstName = restTokens.shift() || "";
+		const middleName = restTokens.join(" ");
+
+		return { firstName, middleName, lastName };
+	}
+
 	const tokens = cleaned.split(" ").filter(Boolean);
 	if (tokens.length === 1) {
 		return { firstName: tokens[0], middleName: "", lastName: "" };
@@ -166,6 +200,154 @@ function buildFamilyCompositionValues(members = [], maxRows = 15) {
 	}
 
 	return values;
+}
+
+function normalizeCaseFamilyMembers(rawMembers) {
+	if (Array.isArray(rawMembers)) return rawMembers;
+	if (typeof rawMembers === "string") {
+		try {
+			const parsed = JSON.parse(rawMembers);
+			return Array.isArray(parsed) ? parsed : [];
+		} catch {
+			return [];
+		}
+	}
+	return [];
+}
+
+function buildCaseFamilyCompositionValues(members = [], maxRows = 15) {
+	const values = {};
+
+	for (let index = 0; index < maxRows; index += 1) {
+		const member = members[index] || {};
+		const rowNumber = index + 1;
+
+		values[`CASE_FAMILY_${rowNumber}_NAME`] = safeString(member.name);
+		values[`CASE_FAMILY_${rowNumber}_AGE`] = safeString(member.age);
+		values[`CASE_FAMILY_${rowNumber}_RELATION`] = safeString(
+			member.relation,
+		);
+		values[`CASE_FAMILY_${rowNumber}_STATUS`] = safeString(member.status);
+		values[`CASE_FAMILY_${rowNumber}_EDUCATION`] = safeString(
+			member.education,
+		);
+		values[`CASE_FAMILY_${rowNumber}_OCCUPATION`] = safeString(
+			member.occupation,
+		);
+		values[`CASE_FAMILY_${rowNumber}_INCOME`] = safeString(member.income);
+		values[`CASE_FAMILY_${rowNumber}_GROUP_NO`] = safeString(
+			member.group_no,
+		);
+	}
+
+	return values;
+}
+
+function buildCaseExcelValues(record = {}) {
+	const familyMembers = normalizeCaseFamilyMembers(record.family_members);
+
+	return {
+		CASE_ID: safeString(record.id || record["case ID"]),
+		CASE_MANAGER: safeString(record.case_manager || record["case manager"]),
+		STATUS: safeString(record.status),
+		PRIORITY: safeString(record.priority),
+		HEADER: safeString(record.header),
+		DATE_FILED: formatDateForTemplate(record.date_filed),
+		LAST_UPDATED: formatDateForTemplate(record.last_updated),
+		CREATED_AT: formatDateForTemplate(record.created_at),
+		UPDATED_AT: formatDateForTemplate(record.updated_at),
+		IDENTIFYING_INTAKE_DATE: formatDateForTemplate(
+			record.identifying_intake_date,
+		),
+		IDENTIFYING_NAME: safeString(record.identifying_name || record.header),
+		IDENTIFYING_REFERRAL_SOURCE: safeString(
+			record.identifying_referral_source,
+		),
+		IDENTIFYING_ALIAS: safeString(record.identifying_alias),
+		IDENTIFYING_AGE: safeString(record.identifying_age),
+		IDENTIFYING_STATUS: safeString(record.identifying_status),
+		IDENTIFYING_OCCUPATION: safeString(record.identifying_occupation),
+		IDENTIFYING_INCOME: safeString(record.identifying_income),
+		IDENTIFYING_SEX: safeString(record.identifying_sex),
+		IDENTIFYING_ADDRESS: safeString(record.identifying_address),
+		IDENTIFYING_CASE_TYPE: safeString(record.identifying_case_type),
+		IDENTIFYING_RELIGION: safeString(record.identifying_religion),
+		IDENTIFYING_EDUCATIONAL_ATTAINMENT: safeString(
+			record.identifying_educational_attainment,
+		),
+		IDENTIFYING_CONTACT_PERSON: safeString(
+			record.identifying_contact_person,
+		),
+		IDENTIFYING_BIRTH_PLACE: safeString(record.identifying_birth_place),
+		IDENTIFYING_RESPONDENT_NAME: safeString(
+			record.identifying_respondent_name,
+		),
+		IDENTIFYING_BIRTHDAY: formatDateForTemplate(record.identifying_birthday),
+		PERPETRATOR_NAME: safeString(record.perpetrator_name),
+		PERPETRATOR_AGE: safeString(record.perpetrator_age),
+		PERPETRATOR_ALIAS: safeString(record.perpetrator_alias),
+		PERPETRATOR_SEX: safeString(record.perpetrator_sex),
+		PERPETRATOR_ADDRESS: safeString(record.perpetrator_address),
+		PERPETRATOR_VICTIM_RELATION: safeString(
+			record.perpetrator_victim_relation,
+		),
+		PERPETRATOR_OFFENCE_TYPE: safeString(record.perpetrator_offence_type),
+		PERPETRATOR_COMMISSION_DATETIME: formatDateForTemplate(
+			record.perpetrator_commission_datetime,
+		),
+		PRESENTING_PROBLEM: safeString(record.presenting_problem),
+		BACKGROUND_INFO: safeString(record.background_info),
+		COMMUNITY_INFO: safeString(record.community_info),
+		ASSESSMENT: safeString(record.assessment),
+		RECOMMENDATION: safeString(record.recommendation),
+		IDENTIFYING2_INTAKE_DATE: formatDateForTemplate(
+			record.identifying2_intake_date,
+		),
+		IDENTIFYING2_NAME: safeString(record.identifying2_name),
+		IDENTIFYING2_REFERRAL_SOURCE: safeString(
+			record.identifying2_referral_source,
+		),
+		IDENTIFYING2_ALIAS: safeString(record.identifying2_alias),
+		IDENTIFYING2_AGE: safeString(record.identifying2_age),
+		IDENTIFYING2_STATUS: safeString(record.identifying2_status),
+		IDENTIFYING2_OCCUPATION: safeString(record.identifying2_occupation),
+		IDENTIFYING2_INCOME: safeString(record.identifying2_income),
+		IDENTIFYING2_SEX: safeString(record.identifying2_sex),
+		IDENTIFYING2_ADDRESS: safeString(record.identifying2_address),
+		IDENTIFYING2_CASE_TYPE: safeString(record.identifying2_case_type),
+		IDENTIFYING2_RELIGION: safeString(record.identifying2_religion),
+		IDENTIFYING2_EDUCATIONAL_ATTAINMENT: safeString(
+			record.identifying2_educational_attainment,
+		),
+		IDENTIFYING2_CONTACT_PERSON: safeString(
+			record.identifying2_contact_person,
+		),
+		IDENTIFYING2_BIRTH_PLACE: safeString(record.identifying2_birth_place),
+		IDENTIFYING2_RESPONDENT_NAME: safeString(
+			record.identifying2_respondent_name,
+		),
+		IDENTIFYING2_BIRTHDAY: formatDateForTemplate(
+			record.identifying2_birthday,
+		),
+		VICTIM2_NAME: safeString(record.victim2_name),
+		VICTIM2_AGE: safeString(record.victim2_age),
+		VICTIM2_ALIAS: safeString(record.victim2_alias),
+		VICTIM2_SEX: safeString(record.victim2_sex),
+		VICTIM2_ADDRESS: safeString(record.victim2_address),
+		VICTIM2_VICTIM_RELATION: safeString(record.victim2_victim_relation),
+		VICTIM2_OFFENCE_TYPE: safeString(record.victim2_offence_type),
+		VICTIM2_COMMISSION_DATETIME: formatDateForTemplate(
+			record.victim2_commission_datetime,
+		),
+		PRESENTING_PROBLEM2: safeString(record.presenting_problem2),
+		BACKGROUND_INFO2: safeString(record.background_info2),
+		COMMUNITY_INFO2: safeString(record.community_info2),
+		ASSESSMENT2: safeString(record.assessment2),
+		RECOMMENDATION2: safeString(record.recommendation2),
+		FAMILY_MEMBER_COUNT: safeString(familyMembers.length),
+		FAMILY_MEMBERS_JSON: safeString(familyMembers),
+		...buildCaseFamilyCompositionValues(familyMembers, 15),
+	};
 }
 
 function buildSpExcelValues(record = {}) {
@@ -271,6 +453,90 @@ function buildFaBulkRowValues(record = {}) {
 	return {
 		...base,
 		BENEFICIARY_NAME: base.BENIFICIARY_NAME,
+	};
+}
+
+function joinListText(value) {
+	return normalizeStringArray(value)
+		.map((entry) => safeString(entry))
+		.filter(Boolean)
+		.join(", ");
+}
+
+function buildPwdExcelValues(record = {}) {
+	const firstName = safeString(record.first_name || record.firstName);
+	const middleName = safeString(record.middle_name || record.middleName);
+	const lastName = safeString(record.last_name || record.lastName);
+	const suffix = safeString(record.suffix);
+	const fatherNameParts = parseNameParts(record.fathers_name);
+	const motherNameParts = parseNameParts(record.mothers_name);
+	const fullName = `${firstName} ${middleName} ${lastName} ${suffix}`
+		.replace(/\s+/g, " ")
+		.trim();
+
+	return {
+		CASE_ID: safeString(record.id),
+		CASE_MANAGER: safeString(record.case_manager || record.caseManager),
+		STATUS: safeString(record.status),
+		PRIORITY: safeString(record.priority),
+		VISIBILITY: safeString(record.visibility),
+		APPLICATION_TYPE: safeString(record.application_type),
+		PWD_NUMBER: safeString(record.pwd_number),
+		DATE_APPLIED: formatDateForTemplate(record.date_applied),
+		LAST_NAME: lastName,
+		FIRST_NAME: firstName,
+		MIDDLE_NAME: middleName,
+		SUFFIX: suffix,
+		FULL_NAME:
+			fullName ||
+			safeString(record.full_name || record.person_name || record.client_name),
+		DATE_OF_BIRTH: formatDateForTemplate(record.date_of_birth),
+		SEX: safeString(record.sex),
+		CIVIL_STATUS: safeString(record.civil_status),
+		TYPE_OF_DISABILITY: joinListText(
+			record.type_of_disability || record.disability_type,
+		),
+		CAUSE_OF_DISABILITY: joinListText(record.cause_of_disability),
+		HOUSE_NO_STREET: safeString(record.house_no_street),
+		BARANGAY: safeString(record.barangay),
+		MUNICIPALITY: safeString(record.municipality),
+		PROVINCE: safeString(record.province),
+		REGION: safeString(record.region),
+		LANDLINE_NUMBER: safeString(record.landline_number),
+		MOBILE_NO: safeString(record.mobile_no),
+		EMAIL_ADDRESS: safeString(record.email_address),
+		EDUCATIONAL_ATTAINMENT: safeString(record.educational_attainment),
+		EMPLOYMENT_STATUS: safeString(record.employment_status),
+		EMPLOYMENT_CATEGORY: safeString(record.employment_category),
+		TYPE_OF_EMPLOYMENT: safeString(record.type_of_employment),
+		OCCUPATION: safeString(record.occupation),
+		ORGANIZATION_AFFILIATED: safeString(record.organization_affiliated),
+		CONTACT_PERSON: safeString(record.contact_person),
+		OFFICE_ADDRESS: safeString(record.office_address),
+		TEL_NO: safeString(record.tel_no),
+		SSS: safeString(record.sss),
+		GSIS: safeString(record.gsis),
+		PAG_IBIG: safeString(record.pag_ibig),
+		PSN: safeString(record.psn),
+		PHILHEALTH: safeString(record.philhealth),
+		FATHERS_NAME: safeString(record.fathers_name),
+		MOTHERS_NAME: safeString(record.mothers_name),
+		ACCOMPLISHED_BY: safeString(record.accomplished_by),
+		CERTIFYING_PHYSICIAN: safeString(record.certifying_physician),
+		LICENSE_NO: safeString(record.license_no),
+		PROCESSING_OFFICER: safeString(record.processing_officer),
+		APPROVING_OFFICER: safeString(record.approving_officer),
+		ENCODER: safeString(record.encoder),
+		FATHER_FIRST_NAME: fatherNameParts.firstName,
+		FATHER_LAST_NAME: fatherNameParts.lastName,
+		FATHER_MIDDLE_NAME: fatherNameParts.middleName,
+		REPORTING_UNIT: safeString(record.reporting_unit),
+		CONTROL_NO: safeString(record.control_no),
+		CREATED_AT: formatDateForTemplate(record.created_at),
+		MOTHER_FIRST_NAME: motherNameParts.firstName,
+		MOTHER_LAST_NAME: motherNameParts.lastName,
+		MOTHER_MIDDLE_NAME: motherNameParts.middleName,
+		UPDATED_AT: formatDateForTemplate(record.updated_at),
 	};
 }
 
@@ -891,10 +1157,14 @@ function buildIvacBulkRowValues(record = {}) {
 
 function getCaseExcelValues(caseType, record) {
 	switch (caseType) {
+		case "CASE":
+			return buildCaseExcelValues(record);
 		case "SP":
 			return buildSpExcelValues(record);
 		case "FA":
 			return buildFaExcelValues(record);
+		case "PWD":
+			return buildPwdExcelValues(record);
 		case "CICLCAR":
 			return buildCiclcarExcelValues(record);
 		case "FAC":
@@ -912,10 +1182,14 @@ function getCaseExcelValues(caseType, record) {
 
 function getCaseCellMap(caseType) {
 	switch (caseType) {
+		case "CASE":
+			return CASE_FALLBACK_CELL_MAP;
 		case "SP":
 			return SP_FALLBACK_CELL_MAP;
 		case "FA":
 			return FA_FALLBACK_CELL_MAP;
+		case "PWD":
+			return PWD_FALLBACK_CELL_MAP;
 		case "CICLCAR":
 			return CICLCAR_FALLBACK_CELL_MAP;
 		case "FAC":

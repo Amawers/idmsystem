@@ -4,11 +4,13 @@ Place case export Excel templates in this folder.
 
 Current supported template:
 
+- `case-template.xlsx` → used by CASE (`CASE`) record export.
 - `sp-case-template.xlsx` → used by Single Parent (`SP`) record export.
 - `fa-case-template.xlsx` → used by Financial Assistance (`FA`) record export.
 - `ciclcar-case-template.xlsx` → used by CICL/CAR (`CICLCAR`) record export.
 - `fac-case-template.xlsx` → used by Family Assistance Card (`FAC`) record export.
 - `far-case-template.xlsx` → used by Family Assistance Record (`FAR`) bulk export.
+- `pwd-case-template.xlsx` → used by Persons with Disabilities (`PWD`) record export.
 - `sc-case-template.xlsx` → used by Senior Citizen (`SC`) record export.
 - `ivac-case-template.xlsx` → used by Incidence on VAC (`IVAC`) export.
 
@@ -157,6 +159,97 @@ To make bulk export work, create **one template row** in `far-case-template.xlsx
 
 The exporter duplicates that row once per record and fills each row with the corresponding values.
 
+## CASE template fields (per record export)
+
+CASE export is **per row/record** only.
+
+- Use the row action menu in CASE table
+- Click **Export Excel** for the specific record
+
+Create `case-template.xlsx` and use named ranges or inline placeholders.
+
+### CASE placeholders
+
+- `{{CASE_ID}}`
+- `{{CASE_MANAGER}}`
+- `{{STATUS}}`
+- `{{PRIORITY}}`
+- `{{HEADER}}`
+- `{{DATE_FILED}}`
+- `{{LAST_UPDATED}}`
+- `{{CREATED_AT}}`
+- `{{UPDATED_AT}}`
+- `{{IDENTIFYING_INTAKE_DATE}}`
+- `{{IDENTIFYING_NAME}}`
+- `{{IDENTIFYING_REFERRAL_SOURCE}}`
+- `{{IDENTIFYING_ALIAS}}`
+- `{{IDENTIFYING_AGE}}`
+- `{{IDENTIFYING_STATUS}}`
+- `{{IDENTIFYING_OCCUPATION}}`
+- `{{IDENTIFYING_INCOME}}`
+- `{{IDENTIFYING_SEX}}`
+- `{{IDENTIFYING_ADDRESS}}`
+- `{{IDENTIFYING_CASE_TYPE}}`
+- `{{IDENTIFYING_RELIGION}}`
+- `{{IDENTIFYING_EDUCATIONAL_ATTAINMENT}}`
+- `{{IDENTIFYING_CONTACT_PERSON}}`
+- `{{IDENTIFYING_BIRTH_PLACE}}`
+- `{{IDENTIFYING_RESPONDENT_NAME}}`
+- `{{IDENTIFYING_BIRTHDAY}}`
+- `{{PERPETRATOR_NAME}}`
+- `{{PERPETRATOR_AGE}}`
+- `{{PERPETRATOR_ALIAS}}`
+- `{{PERPETRATOR_SEX}}`
+- `{{PERPETRATOR_ADDRESS}}`
+- `{{PERPETRATOR_VICTIM_RELATION}}`
+- `{{PERPETRATOR_OFFENCE_TYPE}}`
+- `{{PERPETRATOR_COMMISSION_DATETIME}}`
+- `{{PRESENTING_PROBLEM}}`
+- `{{BACKGROUND_INFO}}`
+- `{{COMMUNITY_INFO}}`
+- `{{ASSESSMENT}}`
+- `{{RECOMMENDATION}}`
+- `{{IDENTIFYING2_INTAKE_DATE}}`
+- `{{IDENTIFYING2_NAME}}`
+- `{{IDENTIFYING2_REFERRAL_SOURCE}}`
+- `{{IDENTIFYING2_ALIAS}}`
+- `{{IDENTIFYING2_AGE}}`
+- `{{IDENTIFYING2_STATUS}}`
+- `{{IDENTIFYING2_OCCUPATION}}`
+- `{{IDENTIFYING2_INCOME}}`
+- `{{IDENTIFYING2_SEX}}`
+- `{{IDENTIFYING2_ADDRESS}}`
+- `{{IDENTIFYING2_CASE_TYPE}}`
+- `{{IDENTIFYING2_RELIGION}}`
+- `{{IDENTIFYING2_EDUCATIONAL_ATTAINMENT}}`
+- `{{IDENTIFYING2_CONTACT_PERSON}}`
+- `{{IDENTIFYING2_BIRTH_PLACE}}`
+- `{{IDENTIFYING2_RESPONDENT_NAME}}`
+- `{{IDENTIFYING2_BIRTHDAY}}`
+- `{{VICTIM2_NAME}}`
+- `{{VICTIM2_AGE}}`
+- `{{VICTIM2_ALIAS}}`
+- `{{VICTIM2_SEX}}`
+- `{{VICTIM2_ADDRESS}}`
+- `{{VICTIM2_VICTIM_RELATION}}`
+- `{{VICTIM2_OFFENCE_TYPE}}`
+- `{{VICTIM2_COMMISSION_DATETIME}}`
+- `{{PRESENTING_PROBLEM2}}`
+- `{{BACKGROUND_INFO2}}`
+- `{{COMMUNITY_INFO2}}`
+- `{{ASSESSMENT2}}`
+- `{{RECOMMENDATION2}}`
+- `{{FAMILY_MEMBER_COUNT}}`
+- `{{FAMILY_MEMBERS_JSON}}`
+
+### CASE family member per-row tokens
+
+Family members are available up to 15 rows:
+
+- `{{CASE_FAMILY_1_NAME}}`, `{{CASE_FAMILY_1_AGE}}`, `{{CASE_FAMILY_1_RELATION}}`, `{{CASE_FAMILY_1_STATUS}}`, `{{CASE_FAMILY_1_EDUCATION}}`, `{{CASE_FAMILY_1_OCCUPATION}}`, `{{CASE_FAMILY_1_INCOME}}`, `{{CASE_FAMILY_1_GROUP_NO}}`
+- `{{CASE_FAMILY_2_NAME}}`, `{{CASE_FAMILY_2_AGE}}`, ...
+- ... up to `{{CASE_FAMILY_15_*}}`
+
 ## CICL/CAR template fields (per record export)
 
 CICL/CAR export is **per row/record** only.
@@ -295,6 +388,98 @@ Family members are available up to 15 rows:
 - `{{FAC_FAMILY_1_NAME}}`, `{{FAC_FAMILY_1_RELATION_TO_HEAD}}`, `{{FAC_FAMILY_1_BIRTHDATE}}`, `{{FAC_FAMILY_1_AGE}}`, `{{FAC_FAMILY_1_SEX}}`, `{{FAC_FAMILY_1_EDUCATIONAL_ATTAINMENT}}`, `{{FAC_FAMILY_1_OCCUPATION}}`, `{{FAC_FAMILY_1_REMARKS}}`
 - `{{FAC_FAMILY_2_NAME}}`, `{{FAC_FAMILY_2_RELATION_TO_HEAD}}`, ...
 - ... up to `{{FAC_FAMILY_15_*}}`
+
+## PWD template fields (per record export)
+
+PWD export is **per row/record** only.
+
+- Use the row action menu in PWD table
+- Click **Export Excel** for the specific record
+
+Create `pwd-case-template.xlsx` and use named ranges or inline placeholders.
+
+### PWD placeholders
+
+- `{{ACCOMPLISHED_BY}}`
+- `{{APPLICATION_TYPE}}`
+- `{{APPROVING_OFFICER}}`
+- `{{BARANGAY}}`
+- `{{CASE_ID}}`
+- `{{CASE_MANAGER}}`
+- `{{CAUSE_OF_DISABILITY}}`
+- `{{CERTIFYING_PHYSICIAN}}`
+- `{{CIVIL_STATUS}}`
+- `{{CONTACT_PERSON}}`
+- `{{CONTROL_NO}}`
+- `{{CREATED_AT}}`
+- `{{DATE_APPLIED}}`
+- `{{DATE_OF_BIRTH}}`
+- `{{EDUCATIONAL_ATTAINMENT}}`
+- `{{EMAIL_ADDRESS}}`
+- `{{EMPLOYMENT_CATEGORY}}`
+- `{{EMPLOYMENT_STATUS}}`
+- `{{ENCODER}}`
+- `{{FATHER_FIRST_NAME}}`
+- `{{FATHER_LAST_NAME}}`
+- `{{FATHER_MIDDLE_NAME}}`
+- `{{FATHERS_NAME}}`
+- `{{FIRST_NAME}}`
+- `{{FULL_NAME}}`
+- `{{GSIS}}`
+- `{{HOUSE_NO_STREET}}`
+- `{{LANDLINE_NUMBER}}`
+- `{{LAST_NAME}}`
+- `{{LICENSE_NO}}`
+- `{{MIDDLE_NAME}}`
+- `{{MOBILE_NO}}`
+- `{{MOTHER_FIRST_NAME}}`
+- `{{MOTHER_LAST_NAME}}`
+- `{{MOTHER_MIDDLE_NAME}}`
+- `{{MOTHERS_NAME}}`
+- `{{MUNICIPALITY}}`
+- `{{OCCUPATION}}`
+- `{{OFFICE_ADDRESS}}`
+- `{{ORGANIZATION_AFFILIATED}}`
+- `{{PAG_IBIG}}`
+- `{{PHILHEALTH}}`
+- `{{PRIORITY}}`
+- `{{PROCESSING_OFFICER}}`
+- `{{PROVINCE}}`
+- `{{PSN}}`
+- `{{PWD_NUMBER}}`
+- `{{REGION}}`
+- `{{REPORTING_UNIT}}`
+- `{{SEX}}`
+- `{{SSS}}`
+- `{{STATUS}}`
+- `{{SUFFIX}}`
+- `{{TEL_NO}}`
+- `{{TYPE_OF_DISABILITY}}`
+- `{{TYPE_OF_EMPLOYMENT}}`
+- `{{UPDATED_AT}}`
+- `{{VISIBILITY}}`
+
+Parent name split tokens (`FATHER_*`, `MOTHER_*`) are derived from `FATHERS_NAME` and `MOTHERS_NAME`.
+Best input format is either `First Middle Last` or `Last, First Middle`.
+
+### PWD `APPLICATION_TYPE` checkbox setup
+
+`APPLICATION_TYPE` stores one value:
+
+- `new_applicant`
+- `renewal`
+
+Use a helper cell + checkbox formulas:
+
+1. Put `{{APPLICATION_TYPE}}` in helper cell `Z2`.
+2. In visible checkbox cells:
+
+- New Applicant: `=IF(LOWER(TRIM($Z$2))="new_applicant","☑","☐")`
+- Renewal: `=IF(LOWER(TRIM($Z$2))="renewal","☑","☐")`
+
+Optional display text (instead of checkbox):
+
+`=IF(LOWER(TRIM($Z$2))="new_applicant","New Applicant",IF(LOWER(TRIM($Z$2))="renewal","Renewal",""))`
 
 ## Senior Citizen template fields (per record export)
 

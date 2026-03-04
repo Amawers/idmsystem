@@ -188,6 +188,7 @@ const sortByLatest = (rows = []) =>
 const createCaseColumns = (
 	handleEnrollClick,
 	handleEditClick,
+	handleExportClick,
 	handleDeleteClick,
 	handleDocumentsClick,
 ) => [
@@ -319,6 +320,14 @@ const createCaseColumns = (
 							Documents
 						</DropdownMenuItem>
 					</PermissionGuard>
+					<DropdownMenuItem
+						onClick={(e) => {
+							e.stopPropagation();
+							handleExportClick(row.original, "CASE");
+						}}
+					>
+						Export Excel
+					</DropdownMenuItem>
 					<DropdownMenuItem
 						onClick={(e) => {
 							e.stopPropagation();
@@ -1365,6 +1374,7 @@ const faColumns = (
 // =================================
 const pwdColumns = (
 	handleEditClick,
+	handleExportClick,
 	handleDeleteClick,
 	handleDocumentsClick,
 ) => [
@@ -1472,6 +1482,14 @@ const pwdColumns = (
 							Documents
 						</DropdownMenuItem>
 					</PermissionGuard>
+					<DropdownMenuItem
+						onClick={(e) => {
+							e.stopPropagation();
+							handleExportClick(row.original, "PWD");
+						}}
+					>
+						Export Excel
+					</DropdownMenuItem>
 					<DropdownMenuSeparator />
 					<PermissionGuard permission="delete_case">
 						<DropdownMenuItem
@@ -2706,6 +2724,7 @@ export function DataTable({
 		columns: createCaseColumns(
 			handleEnrollClick,
 			handleEditCaseRow,
+			handleExportCaseRow,
 			handleDeleteClick,
 			handleDocumentsClick,
 		),
@@ -2789,6 +2808,7 @@ export function DataTable({
 		initialData: pwdSortedData,
 		columns: pwdColumns(
 			handleEditPwdRow,
+			handleExportCaseRow,
 			handleDeleteClick,
 			handleDocumentsClick,
 		),
@@ -5139,6 +5159,7 @@ export function DataTable({
 						setData={pwdTable.setData}
 						columns={pwdColumns(
 							handleEditPwdRow,
+							handleExportCaseRow,
 							handleDeleteClick,
 							handleDocumentsClick,
 						)}
