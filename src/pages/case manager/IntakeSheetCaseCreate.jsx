@@ -13,7 +13,7 @@
  * - This component currently initializes `currentTabIndex` to the last step, which effectively
  *   bypasses step-by-step navigation (intentional per existing behavior).
  */
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
 	Dialog,
 	DialogContent,
@@ -109,6 +109,7 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 	const [completedTabs, setCompletedTabs] = useState(new Set());
 	const { getAllData, resetAll } = useIntakeFormStore();
 	const [isSaving, setIsSaving] = useState(false);
+	const createInFlightRef = useRef(false);
 
 	/**
 	 * Safely picks the first non-empty value for any of the provided keys.
@@ -144,6 +145,10 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 	 * When online, signals the parent Case view to refresh/sync via a full reload.
 	 */
 	const handleCreate = async () => {
+		if (createInFlightRef.current) {
+			return;
+		}
+		createInFlightRef.current = true;
 		try {
 			setIsSaving(true);
 			const all = getAllData() || {};
@@ -373,6 +378,7 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 			});
 		} finally {
 			setIsSaving(false);
+			createInFlightRef.current = false;
 		}
 	};
 

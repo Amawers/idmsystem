@@ -399,11 +399,14 @@ export async function createOrUpdateLocalCase({
 				...casePayload,
 			};
 
+			const resolvedTargetId = targetId ?? record?.id ?? null;
+			const operationType = resolvedTargetId ? "update" : "create";
+
 			const baseRecord = buildLocalRecord(mergedCase, {
-				id: targetId ?? record?.id ?? null,
+				id: resolvedTargetId,
 				family_members: uiFamilies,
 				hasPendingWrites: true,
-				pendingAction: mode,
+				pendingAction: operationType,
 				lastLocalChange: nowTs(),
 			});
 
@@ -421,10 +424,24 @@ export async function createOrUpdateLocalCase({
 				});
 			}
 
+			const existingOps = await QUEUE_TABLE.where("targetLocalId")
+				.equals(resolvedLocalId)
+				.toArray();
+			const replaceableOps = existingOps.filter(
+				(op) =>
+					op.operationType === "create" ||
+					op.operationType === "update",
+			);
+			if (replaceableOps.length) {
+				await QUEUE_TABLE.bulkDelete(
+					replaceableOps.map((op) => op.queueId),
+				);
+			}
+
 			await QUEUE_TABLE.add({
-				operationType: mode,
+				operationType,
 				targetLocalId: resolvedLocalId,
-				targetId: targetId ?? null,
+				targetId: resolvedTargetId,
 				payload: {
 					case: sanitizeCasePayload(casePayload),
 					family_members: supabaseFamilies,
@@ -586,18 +603,35 @@ export function syncCaseQueue(statusCb) {
 				}
 
 				if (op.operationType === "create") {
-					const { data, error } = await supabase
-						.from(CASE_TABLE_NAME)
-						.insert([sanitizeCasePayload(op.payload?.case ?? {})])
-						.select()
-						.single();
-					if (error) throw error;
+					const localRecord = await CASE_TABLE.get(op.targetLocalId);
+					const existingTargetId = localRecord?.id ?? op.targetId ?? null;
+					let data;
+
+					if (existingTargetId) {
+						const updateResult = await supabase
+							.from(CASE_TABLE_NAME)
+							.update(
+								sanitizeCasePayload(op.payload?.case ?? {}),
+							)
+							.eq("id", existingTargetId)
+							.select()
+							.single();
+						if (updateResult.error) throw updateResult.error;
+						data = updateResult.data;
+					} else {
+						const insertResult = await supabase
+							.from(CASE_TABLE_NAME)
+							.insert([
+								sanitizeCasePayload(op.payload?.case ?? {}),
+							])
+							.select()
+							.single();
+						if (insertResult.error) throw insertResult.error;
+						data = insertResult.data;
+					}
 
 					if (op.payload?.family_members?.length) {
-						await syncFamilyMembers(
-							data.id,
-							op.payload.family_members,
-						);
+						await syncFamilyMembers(data.id, op.payload.family_members);
 					}
 
 					await offlineCaseDb.transaction(
