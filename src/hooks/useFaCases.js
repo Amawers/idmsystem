@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import supabase from "@/../config/supabase";
+import { runSupabaseQueryWithTimeout } from "@/lib/supabaseTimeout";
 
 export function useFaCases() {
   const [data, setData] = useState([]);
@@ -13,10 +14,18 @@ export function useFaCases() {
     setLoading(true);
     setError(null);
     try {
-      const { data: rows, error: err } = await supabase
-        .from("fa_case")
-        .select("*")
-        .order("updated_at", { ascending: false });
+      const { data: rows, error: err } = await runSupabaseQueryWithTimeout(
+        (signal) =>
+          supabase
+            .from("fa_case")
+            .select("*")
+            .order("updated_at", { ascending: false })
+            .abortSignal(signal),
+        {
+          timeoutMessage:
+            "Loading FA records timed out. Please try refresh again.",
+        },
+      );
       if (err) throw err;
       setData((rows ?? []).map((row) => ({ ...row, id: row?.id ?? row?.case_id ?? row?.localId })));
       return { success: true };

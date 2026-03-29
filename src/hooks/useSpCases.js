@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import supabase from "@/../config/supabase";
+import { runSupabaseQueryWithTimeout } from "@/lib/supabaseTimeout";
 
 export function useSpCases() {
 const [data, setData] = useState([]);
@@ -13,10 +14,18 @@ const load = useCallback(async () => {
 setLoading(true);
 setError(null);
 try {
-const { data: rows, error: err } = await supabase
+const { data: rows, error: err } = await runSupabaseQueryWithTimeout(
+(signal) =>
+supabase
 .from("sp_case")
 .select("*")
-.order("updated_at", { ascending: false });
+.order("updated_at", { ascending: false })
+.abortSignal(signal),
+{
+timeoutMessage:
+"Loading Single Parent records timed out. Please try refresh again.",
+},
+);
 if (err) throw err;
 setData(
 (rows ?? []).map((row) => ({

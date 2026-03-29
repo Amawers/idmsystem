@@ -2401,54 +2401,122 @@ export function DataTable({
 	const handleRefresh = React.useCallback(async () => {
 		if (isRefreshing) return;
 		setIsRefreshing(true);
+		const REFRESH_TIMEOUT_MS = 20000;
+
+		const withTimeout = (promise, label) =>
+			new Promise((resolve, reject) => {
+				const timeoutId = setTimeout(() => {
+					reject(new Error(`${label} refresh timed out`));
+				}, REFRESH_TIMEOUT_MS);
+
+				Promise.resolve(promise)
+					.then((result) => {
+						clearTimeout(timeoutId);
+						resolve(result);
+					})
+					.catch((error) => {
+						clearTimeout(timeoutId);
+						reject(error);
+					});
+			});
 
 		try {
-			const promises = [];
+			const tasks = [];
 			switch (activeTab) {
 				case "CASE":
-					promises.push(reloadCases?.());
+					if (reloadCases) {
+						tasks.push({
+							label: "CASE",
+							promise: reloadCases(),
+						});
+					}
 					break;
 				case "CICLCAR":
-					promises.push(reloadCiclcar?.());
+					if (reloadCiclcar) {
+						tasks.push({
+							label: "CICL/CAR",
+							promise: reloadCiclcar(),
+						});
+					}
 					break;
 				case "FAR":
-					promises.push(reloadFar?.());
+					if (reloadFar) {
+						tasks.push({ label: "FAR", promise: reloadFar() });
+					}
 					break;
 				case "FAC":
-					promises.push(reloadFac?.());
+					if (reloadFac) {
+						tasks.push({ label: "FAC", promise: reloadFac() });
+					}
 					break;
 				case "IVAC":
-					promises.push(reloadIvac?.());
+					if (reloadIvac) {
+						tasks.push({ label: "IVAC", promise: reloadIvac() });
+					}
 					break;
 				case "SP":
-					promises.push(reloadSp?.());
+					if (reloadSp) {
+						tasks.push({ label: "SP", promise: reloadSp() });
+					}
 					break;
 				case "FA":
-					promises.push(reloadFa?.());
+					if (reloadFa) {
+						tasks.push({ label: "FA", promise: reloadFa() });
+					}
 					break;
 				case "PWD":
-					promises.push(reloadPwd?.());
+					if (reloadPwd) {
+						tasks.push({ label: "PWD", promise: reloadPwd() });
+					}
 					break;
 				case "SC":
-					promises.push(reloadSc?.());
+					if (reloadSc) {
+						tasks.push({ label: "SC", promise: reloadSc() });
+					}
 					break;
 				default:
-					promises.push(
-						reloadCases?.(),
-						reloadCiclcar?.(),
-						reloadFar?.(),
-						reloadFac?.(),
-						reloadIvac?.(),
-						reloadSp?.(),
-						reloadFa?.(),
-						reloadPwd?.(),
-						reloadSc?.(),
-					);
+					if (reloadCases)
+						tasks.push({ label: "CASE", promise: reloadCases() });
+					if (reloadCiclcar)
+						tasks.push({
+							label: "CICL/CAR",
+							promise: reloadCiclcar(),
+						});
+					if (reloadFar)
+						tasks.push({ label: "FAR", promise: reloadFar() });
+					if (reloadFac)
+						tasks.push({ label: "FAC", promise: reloadFac() });
+					if (reloadIvac)
+						tasks.push({ label: "IVAC", promise: reloadIvac() });
+					if (reloadSp)
+						tasks.push({ label: "SP", promise: reloadSp() });
+					if (reloadFa)
+						tasks.push({ label: "FA", promise: reloadFa() });
+					if (reloadPwd)
+						tasks.push({ label: "PWD", promise: reloadPwd() });
+					if (reloadSc)
+						tasks.push({ label: "SC", promise: reloadSc() });
 			}
-			await Promise.all(promises.filter(Boolean));
-			toast.success("Refreshed", {
-				description: `${activeTab} data has been refreshed successfully.`,
+
+			const results = await Promise.allSettled(
+				tasks.map((task) => withTimeout(task.promise, task.label)),
+			);
+
+			const hasFailure = results.some((result) => {
+				if (result.status === "rejected") return true;
+				return result.value?.success === false;
 			});
+
+			if (hasFailure) {
+				toast.error("Refresh Incomplete", {
+					description:
+						"Some data failed to refresh in time. Please try again.",
+				});
+			} else {
+				toast.success("Refreshed", {
+					description: `${activeTab} data has been refreshed successfully.`,
+				});
+			}
 		} catch (error) {
 			console.error("Error refreshing data:", error);
 			toast.error("Refresh Failed", {

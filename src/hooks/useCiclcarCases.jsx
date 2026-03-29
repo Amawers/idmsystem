@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import supabase from "@/../config/supabase";
+import { runSupabaseQueryWithTimeout } from "@/lib/supabaseTimeout";
 
 export function useCiclcarCases() {
   const [data, setData] = useState([]);
@@ -17,10 +18,18 @@ export function useCiclcarCases() {
     setError(null);
     enrollmentCaseIdSignatureRef.current = "";
     try {
-      const { data: rows, error: err } = await supabase
-        .from("ciclcar_case")
-        .select("*")
-        .order("updated_at", { ascending: false });
+      const { data: rows, error: err } = await runSupabaseQueryWithTimeout(
+        (signal) =>
+          supabase
+            .from("ciclcar_case")
+            .select("*")
+            .order("updated_at", { ascending: false })
+            .abortSignal(signal),
+        {
+          timeoutMessage:
+            "Loading CICL/CAR records timed out. Please try refresh again.",
+        },
+      );
       if (err) throw err;
       setData((rows ?? []).map((row) => ({
         ...row,
@@ -67,10 +76,12 @@ export function useCiclcarCases() {
 
     const loadEnrollments = async () => {
       try {
-        const { data: rows, error: err } = await supabase
-          .from("program_enrollments")
-          .select(
-            `
+        const { data: rows, error: err } = await runSupabaseQueryWithTimeout(
+          (signal) =>
+            supabase
+              .from("program_enrollments")
+              .select(
+                `
               *,
               program:programs(
                 id,
@@ -82,10 +93,16 @@ export function useCiclcarCases() {
                 schedule
               )
             `,
-          )
-          .in("case_id", caseIds)
-          .eq("status", "active")
-          .order("enrollment_date", { ascending: false });
+              )
+              .in("case_id", caseIds)
+              .eq("status", "active")
+              .order("enrollment_date", { ascending: false })
+              .abortSignal(signal),
+          {
+            timeoutMessage:
+              "Loading CICL/CAR enrollments timed out. Please try again.",
+          },
+        );
         if (err) throw err;
         if (!isActive) return;
 

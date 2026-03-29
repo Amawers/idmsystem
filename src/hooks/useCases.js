@@ -12,6 +12,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import supabase from "@/../config/supabase";
+import { runSupabaseQueryWithTimeout } from "@/lib/supabaseTimeout";
 
 /**
  * @typedef {Object} CaseFamilyMemberRow
@@ -190,17 +191,27 @@ export function useCases() {
 		setLoading(true);
 		setError(null);
 		try {
-			// Select all case fields plus related family members from case_family_member
-			// Supabase allows selecting related rows using foreign table syntax: case_family_member(*)
-			const { data: rows, error: err } = await supabase
-				.from("case")
-				.select(`*, case_family_member(*)`)
-				.order("updated_at", { ascending: false });
+			// Select all case fields plus related family members from case_family_member.
+			const { data: rows, error: err } =
+				await runSupabaseQueryWithTimeout(
+					(signal) =>
+						supabase
+							.from("case")
+							.select(`*, case_family_member(*)`)
+							.order("updated_at", { ascending: false })
+							.abortSignal(signal),
+					{
+						timeoutMessage:
+							"Loading CASE records timed out. Please try refresh again.",
+					},
+				);
 
 			if (err) throw err;
 			setData((rows || []).map(mapCaseRow));
+			return { success: true };
 		} catch (e) {
 			setError(e);
+			return { success: false, error: e };
 		} finally {
 			setLoading(false);
 		}

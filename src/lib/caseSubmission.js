@@ -12,6 +12,7 @@
  */
 
 import supabase from "../../config/supabase";
+import { runSupabaseQueryWithTimeout } from "@/lib/supabaseTimeout";
 
 /**
  * @typedef {Object} CaseDetails
@@ -241,11 +242,19 @@ export async function submitCase(finalData) {
 	const payload = { ...p1, ...p2 };
 
 	// Insert main case row
-	const { data: inserted, error } = await supabase
-		.from("case")
-		.insert(payload)
-		.select()
-		.single();
+	const { data: inserted, error } = await runSupabaseQueryWithTimeout(
+		(signal) =>
+			supabase
+				.from("case")
+				.insert(payload)
+				.select("id")
+				.single()
+				.abortSignal(signal),
+		{
+			timeoutMessage:
+				"Saving CASE record took too long. Please try submitting again.",
+		},
+	);
 
 	if (error) return { caseId: null, error };
 	const caseId = inserted?.id;
@@ -291,9 +300,17 @@ export async function submitCase(finalData) {
 	});
 
 	if (fmRows.length) {
-		const { error: fmErr } = await supabase
-			.from("case_family_member")
-			.insert(fmRows);
+		const { error: fmErr } = await runSupabaseQueryWithTimeout(
+			(signal) =>
+				supabase
+					.from("case_family_member")
+					.insert(fmRows)
+					.abortSignal(signal),
+			{
+				timeoutMessage:
+					"Saving family members took too long. Please try again.",
+			},
+		);
 		if (fmErr) return { caseId, error: fmErr };
 	}
 
@@ -331,21 +348,35 @@ export async function saveCaseRecord({
 			};
 		}
 
-		const { data, error } = await supabase
-			.from("case")
-			.update(casePayload)
-			.eq("id", targetId)
-			.select("id")
-			.single();
+		const { error } = await runSupabaseQueryWithTimeout(
+			(signal) =>
+				supabase
+					.from("case")
+					.update(casePayload)
+					.eq("id", targetId)
+					.abortSignal(signal),
+			{
+				timeoutMessage:
+					"Updating CASE record took too long. Please try again.",
+			},
+		);
 
 		if (error) return { caseId: null, error };
-		caseId = data?.id ?? targetId;
+		caseId = targetId;
 	} else {
-		const { data, error } = await supabase
-			.from("case")
-			.insert(casePayload)
-			.select("id")
-			.single();
+		const { data, error } = await runSupabaseQueryWithTimeout(
+			(signal) =>
+				supabase
+					.from("case")
+					.insert(casePayload)
+					.select("id")
+					.single()
+					.abortSignal(signal),
+			{
+				timeoutMessage:
+					"Creating CASE record took too long. Please try again.",
+			},
+		);
 
 		if (error) return { caseId: null, error };
 		caseId = data?.id ?? null;
@@ -358,13 +389,24 @@ export async function saveCaseRecord({
 		};
 	}
 
-	const { error: clearMembersError } = await supabase
-		.from("case_family_member")
-		.delete()
-		.eq("case_id", caseId);
+	// Avoid an unnecessary delete round-trip on create when no members are provided.
+	if (mode === "update" || familyMembers.length > 0) {
+		const { error: clearMembersError } = await runSupabaseQueryWithTimeout(
+			(signal) =>
+				supabase
+					.from("case_family_member")
+					.delete()
+					.eq("case_id", caseId)
+					.abortSignal(signal),
+			{
+				timeoutMessage:
+					"Refreshing family member rows took too long. Please try again.",
+			},
+		);
 
-	if (clearMembersError) {
-		return { caseId, error: clearMembersError };
+		if (clearMembersError) {
+			return { caseId, error: clearMembersError };
+		}
 	}
 
 	if (familyMembers.length) {
@@ -383,9 +425,17 @@ export async function saveCaseRecord({
 			income: member.income || null,
 		}));
 
-		const { error: insertMembersError } = await supabase
-			.from("case_family_member")
-			.insert(normalizedFamilyMembers);
+		const { error: insertMembersError } = await runSupabaseQueryWithTimeout(
+			(signal) =>
+				supabase
+					.from("case_family_member")
+					.insert(normalizedFamilyMembers)
+					.abortSignal(signal),
+			{
+				timeoutMessage:
+					"Saving family members took too long. Please try again.",
+			},
+		);
 
 		if (insertMembersError) {
 			return { caseId, error: insertMembersError };

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import supabase from "@/../config/supabase";
+import { runSupabaseQueryWithTimeout } from "@/lib/supabaseTimeout";
 
 export function useIvacCases() {
   const [data, setData] = useState([]);
@@ -13,10 +14,18 @@ export function useIvacCases() {
     setLoading(true);
     setError(null);
     try {
-      const { data: rows, error: err } = await supabase
-        .from("ivac_cases")
-        .select("*")
-        .order("updated_at", { ascending: false });
+      const { data: rows, error: err } = await runSupabaseQueryWithTimeout(
+        (signal) =>
+          supabase
+            .from("ivac_cases")
+            .select("*")
+            .order("updated_at", { ascending: false })
+            .abortSignal(signal),
+        {
+          timeoutMessage:
+            "Loading IVAC records timed out. Please try refresh again.",
+        },
+      );
       if (err) throw err;
       setData((rows ?? []).map((row) => ({ ...row, id: row?.id ?? row?.case_id ?? row?.localId })));
       return { success: true };
