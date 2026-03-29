@@ -6,15 +6,10 @@
  * - inventory items + stock updates
  * - transactions/disbursements
  * - alerts
- *
- * Offline behavior:
- * - Some fetch methods short-circuit when offline to avoid long/hanging network calls.
- * - Inventory snapshots are cached to IndexedDB for read-only access while offline.
  */
 
 import { create } from "zustand";
 import supabase from "@/../config/supabase";
-import offlineCaseDb from "@/db/offlineCaseDb";
 
 /** @typedef {{ from: string, to: string }} DateRange */
 /**
@@ -380,32 +375,10 @@ export const useResourceStore = create((set, get) => ({
 
 	/**
 	 * Fetches inventory items with optional filters.
-	 *
-	 * When offline, returns the last cached inventory snapshot from IndexedDB.
 	 * @param {InventoryFilters} filters
 	 */
 	fetchInventory: async (filters = {}) => {
 		set({ loading: true, error: null });
-
-		// If offline, load cached inventory snapshot from IndexedDB
-		if (typeof navigator !== "undefined" && !navigator.onLine) {
-			try {
-				const cached = await offlineCaseDb.inventory_items.toArray();
-				const items = Array.isArray(cached) ? cached : [];
-				const stats = get().computeInventoryStats(items || []);
-				set({
-					inventoryItems: items || [],
-					filteredInventory: items || [],
-					inventoryStats: stats,
-					loading: false,
-				});
-				return;
-			} catch (cacheErr) {
-				console.error("Error loading inventory from cache:", cacheErr);
-				set({ loading: false });
-				return;
-			}
-		}
 
 		try {
 			let query = supabase
@@ -473,22 +446,6 @@ export const useResourceStore = create((set, get) => ({
 				inventoryStats: stats,
 				loading: false,
 			});
-
-			// Persist a snapshot to IndexedDB for offline use (best-effort)
-			try {
-				await offlineCaseDb.inventory_items.clear();
-				if (Array.isArray(data) && data.length > 0) {
-					// Bulk add plain objects
-					await offlineCaseDb.inventory_items.bulkAdd(
-						data.map((d) => ({ ...d })),
-					);
-				}
-			} catch (cacheErr) {
-				console.warn(
-					"Failed to save inventory snapshot to cache:",
-					cacheErr,
-				);
-			}
 		} catch (err) {
 			console.error("Error fetching inventory:", err);
 			set({ error: err.message, loading: false });

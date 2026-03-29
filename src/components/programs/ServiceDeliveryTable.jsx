@@ -11,10 +11,9 @@
  * - Export service logs
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useServiceDelivery } from "@/hooks/useServiceDelivery";
 import { usePrograms } from "@/hooks/usePrograms";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import CreateServiceDeliveryDialog from "./CreateServiceDeliveryDialog";
 import UpdateServiceDeliveryDialog from "./UpdateServiceDeliveryDialog";
 import ViewServiceDeliveryDialog from "./ViewServiceDeliveryDialog";
@@ -72,7 +71,6 @@ import {
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import PermissionGuard from "@/components/PermissionGuard";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 /**
  * Service Delivery Table Component
@@ -107,49 +105,14 @@ export default function ServiceDeliveryTable({ autoSync = false, onAutoSyncHandl
     updateServiceDelivery,
     deleteServiceDelivery,
     fetchServiceDelivery,
-    pendingCount,
-    runSync,
-    syncing,
-    syncStatus,
-    offline,
   } = useServiceDelivery(filterOptions);
 
-  const isOnline = useNetworkStatus();
   const { programs = [] } = usePrograms({ status: "active" });
-  const runSyncRef = useRef(runSync);
-
-  useEffect(() => {
-    runSyncRef.current = runSync;
-  }, [runSync]);
 
   useEffect(() => {
     if (!autoSync) return;
-
-    let cancelled = false;
-
-    const syncAfterReload = async () => {
-      if (!isOnline) {
-        onAutoSyncHandled?.();
-        return;
-      }
-      try {
-        await runSyncRef.current?.();
-      } catch (err) {
-        console.error("Automatic service delivery sync failed:", err);
-        toast.error(err?.message || "Automatic sync failed");
-      } finally {
-        if (!cancelled) {
-          onAutoSyncHandled?.();
-        }
-      }
-    };
-
-    syncAfterReload();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [autoSync, isOnline, onAutoSyncHandled]);
+    onAutoSyncHandled?.();
+  }, [autoSync, onAutoSyncHandled]);
 
   /**
    * Handle refresh
@@ -157,12 +120,6 @@ export default function ServiceDeliveryTable({ autoSync = false, onAutoSyncHandl
   const handleRefresh = async () => {
     try {
       setIsRefreshing(true);
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem("serviceDelivery.forceSync", "true");
-        window.location.reload();
-        return;
-      }
-
       await fetchServiceDelivery();
       toast.success("Service delivery list refreshed");
     } catch (error) {
@@ -214,20 +171,6 @@ export default function ServiceDeliveryTable({ autoSync = false, onAutoSyncHandl
     } catch (error) {
       console.error("Error deleting service delivery:", error);
       toast.error(error.message || "Failed to delete service delivery");
-    }
-  };
-
-  const handleSync = async () => {
-    if (!runSync) return;
-    if (!isOnline) {
-      toast.error("Cannot sync while offline");
-      return;
-    }
-    try {
-      await runSync();
-    } catch (error) {
-      console.error("Service delivery sync failed:", error);
-      toast.error(error?.message || "Sync failed");
     }
   };
 
@@ -336,21 +279,6 @@ export default function ServiceDeliveryTable({ autoSync = false, onAutoSyncHandl
                   Track service sessions and attendance records
                 </CardDescription>
               </div>
-              {!isOnline && (
-                <Badge variant="destructive" className="h-6">
-                  Offline
-                </Badge>
-              )}
-              {offline && isOnline && (
-                <Badge variant="secondary" className="h-6">
-                  Showing cached data
-                </Badge>
-              )}
-              {pendingCount > 0 && (
-                <Badge variant="outline" className="h-6 border-amber-500 text-amber-700">
-                  {pendingCount} pending
-                </Badge>
-              )}
             </div>
             <div className="flex gap-2 items-center">
               <Button 
@@ -363,18 +291,6 @@ export default function ServiceDeliveryTable({ autoSync = false, onAutoSyncHandl
                 <RefreshCw className={cn("mr-2 h-4 w-4", isRefreshing && "animate-spin")} />
                 Refresh
               </Button>
-              {/* Offline sync controls */}
-              <PermissionGuard permission="manage_service_delivery">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSync}
-                  disabled={!isOnline || syncing || pendingCount === 0}
-                >
-                  <RefreshCw className={cn("mr-2 h-4 w-4", syncing && "animate-spin")} />
-                  Sync
-                </Button>
-              </PermissionGuard>
               <PermissionGuard permission="create_service_delivery">
                 <Button size="sm" onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
                   <Plus className="mr-2 h-4 w-4" />
@@ -383,13 +299,6 @@ export default function ServiceDeliveryTable({ autoSync = false, onAutoSyncHandl
               </PermissionGuard>
             </div>
           </div>
-          {syncStatus && (
-            <Alert className="mt-3">
-              <AlertDescription className="text-xs">
-                {syncStatus}
-              </AlertDescription>
-            </Alert>
-          )}
         </CardHeader>
         <CardContent>
           {/* Filters */}
@@ -461,8 +370,6 @@ export default function ServiceDeliveryTable({ autoSync = false, onAutoSyncHandl
                     return (
                       <TableRow
                         key={rowKey}
-                        className={cn(delivery.hasPendingWrites && "bg-amber-50/70")}
-                        data-pending={delivery.hasPendingWrites ? "true" : undefined}
                       >
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-2">
@@ -476,11 +383,6 @@ export default function ServiceDeliveryTable({ autoSync = false, onAutoSyncHandl
                           <div className="text-xs text-muted-foreground">
                             {delivery.case_number}
                           </div>
-                          {delivery.hasPendingWrites && (
-                            <Badge variant="outline" className="mt-1 text-[10px] uppercase tracking-wide text-amber-700 border-amber-500">
-                              Pending sync
-                            </Badge>
-                          )}
                         </div>
                       </TableCell>
                       <TableCell>

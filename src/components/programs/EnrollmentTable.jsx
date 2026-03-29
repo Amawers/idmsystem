@@ -15,7 +15,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useEnrollments } from "@/hooks/useEnrollments";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import CreateEnrollmentDialog from "./CreateEnrollmentDialog";
 import UpdateEnrollmentDialog from "./UpdateEnrollmentDialog";
 import {
@@ -92,9 +91,6 @@ export default function EnrollmentTable() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Network status
-  const isOnline = useNetworkStatus();
 
   // Read URL query parameters on mount
   useEffect(() => {
@@ -123,10 +119,6 @@ export default function EnrollmentTable() {
     error, 
     deleteEnrollment, 
     fetchEnrollments,
-    pendingCount,
-    syncing,
-    syncStatus,
-    runSync,
   } = useEnrollments(filterOptions);
 
   const filteredEnrollments = (enrollments || []).filter(
@@ -199,14 +191,6 @@ export default function EnrollmentTable() {
     } finally {
       setIsRefreshing(false);
     }
-  };
-
-  /**
-   * Handle manual sync
-   */
-  const handleSync = async () => {
-    if (!isOnline || syncing || pendingCount === 0) return;
-    await runSync();
   };
 
   /**
@@ -323,18 +307,6 @@ export default function EnrollmentTable() {
                 <CardTitle className="text-base leading-tight">Program Enrollments</CardTitle>
                 <CardDescription className="text-xs leading-snug mt-0">Track case enrollment and progress in programs</CardDescription>
               </div>
-              {/* Offline Badge */}
-              {!isOnline && (
-                <Badge variant="destructive" className="h-6">
-                  Offline
-                </Badge>
-              )}
-              {/* Pending Changes Badge */}
-              {isOnline && pendingCount > 0 && (
-                <Badge variant="outline" className="h-6 border-amber-500 text-amber-700">
-                  {pendingCount} Pending
-                </Badge>
-              )}
             </div>
             <div className="flex gap-2">
               <Button 
@@ -347,17 +319,6 @@ export default function EnrollmentTable() {
                 <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              {/* Sync Button */}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleSync}
-                disabled={!isOnline || syncing || pendingCount === 0}
-                className="cursor-pointer"
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-                Sync ({pendingCount})
-              </Button>
               <PermissionGuard permission="create_enrollment">
                 <Button onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
                   <Plus className="mr-2 h-4 w-4" />
@@ -366,16 +327,6 @@ export default function EnrollmentTable() {
               </PermissionGuard>
             </div>
           </div>
-          {/* Sync Status Message */}
-          {syncStatus && (
-            <div className="mt-2">
-              <Alert className={syncing ? "border-blue-500" : pendingCount > 0 ? "border-amber-500" : "border-green-500"}>
-                <AlertDescription className="text-xs">
-                  {syncStatus}
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
         </CardHeader>
         <CardContent>
           {/* Program Filter Badge - Show when filtering by program */}

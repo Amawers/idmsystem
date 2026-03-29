@@ -5,9 +5,7 @@
  *
  * Responsibilities:
  * - Collect a multi-step intake form across tabs.
- * - Build a PWD case payload and stage it locally via the offline service.
- * - When saving while online, trigger a reload with sessionStorage flags so the
- *   Case Management view can restore context and prompt syncing.
+	* - Build a PWD case payload and save directly to Supabase.
  */
 
 import { useEffect, useState } from "react";
@@ -31,7 +29,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { buildPWDCasePayload } from "@/lib/pwdSubmission";
-import { createOrUpdateLocalPwdCase } from "@/services/pwdOfflineService";
+import supabase from "@/../config/supabase";
 import { useCaseManagers } from "@/store/useCaseManagerStore";
 
 /**
@@ -139,26 +137,6 @@ const initialFormState = {
 	control_no: "",
 };
 
-/**
- * Read the browser's online state.
- * @returns {boolean}
- */
-const isBrowserOnline = () =>
-	typeof navigator !== "undefined" ? navigator.onLine : true;
-
-/**
- * Force the Case Management UI back to the PWD tab after save.
- *
- * Uses sessionStorage flags + reload to reset downstream hook state and encourage a sync.
- * @returns {void}
- */
-const forcePwdTabReload = () => {
-	if (typeof window === "undefined") return;
-	sessionStorage.setItem("caseManagement.activeTab", "PWD");
-	sessionStorage.setItem("caseManagement.forceTabAfterReload", "PWD");
-	sessionStorage.setItem("caseManagement.forcePwdSync", "true");
-	window.location.reload();
-};
 
 const ARRAY_FIELDS = new Set(["type_of_disability", "cause_of_disability"]);
 
@@ -334,7 +312,7 @@ export default function IntakeSheetPWD({
 	);
 
 	/**
-	 * Build and stage the PWD case locally, then optionally trigger a sync flow.
+	 * Build and save the PWD case directly to Supabase.
 	 * @param {import("react").FormEvent | undefined} event
 	 * @returns {Promise<void>}
 	 */
@@ -343,28 +321,27 @@ export default function IntakeSheetPWD({
 		setIsSubmitting(true);
 		try {
 			const casePayload = buildPWDCasePayload(formState);
-			await createOrUpdateLocalPwdCase({
-				casePayload,
-				targetId: isEditMode ? (editingRecord?.id ?? null) : null,
-				localId: isEditMode ? (editingRecord?.localId ?? null) : null,
-				mode: isEditMode ? "update" : "create",
-			});
+			if (isEditMode && editingRecord?.id) {
+				const { error } = await supabase
+					.from("pwd_case")
+					.update(casePayload)
+					.eq("id", editingRecord.id);
+				if (error) throw error;
+			} else {
+				const { error } = await supabase
+					.from("pwd_case")
+					.insert([casePayload]);
+				if (error) throw error;
+			}
 
-			const online = isBrowserOnline();
 			toast.success(
-				isEditMode ? "PWD case update queued" : "PWD case queued",
+				isEditMode ? "PWD case updated" : "PWD case saved",
 				{
-					description: online
-						? "Sync queued and will push shortly."
-						: "Stored locally. Sync once you're online.",
+					description: "Changes were saved successfully.",
 				},
 			);
 			setOpen(false);
 			onSuccess?.();
-
-			if (online) {
-				setTimeout(forcePwdTabReload, 0);
-			}
 		} catch (error) {
 			toast.error("Save failed", {
 				description: error?.message || "Please try again.",

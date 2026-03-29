@@ -3,7 +3,7 @@
 ## Big picture
 
 - React 19 + Vite + Tailwind renderer, packaged as an Electron desktop app (electron/main.js). Packaged builds load dist/index.html; routing uses HashRouter (src/App.jsx) to work reliably under file-based hosting.
-- Supabase is the backend (config/supabase.js). The app is “offline-first” in key areas using Dexie/IndexedDB (src/db/offlineCaseDb.js) + offline services (src/services/*OfflineService.js) + hooks (src/hooks/*Offline.js).
+- Supabase is the backend (config/supabase.js). The app now runs online-only for CRUD flows, with direct Supabase reads/writes in hooks/services.
 
 ## Developer commands (package.json)
 
@@ -26,11 +26,10 @@
 ## Auth + routing
 
 - Central auth is src/store/authStore.js (login/logout/init). It reads the profile table (role/avatar_url/status) and signs avatar URLs from the profile_pictures storage bucket.
-- Offline “Remember me” stores a sanitized session snapshot in localStorage (src/lib/offlineAuthSession.js); init() can hydrate from it when navigator is offline.
+- Auth initialization is online-only via Supabase session state; there is no custom offline localStorage session fallback.
 - Route gating uses src/pages/ProtectedRoute.jsx and allowedRoles in src/App.jsx. Note: authStore currently normalizes legacy roles to social_worker.
 
-## Offline data pattern (Dexie)
+## Data access pattern
 
-- IndexedDB schema + queues are defined in src/db/offlineCaseDb.js (per-module caches + ordered operation queues).
-- Services own cache/sync rules (example: src/services/caseOfflineService.js uses liveQuery, queue tables, and a sanitize step before syncing to Supabase).
-- Hooks subscribe to liveQuery and expose UX state (example: src/hooks/useCasesOffline.js provides pendingCount/runSync and may force a reload via sessionStorage flags after certain syncs).
+- Hooks and services use direct Supabase operations for list/detail/mutations.
+- Legacy compatibility fields may still exist in some hooks (`pendingCount`, `syncing`, `syncStatus`, `runSync`) to avoid immediate UI breakage, but they act as refresh/status facades rather than offline queue state.

@@ -300,4 +300,99 @@ export async function submitCase(finalData) {
 	return { caseId, error: null };
 }
 
+/**
+ * Saves a case record directly to Supabase in online-only mode.
+ *
+ * - `create`: inserts a new row in `case`
+ * - `update`: updates an existing row in `case` by `targetId`
+ * - always replaces related `case_family_member` rows when `familyMembers` is provided
+ *
+ * @param {{
+ *   casePayload: Record<string, any>,
+ *   familyMembers?: Array<Record<string, any>>,
+ *   mode?: "create" | "update",
+ *   targetId?: string
+ * }} params
+ * @returns {Promise<{caseId: string | null, error: any}>}
+ */
+export async function saveCaseRecord({
+	casePayload,
+	familyMembers = [],
+	mode = "create",
+	targetId,
+}) {
+	let caseId = targetId ?? null;
+
+	if (mode === "update") {
+		if (!targetId) {
+			return {
+				caseId: null,
+				error: new Error("targetId is required for case updates"),
+			};
+		}
+
+		const { data, error } = await supabase
+			.from("case")
+			.update(casePayload)
+			.eq("id", targetId)
+			.select("id")
+			.single();
+
+		if (error) return { caseId: null, error };
+		caseId = data?.id ?? targetId;
+	} else {
+		const { data, error } = await supabase
+			.from("case")
+			.insert(casePayload)
+			.select("id")
+			.single();
+
+		if (error) return { caseId: null, error };
+		caseId = data?.id ?? null;
+	}
+
+	if (!caseId) {
+		return {
+			caseId: null,
+			error: new Error("Unable to resolve case id after save operation"),
+		};
+	}
+
+	const { error: clearMembersError } = await supabase
+		.from("case_family_member")
+		.delete()
+		.eq("case_id", caseId);
+
+	if (clearMembersError) {
+		return { caseId, error: clearMembersError };
+	}
+
+	if (familyMembers.length) {
+		const normalizedFamilyMembers = familyMembers.map((member, index) => ({
+			case_id: caseId,
+			group_no:
+				typeof member.group_no === "number"
+					? member.group_no
+					: index + 1,
+			name: member.name || null,
+			age: member.age || null,
+			relation: member.relation || null,
+			status: member.status || null,
+			education: member.education || null,
+			occupation: member.occupation || null,
+			income: member.income || null,
+		}));
+
+		const { error: insertMembersError } = await supabase
+			.from("case_family_member")
+			.insert(normalizedFamilyMembers);
+
+		if (insertMembersError) {
+			return { caseId, error: insertMembersError };
+		}
+	}
+
+	return { caseId, error: null };
+}
+
 export { buildCasePayload };

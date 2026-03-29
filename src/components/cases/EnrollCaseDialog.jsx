@@ -12,7 +12,7 @@
  * - Create audit log entries
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { usePrograms } from "@/hooks/usePrograms";
 import { useAuthStore } from "@/store/authStore";
 import {
@@ -149,14 +149,12 @@ export default function EnrollCaseDialog({
 		return compatiblePrograms.find((p) => p.id === selectedProgramId);
 	}, [compatiblePrograms, selectedProgramId]);
 
-	// Fetch existing enrollments for this case
-	useEffect(() => {
-		if (open && caseData) {
-			fetchExistingEnrollments();
+	const fetchExistingEnrollments = useCallback(async () => {
+		if (!caseData?.id) {
+			setExistingEnrollments([]);
+			return;
 		}
-	}, [open, caseData]);
 
-	const fetchExistingEnrollments = async () => {
 		try {
 			const { data, error } = await supabase
 				.from("program_enrollments")
@@ -175,7 +173,14 @@ export default function EnrollCaseDialog({
 			console.error("Error fetching existing enrollments:", error);
 			setExistingEnrollments([]);
 		}
-	};
+	}, [caseData?.id]);
+
+	// Fetch existing enrollments for this case
+	useEffect(() => {
+		if (open && caseData) {
+			fetchExistingEnrollments();
+		}
+	}, [open, caseData, fetchExistingEnrollments]);
 
 	// Check if case is already enrolled in selected program
 	const isAlreadyEnrolled = useMemo(() => {

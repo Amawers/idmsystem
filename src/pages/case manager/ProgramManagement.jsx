@@ -20,10 +20,9 @@ import ServiceDeliveryTable from "@/components/programs/ServiceDeliveryTable";
 import PartnersTable from "@/components/programs/PartnersTable";
 import CreateProgramDialog from "@/components/programs/CreateProgramDialog";
 import PermissionGuard from "@/components/PermissionGuard";
-import {
-	PROGRAM_ACTIVE_TAB_KEY,
-	PROGRAM_FORCE_TAB_KEY,
-} from "@/components/programs/programSyncUtils";
+
+const PROGRAM_ACTIVE_TAB_KEY = "programManagement.activeTab";
+const PROGRAM_FORCE_TAB_KEY = "programManagement.forceTabAfterReload";
 
 /**
  * @typedef {"dashboard"|"programs"|"enrollments"|"service-delivery"|"partners"} ProgramManagementTab

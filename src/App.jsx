@@ -103,7 +103,7 @@ export default function App() {
 	const { init, loading } = useAuthStore();
 
 	useEffect(() => {
-		// Bootstrap auth state (online session or offline fallback).
+		// Bootstrap auth state from Supabase session.
 		init();
 	}, [init]);
 

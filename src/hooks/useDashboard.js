@@ -1,272 +1,131 @@
-/**
- * Dashboard metrics hook (offline-aware where supported).
- *
- * Responsibilities:
- * - Load dashboard data for the requested type.
- * - Prefer cached data for offline-capable dashboards and revalidate in the background when online.
- * - Subscribe to cache updates for supported dashboard types.
- *
- * Dashboard types:
- * - `case`, `program`: offline-capable via `dashboardOfflineService` cache.
- * - `user`: fetched directly from Supabase (role-gated).
- */
-
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import supabase from "@/../config/supabase";
 import { useAuthStore } from "@/store/authStore";
-import {
-	getDashboardData,
-	fetchAndCacheDashboardData,
-	dashboardCacheLiveQuery,
-} from "@/services/dashboardOfflineService";
 
-/**
- * @typedef {"case"|"program"|"user"|string} DashboardType
- */
+const isBrowserOnline = () => (typeof navigator !== "undefined" ? navigator.onLine : true);
 
-/**
- * @typedef {Object<string, any>} DashboardFilters
- */
+async function fetchCaseDashboard() {
+  const [{ count: caseCount }, { count: ciclcarCount }, { count: facCount }, { count: farCount }, { count: ivacCount }, { count: spCount }, { count: faCount }, { count: pwdCount }, { count: scCount }] = await Promise.all([
+    supabase.from("case").select("id", { count: "exact", head: true }),
+    supabase.from("ciclcar_case").select("id", { count: "exact", head: true }),
+    supabase.from("fac_case").select("id", { count: "exact", head: true }),
+    supabase.from("far_case").select("id", { count: "exact", head: true }),
+    supabase.from("ivac_cases").select("id", { count: "exact", head: true }),
+    supabase.from("sp_case").select("id", { count: "exact", head: true }),
+    supabase.from("fa_case").select("id", { count: "exact", head: true }),
+    supabase.from("pwd_case").select("id", { count: "exact", head: true }),
+    supabase.from("sc_case").select("id", { count: "exact", head: true }),
+  ]);
 
-/**
- * @typedef {Object<string, any>} DashboardPayload
- */
+  return {
+    stats: {
+      total_cases: (caseCount ?? 0) + (ciclcarCount ?? 0) + (facCount ?? 0) + (farCount ?? 0) + (ivacCount ?? 0) + (spCount ?? 0) + (faCount ?? 0) + (pwdCount ?? 0) + (scCount ?? 0),
+      vac: caseCount ?? 0,
+      ciclcar: ciclcarCount ?? 0,
+      fac: facCount ?? 0,
+      far: farCount ?? 0,
+      ivac: ivacCount ?? 0,
+      sp: spCount ?? 0,
+      fa: faCount ?? 0,
+      pwd: pwdCount ?? 0,
+      sc: scCount ?? 0,
+    },
+    rawData: {},
+  };
+}
 
-/**
- * @typedef {Object} UseDashboardResult
- * @property {DashboardPayload|null} data
- * @property {boolean} loading
- * @property {string|null} error
- * @property {() => void} refresh Force refresh (bypass cache where applicable)
- * @property {() => Promise<void>} refreshFromServer Refresh and cache when supported
- * @property {boolean} syncing
- * @property {string|null} syncStatus
- * @property {boolean} fromCache
- * @property {boolean} isOnline
- */
+async function fetchProgramDashboard() {
+  const [{ count: totalPrograms }, { count: activePrograms }, { count: totalEnrollments }] = await Promise.all([
+    supabase.from("programs").select("id", { count: "exact", head: true }),
+    supabase.from("programs").select("id", { count: "exact", head: true }).eq("status", "active"),
+    supabase.from("program_enrollments").select("id", { count: "exact", head: true }),
+  ]);
 
-/**
- * Guarded browser online check for environments without `navigator`.
- */
-const isBrowserOnline = () =>
-	typeof navigator !== "undefined" ? navigator.onLine : true;
+  return {
+    stats: {
+      totalPrograms: totalPrograms ?? 0,
+      activePrograms: activePrograms ?? 0,
+      totalEnrollments: totalEnrollments ?? 0,
+    },
+    rawData: {},
+  };
+}
 
-/**
- * Load dashboard data with best-effort offline support.
- * @param {DashboardType} [dashboardType]
- * @param {DashboardFilters} [filters]
- * @returns {UseDashboardResult}
- */
-export function useDashboard(dashboardType = "case", filters = {}) {
-	const [data, setData] = useState(null);
-	const [loading, setLoading] = useState(true);
-	const [error, setError] = useState(null);
-	const [syncing, setSyncing] = useState(false);
-	const [syncStatus, setSyncStatus] = useState(null);
-	const [fromCache, setFromCache] = useState(false);
-	const { role } = useAuthStore();
-	const cacheSubscriptionRef = useRef(null);
-	const filtersRef = useRef(filters);
+export function useDashboard(dashboardType = "case") {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [syncing, setSyncing] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [fromCache] = useState(false);
+  const { role } = useAuthStore();
 
-	// Update filters ref when filters change
-	useEffect(() => {
-		filtersRef.current = filters;
-	}, [filters]);
+  const fetchDashboardData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      if (dashboardType === "case") {
+        setData(await fetchCaseDashboard());
+      } else if (dashboardType === "program") {
+        setData(await fetchProgramDashboard());
+      } else if (dashboardType === "user") {
+        if (role !== "social_worker") {
+          throw new Error("Unauthorized: Only social workers can access user management dashboard");
+        }
+        const { data: users, error: userError } = await supabase
+          .from("profile")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (userError) throw userError;
+        setData({
+          stats: {
+            total: users.length,
+            active: users.filter((u) => u.status === "active").length,
+            inactive: users.filter((u) => u.status === "inactive").length,
+            banned: users.filter((u) => u.status === "banned").length,
+            socialWorkers: users.filter((u) => u.role === "social_worker").length,
+          },
+          rawData: { users },
+        });
+      } else {
+        setData({ stats: {}, rawData: {} });
+      }
+    } catch (e) {
+      setError(e?.message ?? "Failed to load dashboard data");
+      setSyncStatus("Error loading dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  }, [dashboardType, role]);
 
-	const fetchDashboardData = useCallback(
-		async (forceRefresh = false) => {
-			setLoading(true);
-			setError(null);
-			setSyncStatus(null);
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
 
-			let usedCache = false; // Track whether the initial load came from cache
+  const refreshFromServer = useCallback(async () => {
+    setSyncing(true);
+    setSyncStatus("Refreshing...");
+    try {
+      await fetchDashboardData();
+      setSyncStatus("Up to date");
+    } finally {
+      setTimeout(() => setSyncStatus(null), 1200);
+      setSyncing(false);
+    }
+  }, [fetchDashboardData]);
 
-			try {
-				switch (dashboardType) {
-					case "case":
-					case "program": {
-						// Try to get dashboard data (offline-aware)
-						const result = await getDashboardData(
-							dashboardType,
-							filtersRef.current,
-							forceRefresh,
-						);
-						usedCache = !!result.fromCache;
-
-						setData(result.data);
-						setFromCache(result.fromCache || false);
-
-						if (result.fromCache) {
-							setSyncStatus(
-								result.recomputed
-									? "Showing cached data (recomputed)"
-									: "Showing cached data",
-							);
-						} else {
-							setSyncStatus("Data refreshed from server");
-						}
-
-						break;
-					}
-
-					case "user": {
-						if (role !== "social_worker") {
-							throw new Error(
-								"Unauthorized: Only social workers can access user management dashboard",
-							);
-						}
-
-						const { data: users, error: userError } = await supabase
-							.from("profile")
-							.select("*")
-							.order("created_at", { ascending: false });
-
-						if (userError) throw userError;
-
-						const userStats = {
-							total: users.length,
-							active: users.filter((u) => u.status === "active")
-								.length,
-							inactive: users.filter(
-								(u) => u.status === "inactive",
-							).length,
-							banned: users.filter((u) => u.status === "banned")
-								.length,
-							socialWorkers: users.filter(
-								(u) => u.role === "social_worker",
-							).length,
-						};
-
-						setData({
-							stats: userStats,
-							rawData: { users },
-						});
-						break;
-					}
-
-					default:
-						setData({ stats: {}, rawData: {} });
-				}
-			} catch (err) {
-				console.error("Dashboard fetch error:", err);
-				setError(err.message || "Failed to load dashboard data");
-				setSyncStatus("Error loading dashboard data");
-			} finally {
-				setLoading(false);
-			}
-
-			// If we served cached data and we are online, immediately revalidate in the background
-			if (usedCache && !forceRefresh && isBrowserOnline()) {
-				setSyncing(true);
-				setSyncStatus("Refreshing from server...");
-
-				try {
-					const fresh = await fetchAndCacheDashboardData(
-						dashboardType,
-						filtersRef.current,
-					);
-					setData(fresh);
-					setFromCache(false);
-					setSyncStatus("Data refreshed from server");
-				} catch (err) {
-					console.error("Background refresh failed:", err);
-					setSyncStatus("Failed to refresh from server");
-				} finally {
-					setSyncing(false);
-				}
-			}
-		},
-		[dashboardType, role],
-	);
-
-	/**
-	 * Force refresh dashboard data from Supabase
-	 */
-	const refreshFromServer = useCallback(async () => {
-		setSyncing(true);
-		setSyncStatus("Refreshing from server...");
-
-		try {
-			if (!isBrowserOnline()) {
-				setSyncStatus("Cannot refresh while offline");
-				return;
-			}
-
-			if (dashboardType === "case" || dashboardType === "program") {
-				const fresh = await fetchAndCacheDashboardData(
-					dashboardType,
-					filtersRef.current,
-				);
-				setData(fresh);
-				setFromCache(false);
-				setSyncStatus("Successfully refreshed");
-			} else {
-				// For non-supported offline dashboards, refetch directly
-				setLoading(true);
-				setError(null);
-				setSyncStatus("Refreshing...");
-				// Trigger a refresh by changing a state that will cause fetchDashboardData to run
-				setData(null);
-			}
-		} catch (err) {
-			console.error("Error refreshing dashboard:", err);
-			setError(err.message || "Failed to refresh dashboard");
-			setSyncStatus("Refresh failed");
-		} finally {
-			setSyncing(false);
-		}
-	}, [dashboardType]);
-
-	useEffect(() => {
-		fetchDashboardData();
-	}, [fetchDashboardData, dashboardType, role]);
-
-	// Subscribe to cache updates for case and program dashboards
-	useEffect(() => {
-		if (dashboardType !== "case" && dashboardType !== "program") return;
-
-		const subscription = dashboardCacheLiveQuery(dashboardType).subscribe({
-			next: (cachedData) => {
-				if (cachedData && !loading) {
-					setData(cachedData);
-					setFromCache(true);
-				}
-			},
-			error: (err) => {
-				console.error("Cache subscription error:", err);
-			},
-		});
-
-		cacheSubscriptionRef.current = subscription;
-
-		return () => {
-			if (cacheSubscriptionRef.current) {
-				cacheSubscriptionRef.current.unsubscribe();
-			}
-		};
-	}, [dashboardType, loading]);
-
-	return useMemo(
-		() => ({
-			data,
-			loading,
-			error,
-			refresh: () => fetchDashboardData(true),
-			refreshFromServer,
-			syncing,
-			syncStatus,
-			fromCache,
-			isOnline: isBrowserOnline(),
-		}),
-		[
-			data,
-			loading,
-			error,
-			refreshFromServer,
-			syncing,
-			syncStatus,
-			fromCache,
-			fetchDashboardData,
-		],
-	);
+  return useMemo(
+    () => ({
+      data,
+      loading,
+      error,
+      refresh: refreshFromServer,
+      refreshFromServer,
+      syncing,
+      syncStatus,
+      fromCache,
+      isOnline: isBrowserOnline(),
+    }),
+    [data, loading, error, refreshFromServer, syncing, syncStatus, fromCache],
+  );
 }

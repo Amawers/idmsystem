@@ -20,7 +20,6 @@ import logo from "@/assets/logo.jpg";
  * - Render a controlled email/password form.
  * - Provide password visibility toggle.
  * - Wrap `onSubmit` with a local loading state for UX feedback.
- * - Support an offline-first "Remember me" toggle.
  */
 
 /**
@@ -30,8 +29,6 @@ import logo from "@/assets/logo.jpg";
  * @property {(value: string) => void} setEmail
  * @property {string} password
  * @property {(value: string) => void} setPassword
- * @property {boolean} rememberMe
- * @property {(next: boolean) => void} setRememberMe
  * @property {string} [className]
  */
 
@@ -44,8 +41,6 @@ export function LoginForm({
 	setEmail,
 	password,
 	setPassword,
-	rememberMe,
-	setRememberMe,
 	className,
 	...props
 }) {
@@ -126,24 +121,6 @@ export function LoginForm({
 										)}
 									</button>
 								</div>
-							</div>
-
-							<div className="flex items-center justify-between text-sm">
-								<label
-									htmlFor="remember-me"
-									className="flex items-center gap-2"
-								>
-									<input
-										type="checkbox"
-										id="remember-me"
-										className="h-4 w-4 accent-primary"
-										checked={rememberMe}
-										onChange={(event) =>
-											setRememberMe(event.target.checked)
-										}
-									/>
-									<span>Remember me for offline access</span>
-								</label>
 							</div>
 
 							<Button

@@ -48,10 +48,6 @@ function CaseDashboard({ filters }) {
     data, 
     loading, 
     error, 
-    syncing,
-    syncStatus,
-    fromCache,
-    isOnline,
   } = useDashboard('case', filters);
 
   if (error) {
@@ -77,39 +73,15 @@ function CaseDashboard({ filters }) {
           <p className="text-muted-foreground text-[11px]">Overview of all case activities and metrics</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Offline Badge with Status */}
-          {!isOnline && (
-            <Badge variant="destructive" className="h-7 text-xs gap-1.5">
-              Offline
-              {fromCache && <span className="opacity-75">• Cached data</span>}
-            </Badge>
-          )}
-          
-          {/* Cache Indicator with Status */}
-          {fromCache && isOnline && (
-            <Badge variant="secondary" className="h-7 text-xs gap-1.5">
-              Cached
-              {syncStatus && <span className="opacity-75">• {syncStatus}</span>}
-            </Badge>
-          )}
-          
-          {/* Fresh Data Indicator */}
-          {!fromCache && isOnline && syncStatus && (
-            <Badge variant="outline" className="h-7 text-xs text-green-600 border-green-600">
-              {syncStatus}
-            </Badge>
-          )}
-          
-          {/* Sync Button */}
           <Button
             variant="outline"
             size="sm"
             onClick={() => window.location.reload()}
-            disabled={loading || syncing}
+            disabled={loading}
             className="gap-2 h-7 text-xs cursor-pointer"
           >
-            <RefreshCw className={cn("h-3 w-3", (loading || syncing) && "animate-spin")} />
-            {syncing ? "Syncing..." : "Refresh"}
+            <RefreshCw className={cn("h-3 w-3", loading && "animate-spin")} />
+            Refresh
           </Button>
         </div>
       </div>

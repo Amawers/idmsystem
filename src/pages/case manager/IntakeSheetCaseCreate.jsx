@@ -5,9 +5,7 @@
  *
  * Responsibilities:
  * - Renders a multi-tab intake flow backed by `useIntakeFormStore`.
- * - On the final step, builds a normalized payload from store sections and queues a local create via
- *   `createOrUpdateLocalCase` (offline-first).
- * - When online, triggers a tab reload/sync signal via `sessionStorage` keys to refresh the Case list.
+	* - On the final step, builds a normalized payload from store sections and saves directly to Supabase.
  *
  * Notes:
  * - This component currently initializes `currentTabIndex` to the last step, which effectively
@@ -32,24 +30,7 @@ import { AssessmentForm } from "@/components/intake sheet/AssessmentForm";
 import { RecommendationForm } from "@/components/intake sheet/RecommendationForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { toast } from "sonner";
-import { createOrUpdateLocalCase } from "@/services/caseOfflineService";
-
-/** @returns {boolean} True when the browser reports an online network state. */
-const isBrowserOnline = () =>
-	typeof navigator !== "undefined" ? navigator.onLine : true;
-
-/**
- * Forces the Case Management view to reopen the CASE tab after a full reload.
- *
- * Used as a simple way to refresh data/sync state after a successful create while online.
- */
-const forceCaseTabReload = () => {
-	if (typeof window === "undefined") return;
-	sessionStorage.setItem("caseManagement.activeTab", "CASE");
-	sessionStorage.setItem("caseManagement.forceTabAfterReload", "CASE");
-	sessionStorage.setItem("caseManagement.forceCaseSync", "true");
-	window.location.reload();
-};
+import { saveCaseRecord } from "@/lib/caseSubmission";
 
 /**
  * @typedef {(
@@ -141,8 +122,7 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 	};
 
 	/**
-	 * Builds the case payload from store sections and queues a local create.
-	 * When online, signals the parent Case view to refresh/sync via a full reload.
+	 * Builds the case payload from store sections and saves directly to Supabase.
 	 */
 	const handleCreate = async () => {
 		if (createInFlightRef.current) {
@@ -337,21 +317,20 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 			console.log("💾 Final case payload:", casePayload);
 			console.log("👨‍👩‍👧‍👦 Family members:", familyMembers);
 
-			await createOrUpdateLocalCase({
+			const { error } = await saveCaseRecord({
 				casePayload,
 				familyMembers,
 				mode: "create",
 			});
 
+			if (error) throw error;
+
 			// Done - close modal and clean up
 			resetAll();
 			setOpen(false);
 
-			const online = isBrowserOnline();
-			toast.success(online ? "Case Saved" : "Case Saved Offline", {
-				description: online
-					? "Case was stored and will sync shortly."
-					: "Changes were stored locally and will sync once you're reconnected.",
+			toast.success("Case Saved", {
+				description: "Case was saved successfully.",
 			});
 
 			// Fire-and-forget parent refresh
@@ -366,9 +345,6 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 				}
 			}
 
-			if (online) {
-				setTimeout(forceCaseTabReload, 0);
-			}
 		} catch (err) {
 			console.error("Failed to create case record:", err);
 			toast.error("Creation Failed", {
@@ -615,7 +591,6 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 								isSecond={true}
 								setOpen={setOpen}
 								submitDisabled={isSaving}
-								useOfflineSubmit={true}
 							/>
 						</TabsContent>
 					</div>

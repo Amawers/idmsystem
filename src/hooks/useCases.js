@@ -7,8 +7,7 @@
  * - Expose a delete helper and a `reload` function.
  *
  * Note:
- * - This hook is the direct Supabase implementation; the offline-first variant lives in
- *   `useCasesOffline()`.
+ * - This hook is the direct Supabase implementation used by Case Management.
  */
 
 import { useEffect, useMemo, useState, useCallback } from "react";
@@ -183,6 +182,9 @@ export function useCases() {
 	const [data, setData] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
+	const [pendingCount] = useState(0);
+	const [syncing, setSyncing] = useState(false);
+	const [syncStatus, setSyncStatus] = useState(null);
 
 	const load = useCallback(async () => {
 		setLoading(true);
@@ -229,8 +231,44 @@ export function useCases() {
 		[load],
 	);
 
+	const runSync = useCallback(async () => {
+		setSyncing(true);
+		setSyncStatus("Refreshing...");
+		try {
+			await load();
+			setSyncStatus("Up to date");
+			return { success: true };
+		} catch (e) {
+			setSyncStatus("Refresh failed");
+			return { success: false, error: e };
+		} finally {
+			setTimeout(() => setSyncStatus(null), 1200);
+			setSyncing(false);
+		}
+	}, [load]);
+
 	return useMemo(
-		() => ({ data, loading, error, reload: load, deleteCase }),
-		[data, loading, error, load, deleteCase],
+		() => ({
+			data,
+			loading,
+			error,
+			reload: load,
+			deleteCase,
+			pendingCount,
+			syncing,
+			syncStatus,
+			runSync,
+		}),
+		[
+			data,
+			loading,
+			error,
+			load,
+			deleteCase,
+			pendingCount,
+			syncing,
+			syncStatus,
+			runSync,
+		],
 	);
 }

@@ -1,8 +1,7 @@
 /**
  * Login page.
  *
- * Uses `authStore.login` for authentication and optionally persists an offline
- * session snapshot when “Remember me” is enabled.
+ * Uses `authStore.login` for online Supabase authentication.
  */
 
 import { useState } from "react";
@@ -20,7 +19,6 @@ export default function Login() {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState(null);
-	const [rememberMe, setRememberMe] = useState(false);
 
 	/** Auth action (wraps Supabase sign-in and role/profile hydration). */
 	const login = useAuthStore((s) => s.login);
@@ -36,7 +34,7 @@ export default function Login() {
 	const handleLogin = async (e) => {
 		e.preventDefault();
 		try {
-			await login(email, password, rememberMe);
+			await login(email, password);
 
 			toast.success("Login successful!", {
 				icon: <CheckCircle className="text-green-500" size={20} />,
@@ -68,8 +66,6 @@ export default function Login() {
 					setEmail={setEmail}
 					password={password}
 					setPassword={setPassword}
-					rememberMe={rememberMe}
-					setRememberMe={setRememberMe}
 					error={error}
 				/>
 			</div>

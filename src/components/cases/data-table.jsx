@@ -29,18 +29,14 @@ import * as React from "react";
 // Icons
 import {
 	IconChevronDown,
-	IconCircleCheckFilled,
-	IconAlertTriangle,
 	IconClipboardText,
 	IconCheckbox,
 	IconDotsVertical,
 	IconLayoutColumns,
-	IconCloudUpload,
-	IconLoader,
 	IconPlus,
 	IconRefresh,
 } from "@tabler/icons-react";
-import { Edit, ChevronLeft, ChevronRight, WifiOff, Search } from "lucide-react";
+import { Edit, ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 // Other utilities
 // import { toast } from "sonner";
@@ -1933,18 +1929,8 @@ export function DataTable({
 	deleteScCase,
 	initialTab = "CASE",
 	onTabChange,
-	caseSync,
-	ciclcarSync,
-	facSync,
-	farSync,
-	ivacSync,
-	spSync,
-	faSync,
-	pwdSync,
-	scSync,
 	ciclcarProgramEnrollments = {},
 	ciclcarProgramEnrollmentsLoading = false,
-	isOnline = true,
 }) {
 	// State to control Intake Sheet modal visibility (open/close)
 	const [openIntakeSheet, setOpenIntakeSheet] = useState(false);
@@ -2125,42 +2111,6 @@ export function DataTable({
 		});
 	}, []);
 
-	const casePending = caseSync?.pendingCount ?? 0;
-	const caseSyncing = caseSync?.syncing ?? false;
-	const caseSyncStatus = caseSync?.syncStatus ?? null;
-	const caseOnSync = caseSync?.onSync;
-	const ciclcarPending = ciclcarSync?.pendingCount ?? 0;
-	const ciclcarSyncing = ciclcarSync?.syncing ?? false;
-	const ciclcarSyncStatus = ciclcarSync?.syncStatus ?? null;
-	const ciclcarOnSync = ciclcarSync?.onSync;
-	const facPending = facSync?.pendingCount ?? 0;
-	const facSyncing = facSync?.syncing ?? false;
-	const facSyncStatus = facSync?.syncStatus ?? null;
-	const facOnSync = facSync?.onSync;
-	const farPending = farSync?.pendingCount ?? 0;
-	const farSyncing = farSync?.syncing ?? false;
-	const farSyncStatus = farSync?.syncStatus ?? null;
-	const farOnSync = farSync?.onSync;
-	const ivacPending = ivacSync?.pendingCount ?? 0;
-	const ivacSyncing = ivacSync?.syncing ?? false;
-	const ivacSyncStatus = ivacSync?.syncStatus ?? null;
-	const ivacOnSync = ivacSync?.onSync;
-	const spPending = spSync?.pendingCount ?? 0;
-	const spSyncing = spSync?.syncing ?? false;
-	const spSyncStatus = spSync?.syncStatus ?? null;
-	const spOnSync = spSync?.onSync;
-	const faPending = faSync?.pendingCount ?? 0;
-	const faSyncing = faSync?.syncing ?? false;
-	const faSyncStatus = faSync?.syncStatus ?? null;
-	const faOnSync = faSync?.onSync;
-	const pwdPending = pwdSync?.pendingCount ?? 0;
-	const pwdSyncing = pwdSync?.syncing ?? false;
-	const pwdSyncStatus = pwdSync?.syncStatus ?? null;
-	const pwdOnSync = pwdSync?.onSync;
-	const scPending = scSync?.pendingCount ?? 0;
-	const scSyncing = scSync?.syncing ?? false;
-	const scSyncStatus = scSync?.syncStatus ?? null;
-	const scOnSync = scSync?.onSync;
 	const getCiclcarPrefetchedEnrollments = React.useCallback(
 		(caseId) => {
 			if (!caseId) return undefined;
@@ -2447,22 +2397,11 @@ export function DataTable({
 		setDocumentsDialogOpen(true);
 	}
 
-	// Handle refresh - full page reload that returns to the active tab for consistency across datasets
+	// Handle refresh by reloading only the active dataset.
 	const handleRefresh = React.useCallback(async () => {
 		if (isRefreshing) return;
 		setIsRefreshing(true);
 
-		if (typeof window !== "undefined") {
-			sessionStorage.setItem("caseManagement.activeTab", activeTab);
-			sessionStorage.setItem(
-				"caseManagement.forceTabAfterReload",
-				activeTab,
-			);
-			window.location.reload();
-			return;
-		}
-
-		// Fallback for non-browser environments (keeps previous reload behavior)
 		try {
 			const promises = [];
 			switch (activeTab) {
@@ -2921,15 +2860,6 @@ export function DataTable({
 							</p>
 						</div>
 						<div className="flex flex-wrap items-center justify-end gap-2">
-							{!isOnline && (
-								<Badge
-									variant="destructive"
-									className="gap-1 text-[11px]"
-								>
-									<WifiOff className="h-3 w-3" />
-									Offline
-								</Badge>
-							)}
 							{/* CASES SECTION */}
 							{activeTab === "CASE" && (
 								<>
@@ -2989,31 +2919,6 @@ export function DataTable({
 										</span>
 									</Button>
 
-									{/* Sync Button */}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => caseOnSync?.()}
-										disabled={
-											!isOnline ||
-											caseSyncing ||
-											casePending === 0
-										}
-										className="cursor-pointer"
-									>
-										<IconCloudUpload
-											className={
-												caseSyncing
-													? "animate-spin"
-													: ""
-											}
-										/>
-										<span className="hidden lg:inline">
-											{caseSyncing
-												? "SYNCING..."
-												: "SYNC"}
-										</span>
-									</Button>
 
 									{/* Customize Columns Dropdown */}
 									<DropdownMenu>
@@ -3088,40 +2993,6 @@ export function DataTable({
 										onSuccess={reloadCases}
 									/>
 
-									{(caseSyncing ||
-										casePending > 0 ||
-										caseSyncStatus) && (
-										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-											{caseSyncing ? (
-												<>
-													<IconLoader className="h-3 w-3 animate-spin" />
-													<span>
-														{caseSyncStatus ||
-															"Syncing queued changes..."}
-													</span>
-												</>
-											) : casePending > 0 ? (
-												<>
-													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
-													<span className="text-amber-600">
-														{casePending} pending
-														change
-														{casePending === 1
-															? ""
-															: "s"}{" "}
-														waiting for sync
-													</span>
-												</>
-											) : (
-												<>
-													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
-													<span className="text-emerald-600">
-														{caseSyncStatus}
-													</span>
-												</>
-											)}
-										</div>
-									)}
 								</>
 							)}
 
@@ -3184,31 +3055,6 @@ export function DataTable({
 										</span>
 									</Button>
 
-									{/* Sync Button */}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => ciclcarOnSync?.()}
-										disabled={
-											!isOnline ||
-											ciclcarSyncing ||
-											ciclcarPending === 0
-										}
-										className="cursor-pointer"
-									>
-										<IconCloudUpload
-											className={
-												ciclcarSyncing
-													? "animate-spin"
-													: ""
-											}
-										/>
-										<span className="hidden lg:inline">
-											{ciclcarSyncing
-												? "SYNCING..."
-												: "SYNC"}
-										</span>
-									</Button>
 
 									{/* Customize Columns Dropdown */}
 									<DropdownMenu>
@@ -3283,40 +3129,6 @@ export function DataTable({
 										onSuccess={reloadCiclcar}
 									/>
 
-									{(ciclcarSyncing ||
-										ciclcarPending > 0 ||
-										ciclcarSyncStatus) && (
-										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-											{ciclcarSyncing ? (
-												<>
-													<IconLoader className="h-3 w-3 animate-spin" />
-													<span>
-														{ciclcarSyncStatus ||
-															"Syncing queued changes..."}
-													</span>
-												</>
-											) : ciclcarPending > 0 ? (
-												<>
-													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
-													<span className="text-amber-600">
-														{ciclcarPending} pending
-														change
-														{ciclcarPending === 1
-															? ""
-															: "s"}{" "}
-														waiting for sync
-													</span>
-												</>
-											) : (
-												<>
-													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
-													<span className="text-emerald-600">
-														{ciclcarSyncStatus}
-													</span>
-												</>
-											)}
-										</div>
-									)}
 								</>
 							)}
 
@@ -3376,28 +3188,6 @@ export function DataTable({
 											{isRefreshing
 												? "REFRESHING..."
 												: "REFRESH"}
-										</span>
-									</Button>
-
-									{/* Sync Button */}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => farOnSync?.()}
-										disabled={
-											!isOnline ||
-											farSyncing ||
-											farPending === 0
-										}
-										className="cursor-pointer"
-									>
-										<IconCloudUpload
-											className={
-												farSyncing ? "animate-spin" : ""
-											}
-										/>
-										<span className="hidden lg:inline">
-											{farSyncing ? "SYNCING..." : "SYNC"}
 										</span>
 									</Button>
 
@@ -3487,41 +3277,6 @@ export function DataTable({
 										onSuccess={reloadFar}
 										editingRecord={editingFarRecord}
 									/>
-
-									{(farSyncing ||
-										farPending > 0 ||
-										farSyncStatus) && (
-										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-											{farSyncing ? (
-												<>
-													<IconLoader className="h-3 w-3 animate-spin" />
-													<span>
-														{farSyncStatus ||
-															"Syncing queued changes..."}
-													</span>
-												</>
-											) : farPending > 0 ? (
-												<>
-													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
-													<span className="text-amber-600">
-														{farPending} pending
-														change
-														{farPending === 1
-															? ""
-															: "s"}{" "}
-														waiting for sync
-													</span>
-												</>
-											) : (
-												<>
-													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
-													<span className="text-emerald-600">
-														{farSyncStatus}
-													</span>
-												</>
-											)}
-										</div>
-									)}
 								</>
 							)}
 
@@ -3581,28 +3336,6 @@ export function DataTable({
 											{isRefreshing
 												? "REFRESHING..."
 												: "REFRESH"}
-										</span>
-									</Button>
-
-									{/* Sync Button */}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => facOnSync?.()}
-										disabled={
-											!isOnline ||
-											facSyncing ||
-											facPending === 0
-										}
-										className="cursor-pointer"
-									>
-										<IconCloudUpload
-											className={
-												facSyncing ? "animate-spin" : ""
-											}
-										/>
-										<span className="hidden lg:inline">
-											{facSyncing ? "SYNCING..." : "SYNC"}
 										</span>
 									</Button>
 
@@ -3679,41 +3412,6 @@ export function DataTable({
 										editingRecord={editingFacRecord}
 										onSuccess={reloadFac}
 									/>
-
-									{(facSyncing ||
-										facPending > 0 ||
-										facSyncStatus) && (
-										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-											{facSyncing ? (
-												<>
-													<IconLoader className="h-3 w-3 animate-spin" />
-													<span>
-														{facSyncStatus ||
-															"Syncing queued changes..."}
-													</span>
-												</>
-											) : facPending > 0 ? (
-												<>
-													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
-													<span className="text-amber-600">
-														{facPending} pending
-														change
-														{facPending === 1
-															? ""
-															: "s"}{" "}
-														waiting for sync
-													</span>
-												</>
-											) : (
-												<>
-													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
-													<span className="text-emerald-600">
-														{facSyncStatus}
-													</span>
-												</>
-											)}
-										</div>
-									)}
 								</>
 							)}
 
@@ -3773,32 +3471,6 @@ export function DataTable({
 											{isRefreshing
 												? "REFRESHING..."
 												: "REFRESH"}
-										</span>
-									</Button>
-
-									{/* Sync Button */}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => ivacOnSync?.()}
-										disabled={
-											!isOnline ||
-											ivacSyncing ||
-											ivacPending === 0
-										}
-										className="cursor-pointer"
-									>
-										<IconCloudUpload
-											className={
-												ivacSyncing
-													? "animate-spin"
-													: ""
-											}
-										/>
-										<span className="hidden lg:inline">
-											{ivacSyncing
-												? "SYNCING..."
-												: "SYNC"}
 										</span>
 									</Button>
 
@@ -3875,41 +3547,6 @@ export function DataTable({
 										editingRecord={editingIvacRecord}
 										onSuccess={reloadIvac}
 									/>
-
-									{(ivacSyncing ||
-										ivacPending > 0 ||
-										ivacSyncStatus) && (
-										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-											{ivacSyncing ? (
-												<>
-													<IconLoader className="h-3 w-3 animate-spin" />
-													<span>
-														{ivacSyncStatus ||
-															"Syncing queued changes..."}
-													</span>
-												</>
-											) : ivacPending > 0 ? (
-												<>
-													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
-													<span className="text-amber-600">
-														{ivacPending} pending
-														change
-														{ivacPending === 1
-															? ""
-															: "s"}{" "}
-														waiting for sync
-													</span>
-												</>
-											) : (
-												<>
-													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
-													<span className="text-emerald-600">
-														{ivacSyncStatus}
-													</span>
-												</>
-											)}
-										</div>
-									)}
 								</>
 							)}
 
@@ -3969,28 +3606,6 @@ export function DataTable({
 											{isRefreshing
 												? "REFRESHING..."
 												: "REFRESH"}
-										</span>
-									</Button>
-
-									{/* Sync Button */}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => spOnSync?.()}
-										disabled={
-											!isOnline ||
-											spSyncing ||
-											spPending === 0
-										}
-										className="cursor-pointer"
-									>
-										<IconCloudUpload
-											className={
-												spSyncing ? "animate-spin" : ""
-											}
-										/>
-										<span className="hidden lg:inline">
-											{spSyncing ? "SYNCING..." : "SYNC"}
 										</span>
 									</Button>
 
@@ -4071,41 +3686,6 @@ export function DataTable({
 										onSuccess={reloadSp}
 										editingRecord={editingSpRecord}
 									/>
-
-									{(spSyncing ||
-										spPending > 0 ||
-										spSyncStatus) && (
-										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-											{spSyncing ? (
-												<>
-													<IconLoader className="h-3 w-3 animate-spin" />
-													<span>
-														{spSyncStatus ||
-															"Syncing queued changes..."}
-													</span>
-												</>
-											) : spPending > 0 ? (
-												<>
-													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
-													<span className="text-amber-600">
-														{spPending} pending
-														change
-														{spPending === 1
-															? ""
-															: "s"}{" "}
-														waiting for sync
-													</span>
-												</>
-											) : (
-												<>
-													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
-													<span className="text-emerald-600">
-														{spSyncStatus}
-													</span>
-												</>
-											)}
-										</div>
-									)}
 								</>
 							)}
 
@@ -4165,28 +3745,6 @@ export function DataTable({
 											{isRefreshing
 												? "REFRESHING..."
 												: "REFRESH"}
-										</span>
-									</Button>
-
-									{/* Sync Button */}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => faOnSync?.()}
-										disabled={
-											!isOnline ||
-											faSyncing ||
-											faPending === 0
-										}
-										className="cursor-pointer"
-									>
-										<IconCloudUpload
-											className={
-												faSyncing ? "animate-spin" : ""
-											}
-										/>
-										<span className="hidden lg:inline">
-											{faSyncing ? "SYNCING..." : "SYNC"}
 										</span>
 									</Button>
 
@@ -4281,41 +3839,6 @@ export function DataTable({
 										onSuccess={reloadFa}
 										editingRecord={editingFaRecord}
 									/>
-
-									{(faSyncing ||
-										faPending > 0 ||
-										faSyncStatus) && (
-										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-											{faSyncing ? (
-												<>
-													<IconLoader className="h-3 w-3 animate-spin" />
-													<span>
-														{faSyncStatus ||
-															"Syncing queued changes..."}
-													</span>
-												</>
-											) : faPending > 0 ? (
-												<>
-													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
-													<span className="text-amber-600">
-														{faPending} pending
-														change
-														{faPending === 1
-															? ""
-															: "s"}{" "}
-														waiting for sync
-													</span>
-												</>
-											) : (
-												<>
-													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
-													<span className="text-emerald-600">
-														{faSyncStatus}
-													</span>
-												</>
-											)}
-										</div>
-									)}
 								</>
 							)}
 
@@ -4375,28 +3898,6 @@ export function DataTable({
 											{isRefreshing
 												? "REFRESHING..."
 												: "REFRESH"}
-										</span>
-									</Button>
-
-									{/* Sync Button */}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => pwdOnSync?.()}
-										disabled={
-											!isOnline ||
-											pwdSyncing ||
-											pwdPending === 0
-										}
-										className="cursor-pointer"
-									>
-										<IconCloudUpload
-											className={
-												pwdSyncing ? "animate-spin" : ""
-											}
-										/>
-										<span className="hidden lg:inline">
-											{pwdSyncing ? "SYNCING..." : "SYNC"}
 										</span>
 									</Button>
 
@@ -4472,41 +3973,6 @@ export function DataTable({
 										editingRecord={editingPwdRecord}
 										onSuccess={reloadPwd}
 									/>
-
-									{(pwdSyncing ||
-										pwdPending > 0 ||
-										pwdSyncStatus) && (
-										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-											{pwdSyncing ? (
-												<>
-													<IconLoader className="h-3 w-3 animate-spin" />
-													<span>
-														{pwdSyncStatus ||
-															"Syncing queued changes..."}
-													</span>
-												</>
-											) : pwdPending > 0 ? (
-												<>
-													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
-													<span className="text-amber-600">
-														{pwdPending} pending
-														change
-														{pwdPending === 1
-															? ""
-															: "s"}{" "}
-														waiting for sync
-													</span>
-												</>
-											) : (
-												<>
-													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
-													<span className="text-emerald-600">
-														{pwdSyncStatus}
-													</span>
-												</>
-											)}
-										</div>
-									)}
 								</>
 							)}
 
@@ -4566,28 +4032,6 @@ export function DataTable({
 											{isRefreshing
 												? "REFRESHING..."
 												: "REFRESH"}
-										</span>
-									</Button>
-
-									{/* Sync Button */}
-									<Button
-										variant="outline"
-										size="sm"
-										onClick={() => scOnSync?.()}
-										disabled={
-											!isOnline ||
-											scSyncing ||
-											scPending === 0
-										}
-										className="cursor-pointer"
-									>
-										<IconCloudUpload
-											className={
-												scSyncing ? "animate-spin" : ""
-											}
-										/>
-										<span className="hidden lg:inline">
-											{scSyncing ? "SYNCING..." : "SYNC"}
 										</span>
 									</Button>
 
@@ -4663,41 +4107,6 @@ export function DataTable({
 										editingRecord={editingScRecord}
 										onSuccess={reloadSc}
 									/>
-
-									{(scSyncing ||
-										scPending > 0 ||
-										scSyncStatus) && (
-										<div className="flex items-center gap-2 text-xs text-muted-foreground pt-2">
-											{scSyncing ? (
-												<>
-													<IconLoader className="h-3 w-3 animate-spin" />
-													<span>
-														{scSyncStatus ||
-															"Syncing queued changes..."}
-													</span>
-												</>
-											) : scPending > 0 ? (
-												<>
-													<IconAlertTriangle className="h-3 w-3 text-amber-500" />
-													<span className="text-amber-600">
-														{scPending} pending
-														change
-														{scPending === 1
-															? ""
-															: "s"}{" "}
-														waiting for sync
-													</span>
-												</>
-											) : (
-												<>
-													<IconCircleCheckFilled className="h-3 w-3 text-emerald-500" />
-													<span className="text-emerald-600">
-														{scSyncStatus}
-													</span>
-												</>
-											)}
-										</div>
-									)}
 								</>
 							)}
 						</div>

@@ -6,12 +6,10 @@
  * - Prefill `useIntakeFormStore` from a selected case row for a two-part intake flow.
  * - Normalize date/datetime values to what form controls expect.
  * - Merge Part 1 + Part 2 family members with a stable `group_no` offset.
- * - Queue the update via the offline service; when online, force a one-time tab reload to
- *   encourage immediate sync.
+	* - Save updates directly to Supabase.
  *
  * Notes:
  * - The flow uses index-based tab state + a completed set (similar to FAC) to keep UX stable.
- * - Tab forcing is coordinated via `sessionStorage` keys consumed by the case management page.
  */
 import { useState, useEffect } from "react";
 import {
@@ -32,28 +30,7 @@ import { AssessmentForm } from "@/components/intake sheet/AssessmentForm";
 import { RecommendationForm } from "@/components/intake sheet/RecommendationForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { toast } from "sonner";
-import { createOrUpdateLocalCase } from "@/services/caseOfflineService";
-
-/**
- * Safe online check for browser-like environments.
- * @returns {boolean} True when the browser reports connectivity, otherwise true by default.
- */
-const isBrowserOnline = () =>
-	typeof navigator !== "undefined" ? navigator.onLine : true;
-
-/**
- * Forces the Case Management view to reopen on the CASE tab.
- *
- * Used after queuing an update while online so the list can refresh/sync.
- * @returns {void}
- */
-const forceCaseTabReload = () => {
-	if (typeof window === "undefined") return;
-	sessionStorage.setItem("caseManagement.activeTab", "CASE");
-	sessionStorage.setItem("caseManagement.forceTabAfterReload", "CASE");
-	sessionStorage.setItem("caseManagement.forceCaseSync", "true");
-	window.location.reload();
-};
+import { saveCaseRecord } from "@/lib/caseSubmission";
 
 /**
  * @typedef {(
@@ -378,7 +355,7 @@ export default function IntakeSheetCaseEdit({
 	};
 
 	/**
-	 * Queues an update for the current record via the offline service.
+	 * Saves an update for the current record directly to Supabase.
 	 * @returns {Promise<void>}
 	 */
 	const handleUpdate = async () => {
@@ -581,13 +558,14 @@ export default function IntakeSheetCaseEdit({
 			console.log("💾 Final update payload:", casePayload);
 			console.log("👨‍👩‍👧‍👦 Family members:", familyMembers);
 
-			await createOrUpdateLocalCase({
+			const { error } = await saveCaseRecord({
 				casePayload,
 				familyMembers,
 				targetId: row.id,
-				localId: row.localId,
 				mode: "update",
 			});
+
+			if (error) throw error;
 
 			// Done - close modal and clean up
 			resetAll();
@@ -605,16 +583,9 @@ export default function IntakeSheetCaseEdit({
 				}
 			}
 
-			const online = isBrowserOnline();
-			toast.success(online ? "Case Updated" : "Case Updated Offline", {
-				description: online
-					? "Case was updated and will sync shortly."
-					: "Changes were stored locally and will sync once you're reconnected.",
+			toast.success("Case Updated", {
+				description: "Case was updated successfully.",
 			});
-
-			if (online) {
-				setTimeout(forceCaseTabReload, 0);
-			}
 		} catch (e) {
 			console.error("Failed to update case record:", e);
 			toast.error("Update Failed", {

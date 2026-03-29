@@ -5,8 +5,7 @@
  * Responsibilities:
  * - Hydrate `useIntakeFormStore` from the provided row (and related rows when online).
  * - Normalize mixed naming/date formats to what form controls expect.
- * - Queue create/update via the offline service, then optionally force a tab reload to
- *   encourage immediate sync when online.
+	* - Save create/update directly to Supabase.
  *
  * Notes:
  * - This file contains defensive mapping (`pick`, date normalizers) to support legacy field
@@ -32,7 +31,6 @@ import { ReferralForm } from "@/components/intake sheet CICLCAR/ReferralForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import supabase from "@/../config/supabase";
 import { toast } from "sonner";
-import { createOrUpdateLocalCase } from "@/services/ciclcarOfflineService";
 
 /**
  * Safe online check for browser-like environments.
@@ -41,19 +39,6 @@ import { createOrUpdateLocalCase } from "@/services/ciclcarOfflineService";
 const isBrowserOnline = () =>
 	typeof navigator !== "undefined" ? navigator.onLine : true;
 
-/**
- * Forces the Case Management view to reopen on the CICLCAR tab.
- *
- * Used after queuing an update while online so the list can refresh/sync.
- * @returns {void}
- */
-const forceCiclcarTabReload = () => {
-	if (typeof window === "undefined") return;
-	sessionStorage.setItem("caseManagement.activeTab", "CICLCAR");
-	sessionStorage.setItem("caseManagement.forceTabAfterReload", "CICLCAR");
-	sessionStorage.setItem("caseManagement.forceCiclcarSync", "true");
-	window.location.reload();
-};
 
 /**
  * Picks the first non-empty value from `obj` by key.
@@ -308,7 +293,7 @@ export default function IntakeSheetCICLCAREdit({
 	}, [open, row, setSectionField]);
 
 	/**
-	 * Queues create/update of the CICL/CAR case and related family background rows.
+	 * Saves create/update of the CICL/CAR case and related family background rows.
 	 *
 	 * Uses defensive mapping to support older section keys (`referal`) and mixed field naming.
 	 * @returns {Promise<void>}
@@ -488,13 +473,61 @@ export default function IntakeSheetCICLCAREdit({
 
 			console.log("💾 Final case payload:", casePayload);
 
-			await createOrUpdateLocalCase({
-				casePayload,
-				familyMembers: familyRows,
-				targetId: row?.id ?? null,
-				localId: row?.localId ?? null,
-				mode: isEditing ? "update" : "create",
-			});
+			let caseId = row?.id ?? null;
+
+			if (isEditing) {
+				if (!caseId) {
+					throw new Error("Missing CICL/CAR case id for update");
+				}
+
+				const { error: updateError } = await supabase
+					.from("ciclcar_case")
+					.update(casePayload)
+					.eq("id", caseId);
+
+				if (updateError) throw updateError;
+			} else {
+				const { data: insertedCase, error: insertError } = await supabase
+					.from("ciclcar_case")
+					.insert(casePayload)
+					.select("id")
+					.single();
+
+				if (insertError) throw insertError;
+				caseId = insertedCase?.id ?? null;
+			}
+
+			if (!caseId) {
+				throw new Error("Unable to resolve CICL/CAR case id after save");
+			}
+
+			const { error: deleteFamilyError } = await supabase
+				.from("ciclcar_family_background")
+				.delete()
+				.eq("ciclcar_case_id", caseId);
+
+			if (deleteFamilyError) throw deleteFamilyError;
+
+			if (familyRows.length) {
+				const familyPayload = familyRows.map((member) => ({
+					ciclcar_case_id: caseId,
+					name: member?.name || null,
+					relationship: member?.relationship || null,
+					age: member?.age || null,
+					sex: member?.sex || null,
+					status: member?.status || null,
+					contact_number: member?.contactNumber || null,
+					educational_attainment:
+						member?.educationalAttainment || null,
+					employment: member?.employment || null,
+				}));
+
+				const { error: insertFamilyError } = await supabase
+					.from("ciclcar_family_background")
+					.insert(familyPayload);
+
+				if (insertFamilyError) throw insertFamilyError;
+			}
 
 			// Done - close modal and clean up
 			resetAll();
@@ -512,16 +545,9 @@ export default function IntakeSheetCICLCAREdit({
 				}
 			}
 
-			const online = isBrowserOnline();
 			toast.success(isEditing ? "Changes Saved" : "Case Saved", {
-				description: online
-					? "Sync queued. Remote data will update shortly."
-					: "Changes stored locally and will sync once reconnected.",
+				description: "CICL/CAR case was saved successfully.",
 			});
-
-			if (online) {
-				setTimeout(forceCiclcarTabReload, 0);
-			}
 		} catch (err) {
 			console.error("Failed to create/update CICL/CAR record:", err);
 			toast.error(isEditing ? "Update Failed" : "Creation Failed", {

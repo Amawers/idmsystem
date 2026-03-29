@@ -3,13 +3,12 @@
  * IVAC intake dialog.
  *
  * Responsibilities:
- * - Hydrate the form store when editing an existing record (prefers offline cache when present).
- * - Validate + build a submission payload, then queue the create/update via the offline service.
- * - When online, trigger a one-time reload into the IVAC tab to encourage immediate sync.
+	* - Hydrate the form store when editing an existing record.
+	* - Validate + build a submission payload, then save create/update directly via Supabase.
  *
  * Notes:
  * - This component intentionally persists form state in `useIntakeFormStore`.
- * - Tab forcing is coordinated via `sessionStorage` keys consumed by the case management page.
+ * - Single-step flow submits through `goNext`.
  */
 import { useState, useEffect } from "react";
 import {
@@ -21,35 +20,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { IncidenceVACForm } from "@/components/intake sheet IVAC/IncidenceVACForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
-import { buildIVACCasePayload, validateIVACData } from "@/lib/ivacSubmission";
 import {
-	createOrUpdateLocalIvacCase,
-	getIvacCaseById,
-	getIvacCaseByLocalId,
-} from "@/services/ivacOfflineService";
+	submitIVACCase,
+	updateIVACCase,
+	validateIVACData,
+} from "@/lib/ivacSubmission";
 import { toast } from "sonner";
 import { IconCircleCheck, IconAlertCircle } from "@tabler/icons-react";
-
-/**
- * Safe online check for browser-like environments.
- * @returns {boolean} True when the browser reports connectivity, otherwise true by default.
- */
-const isBrowserOnline = () =>
-	typeof navigator !== "undefined" ? navigator.onLine : true;
-
-/**
- * Forces the Case Management view to reopen on the IVAC tab.
- *
- * Used after queuing a create/update while online so the IVAC list can refresh/sync.
- * @returns {void}
- */
-const forceIvacTabReload = () => {
-	if (typeof window === "undefined") return;
-	sessionStorage.setItem("caseManagement.activeTab", "IVAC");
-	sessionStorage.setItem("caseManagement.forceTabAfterReload", "IVAC");
-	sessionStorage.setItem("caseManagement.forceIvacSync", "true");
-	window.location.reload();
-};
 
 /**
  * @typedef {Object} IvacCaseDetails
@@ -91,14 +68,10 @@ export default function IntakeSheetIVAC({
 
 	/**
 	 * Hydrates `useIntakeFormStore` for edit mode.
-	 *
-	 * Prefers offline cache when `editingRecord.localId` is available; otherwise uses cached
-	 * remote record when `editingRecord.id` exists.
 	 * @returns {void}
 	 */
 	useEffect(() => {
-		let isActive = true;
-		async function hydrateForm() {
+		function hydrateForm() {
 			if (!open) return;
 
 			if (!editingRecord) {
@@ -108,18 +81,7 @@ export default function IntakeSheetIVAC({
 
 			console.log("🔄 Pre-filling IVAC form with:", editingRecord);
 			try {
-				let sourceRecord = editingRecord;
-				if (editingRecord?.localId != null) {
-					const local = await getIvacCaseByLocalId(
-						editingRecord.localId,
-					);
-					if (local) sourceRecord = local;
-				} else if (editingRecord?.id) {
-					const cached = await getIvacCaseById(editingRecord.id);
-					if (cached) sourceRecord = cached;
-				}
-
-				if (!isActive) return;
+				const sourceRecord = editingRecord;
 
 				/** @type {IncidenceOnVacSection} */
 				const formData = {
@@ -136,7 +98,6 @@ export default function IntakeSheetIVAC({
 
 				setSectionField("incidenceOnVAC", formData);
 			} catch (err) {
-				if (!isActive) return;
 				console.error("❌ Failed to load IVAC case:", err);
 				toast.error("Error loading Incidence on VAC record", {
 					description: err.message || "An unexpected error occurred.",
@@ -145,19 +106,10 @@ export default function IntakeSheetIVAC({
 		}
 
 		hydrateForm();
-		return () => {
-			isActive = false;
-		};
 	}, [open, editingRecord, resetAll, setSectionField]);
 
 	/**
-	 * Queues an IVAC case create/update.
-	 *
-	 * Flow:
-	 * - Validate intake store snapshot.
-	 * - Build payload.
-	 * - Write to offline queue (and local cache) via `createOrUpdateLocalIvacCase`.
-	 * - When online, force a one-time reload into the IVAC tab to pick up sync.
+	 * Saves an IVAC case create/update directly to Supabase.
 	 * @returns {Promise<void>}
 	 */
 	const handleSubmit = async () => {
@@ -175,23 +127,23 @@ export default function IntakeSheetIVAC({
 				return;
 			}
 
-			const casePayload = buildIVACCasePayload(allData);
-			await createOrUpdateLocalIvacCase({
-				casePayload,
-				targetId: editingRecord?.id ?? null,
-				localId: editingRecord?.localId ?? null,
-				mode: isEditMode ? "update" : "create",
-			});
+			if (isEditMode && editingRecord?.id) {
+				const { success, error } = await updateIVACCase(
+					editingRecord.id,
+					allData,
+				);
+				if (!success) throw error ?? new Error("Failed to update IVAC case");
+			} else {
+				const { error } = await submitIVACCase(allData);
+				if (error) throw error;
+			}
 
-			const online = isBrowserOnline();
 			toast.success(
 				isEditMode
 					? "Incidence on VAC saved"
-					: "Incidence on VAC queued",
+					: "Incidence on VAC created",
 				{
-					description: online
-						? "Sync queued and will push shortly."
-						: "Stored locally. Sync once you're online.",
+					description: "Changes were saved successfully.",
 				},
 			);
 
@@ -201,9 +153,6 @@ export default function IntakeSheetIVAC({
 				onSuccess();
 			}
 
-			if (online) {
-				setTimeout(forceIvacTabReload, 0);
-			}
 		} catch (err) {
 			console.error("❌ Unexpected error:", err);
 			toast.error(

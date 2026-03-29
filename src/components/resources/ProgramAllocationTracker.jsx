@@ -171,7 +171,7 @@ function ProgramCard({ program, allocations }) {
 
 export default function ProgramAllocationTracker() {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { programs, loading: programsLoading, fetchPrograms, pendingCount, runSync, syncing, syncStatus, offline } = usePrograms({ status: 'active' });
+  const { programs, loading: programsLoading, fetchPrograms } = usePrograms({ status: 'active' });
   const { allocations, loading: allocationsLoading, refresh: refreshAllocations } = useResourceAllocations();
   
   const loading = programsLoading || allocationsLoading;
@@ -213,19 +213,6 @@ export default function ProgramAllocationTracker() {
       {/* Header with Refresh Button */}
       <div className="flex items-center justify-end gap-3">
         <div className="flex items-center gap-2">
-          {offline && (
-            <Badge variant="secondary" className="text-[10px] font-medium uppercase">
-              <RefreshCw className="mr-1 h-3 w-3" /> Cached Data
-            </Badge>
-          )}
-          {pendingCount > 0 && (
-            <Badge variant="outline" className="text-[10px] font-medium">
-              {pendingCount} pending change{pendingCount !== 1 ? 's' : ''}
-            </Badge>
-          )}
-          {syncStatus && <span className="text-xs text-muted-foreground">{syncStatus}</span>}
-        </div>
-        <div className="flex items-center gap-2">
           <Button 
             onClick={handleRefresh} 
             disabled={isRefreshing || loading}
@@ -235,15 +222,6 @@ export default function ProgramAllocationTracker() {
           >
             <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Refreshing...' : 'Refresh'}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => runSync && runSync().catch(() => {})}
-            disabled={!runSync || pendingCount === 0 || syncing}
-            className="cursor-pointer"
-          >
-            {syncing ? 'Syncing…' : 'Sync'}
           </Button>
         </div>
       </div>

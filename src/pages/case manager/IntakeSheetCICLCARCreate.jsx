@@ -5,8 +5,7 @@
  * Responsibilities:
  * - Multi-step (tabbed) intake flow backed by `useIntakeFormStore`.
  * - Build a case payload using defensive field mapping to support legacy keys.
- * - Queue case creation via the offline service; when online, force a one-time tab reload to
- *   encourage immediate sync.
+	* - Save the case directly to Supabase.
  *
  * Notes:
  * - Case manager options are read from `useCaseManagerStore` and initialized on mount.
@@ -31,28 +30,8 @@ import { ReferralForm } from "@/components/intake sheet CICLCAR/ReferralForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { useCaseManagerStore } from "@/store/useCaseManagerStore";
 import { toast } from "sonner";
-import { createOrUpdateLocalCase } from "@/services/ciclcarOfflineService";
+import supabase from "@/../config/supabase";
 
-/**
- * Safe online check for browser-like environments.
- * @returns {boolean} True when the browser reports connectivity, otherwise true by default.
- */
-const isBrowserOnline = () =>
-	typeof navigator !== "undefined" ? navigator.onLine : true;
-
-/**
- * Forces the Case Management view to reopen on the CICLCAR tab.
- *
- * Used after queuing a create while online so the list can refresh/sync.
- * @returns {void}
- */
-const forceCiclcarTabReload = () => {
-	if (typeof window === "undefined") return;
-	sessionStorage.setItem("caseManagement.activeTab", "CICLCAR");
-	sessionStorage.setItem("caseManagement.forceTabAfterReload", "CICLCAR");
-	sessionStorage.setItem("caseManagement.forceCiclcarSync", "true");
-	window.location.reload();
-};
 
 /**
  * Picks the first non-empty value from `obj` by key.
@@ -152,7 +131,7 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 	}, [initCaseManagers]);
 
 	/**
-	 * Queues creation of the CICL/CAR case and related family background rows.
+	 * Saves the CICL/CAR case and related family background rows.
 	 *
 	 * Uses defensive mapping to support older section keys (`referal`) and mixed field naming.
 	 * @returns {Promise<void>}
@@ -326,21 +305,46 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 
 			console.log("💾 Final case payload:", casePayload);
 
-			await createOrUpdateLocalCase({
-				casePayload,
-				familyMembers: familyRows,
-				mode: "create",
-			});
+			const { data: insertedCase, error: caseError } = await supabase
+				.from("ciclcar_case")
+				.insert(casePayload)
+				.select("id")
+				.single();
+
+			if (caseError) throw caseError;
+
+			const caseId = insertedCase?.id;
+			if (!caseId) {
+				throw new Error("Unable to resolve CICL/CAR case id after create");
+			}
+
+			if (familyRows.length) {
+				const familyPayload = familyRows.map((member) => ({
+					ciclcar_case_id: caseId,
+					name: member?.name || null,
+					relationship: member?.relationship || null,
+					age: member?.age || null,
+					sex: member?.sex || null,
+					status: member?.status || null,
+					contact_number: member?.contactNumber || null,
+					educational_attainment:
+						member?.educationalAttainment || null,
+					employment: member?.employment || null,
+				}));
+
+				const { error: familyError } = await supabase
+					.from("ciclcar_family_background")
+					.insert(familyPayload);
+
+				if (familyError) throw familyError;
+			}
 
 			// Done - close modal and clean up
 			resetAll();
 			setOpen(false);
 
-			const online = isBrowserOnline();
-			toast.success(online ? "Case Saved" : "Case Saved Offline", {
-				description: online
-					? "CICL/CAR case was stored and will sync shortly."
-					: "Changes were stored locally and will sync once you're reconnected.",
+			toast.success("Case Saved", {
+				description: "CICL/CAR case was saved successfully.",
 			});
 
 			// Fire-and-forget parent refresh so we can move straight to reload when needed
@@ -355,9 +359,6 @@ export default function IntakeSheetCICLCARCreate({ open, setOpen, onSuccess }) {
 				}
 			}
 
-			if (online) {
-				setTimeout(forceCiclcarTabReload, 0);
-			}
 		} catch (err) {
 			console.error("Failed to create CICL/CAR record:", err);
 

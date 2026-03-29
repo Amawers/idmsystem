@@ -4,13 +4,12 @@
  *
  * Responsibilities:
  * - Multi-step (tabbed) intake flow backed by `useIntakeFormStore`.
- * - In edit mode, hydrate the store from the best available source (offline cache preferred).
- * - On submit, build a payload and queue create/update via the FAC offline service.
- * - When online, trigger a one-time reload into the FAC tab to encourage immediate sync.
+	* - In edit mode, hydrate the store from the current record or remote fetch.
+	* - On submit, save create/update directly via Supabase.
  *
  * Notes:
  * - `completedTabs` gates forward navigation in create mode.
- * - Tab forcing is coordinated via `sessionStorage` keys consumed by the case management page.
+ * - Family members are mapped to form schema before prefill.
  */
 import { useState, useEffect } from "react";
 import {
@@ -27,12 +26,12 @@ import { FamilyInformationForm } from "@/components/intake sheet FAC/FamilyInfor
 import { VulnerableMembersForm } from "@/components/intake sheet FAC/VulnerableMembersForm";
 import { FinalDetailsForm } from "@/components/intake sheet FAC/FinalDetailsForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
-import { buildFacCasePayload, mapDbToFormData } from "@/lib/facSubmission";
 import {
-	createOrUpdateLocalFacCase,
-	getFacCaseById,
-	getFacCaseByLocalId,
-} from "@/services/facOfflineService";
+	mapDbToFormData,
+	fetchFacCase,
+	submitFacCase,
+	updateFacCase,
+} from "@/lib/facSubmission";
 import { toast } from "sonner";
 
 /**
@@ -88,26 +87,6 @@ const normalizeFamilyMembersForPrefill = (members = []) =>
 		remarks: member.remarks ?? "",
 	}));
 
-/**
- * Safe online check for browser-like environments.
- * @returns {boolean} True when the browser reports connectivity, otherwise true by default.
- */
-const isBrowserOnline = () =>
-	typeof navigator !== "undefined" ? navigator.onLine : true;
-
-/**
- * Forces the Case Management view to reopen on the FAC tab.
- *
- * Used after queuing a create/update while online so the FAC list can refresh/sync.
- * @returns {void}
- */
-const forceFacTabReload = () => {
-	if (typeof window === "undefined") return;
-	sessionStorage.setItem("caseManagement.activeTab", "FAC");
-	sessionStorage.setItem("caseManagement.forceTabAfterReload", "FAC");
-	sessionStorage.setItem("caseManagement.forceFacSync", "true");
-	window.location.reload();
-};
 
 /**
  * @typedef {Object} IntakeSheetFacProps
@@ -136,9 +115,6 @@ export default function IntakeSheetFAC({
 
 	/**
 	 * Loads existing data when the dialog opens in edit mode.
-	 *
-	 * Prefers offline cache when `editingRecord.localId` exists; otherwise falls back to a
-	 * cached remote record when `editingRecord.id` exists.
 	 * @returns {void}
 	 */
 	useEffect(() => {
@@ -158,18 +134,13 @@ export default function IntakeSheetFAC({
 			try {
 				let sourceRecord = editingRecord;
 				if (!sourceRecord?.family_members?.length) {
-					const localFallback =
-						sourceRecord?.localId != null
-							? await getFacCaseByLocalId(sourceRecord.localId)
-							: null;
-					if (localFallback) {
-						sourceRecord = localFallback;
-					} else if (sourceRecord?.id) {
-						const remoteCached = await getFacCaseById(
-							sourceRecord.id,
-						);
-						if (remoteCached) {
-							sourceRecord = remoteCached;
+					if (sourceRecord?.id) {
+						const { data, error } = await fetchFacCase(sourceRecord.id);
+						if (!error && data?.case) {
+							sourceRecord = {
+								...data.case,
+								family_members: data.members || [],
+							};
 						}
 					}
 				}
@@ -197,7 +168,7 @@ export default function IntakeSheetFAC({
 	}, [editingRecord, open, resetAll]);
 
 	/**
-	 * Queues a FAC create/update via the offline service.
+	 * Saves a FAC create/update directly to Supabase.
 	 * @returns {Promise<void>}
 	 */
 	const handleSubmit = async () => {
@@ -205,30 +176,25 @@ export default function IntakeSheetFAC({
 		const formData = getAllData();
 
 		try {
-			const casePayload = buildFacCasePayload(formData);
-			const familyMembers = formData.familyInformation?.members || [];
-			await createOrUpdateLocalFacCase({
-				casePayload,
-				familyMembers,
-				targetId: editingRecord?.id ?? null,
-				localId: editingRecord?.localId ?? null,
-				mode: isEditMode ? "update" : "create",
-			});
+			if (isEditMode && editingRecord?.id) {
+				const { success, error } = await updateFacCase(
+					editingRecord.id,
+					formData,
+				);
+				if (!success) throw error ?? new Error("Failed to update FAC case");
+			} else {
+				const { error } = await submitFacCase(formData);
+				if (error) throw error;
+			}
 
-			const online = isBrowserOnline();
 			toast.success(isEditMode ? "FAC saved" : "FAC created", {
-				description: online
-					? "Sync queued and will push shortly."
-					: "Stored locally. Sync once you're back online.",
+				description: "Changes were saved successfully.",
 			});
 
 			resetAll();
 			setOpen(false);
 			if (onSuccess) onSuccess();
 
-			if (online) {
-				setTimeout(forceFacTabReload, 0);
-			}
 		} catch (err) {
 			console.error("❌ Unexpected error:", err);
 			toast.error(
