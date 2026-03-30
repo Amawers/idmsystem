@@ -2,16 +2,13 @@
  * User Management page.
  *
  * Responsibilities:
- * - Fetch and display user accounts (via `useUserManagementStore`).
- * - Provide client-side search and status filtering (delegated to the store selectors).
- * - Present create/edit/ban dialogs that refresh the list on success.
- * - Gate the experience when offline (online-only view).
- *
- * Notes:
- * - Pagination in this view is client-side over `getFilteredUsers()`.
+ * - Fetch and display user accounts from Supabase `profile`.
+ * - Provide client-side search, filtering, and pagination.
+ * - Route all user-management mutations through one page-level source of truth.
+ * - Keep UI dialogs focused on form UX while this page owns data operations.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CreateUserDialog } from "@/components/user-management/CreateUserDialog";
 import { EditUserDialog } from "@/components/user-management/EditUserDialog";
 import { BanUserDialog } from "@/components/user-management/BanUserDialog";
@@ -60,9 +57,17 @@ import {
 	UserCheck,
 	UserX,
 	ShieldAlert,
-	WifiOff,
 } from "lucide-react";
 import { toast } from "sonner";
+import supabase from "@/../config/supabase";
+import { useAuthStore } from "@/store/authStore";
+import {
+	createAuditLog,
+	AUDIT_ACTIONS,
+	AUDIT_CATEGORIES,
+} from "@/lib/auditLog";
+
+const ITEMS_PER_PAGE = 10;
 
 /**
  * @typedef {"active"|"inactive"|"banned"} UserStatus
@@ -72,163 +77,402 @@ import { toast } from "sonner";
  * @typedef {Object} ManagedUser
  * @property {string} id
  * @property {string} email
- * @property {string} [role]
+ * @property {string} full_name
+ * @property {string} role
  * @property {UserStatus} status
- * @property {string} [created_at]
- * @property {string} [updated_at]
+ * @property {string | null} created_at
+ * @property {string | null} updated_at
+ * @property {string | null} banned_at
+ * @property {string | null} banned_by
  */
+
+/**
+ * Normalize profile status for consistent UI behavior.
+ * @param {unknown} status
+ * @returns {UserStatus}
+ */
+const normalizeStatus = (status) => {
+	if (!status) return "active";
+
+	const value = String(status).trim().toLowerCase();
+	if (value === "inactive" || value === "banned") return value;
+	return "active";
+};
+
+/**
+ * Convert a profile row into the shape expected by the page.
+ * @param {Record<string, any>} row
+ * @returns {ManagedUser}
+ */
+const normalizeUserRow = (row) => ({
+	id: row.id,
+	email: row.email || "N/A",
+	full_name: row.full_name || "",
+	role: row.role || "social_worker",
+	status: normalizeStatus(row.status),
+	created_at: row.created_at || null,
+	updated_at: row.updated_at || null,
+	banned_at: row.banned_at || null,
+	banned_by: row.banned_by || null,
+});
+
+/**
+ * Format an ISO timestamp for display.
+ * @param {string | undefined | null} dateString
+ * @returns {string}
+ */
+const formatDate = (dateString) => {
+	if (!dateString) return "N/A";
+	return new Date(dateString).toLocaleDateString("en-US", {
+		year: "numeric",
+		month: "short",
+		day: "numeric",
+	});
+};
+
+/**
+ * Render a user status badge.
+ * @param {UserStatus} status
+ * @returns {JSX.Element}
+ */
+const getStatusBadge = (status) => {
+	const variants = {
+		active: "bg-green-500/10 text-green-700 border-green-200",
+		inactive: "bg-gray-500/10 text-gray-700 border-gray-200",
+		banned: "bg-red-500/10 text-red-700 border-red-200",
+	};
+
+	return (
+		<Badge variant="outline" className={variants[status] || ""}>
+			{status}
+		</Badge>
+	);
+};
 
 /**
  * Head-only user management view.
  * @returns {JSX.Element}
  */
 export default function UserManagement() {
-	const {
-		users,
-		loading,
-		error,
-		fetchUsers,
-		getFilteredUsers,
-		setSearchQuery,
-		setStatusFilter,
-		searchQuery,
-		statusFilter,
-	} = useUserManagementStore();
+	const signup = useAuthStore((state) => state.signup);
+	const initializeAuth = useAuthStore((state) => state.initialize);
+	const currentUser = useAuthStore((state) => state.user);
+
+	const [users, setUsers] = useState([]);
+	const [loading, setLoading] = useState(false);
+	const [mutationLoading, setMutationLoading] = useState(false);
+	const [searchQuery, setSearchQuery] = useState("");
+	const [statusFilter, setStatusFilter] = useState("all");
+	const [currentPage, setCurrentPage] = useState(1);
 
 	// Dialog state
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [editUser, setEditUser] = useState(null);
 	const [banAction, setBanAction] = useState(null);
 
-	// Online state gates network-backed operations.
-	const [isOnline, setIsOnline] = useState(
-		typeof navigator !== "undefined" ? navigator.onLine : true,
-	);
+	const fetchUsers = useCallback(async () => {
+		setLoading(true);
 
-	useEffect(() => {
-		const goOnline = () => setIsOnline(true);
-		const goOffline = () => setIsOnline(false);
+		try {
+			const { data, error } = await supabase
+				.from("profile")
+				.select("*")
+				.order("created_at", { ascending: false });
 
-		window.addEventListener("online", goOnline);
-		window.addEventListener("offline", goOffline);
+			if (error) {
+				throw new Error(error.message || "Failed to load users.");
+			}
 
-		return () => {
-			window.removeEventListener("online", goOnline);
-			window.removeEventListener("offline", goOffline);
-		};
+			const normalized = (data || [])
+				.map(normalizeUserRow)
+				.filter((user) => user.role === "social_worker");
+
+			setUsers(normalized);
+		} catch (error) {
+			toast.error("Failed to load users", {
+				description:
+					error instanceof Error
+						? error.message
+						: "Please try again.",
+			});
+		} finally {
+			setLoading(false);
+		}
 	}, []);
 
-	// Pagination state (client-side).
-	const [currentPage, setCurrentPage] = useState(1);
-	const itemsPerPage = 3;
-
-	// Fetch users on mount or when coming back online
 	useEffect(() => {
-		if (isOnline) {
-			fetchUsers();
-		}
-	}, [fetchUsers, isOnline]);
+		fetchUsers();
+	}, [fetchUsers]);
 
-	// Surface store fetch errors.
-	useEffect(() => {
-		if (error) {
-			toast.error("Error loading users", {
-				description: error,
-			});
-		}
-	}, [error]);
-
-	/** @type {ManagedUser[]} */
-	const filteredUsers = getFilteredUsers();
-
-	// Pagination calculations
-	const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
-	const startIndex = (currentPage - 1) * itemsPerPage;
-	const endIndex = startIndex + itemsPerPage;
-	const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
-
-	// Reset to page 1 when filters change
 	useEffect(() => {
 		setCurrentPage(1);
 	}, [searchQuery, statusFilter]);
 
-	// Summary stats are computed from the raw `users` list.
-	const stats = {
-		total: users.length,
-		active: users.filter((u) => u.status === "active").length,
-		inactive: users.filter((u) => u.status === "inactive").length,
-		banned: users.filter((u) => u.status === "banned").length,
-	};
+	const filteredUsers = useMemo(() => {
+		const search = searchQuery.trim().toLowerCase();
+
+		return users.filter((user) => {
+			const matchesStatus =
+				statusFilter === "all" || user.status === statusFilter;
+			const matchesSearch =
+				!search ||
+				user.email.toLowerCase().includes(search) ||
+				user.full_name.toLowerCase().includes(search) ||
+				user.role.replace(/_/g, " ").toLowerCase().includes(search);
+
+			return matchesStatus && matchesSearch;
+		});
+	}, [users, searchQuery, statusFilter]);
+
+	const stats = useMemo(() => {
+		return {
+			total: users.length,
+			active: users.filter((user) => user.status === "active").length,
+			inactive: users.filter((user) => user.status === "inactive").length,
+			banned: users.filter((user) => user.status === "banned").length,
+		};
+	}, [users]);
+
+	const totalPages = useMemo(() => {
+		return Math.max(1, Math.ceil(filteredUsers.length / ITEMS_PER_PAGE));
+	}, [filteredUsers.length]);
+
+	useEffect(() => {
+		if (currentPage > totalPages) {
+			setCurrentPage(totalPages);
+		}
+	}, [currentPage, totalPages]);
+
+	const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+	const endIndex = startIndex + ITEMS_PER_PAGE;
+	const fromCount = filteredUsers.length === 0 ? 0 : startIndex + 1;
+	const toCount =
+		filteredUsers.length === 0
+			? 0
+			: Math.min(endIndex, filteredUsers.length);
+
+	const paginatedUsers = useMemo(() => {
+		return filteredUsers.slice(startIndex, endIndex);
+	}, [filteredUsers, startIndex, endIndex]);
+
+	const restorePreviousSession = useCallback(
+		async (previousSession, previousUserId) => {
+			if (!previousUserId) {
+				return { restored: true };
+			}
+
+			const {
+				data: { session: currentSession },
+			} = await supabase.auth.getSession();
+
+			if (currentSession?.user?.id === previousUserId) {
+				return { restored: true };
+			}
+
+			if (
+				!previousSession?.access_token ||
+				!previousSession?.refresh_token
+			) {
+				return {
+					restored: false,
+					message: "Previous session snapshot is unavailable.",
+				};
+			}
+
+			const { error } = await supabase.auth.setSession({
+				access_token: previousSession.access_token,
+				refresh_token: previousSession.refresh_token,
+			});
+
+			if (error) {
+				return {
+					restored: false,
+					message:
+						error.message || "Unable to restore previous session.",
+				};
+			}
+
+			await initializeAuth();
+			return { restored: true };
+		},
+		[initializeAuth],
+	);
+
+	const handleCreateUser = useCallback(
+		async ({ fullName, email, password }) => {
+			setMutationLoading(true);
+
+			const previousSession = useAuthStore.getState().session;
+			const previousUserId = useAuthStore.getState().user?.id || null;
+
+			try {
+				const result = await signup({
+					fullName,
+					email,
+					password,
+					role: "social_worker",
+				});
+
+				if (!result?.success) {
+					throw new Error(result?.message || "Failed to create user.");
+				}
+
+				const restoreResult = await restorePreviousSession(
+					previousSession,
+					previousUserId,
+				);
+
+				if (!restoreResult.restored) {
+					toast.warning("User created but session restore failed", {
+						description:
+							restoreResult.message ||
+							"Please sign in again to continue.",
+					});
+				}
+
+				const createdUserId = result?.user?.id || null;
+
+				await createAuditLog({
+					actionType: AUDIT_ACTIONS.CREATE_USER,
+					actionCategory: AUDIT_CATEGORIES.USER,
+					description: `Created user account for ${email}`,
+					resourceType: "user",
+					resourceId: createdUserId,
+					metadata: {
+						fullName,
+						email,
+						role: "social_worker",
+						status: "active",
+					},
+					severity: "info",
+				});
+
+				await fetchUsers();
+
+				return {
+					userId: createdUserId,
+					password,
+				};
+			} catch (error) {
+				throw new Error(
+					error instanceof Error
+						? error.message
+						: "Failed to create user.",
+				);
+			} finally {
+				setMutationLoading(false);
+			}
+		},
+		[fetchUsers, restorePreviousSession, signup],
+	);
+
+	const updateUserStatus = useCallback(
+		async (user, nextStatus, actionType) => {
+			if (!user?.id) {
+				throw new Error("User record is missing.");
+			}
+
+			if (user.id === currentUser?.id && nextStatus !== "active") {
+				throw new Error(
+					"You cannot deactivate or ban your own account while signed in.",
+				);
+			}
+
+			setMutationLoading(true);
+
+			try {
+				const payload = {
+					status: nextStatus,
+					banned_at:
+						nextStatus === "banned"
+							? new Date().toISOString()
+							: null,
+					banned_by:
+						nextStatus === "banned"
+							? currentUser?.id || null
+							: null,
+				};
+
+				const { error } = await supabase
+					.from("profile")
+					.update(payload)
+					.eq("id", user.id);
+
+				if (error) {
+					throw new Error(error.message || "Failed to update user.");
+				}
+
+				const actionDescription =
+					actionType === AUDIT_ACTIONS.BAN_USER
+						? `Banned user account ${user.email}`
+						: actionType === AUDIT_ACTIONS.UNBAN_USER
+							? `Unbanned user account ${user.email}`
+							: `Updated user account ${user.email} status to ${nextStatus}`;
+
+				await createAuditLog({
+					actionType,
+					actionCategory: AUDIT_CATEGORIES.USER,
+					description: actionDescription,
+					resourceType: "user",
+					resourceId: user.id,
+					metadata: {
+						email: user.email,
+						role: user.role,
+						oldStatus: user.status,
+						newStatus: nextStatus,
+					},
+					severity: nextStatus === "banned" ? "critical" : "info",
+				});
+
+				await fetchUsers();
+			} catch (error) {
+				throw new Error(
+					error instanceof Error
+						? error.message
+						: "Failed to update user.",
+				);
+			} finally {
+				setMutationLoading(false);
+			}
+		},
+		[currentUser?.id, fetchUsers],
+	);
 
 	/**
-	 * Update the store search query.
-	 * @param {import("react").ChangeEvent<HTMLInputElement>} e
+	 * Update the search query.
+	 * @param {import("react").ChangeEvent<HTMLInputElement>} event
 	 */
-	const handleSearch = (e) => {
-		setSearchQuery(e.target.value);
+	const handleSearch = (event) => {
+		setSearchQuery(event.target.value);
 	};
 
 	/**
-	 * Update the store status filter.
+	 * Update the active status filter.
 	 * @param {string} value
 	 */
 	const handleStatusFilter = (value) => {
 		setStatusFilter(value);
 	};
 
-	/**
-	 * Format an ISO timestamp for display.
-	 * @param {string | undefined | null} dateString
-	 * @returns {string}
-	 */
-	const formatDate = (dateString) => {
-		if (!dateString) return "N/A";
-		return new Date(dateString).toLocaleDateString("en-US", {
-			year: "numeric",
-			month: "short",
-			day: "numeric",
-		});
-	};
+	const handleUpdateStatus = useCallback(
+		async (user, status) => {
+			await updateUserStatus(user, normalizeStatus(status), AUDIT_ACTIONS.UPDATE_USER);
+		},
+		[updateUserStatus],
+	);
 
-	/**
-	 * Render a user status badge.
-	 * @param {UserStatus} status
-	 * @returns {JSX.Element}
-	 */
-	const getStatusBadge = (status) => {
-		const variants = {
-			active: "bg-green-500/10 text-green-700 border-green-200",
-			inactive: "bg-gray-500/10 text-gray-700 border-gray-200",
-			banned: "bg-red-500/10 text-red-700 border-red-200",
-		};
+	const handleBanAction = useCallback(
+		async (user, action) => {
+			const nextStatus = action === "ban" ? "banned" : "active";
+			const actionType =
+				action === "ban"
+					? AUDIT_ACTIONS.BAN_USER
+					: AUDIT_ACTIONS.UNBAN_USER;
 
-		return (
-			<Badge variant="outline" className={variants[status] || ""}>
-				{status}
-			</Badge>
-		);
-	};
-
-	// If offline, hide all controls and show a clear offline message
-	if (!isOnline) {
-		return (
-			<div className="container mx-auto px-6 py-12 flex items-center justify-center">
-				<div className="max-w-md w-full text-center space-y-4">
-					<div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-muted/20">
-						<WifiOff className="h-10 w-10 text-muted-foreground" />
-					</div>
-					<h2 className="text-lg font-semibold">You’re offline</h2>
-					<p className="text-sm text-muted-foreground">
-						User management requires an internet connection.
-					</p>
-					<p className="text-sm text-muted-foreground">
-						Viewing will resume automatically when you are back
-						online.
-					</p>
-				</div>
-			</div>
-		);
-	}
+			await updateUserStatus(user, nextStatus, actionType);
+		},
+		[updateUserStatus],
+	);
 
 	return (
 		<div className="container mx-auto px-6 space-y-6">
@@ -341,8 +585,8 @@ export default function UserManagement() {
 
 						<Button
 							variant="outline"
-							onClick={() => fetchUsers()}
-							disabled={loading}
+							onClick={fetchUsers}
+							disabled={loading || mutationLoading}
 						>
 							{loading ? (
 								<Loader2 className="h-4 w-4 animate-spin" />
@@ -352,7 +596,6 @@ export default function UserManagement() {
 						</Button>
 					</div>
 
-					{/* Table */}
 					{loading && users.length === 0 ? (
 						<div className="flex items-center justify-center py-12">
 							<Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -411,36 +654,22 @@ export default function UserManagement() {
 																variant="outline"
 																className="capitalize"
 															>
-																{user.role?.replace(
-																	"_",
-																	" ",
-																)}
+																{user.role.replace(/_/g, " ")}
 															</Badge>
 														</TableCell>
 														<TableCell>
-															{getStatusBadge(
-																user.status,
-															)}
+															{getStatusBadge(user.status)}
 														</TableCell>
 														<TableCell className="text-sm text-muted-foreground">
-															{formatDate(
-																user.created_at,
-															)}
+															{formatDate(user.created_at)}
 														</TableCell>
 														<TableCell className="text-sm text-muted-foreground">
-															{formatDate(
-																user.updated_at,
-															)}
+															{formatDate(user.updated_at)}
 														</TableCell>
 														<TableCell className="text-right">
 															<DropdownMenu>
-																<DropdownMenuTrigger
-																	asChild
-																>
-																	<Button
-																		variant="ghost"
-																		size="icon"
-																	>
+																<DropdownMenuTrigger asChild>
+																	<Button variant="ghost" size="icon">
 																		<MoreVertical className="h-4 w-4" />
 																	</Button>
 																</DropdownMenuTrigger>
@@ -450,47 +679,35 @@ export default function UserManagement() {
 																	</DropdownMenuLabel>
 																	<DropdownMenuSeparator />
 																	<DropdownMenuItem
-																		onClick={() =>
-																			setEditUser(
-																				user,
-																			)
-																		}
+																		onClick={() => setEditUser(user)}
 																	>
 																		<Edit className="mr-2 h-4 w-4" />
-																		Edit
-																		User
+																		Edit User
 																	</DropdownMenuItem>
-																	{user.status ===
-																	"banned" ? (
+																	{user.status === "banned" ? (
 																		<DropdownMenuItem
 																			onClick={() =>
-																				setBanAction(
-																					{
-																						user,
-																						action: "unban",
-																					},
-																				)
-																			}
+																				setBanAction({
+																					user,
+																					action: "unban",
+																				})
+																		}
 																		>
 																			<CheckCircle className="mr-2 h-4 w-4" />
-																			Unban
-																			User
+																			Unban User
 																		</DropdownMenuItem>
 																	) : (
 																		<DropdownMenuItem
 																			onClick={() =>
-																				setBanAction(
-																					{
-																						user,
-																						action: "ban",
-																					},
-																				)
-																			}
-																			className="text-destructive"
+																				setBanAction({
+																					user,
+																					action: "ban",
+																				})
+																		}
+																		className="text-destructive"
 																		>
 																			<Ban className="mr-2 h-4 w-4" />
-																			Ban
-																			User
+																			Ban User
 																		</DropdownMenuItem>
 																	)}
 																</DropdownMenuContent>
@@ -506,9 +723,7 @@ export default function UserManagement() {
 
 							<div className="flex items-center justify-between mt-4 pt-4 border-t">
 								<p className="text-sm text-muted-foreground">
-									Showing {startIndex + 1} to{" "}
-									{Math.min(endIndex, filteredUsers.length)}{" "}
-									of {filteredUsers.length} users
+									Showing {fromCount} to {toCount} of {filteredUsers.length} users
 								</p>
 								{totalPages > 1 && (
 									<div className="flex gap-2">
@@ -516,11 +731,11 @@ export default function UserManagement() {
 											variant="outline"
 											size="sm"
 											onClick={() =>
-												setCurrentPage((p) =>
-													Math.max(1, p - 1),
-												)
+												setCurrentPage((page) => Math.max(1, page - 1))
 											}
-											disabled={currentPage === 1}
+											disabled={
+												currentPage === 1 || loading || mutationLoading
+											}
 										>
 											Previous
 										</Button>
@@ -531,12 +746,14 @@ export default function UserManagement() {
 											variant="outline"
 											size="sm"
 											onClick={() =>
-												setCurrentPage((p) =>
-													Math.min(totalPages, p + 1),
+												setCurrentPage((page) =>
+													Math.min(totalPages, page + 1),
 												)
 											}
 											disabled={
-												currentPage === totalPages
+												currentPage === totalPages ||
+												loading ||
+												mutationLoading
 											}
 										>
 											Next
@@ -552,22 +769,29 @@ export default function UserManagement() {
 			<CreateUserDialog
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
-				onSuccess={() => fetchUsers()}
+				onCreateUser={handleCreateUser}
+				loading={mutationLoading}
 			/>
 
 			<EditUserDialog
-				open={!!editUser}
-				onOpenChange={(open) => !open && setEditUser(null)}
+				open={Boolean(editUser)}
+				onOpenChange={(open) => {
+					if (!open) setEditUser(null);
+				}}
 				user={editUser}
-				onSuccess={() => fetchUsers()}
+				onUpdateStatus={handleUpdateStatus}
+				loading={mutationLoading}
 			/>
 
 			<BanUserDialog
-				open={!!banAction}
-				onOpenChange={(open) => !open && setBanAction(null)}
+				open={Boolean(banAction)}
+				onOpenChange={(open) => {
+					if (!open) setBanAction(null);
+				}}
 				user={banAction?.user}
 				action={banAction?.action}
-				onSuccess={() => fetchUsers()}
+				onBanAction={handleBanAction}
+				loading={mutationLoading}
 			/>
 		</div>
 	);

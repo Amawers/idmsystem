@@ -3,8 +3,7 @@
  *
  * Responsibilities:
  * - Presents a high-friction confirmation UI for sensitive actions.
- * - Delegates the mutation to `useUserManagementStore()`.
- * - Emits an audit log entry for ban/unban actions.
+ * - Delegates the mutation to parent-provided callback.
  * - Surfaces outcomes via `sonner` toasts.
  */
 
@@ -44,6 +43,8 @@ import { Badge } from "@/components/ui/badge";
  * @property {(open: boolean) => void} onOpenChange
  * @property {ManagedUser | null | undefined} user
  * @property {"ban" | "unban"=} action
+ * @property {(user: ManagedUser, action: "ban" | "unban") => Promise<void>} onBanAction
+ * @property {boolean=} loading
  * @property {(() => void)=} onSuccess
  */
 
@@ -56,58 +57,32 @@ export function BanUserDialog({
 	onOpenChange,
 	user,
 	action = "ban",
+	onBanAction,
+	loading = false,
 	onSuccess,
 }) {
-	const { banUser, unbanUser, loading } = useUserManagementStore();
-
 	const isBanAction = action === "ban";
 
 	/**
-	 * Executes the selected action and logs it.
-	 *
-	 * Note: audit log severity is `critical` for banning and `info` for unbanning.
+	 * Executes the selected action through the parent callback.
 	 */
 	const handleAction = async () => {
 		if (!user) return;
 
 		try {
+			if (typeof onBanAction !== "function") {
+				throw new Error("Ban action handler is not configured.");
+			}
+
+			await onBanAction(user, action);
+
 			if (isBanAction) {
-				await banUser(user.id);
 				toast.success("User banned successfully", {
 					description: `${user.email} can no longer log in`,
 				});
-
-				await createAuditLog({
-					actionType: AUDIT_ACTIONS.BAN_USER,
-					actionCategory: AUDIT_CATEGORIES.USER,
-					description: `Banned user account ${user.email}`,
-					resourceType: "user",
-					resourceId: user.id,
-					metadata: {
-						email: user.email,
-						role: user.role,
-						fullName: user.full_name,
-					},
-					severity: "critical",
-				});
 			} else {
-				await unbanUser(user.id);
 				toast.success("User unbanned successfully", {
 					description: `${user.email} can now log in again`,
-				});
-
-				await createAuditLog({
-					actionType: AUDIT_ACTIONS.UNBAN_USER,
-					actionCategory: AUDIT_CATEGORIES.USER,
-					description: `Unbanned user account ${user.email}`,
-					resourceType: "user",
-					resourceId: user.id,
-					metadata: {
-						email: user.email,
-						role: user.role,
-						fullName: user.full_name,
-					},
-					severity: "info",
 				});
 			}
 
@@ -115,7 +90,10 @@ export function BanUserDialog({
 			onSuccess?.();
 		} catch (error) {
 			toast.error(`Failed to ${action} user`, {
-				description: error.message,
+				description:
+					error instanceof Error
+						? error.message
+						: "Unexpected error.",
 			});
 		}
 	};

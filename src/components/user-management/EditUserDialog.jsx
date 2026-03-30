@@ -4,8 +4,7 @@
  * Responsibilities:
  * - Presents read-only identity details (email, id, created date).
  * - Allows updating `status` only (email/role are intentionally not editable here).
- * - Persists the change through `useUserManagementStore().updateUser`.
- * - Emits an audit log entry when the status actually changes.
+ * - Delegates status update to parent-provided callback.
  * - Surfaces outcome via `sonner` toasts.
  */
 
@@ -63,6 +62,8 @@ import { Badge } from "@/components/ui/badge";
  * @property {boolean} open
  * @property {(open: boolean) => void} onOpenChange
  * @property {ManagedUser | null | undefined} user
+ * @property {(user: ManagedUser, status: UserStatus) => Promise<void>} onUpdateStatus
+ * @property {boolean=} loading
  * @property {(() => void)=} onSuccess
  */
 
@@ -82,8 +83,14 @@ const editUserSchema = z.object({
  * @param {EditUserDialogProps} props
  * @returns {import("react").ReactNode}
  */
-export function EditUserDialog({ open, onOpenChange, user, onSuccess }) {
-	const { updateUser, loading } = useUserManagementStore();
+export function EditUserDialog({
+	open,
+	onOpenChange,
+	user,
+	onUpdateStatus,
+	loading = false,
+	onSuccess,
+}) {
 
 	const form = useForm({
 		resolver: zodResolver(editUserSchema),
@@ -104,38 +111,24 @@ export function EditUserDialog({ open, onOpenChange, user, onSuccess }) {
 		if (!user) return;
 
 		try {
-			await updateUser(user.id, {
-				status: data.status,
-			});
+			if (typeof onUpdateStatus !== "function") {
+				throw new Error("Update user handler is not configured.");
+			}
+
+			await onUpdateStatus(user, data.status);
 
 			toast.success("User updated successfully", {
 				description: `${user.email}'s account has been updated`,
 			});
 
-			const oldStatus = user.status;
-			const statusChanged = oldStatus !== data.status;
-
-			if (statusChanged) {
-				await createAuditLog({
-					actionType: AUDIT_ACTIONS.UPDATE_USER,
-					actionCategory: AUDIT_CATEGORIES.USER,
-					description: `Changed ${user.email}'s status from ${oldStatus} to ${data.status}`,
-					resourceType: "user",
-					resourceId: user.id,
-					metadata: {
-						email: user.email,
-						oldStatus,
-						newStatus: data.status,
-					},
-					severity: data.status === "banned" ? "critical" : "info",
-				});
-			}
-
 			onOpenChange(false);
 			onSuccess?.();
 		} catch (error) {
 			toast.error("Failed to update user", {
-				description: error.message,
+				description:
+					error instanceof Error
+						? error.message
+						: "Unexpected error.",
 			});
 		}
 	};
