@@ -5,12 +5,6 @@ import {
 	AUDIT_ACTIONS,
 	AUDIT_CATEGORIES,
 } from "@/lib/auditLog";
-import {
-	clearOfflineSession,
-	isOffline,
-	loadOfflineSession,
-	saveOfflineSession,
-} from "@/lib/offlineAuthSession";
 
 /**
  * Authentication store (Zustand).
@@ -18,18 +12,10 @@ import {
  * Responsibilities:
  * - Manage the active Supabase user session (login/logout/init).
  * - Enforce profile status (banned/inactive).
- * - Provide an offline fallback via a sanitized cached session snapshot.
  * - Keep a short-lived signed avatar URL in state.
  */
 
 /** @typedef {"social_worker"} AppRole */
-/**
- * @typedef {Object} OfflineSafeUser
- * @property {string} id
- * @property {string|null|undefined} email
- * @property {Record<string, any>} app_metadata
- * @property {Record<string, any>} user_metadata
- */
 
 const normalizeRole = (role) => {
 	// The app currently operates with a single supported role.
@@ -38,17 +24,6 @@ const normalizeRole = (role) => {
 	if (role === "social_worker") return "social_worker";
 	if (role === "head" || role === "case_manager") return "social_worker";
 	return "social_worker";
-};
-
-/** @param {any} user @returns {OfflineSafeUser | null} */
-const sanitizeUserForOffline = (user) => {
-	if (!user) return null;
-	return {
-		id: user.id,
-		email: user.email,
-		app_metadata: user.app_metadata ?? {},
-		user_metadata: user.user_metadata ?? {},
-	};
 };
 
 /**
@@ -62,7 +37,7 @@ const sanitizeUserForOffline = (user) => {
  *   offlineMode: boolean,
  *   authListener: any,
  *   setUser: (user: any, role: string | null | undefined) => void,
- *   login: (email: string, password: string, rememberMe?: boolean) => Promise<void>,
+ *   login: (email: string, password: string) => Promise<void>,
  *   logout: () => Promise<void>,
  *   init: () => Promise<void>,
  *   cleanup: () => void,
@@ -71,20 +46,6 @@ const sanitizeUserForOffline = (user) => {
  * }}
  */
 export const useAuthStore = create((set) => {
-	const hydrateFromOfflineSession = () => {
-		const cached = loadOfflineSession();
-		if (!cached?.user) return false;
-
-		set({
-			user: cached.user,
-			avatar_url: cached.avatarSignedUrl ?? null,
-			role: normalizeRole(cached.role),
-			loading: false,
-			offlineMode: true,
-		});
-		return true;
-	};
-
 	const resetAuthState = () =>
 		set({
 			user: null,
@@ -117,10 +78,9 @@ export const useAuthStore = create((set) => {
 			}),
 
 		/**
-		 * Signs in with email/password, loads profile metadata, and optionally persists
-		 * an offline-safe session snapshot.
+		 * Signs in with email/password and loads profile metadata.
 		 */
-		login: async (email, password, rememberMe = false) => {
+		login: async (email, password) => {
 			const { data, error } = await supabase.auth.signInWithPassword({
 				email,
 				password,
@@ -169,17 +129,6 @@ export const useAuthStore = create((set) => {
 					offlineMode: false,
 				});
 
-				// Persist minimal session snapshot for offline startup.
-				if (rememberMe) {
-					saveOfflineSession({
-						user: sanitizeUserForOffline(data.user),
-						role: normalizeRole(profile?.role),
-						avatarSignedUrl,
-					});
-				} else {
-					clearOfflineSession();
-				}
-
 				await createAuditLog({
 					actionType: AUDIT_ACTIONS.LOGIN,
 					actionCategory: AUDIT_CATEGORIES.AUTH,
@@ -189,7 +138,7 @@ export const useAuthStore = create((set) => {
 			}
 		},
 
-		/** Logs out, clears cached offline access, and resets state. */
+		/** Logs out and resets auth state. */
 		logout: async () => {
 			await createAuditLog({
 				actionType: AUDIT_ACTIONS.LOGOUT,
@@ -199,8 +148,6 @@ export const useAuthStore = create((set) => {
 			});
 
 			await supabase.auth.signOut();
-
-			clearOfflineSession();
 			set({
 				user: null,
 				avatar_url: null,
@@ -210,7 +157,7 @@ export const useAuthStore = create((set) => {
 			});
 		},
 
-		/** Initializes auth state from Supabase; falls back to offline snapshot when needed. */
+		/** Initializes auth state from Supabase. */
 		init: async () => {
 			try {
 				const { data } = await supabase.auth.getUser();
@@ -232,7 +179,6 @@ export const useAuthStore = create((set) => {
 							profile?.status === "inactive"
 						) {
 							await supabase.auth.signOut();
-							clearOfflineSession();
 							resetAuthState();
 							return;
 						}
@@ -261,17 +207,13 @@ export const useAuthStore = create((set) => {
 						});
 					} catch (profileError) {
 						console.error("Profile init failed", profileError);
-						if (isOffline() && hydrateFromOfflineSession()) return;
 						resetAuthState();
 					}
 				} else {
-					// No active session → check offline fallback.
-					if (isOffline() && hydrateFromOfflineSession()) return;
 					resetAuthState();
 				}
 			} catch (error) {
 				console.error("Supabase init failed", error);
-				if (isOffline() && hydrateFromOfflineSession()) return;
 				resetAuthState();
 				return;
 			}
@@ -283,7 +225,6 @@ export const useAuthStore = create((set) => {
 				console.log("Auth state changed:", event);
 
 				if (event === "SIGNED_OUT" || event === "USER_DELETED") {
-					clearOfflineSession();
 					set({
 						user: null,
 						avatar_url: null,
@@ -313,7 +254,6 @@ export const useAuthStore = create((set) => {
 							profile?.status === "inactive"
 						) {
 							await supabase.auth.signOut();
-							clearOfflineSession();
 							set({
 								user: null,
 								avatar_url: null,

@@ -26,7 +26,6 @@
 ## Auth + routing
 
 - Central auth is src/store/authStore.js (login/logout/init). It reads the profile table (role/avatar_url/status) and signs avatar URLs from the profile_pictures storage bucket.
-- Offline “Remember me” stores a sanitized session snapshot in localStorage (src/lib/offlineAuthSession.js); init() can hydrate from it when navigator is offline.
 - Route gating uses src/pages/ProtectedRoute.jsx and allowedRoles in src/App.jsx. Note: authStore currently normalizes legacy roles to social_worker.
 
 ## Offline data pattern (Dexie)
