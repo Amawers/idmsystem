@@ -2,7 +2,6 @@ import * as React from "react";
 import { format } from "date-fns";
 import { Filter } from "lucide-react";
 
-import { useNotifications } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
 import {
   formatCategoryLabel,
@@ -209,7 +208,7 @@ function NotificationDetailsDialog({ open, onOpenChange, notification }) {
 }
 
 export function SidebarNotificationCalendar() {
-  const { notifications } = useNotifications({ limit: 50 });
+  const notifications = React.useMemo(() => [], []);
 
   const categories = React.useMemo(
     () => getSortedCategoriesFromNotifications(notifications),

@@ -27,7 +27,6 @@ import {
 	WifiOff,
 	X,
 } from "lucide-react";
-import { useAuditLogs } from "@/hooks/useAuditLogs";
 import { AUDIT_CATEGORIES, AUDIT_SEVERITY } from "@/lib/auditLog";
 import {
 	Table,

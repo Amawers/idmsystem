@@ -12,8 +12,6 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import PartnersTable from "@/components/programs/PartnersTable";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import { PARTNERS_FORCE_SYNC_KEY } from "@/hooks/usePartners";
 
 /**
  * Partners management view.

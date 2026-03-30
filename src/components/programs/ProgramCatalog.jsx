@@ -12,7 +12,6 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { usePrograms } from "@/hooks/usePrograms";
 import {
   Table,
   TableBody,

@@ -10,7 +10,6 @@ import {
   WifiOff,
 } from "lucide-react";
 
-import { useNotifications } from "@/hooks/useNotifications";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -98,19 +97,17 @@ function NotificationItem({ notification, isUnread, onMarkRead }) {
 }
 
 export function NotificationBell() {
-  const {
-    notifications,
-    unreadCount,
-    loading,
-    error,
-    isOnline,
-    hasCachedData,
-    lastSyncedAt,
-    markAsRead,
-    markAllAsRead,
-    refreshNotifications,
-    isNotificationUnread,
-  } = useNotifications({ limit: 25 });
+  const notifications = [];
+  const unreadCount = 0;
+  const loading = false;
+  const error = null;
+  const isOnline = typeof navigator !== "undefined" ? navigator.onLine : true;
+  const hasCachedData = false;
+  const lastSyncedAt = null;
+  const markAsRead = () => {};
+  const markAllAsRead = () => {};
+  const refreshNotifications = () => {};
+  const isNotificationUnread = () => false;
 
   const syncStatus = useMemo(() => {
     if (!isOnline) return "Offline • showing cached activity";

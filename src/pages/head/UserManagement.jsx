@@ -12,7 +12,6 @@
  */
 
 import { useEffect, useState } from "react";
-import { useUserManagementStore } from "@/store/useUserManagementStore";
 import { CreateUserDialog } from "@/components/user-management/CreateUserDialog";
 import { EditUserDialog } from "@/components/user-management/EditUserDialog";
 import { BanUserDialog } from "@/components/user-management/BanUserDialog";

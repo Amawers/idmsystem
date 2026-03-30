@@ -12,11 +12,6 @@
 
 import ServiceDeliveryTable from "@/components/programs/ServiceDeliveryTable";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import {
-	fetchAndCacheCasesByType,
-	fetchAndCachePrograms,
-} from "@/services/serviceDeliveryOfflineService";
 
 /**
  * Service delivery tracking and logging view.
