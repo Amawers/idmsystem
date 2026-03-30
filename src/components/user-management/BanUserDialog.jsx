@@ -18,13 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useUserManagementStore } from "@/store/useUserManagementStore";
 import { AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
-import {
-	createAuditLog,
-	AUDIT_ACTIONS,
-	AUDIT_CATEGORIES,
-} from "@/lib/auditLog";
 import { Badge } from "@/components/ui/badge";
 
 /**

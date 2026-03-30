@@ -32,8 +32,6 @@ import {
   Clock,
   Pause
 } from "lucide-react";
-import { usePrograms } from "@/hooks/usePrograms";
-import { useResourceAllocations } from "@/hooks/useResourceAllocations";
 
 /**
  * Get status icon and styling based on program status

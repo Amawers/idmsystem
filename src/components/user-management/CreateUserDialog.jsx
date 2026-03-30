@@ -36,13 +36,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { useUserManagementStore } from "@/store/useUserManagementStore";
 import { Loader2, Eye, EyeOff, RefreshCw, Copy, Check } from "lucide-react";
-import {
-	createAuditLog,
-	AUDIT_ACTIONS,
-	AUDIT_CATEGORIES,
-} from "@/lib/auditLog";
 
 /**
  * @typedef {"social_worker"} UserRole

@@ -11,17 +11,7 @@
 import { DataTable } from "@/components/cases/data-table";
 import React, { useEffect, useState, useRef, useCallback } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { useCasesOffline } from "@/hooks/useCasesOffline";
-import { useCiclcarCases } from "@/hooks/useCiclcarCases";
-import { useFarCases } from "@/hooks/useFarCases";
-import { useFacCases } from "@/hooks/useFacCases";
-import { useIvacCases } from "@/hooks/useIvacCases";
-import { useSpCases } from "@/hooks/useSpCases";
-import { useFaCases } from "@/hooks/useFaCases";
-import { usePwdCases } from "@/hooks/usePwdCases";
-import { useScCases } from "@/hooks/useScCases";
-import { useHiddenCases } from "@/hooks/useHiddenCases";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+
 
 /**
  * @typedef {"CASE"|"CICLCAR"|"FAC"|"FAR"|"IVAC"|"SP"|"FA"|"PWD"|"SC"} CaseManagementTabId

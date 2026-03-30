@@ -15,9 +15,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  DollarSign,
   Users,
   Package,
   TrendingUp,
@@ -26,12 +24,8 @@ import {
   CheckCircle,
   Clock,
   RefreshCw,
-  Plus,
 } from "lucide-react";
-import { useResourceStore } from "@/store/useResourceStore";
-import { usePrograms } from "@/hooks/usePrograms";
 import supabase from "@/../config/supabase";
-import offlineCaseDb from "@/db/offlineCaseDb";
 
 /**
  * Metric Card Component

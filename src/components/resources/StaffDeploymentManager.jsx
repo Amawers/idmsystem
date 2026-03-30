@@ -21,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { AlertCircle, RefreshCw, WifiOff } from "lucide-react";
-import { useCaseWorkload } from "@/hooks/useCaseWorkload";
 
 function StaffAvailabilityCard({ staff }) {
   const getAvailabilityColor = (status) => {

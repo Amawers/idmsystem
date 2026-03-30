@@ -12,7 +12,6 @@
  */
 
 import { useState, useEffect } from "react";
-import { useEnrollments } from "@/hooks/useEnrollments";
 import {
   Dialog,
   DialogContent,

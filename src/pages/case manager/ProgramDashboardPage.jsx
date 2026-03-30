@@ -12,7 +12,6 @@
 
 import { useEffect, useRef } from "react";
 import ProgramDashboard from "@/components/programs/ProgramDashboard";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 /**
  * Program dashboard view.

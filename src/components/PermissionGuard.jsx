@@ -8,7 +8,6 @@
  * - Allow a `fallback` render when access is denied.
  */
 
-import { useUserPermissions } from "@/hooks/useUserPermissions";
 
 /**
  * @typedef {Object} PermissionGuardProps

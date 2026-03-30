@@ -78,10 +78,7 @@ import {
   CloudUpload,
 } from "lucide-react";
 import PermissionGuard from "@/components/PermissionGuard";
-import { useResourceStore } from "@/store/useResourceStore";
 import { useAuthStore } from "@/store/authStore";
-import { useInventoryOffline, INVENTORY_FORCE_SYNC_KEY } from "@/hooks/useInventoryOffline";
-import useNetworkStatus from "@/hooks/useNetworkStatus";
 import RequestSubmissionDialog from "./RequestSubmissionDialog";
 
 /**

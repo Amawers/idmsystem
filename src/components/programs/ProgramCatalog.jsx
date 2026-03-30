@@ -48,7 +48,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { MoreHorizontal, Search, Filter, RefreshCw, Eye, Edit, Trash2, Users, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, Filter, RefreshCw, Eye, Edit, Trash2, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import ProgramDetailsDialog from "./ProgramDetailsDialog";
@@ -62,15 +62,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import {
-  PROGRAM_FORCE_SYNC_KEY,
-  PROGRAM_DEFERRED_RELOAD_KEY,
-  scheduleProgramSyncReload,
-  markProgramReloadOnReconnect,
-  forceProgramTabReload,
-} from "./programSyncUtils";
-import { loadRemoteSnapshotIntoCache as primeEnrollmentCache } from "@/services/enrollmentOfflineService";
 
 const statusColors = {
   active: "bg-green-500",

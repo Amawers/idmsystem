@@ -11,12 +11,7 @@
  * - Reconnect behavior uses `sessionStorage` + `window.location.reload()` to reset hook state.
  */
 
-import { useEffect, useRef } from "react";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import {
-	fetchAndCacheCasesByType,
-	fetchAndCachePrograms,
-} from "@/services/enrollmentOfflineService";
+import { useEffect, useRef } from "react";q
 import EnrollmentTable from "@/components/programs/EnrollmentTable";
 
 /**

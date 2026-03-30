@@ -31,9 +31,6 @@ import {
 	IconChevronDown,
 	IconCircleCheckFilled,
 	IconAlertTriangle,
-	IconClipboardText,
-	IconCheckbox,
-	IconDotsVertical,
 	IconLayoutColumns,
 	IconCloudUpload,
 	IconLoader,
@@ -43,7 +40,6 @@ import {
 import { Edit, ChevronLeft, ChevronRight, WifiOff, Search } from "lucide-react";
 
 // Other utilities
-// import { toast } from "sonner";
 import { z } from "zod";
 import { formatDistanceToNow } from "date-fns";
 
@@ -54,7 +50,6 @@ import { PermissionGuard } from "@/components/PermissionGuard";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
-import { Checkbox } from "@/components/ui/checkbox";
 import {
 	DropdownMenu,
 	DropdownMenuCheckboxItem,
@@ -106,8 +101,6 @@ import IntakeSheetEdit from "@/pages/case manager/intakeSheetCaseEdit";
 import useDataTable from "@/hooks/useDataTable";
 import TableRenderer from "@/components/cases/tables/TableRenderer";
 import EnrollCaseDialog from "@/components/cases/EnrollCaseDialog";
-import ProgramEnrollmentBadge from "@/components/cases/ProgramEnrollmentBadge";
-import { useCaseManagers } from "@/store/useCaseManagerStore";
 import DocumentManager from "@/components/documents/DocumentManager";
 import {
 	exportCaseRecordToExcel,

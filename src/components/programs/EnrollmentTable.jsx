@@ -14,8 +14,6 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useEnrollments } from "@/hooks/useEnrollments";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import CreateEnrollmentDialog from "./CreateEnrollmentDialog";
 import UpdateEnrollmentDialog from "./UpdateEnrollmentDialog";
 import {
@@ -36,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MoreHorizontal, Plus, Trash2, Edit, AlertCircle, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { Search, Plus, Trash2, Edit, AlertCircle, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import PermissionGuard from "@/components/PermissionGuard";

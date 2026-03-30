@@ -31,8 +31,6 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { buildPWDCasePayload } from "@/lib/pwdSubmission";
-import { createOrUpdateLocalPwdCase } from "@/services/pwdOfflineService";
-import { useCaseManagers } from "@/store/useCaseManagerStore";
 
 /**
  * @typedef {Object} IntakeSheetPwdProps

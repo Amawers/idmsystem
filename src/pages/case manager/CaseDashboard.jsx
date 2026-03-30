@@ -9,7 +9,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import DynamicDashboard from "@/components/dashboard/DynamicDashboard";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 /**
  * @typedef {Object} CaseDashboardFilters

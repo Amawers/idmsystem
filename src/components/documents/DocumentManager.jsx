@@ -43,13 +43,6 @@ import {
 	AlertDialogHeader,
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import {
-	createDocumentSignedUrl,
-	deleteDocument,
-	listDocuments,
-	uploadDocument,
-} from "@/services/documentService";
 
 function formatBytes(bytes) {
 	if (bytes == null || Number.isNaN(bytes)) return "—";

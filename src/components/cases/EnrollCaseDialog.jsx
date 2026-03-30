@@ -13,7 +13,6 @@
  */
 
 import { useState, useEffect, useMemo } from "react";
-import { usePrograms } from "@/hooks/usePrograms";
 import { useAuthStore } from "@/store/authStore";
 import {
 	Dialog,

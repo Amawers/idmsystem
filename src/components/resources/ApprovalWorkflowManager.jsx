@@ -54,8 +54,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
-import { useResourceApprovalsOffline, APPROVALS_FORCE_SYNC_KEY } from "@/hooks/useResourceApprovalsOffline";
-import { useInventoryOffline } from "@/hooks/useInventoryOffline";
 import RequestSubmissionDialog from "./RequestSubmissionDialog";
 import PermissionGuard from "@/components/PermissionGuard";
 

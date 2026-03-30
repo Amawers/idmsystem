@@ -39,13 +39,7 @@ import {
 	SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
-import { useUserManagementStore } from "@/store/useUserManagementStore";
 import { Loader2 } from "lucide-react";
-import {
-	createAuditLog,
-	AUDIT_ACTIONS,
-	AUDIT_CATEGORIES,
-} from "@/lib/auditLog";
 import { Badge } from "@/components/ui/badge";
 
 /**

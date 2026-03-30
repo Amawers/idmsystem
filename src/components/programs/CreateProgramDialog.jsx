@@ -33,14 +33,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from "@/components/ui/select";
-import { usePrograms } from "@/hooks/usePrograms";
-import { usePartners } from "@/hooks/usePartners";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { toast } from "sonner";
-import {
-	scheduleProgramSyncReload,
-	markProgramReloadOnReconnect,
-} from "./programSyncUtils";
 
 // Program form schema
 const programSchema = z

@@ -10,7 +10,6 @@
  */
 
 import { useState, useEffect, useRef } from "react";
-import { usePartners, PARTNERS_FORCE_SYNC_KEY } from "@/hooks/usePartners";
 import { ORGANIZATION_TYPES, SERVICE_TYPES } from "@/lib/partnerSubmission";
 import {
   Table,
@@ -51,7 +50,6 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Search, Plus, Building2, Phone, Mail, AlertCircle, Loader2, RefreshCw, Edit, AlertTriangle, ChevronLeft, ChevronRight, CloudUpload } from "lucide-react";
 import PermissionGuard from "@/components/PermissionGuard";
-import useNetworkStatus from "@/hooks/useNetworkStatus";
 
 /**
  * Partners Table Component

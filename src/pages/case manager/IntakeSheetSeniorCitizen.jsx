@@ -25,7 +25,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { buildSCCasePayload } from "@/lib/scSubmission";
-import { createOrUpdateLocalScCase } from "@/services/scOfflineService";
 
 /**
  * @typedef {Object} IntakeSheetSeniorCitizenProps
