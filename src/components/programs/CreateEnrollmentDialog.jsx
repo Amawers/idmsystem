@@ -12,11 +12,6 @@
  */
 
 import { useMemo, useState, useEffect } from "react";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import {
-	getCachedCasesByType,
-	getCachedPrograms,
-} from "@/services/enrollmentOfflineService";
 import {
 	Dialog,
 	DialogContent,

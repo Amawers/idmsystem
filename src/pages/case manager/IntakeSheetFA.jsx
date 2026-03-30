@@ -30,7 +30,6 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { buildFACasePayload } from "@/lib/faSubmission";
-import { createOrUpdateLocalFaCase } from "@/services/faOfflineService";
 
 /**
  * @typedef {Object} FaFormState

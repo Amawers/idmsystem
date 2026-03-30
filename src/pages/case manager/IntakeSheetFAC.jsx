@@ -26,13 +26,7 @@ import { HeadOfFamilyForm } from "@/components/intake sheet FAC/HeadOfFamilyForm
 import { FamilyInformationForm } from "@/components/intake sheet FAC/FamilyInformationForm";
 import { VulnerableMembersForm } from "@/components/intake sheet FAC/VulnerableMembersForm";
 import { FinalDetailsForm } from "@/components/intake sheet FAC/FinalDetailsForm";
-import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { buildFacCasePayload, mapDbToFormData } from "@/lib/facSubmission";
-import {
-	createOrUpdateLocalFacCase,
-	getFacCaseById,
-	getFacCaseByLocalId,
-} from "@/services/facOfflineService";
 import { toast } from "sonner";
 
 /**

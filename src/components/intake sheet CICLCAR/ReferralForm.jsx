@@ -13,14 +13,11 @@ import {
     FormControl,
     FormMessage,
 } from "@/components/ui/form";
-import { useIntakeFormStore } from "../../store/useIntakeFormStore";
 import {
     IconCircleCheckFilled,
     IconClipboardText,
     IconCheckbox,
     IconLoader,
-    IconLock,
-    IconGlobe,
 } from "@tabler/icons-react";
 import { Label } from "@/components/ui/label";
 import {
@@ -31,7 +28,6 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { useState, useEffect } from "react";
-import { useCaseManagers } from "@/store/useCaseManagerStore";
 
 // ✅ Schema with mix of text, select, and date
 const schema = z.object({

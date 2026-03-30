@@ -29,10 +29,8 @@ import { RecordDetailsForm } from "@/components/intake sheet CICLCAR/RecordDetai
 import { ComplainantForm } from "@/components/intake sheet CICLCAR/ComplainantForm";
 import { RemarksForm } from "@/components/intake sheet CICLCAR/RemarksForm";
 import { ReferralForm } from "@/components/intake sheet CICLCAR/ReferralForm";
-import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import supabase from "@/../config/supabase";
 import { toast } from "sonner";
-import { createOrUpdateLocalCase } from "@/services/ciclcarOfflineService";
 
 /**
  * Safe online check for browser-like environments.

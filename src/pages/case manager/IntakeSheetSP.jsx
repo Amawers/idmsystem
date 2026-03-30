@@ -34,10 +34,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { FamilyCompositionForm } from "@/components/intake sheet SP/FamilyCompositionForm";
-import { useIntakeFormStore } from "@/store/useIntakeFormStore";
-import { useCaseManagerStore } from "@/store/useCaseManagerStore";
 import { buildSPCasePayload } from "@/lib/spSubmission";
-import { createOrUpdateLocalSpCase } from "@/services/spOfflineService";
 
 /**
  * @typedef {Object} IntakeSheetSpProps

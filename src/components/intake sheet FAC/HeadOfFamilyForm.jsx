@@ -21,7 +21,6 @@ import {
   FormControl,
   FormMessage,
 } from "@/components/ui/form";
-import { useIntakeFormStore } from "../../store/useIntakeFormStore";
 
 const schema = z.object({
   lastName: z.string().min(2, "Required"),

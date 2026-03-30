@@ -26,9 +26,7 @@ import { BackgroundInfoForm } from "@/components/intake sheet/BackgroundInfoForm
 import { CommunityInfoForm } from "@/components/intake sheet/CommunityInforForm";
 import { AssessmentForm } from "@/components/intake sheet/AssessmentForm";
 import { RecommendationForm } from "@/components/intake sheet/RecommendationForm";
-import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { toast } from "sonner";
-import { createOrUpdateLocalCase } from "@/services/caseOfflineService";
 
 /** @returns {boolean} True when the browser reports an online network state. */
 const isBrowserOnline = () =>

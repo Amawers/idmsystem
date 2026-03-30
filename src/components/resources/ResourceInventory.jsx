@@ -17,7 +17,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Package, AlertTriangle, TrendingDown, DollarSign, Plus } from "lucide-react";
-import { useInventory } from "@/hooks/useInventory";
 import InventoryTable from "./InventoryTable";
 import InventoryAlerts from "./InventoryAlerts";
 import InventoryByCategory from "./InventoryByCategory";

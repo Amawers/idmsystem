@@ -19,13 +19,7 @@ import {
 	DialogTitle,
 } from "@/components/ui/dialog";
 import { FamilyAssistanceForm } from "@/components/intake sheet FAR/FamilyAssistanceForm";
-import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { buildFARCasePayload } from "@/lib/farSubmission";
-import {
-	createOrUpdateLocalFarCase,
-	getFarCaseById,
-	getFarCaseByLocalId,
-} from "@/services/farOfflineService";
 import { toast } from "sonner";
 
 /**

@@ -20,13 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { IncidenceVACForm } from "@/components/intake sheet IVAC/IncidenceVACForm";
-import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { buildIVACCasePayload, validateIVACData } from "@/lib/ivacSubmission";
-import {
-	createOrUpdateLocalIvacCase,
-	getIvacCaseById,
-	getIvacCaseByLocalId,
-} from "@/services/ivacOfflineService";
+
 import { toast } from "sonner";
 import { IconCircleCheck, IconAlertCircle } from "@tabler/icons-react";
 
