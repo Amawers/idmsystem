@@ -31,8 +31,24 @@ export default function Login() {
 	 */
 	const handleLogin = async (e) => {
 		e.preventDefault();
+		setError(null);
+
 		try {
-			await login(email, password);
+			const result = await login({ email, password });
+
+			if (!result?.success) {
+				const message =
+					result?.message ||
+					"Unable to sign in. Please check your credentials and try again.";
+
+				setError(message);
+
+				toast.error(message, {
+					icon: <XCircle className="text-red-500" size={20} />,
+				});
+
+				return;
+			}
 
 			toast.success("Login successful!", {
 				icon: <CheckCircle className="text-green-500" size={20} />,
@@ -40,15 +56,15 @@ export default function Login() {
 
 			navigate("/dashboard");
 		} catch (err) {
-			setError(err.message);
+			const message =
+				err?.message ||
+				"An unexpected error occurred. Please try again later.";
 
-			toast.error(
-				err.message ||
-					"An unexpected error occured. Please try again later.",
-				{
-					icon: <XCircle className="text-red-500" size={20} />,
-				},
-			);
+			setError(message);
+
+			toast.error(message, {
+				icon: <XCircle className="text-red-500" size={20} />,
+			});
 		}
 	};
 

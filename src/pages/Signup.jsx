@@ -7,10 +7,10 @@
  */
 
 import { useState } from "react";
-import supabase from "@/../config/supabase";
 import { useNavigate } from "react-router-dom";
 import { Eye, EyeOff } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { useAuthStore } from "@/store/authStore";
 
 export default function Signup() {
 	const [fullName, setFullName] = useState("");
@@ -20,6 +20,8 @@ export default function Signup() {
 	const [success, setSuccess] = useState(null);
 	const [showPassword, setShowPassword] = useState(false);
 	const navigate = useNavigate();
+	const signup = useAuthStore((s) => s.signup);
+	const isLoading = useAuthStore((s) => s.isLoading);
 
 	/** Single-role system (matches current authStore role normalization). */
 	const role = "social_worker";
@@ -34,23 +36,23 @@ export default function Signup() {
 		setError(null);
 		setSuccess(null);
 
-		const { error } = await supabase.auth.signUp({
+		const result = await signup({
+			fullName,
 			email,
 			password,
-			options: {
-				data: {
-					full_name: fullName,
-					role: role,
-				},
-			},
+			role,
 		});
 
-		if (error) {
-			setError(error.message);
+		if (!result?.success) {
+			setError(result?.message || "Signup failed.");
 			return;
 		}
 
-		setSuccess("Account created! You can now login.");
+		setSuccess(
+			result.requiresEmailConfirmation
+				? "Account created! Check your email to confirm, then log in."
+				: "Account created! You can now login."
+		);
 		setTimeout(() => navigate("/login"), 1500);
 	};
 
@@ -112,8 +114,11 @@ export default function Signup() {
 					<p className="text-green-600 text-sm mb-2">{success}</p>
 				)}
 
-				<button className="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700">
-					Sign Up
+				<button
+					disabled={isLoading}
+					className="w-full bg-green-600 text-white p-2 rounded hover:bg-green-700 disabled:opacity-70"
+				>
+					{isLoading ? "Creating account..." : "Sign Up"}
 				</button>
 			</form>
 		</div>

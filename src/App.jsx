@@ -99,14 +99,16 @@ function AppLoadingOverlay() {
  * Initializes auth state on first render, then renders routes.
  */
 export default function App() {
-	const { init, loading } = useAuthStore();
+	const initialize = useAuthStore((state) => state.initialize);
+	const isInitializing = useAuthStore((state) => state.isInitializing);
+	const isLoading = useAuthStore((state) => state.isLoading);
 
 	useEffect(() => {
 		// Bootstrap auth state (online session or offline fallback).
-		init();
-	}, [init]);
+		initialize();
+	}, [initialize]);
 
-	if (loading) return <AppLoadingOverlay />;
+	if (isInitializing || isLoading) return <AppLoadingOverlay />;
 
 	return (
 		<HashRouter>
