@@ -99,11 +99,7 @@ export default function EnrollCaseDialog({
 
 		switch (caseType) {
 			case "CASE":
-				return (
-					caseData.identifying_name ||
-					caseData.identifying2_name ||
-					"N/A"
-				);
+				return caseData.identifying_name || "N/A";
 			case "CICLCAR":
 				return caseData.profile_name || "N/A";
 			case "FAC":

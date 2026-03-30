@@ -180,7 +180,7 @@ const buildReminderId = (parts) =>
 	`reminder:${parts.filter(Boolean).join(":")}`;
 
 const formatCaseDisplay = (row) => {
-	const name = row.identifying_name || row.identifying2_name || null;
+	const name = row.identifying_name || null;
 	if (name) return name;
 	return row.id ? `Case ${String(row.id).slice(0, 8)}` : "Case";
 };
@@ -276,7 +276,7 @@ const fetchDeadlineReminders = async ({
 		let casesQuery = supabase
 			.from("case")
 			.select(
-				"id, identifying_name, identifying2_name, case_manager, status, priority, updated_at, created_at, identifying_intake_date",
+				"id, identifying_name, case_manager, status, priority, updated_at, created_at, identifying_intake_date",
 			)
 			.order("updated_at", { ascending: false })
 			.limit(250);

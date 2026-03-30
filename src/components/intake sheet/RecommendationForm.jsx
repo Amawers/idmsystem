@@ -1,13 +1,11 @@
 "use client";
 import { Button } from "@/components/ui/button";
-import { toast } from "sonner";
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Textarea } from "@/components/ui/textarea";
 import { useIntakeFormStore } from "../../store/useIntakeFormStore";
-import { submitCase } from "@/lib/caseSubmission";
 import { Label } from "@/components/ui/label";
 import { useCaseManagers } from "@/store/useCaseManagerStore";
 import {
@@ -42,7 +40,7 @@ const schema = z.object({
     ),
 });
 
-export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submitLabel, onSuccess, setOpen, isEditMode, submitDisabled = false, useOfflineSubmit = false }) {
+export function RecommendationForm({ sectionKey, goNext, goBack, submitLabel, isEditMode, submitDisabled = false, useOfflineSubmit = false }) {
   const { data, setSectionField } = useIntakeFormStore();
 
   const form = useForm({
@@ -99,40 +97,6 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
   const [priority, setPriority] = useState(data.caseDetails?.priority || undefined);
   const current = priorities.find((p) => p.value === priority);
 
-  const [submitting, setSubmitting] = useState(false);
-
-  async function handleFinalSubmit(finalData) {
-    setSubmitting(true);
-    try {
-      const { caseId, error } = await submitCase(finalData);
-      if (error) {
-        console.error("Case submission error", error);
-        toast.error("Failed to save case", {
-          description: error.message || "Unknown error",
-        });
-        return;
-      }
-      toast.success("Case saved", {
-        description: `Case ID: ${caseId}`,
-      });
-      
-      // Close the dialog
-      if (setOpen) {
-        setOpen(false);
-      }
-      
-      // Trigger refresh of case data
-      if (onSuccess) {
-        await onSuccess();
-      }
-    } catch (err) {
-      console.error(err);
-      toast.error("Unexpected error", { description: err.message });
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
   function onSubmit(values) {
     setSectionField(sectionKey, values);
 
@@ -148,16 +112,7 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
       return;
     }
 
-    // In create mode, check if this is the second/final form
-    if (isSecond) {
-      const finalData = {
-        ...data,
-        [sectionKey]: { ...(data[sectionKey] || {}), ...values },
-      };
-      handleFinalSubmit(finalData);
-    } else {
-      goNext();
-    }
+    goNext();
   }
 
   function handleCaseDetailChange(field, value) {
@@ -169,89 +124,86 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 w-full">
           <div className="flex gap-4">
-            {/* LEFT COLUMN - Case Details (Only show in Part 2) */}
-            {isSecond && (
-              <div className="w-3/12 flex flex-col items-center justify-center border rounded-lg p-4">
-                <span className="font-bold mb-2">Case Details</span>
+            <div className="w-3/12 flex flex-col items-center justify-center border rounded-lg p-4">
+              <span className="font-bold mb-2">Case Details</span>
 
-                {/* Case Manager */}
-                <div className="space-y-1 mb-1">
-                  <Label htmlFor="caseManager">Case Manager</Label>
-                  <Select
-                    defaultValue={data.caseDetails?.caseManager}
-                    onValueChange={(val) => handleCaseDetailChange("caseManager", val)}
-                    disabled={loadingManagers}
-                  >
-                    <SelectTrigger className="w-[225px]" id="caseManager">
-                      <SelectValue placeholder={loadingManagers ? "Loading..." : "Select Case Manager"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {caseManagers.map((manager) => (
-                        <SelectItem key={manager.id} value={manager.full_name}>
-                          {manager.full_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Status */}
-                <div className="space-y-1 mb-1">
-                  <Label htmlFor="status">Status</Label>
-                  <Select
-                    defaultValue={data.caseDetails?.status}
-                    onValueChange={(val) => handleCaseDetailChange("status", val)}
-                  >
-                    <SelectTrigger className="w-[225px]" id="status">
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statuses.map((status) => (
-                        <SelectItem key={status.value} value={status.value}>
-                          <div className="flex items-center gap-2">
-                            {status.icon}
-                            {status.label}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Priority */}
-                <div className="space-y-1 mb-1">
-                  <Label htmlFor="priority">Priority</Label>
-                  <Select
-                    defaultValue={data.caseDetails?.priority}
-                    onValueChange={(val) => {
-                      handleCaseDetailChange("priority", val);
-                      setPriority(val);
-                    }}
-                  >
-                    <SelectTrigger
-                      id="priority"
-                      className={`w-[225px] ${current?.className || ""}`}
-                    >
-                      <SelectValue placeholder="Select" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {priorities.map((p) => (
-                        <SelectItem
-                          key={p.value}
-                          value={p.value}
-                          className={`px-2 py-0.5 rounded-md text-sm font-medium ${p.className}`}
-                        >
-                          {p.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              {/* Case Manager */}
+              <div className="space-y-1 mb-1">
+                <Label htmlFor="caseManager">Case Manager</Label>
+                <Select
+                  defaultValue={data.caseDetails?.caseManager}
+                  onValueChange={(val) => handleCaseDetailChange("caseManager", val)}
+                  disabled={loadingManagers}
+                >
+                  <SelectTrigger className="w-[225px]" id="caseManager">
+                    <SelectValue placeholder={loadingManagers ? "Loading..." : "Select Case Manager"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {caseManagers.map((manager) => (
+                      <SelectItem key={manager.id} value={manager.full_name}>
+                        {manager.full_name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
-            )}
+
+              {/* Status */}
+              <div className="space-y-1 mb-1">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  defaultValue={data.caseDetails?.status}
+                  onValueChange={(val) => handleCaseDetailChange("status", val)}
+                >
+                  <SelectTrigger className="w-[225px]" id="status">
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statuses.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        <div className="flex items-center gap-2">
+                          {status.icon}
+                          {status.label}
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Priority */}
+              <div className="space-y-1 mb-1">
+                <Label htmlFor="priority">Priority</Label>
+                <Select
+                  defaultValue={data.caseDetails?.priority}
+                  onValueChange={(val) => {
+                    handleCaseDetailChange("priority", val);
+                    setPriority(val);
+                  }}
+                >
+                  <SelectTrigger
+                    id="priority"
+                    className={`w-[225px] ${current?.className || ""}`}
+                  >
+                    <SelectValue placeholder="Select" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {priorities.map((p) => (
+                      <SelectItem
+                        key={p.value}
+                        value={p.value}
+                        className={`px-2 py-0.5 rounded-md text-sm font-medium ${p.className}`}
+                      >
+                        {p.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
             {/* RIGHT COLUMN - Recommendation */}
-            <div className={`${isSecond ? "w-9/12" : "w-full"}`}>
+            <div className="w-9/12">
               <FormField
                 control={form.control}
                 name="recommendation"
@@ -277,8 +229,8 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
               Back
             </Button>
             <div className="flex gap-2">
-              <Button type="submit" disabled={submitting || submitDisabled} className="cursor-pointer">
-                {submitting || submitDisabled ? "Saving..." : (submitLabel || (isSecond ? "Submit All" : "Next"))}
+              <Button type="submit" disabled={submitDisabled} className="cursor-pointer">
+                {submitDisabled ? "Saving..." : (submitLabel || "Next")}
               </Button>
             </div>
           </div>

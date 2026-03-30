@@ -123,41 +123,6 @@ function mapCaseRow(row) {
 		community_info: row.community_info ?? null,
 		assessment: row.assessment ?? null,
 		recommendation: row.recommendation ?? null,
-
-		// Identifying2 (secondary person) fields
-		identifying2_intake_date: row.identifying2_intake_date ?? null,
-		identifying2_name: row.identifying2_name ?? null,
-		identifying2_referral_source: row.identifying2_referral_source ?? null,
-		identifying2_alias: row.identifying2_alias ?? null,
-		identifying2_age: row.identifying2_age ?? null,
-		identifying2_status: row.identifying2_status ?? null,
-		identifying2_occupation: row.identifying2_occupation ?? null,
-		identifying2_income: row.identifying2_income ?? null,
-		identifying2_sex: row.identifying2_sex ?? null,
-		identifying2_address: row.identifying2_address ?? null,
-		identifying2_case_type: row.identifying2_case_type ?? null,
-		identifying2_religion: row.identifying2_religion ?? null,
-		identifying2_educational_attainment:
-			row.identifying2_educational_attainment ?? null,
-		identifying2_contact_person: row.identifying2_contact_person ?? null,
-		identifying2_birth_place: row.identifying2_birth_place ?? null,
-		identifying2_respondent_name: row.identifying2_respondent_name ?? null,
-		identifying2_birthday: row.identifying2_birthday ?? null,
-
-		// Victim2 / secondary victim fields
-		victim2_name: row.victim2_name ?? null,
-		victim2_age: row.victim2_age ?? null,
-		victim2_alias: row.victim2_alias ?? null,
-		victim2_sex: row.victim2_sex ?? null,
-		victim2_address: row.victim2_address ?? null,
-		victim2_victim_relation: row.victim2_victim_relation ?? null,
-		victim2_offence_type: row.victim2_offence_type ?? null,
-		victim2_commission_datetime: row.victim2_commission_datetime ?? null,
-		presenting_problem2: row.presenting_problem2 ?? null,
-		background_info2: row.background_info2 ?? null,
-		community_info2: row.community_info2 ?? null,
-		assessment2: row.assessment2 ?? null,
-		recommendation2: row.recommendation2 ?? null,
 		// Include family members if the related rows were selected
 		family_members: (row.case_family_member || []).map((fm) => ({
 			id: fm.id,
