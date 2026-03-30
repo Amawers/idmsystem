@@ -50,7 +50,6 @@ const pageTitles = {
 	"/controls": "Security & Audit",
 	"/controls/audit": "Audit Trail",
 	"/controls/documents": "Documents",
-	"/controls/permissions": "Role Permissions",
 };
 
 /** @type {Record<string, string>} */
@@ -76,7 +75,6 @@ const parentSections = {
 	// Security & Audit sub-pages
 	"/controls/audit": "Security & Audit",
 	"/controls/documents": "Security & Audit",
-	"/controls/permissions": "Security & Audit",
 };
 
 export function SiteHeader() {

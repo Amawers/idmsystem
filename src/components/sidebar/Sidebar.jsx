@@ -24,7 +24,6 @@ import {
 	IconDashboard,
 	IconFolders,
 	IconShieldLock,
-	IconKey,
 	IconPackage,
 	IconCircleCheck,
 	IconUserCheck
@@ -84,7 +83,6 @@ export default function Sidebar(props) {
         items: [
           { path: "/controls/audit", label: "Audit Trail", icon: IconShieldLock },
           { path: "/controls/documents", label: "Documents", icon: IconFolders },
-          { path: "/controls/permissions", label: "Role Permissions", icon: IconKey },
         ]
       },
     ],
