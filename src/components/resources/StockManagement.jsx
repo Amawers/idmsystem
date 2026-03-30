@@ -719,7 +719,6 @@ export default function StockManagement() {
   const submitRequest = useResourceStore((state) => state.submitRequest);
 
   const { user } = useAuthStore();
-  const isOnline = useNetworkStatus();
   const [autoSyncPending, setAutoSyncPending] = useState(false);
   const runSyncRef = useRef(runSync);
 

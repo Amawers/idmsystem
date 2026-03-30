@@ -11,7 +11,6 @@
  * - Reconnect behavior uses `sessionStorage` + `window.location.reload()` to reset hook state.
  */
 
-import { useEffect, useRef } from "react";q
 import EnrollmentTable from "@/components/programs/EnrollmentTable";
 
 /**
@@ -19,7 +18,6 @@ import EnrollmentTable from "@/components/programs/EnrollmentTable";
  * @returns {JSX.Element}
  */
 export default function ProgramEnrollmentsPage() {
-	const isOnline = useNetworkStatus();
 	const wasOfflineRef = useRef(!isOnline);
 
 	// Pre-fetch all cases and programs when page loads (online only).

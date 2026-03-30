@@ -118,7 +118,6 @@ export default function ProgramCatalog() {
     runSync,
     offline,
   } = usePrograms(filterOptions);
-  const isOnline = useNetworkStatus();
   
   useEffect(() => {
     console.log("[ProgramCatalog] network/debug", {

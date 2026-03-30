@@ -49,7 +49,6 @@ export default function CreateEnrollmentDialog({
 	onSuccess,
 }) {
 	const { createEnrollment } = useEnrollments();
-	const isOnline = useNetworkStatus();
 
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);

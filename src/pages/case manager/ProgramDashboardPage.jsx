@@ -18,8 +18,6 @@ import ProgramDashboard from "@/components/programs/ProgramDashboard";
  * @returns {JSX.Element}
  */
 export default function ProgramDashboardPage() {
-	const isOnline = useNetworkStatus();
-	const previousOnline = useRef(isOnline);
 
 	// Check for forced reload flag on mount.
 	useEffect(() => {

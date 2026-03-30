@@ -111,7 +111,6 @@ export default function ServiceDeliveryTable({ autoSync = false, onAutoSyncHandl
     offline,
   } = useServiceDelivery(filterOptions);
 
-  const isOnline = useNetworkStatus();
   const { programs = [] } = usePrograms({ status: "active" });
   const runSyncRef = useRef(runSync);
 

@@ -18,7 +18,6 @@ import PartnersTable from "@/components/programs/PartnersTable";
  * @returns {JSX.Element}
  */
 export default function PartnersPage() {
-	const isOnline = useNetworkStatus();
 	const wasOfflineRef = useRef(!isOnline);
 	const [shouldAutoSync, setShouldAutoSync] = useState(false);
 

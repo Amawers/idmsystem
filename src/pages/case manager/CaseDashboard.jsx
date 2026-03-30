@@ -22,8 +22,6 @@ export default function CaseDashboard() {
 	/** @type {[CaseDashboardFilters, (next: CaseDashboardFilters) => void]} */
 	const [filters, setFilters] = useState({});
 	const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-	const isOnline = useNetworkStatus();
-	const previousOnline = useRef(isOnline);
 
 	/** @param {CaseDashboardFilters} newFilters */
 	const handleFilterChange = useCallback((newFilters) => {

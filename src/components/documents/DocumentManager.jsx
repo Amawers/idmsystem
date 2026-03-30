@@ -63,7 +63,6 @@ function formatBytes(bytes) {
  * @param {boolean} [props.open] When provided, loads only when open becomes true
  */
 export default function DocumentManager({ relatedType, relatedId, open }) {
-	const isOnline = useNetworkStatus();
 	const [rows, setRows] = useState([]);
 	const [loading, setLoading] = useState(false);
 	const [uploading, setUploading] = useState(false);

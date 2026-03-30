@@ -18,7 +18,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
  * @returns {JSX.Element}
  */
 export default function ServiceDeliveryPage() {
-	const isOnline = useNetworkStatus();
 	const wasOfflineRef = useRef(!isOnline);
 	const [shouldAutoSync, setShouldAutoSync] = useState(false);
 

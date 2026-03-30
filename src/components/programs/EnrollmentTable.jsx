@@ -91,8 +91,7 @@ export default function EnrollmentTable() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
-  // Network status
-  const isOnline = useNetworkStatus();
+
 
   // Read URL query parameters on mount
   useEffect(() => {

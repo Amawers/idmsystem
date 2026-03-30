@@ -121,7 +121,6 @@ export default function CreateProgramDialog({
 
 	const { createProgram, updateProgram } = usePrograms();
 	const { partners, loading: partnersLoading } = usePartners();
-	const isOnline = useNetworkStatus();
 
 	const {
 		register,

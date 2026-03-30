@@ -98,7 +98,6 @@ export default function PartnersTable({ autoSync = false, onAutoSyncHandled = ()
     offline,
   } = usePartners();
 
-  const isOnline = useNetworkStatus();
   const runSyncRef = useRef(runSync);
 
   useEffect(() => {

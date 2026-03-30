@@ -131,13 +131,11 @@ export default function CaseManagement() {
 
 	// Filter hidden cases for case managers
 	const { filterVisibleCases } = useHiddenCases();
-	const isOnline = useNetworkStatus();
 	/** @type {[CaseManagementTabId, (t: CaseManagementTabId) => void]} */
 	const [initialTab, setInitialTab] = useState("CASE");
 	/** @type {[CaseManagementTabId | null, (t: CaseManagementTabId | null) => void]} */
 	const [autoSyncAfterReloadTab, setAutoSyncAfterReloadTab] = useState(null);
 	const hasBootstrappedTab = useRef(false);
-	const previousOnline = useRef(isOnline);
 	/**
 	 * Used as a simple in-memory lock map to prevent overlapping auto-sync attempts per tab.
 	 * @type {React.MutableRefObject<Record<CaseManagementTabId, boolean>>}
