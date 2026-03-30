@@ -37,7 +37,6 @@ import {
   Building2,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import { usePartners } from '@/hooks/usePartners';
 
 const statusColors = {
   active: 'bg-green-500',

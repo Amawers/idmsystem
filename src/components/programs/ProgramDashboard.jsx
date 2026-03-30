@@ -12,9 +12,6 @@
  */
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { usePrograms } from "@/hooks/usePrograms";
-import { useEnrollments } from "@/hooks/useEnrollments";
-import { useDashboard } from "@/hooks/useDashboard";
 import { 
   Activity,
   DollarSign,

@@ -12,7 +12,6 @@
 
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useEnrollments } from '@/hooks/useEnrollments';
 import {
   Dialog,
   DialogContent,

@@ -12,7 +12,6 @@
  */
 
 import { useMemo, useState, useEffect } from "react";
-import { useEnrollments } from "@/hooks/useEnrollments";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import {
 	getCachedCasesByType,

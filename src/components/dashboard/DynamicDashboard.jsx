@@ -18,7 +18,6 @@
  * ```
  */
 
-import { useDashboard } from "@/hooks/useDashboard";
 import { DynamicMetricCard, MetricCardGrid } from "./DynamicMetricCard";
 import { TimeTrendChart, StatusDistributionChart, PriorityChart, WorkloadChart } from "./DashboardCharts";
 import { Button } from "@/components/ui/button";
