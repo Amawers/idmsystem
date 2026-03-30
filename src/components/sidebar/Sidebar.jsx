@@ -98,7 +98,7 @@ export default function Sidebar(props) {
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton asChild>
-              <Link to="/dashboard">
+              <Link to="/case/dashboard">
                <Avatar className="h-8 w-8 rounded-lg">
                 <AvatarImage src={logo} alt="IDMS" />
                 <AvatarFallback className="rounded-lg">CN</AvatarFallback>

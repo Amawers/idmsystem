@@ -9,7 +9,7 @@ import { useEffect } from "react";
 import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "./components/sidebar/Sidebar";
 import ProtectedRoute from "@/pages/ProtectedRoute";
-import { useAuthStore } from "./store/authStore";
+import { AUTH_STATUS, useAuthStore } from "@/store/authStore";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import { Toaster } from "@/components/ui/sonner";
@@ -100,15 +100,30 @@ function AppLoadingOverlay() {
  */
 export default function App() {
 	const initialize = useAuthStore((state) => state.initialize);
+	const subscribeToAuthChanges = useAuthStore(
+		(state) => state.subscribeToAuthChanges,
+	);
+	const authStatus = useAuthStore((state) => state.authStatus);
 	const isInitializing = useAuthStore((state) => state.isInitializing);
-	const isLoading = useAuthStore((state) => state.isLoading);
 
 	useEffect(() => {
 		// Bootstrap auth state (online session or offline fallback).
 		initialize();
 	}, [initialize]);
 
-	if (isInitializing || isLoading) return <AppLoadingOverlay />;
+	useEffect(() => {
+		const unsubscribe = subscribeToAuthChanges();
+
+		return () => {
+			if (typeof unsubscribe === "function") {
+				unsubscribe();
+			}
+		};
+	}, [subscribeToAuthChanges]);
+
+	if (authStatus === AUTH_STATUS.IDLE || isInitializing) {
+		return <AppLoadingOverlay />;
+	}
 
 	return (
 		<HashRouter>
@@ -123,7 +138,7 @@ export default function App() {
 				<Route
 					path="/case"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<Case />
 							</Layout>
@@ -135,7 +150,7 @@ export default function App() {
 				<Route
 					path="/case/dashboard"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<CaseDashboard />
 							</Layout>
@@ -147,7 +162,7 @@ export default function App() {
 				<Route
 					path="/case/management"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<CaseManagement />
 							</Layout>
@@ -159,7 +174,7 @@ export default function App() {
 				<Route
 					path="/program/dashboard"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<ProgramDashboardPage />
 							</Layout>
@@ -171,7 +186,7 @@ export default function App() {
 				<Route
 					path="/program/catalog"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<ProgramCatalogPage />
 							</Layout>
@@ -183,7 +198,7 @@ export default function App() {
 				<Route
 					path="/program/enrollments"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<ProgramEnrollmentsPage />
 							</Layout>
@@ -195,7 +210,7 @@ export default function App() {
 				<Route
 					path="/program/service-delivery"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<ServiceDeliveryPage />
 							</Layout>
@@ -207,7 +222,7 @@ export default function App() {
 				<Route
 					path="/program/partners"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<PartnersPage />
 							</Layout>
@@ -225,7 +240,7 @@ export default function App() {
 				<Route
 					path="/resource/dashboard"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<ResourceDashboard />
 							</Layout>
@@ -237,7 +252,7 @@ export default function App() {
 				<Route
 					path="/resource/stock"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<ResourceStock />
 							</Layout>
@@ -249,7 +264,7 @@ export default function App() {
 				<Route
 					path="/resource/approvals"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<ResourceApprovals />
 							</Layout>
@@ -261,7 +276,7 @@ export default function App() {
 				<Route
 					path="/resource/staff"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<ResourceStaff />
 							</Layout>
@@ -273,7 +288,7 @@ export default function App() {
 				<Route
 					path="/resource/programs"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<ResourcePrograms />
 							</Layout>
@@ -291,7 +306,7 @@ export default function App() {
 				<Route
 					path="/account"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<UserManagement />
 							</Layout>
@@ -303,7 +318,7 @@ export default function App() {
 				<Route
 					path="/controls"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<SecurityAudit />
 							</Layout>
@@ -315,7 +330,7 @@ export default function App() {
 				<Route
 					path="/controls/audit"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<AuditTrail />
 							</Layout>
@@ -327,7 +342,7 @@ export default function App() {
 				<Route
 					path="/controls/documents"
 					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
+						<ProtectedRoute>
 							<Layout>
 								<DocumentManagement />
 							</Layout>

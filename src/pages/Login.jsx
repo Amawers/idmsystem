@@ -4,7 +4,7 @@
 
 import { useState } from "react";
 import { useAuthStore } from "@/store/authStore";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { LoginForm } from "@/components/login-form";
 import { toast } from "sonner";
 import { CheckCircle, XCircle } from "lucide-react";
@@ -23,6 +23,7 @@ export default function Login() {
 
 	/** Router navigation helper used after successful login. */
 	const navigate = useNavigate();
+	const location = useLocation();
 
 	/**
 	 * Submits credentials to the auth store and navigates on success.
@@ -54,7 +55,12 @@ export default function Login() {
 				icon: <CheckCircle className="text-green-500" size={20} />,
 			});
 
-			navigate("/dashboard");
+			const from = location.state?.from;
+			const redirectTo = from?.pathname
+				? `${from.pathname}${from.search || ""}${from.hash || ""}`
+				: "/case/dashboard";
+
+			navigate(redirectTo, { replace: true });
 		} catch (err) {
 			const message =
 				err?.message ||

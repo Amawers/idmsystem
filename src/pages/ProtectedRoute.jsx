@@ -1,26 +1,21 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "@/store/authStore";
 
 /**
- * Route guard for authentication and optional role-based access.
+ * Route guard for authentication only.
  *
  * - If no authenticated user: redirects to `/login`.
- * - If `allowedRoles` is provided and the user role is not allowed: redirects to `/unauthorized`.
  *
  * @param {{
- *   children: import('react').ReactNode,
- *   allowedRoles?: string[]
+ *   children: import('react').ReactNode
  * }} props
  */
-export default function ProtectedRoute({ children, allowedRoles }) {
-	const { user, role } = useAuthStore();
+export default function ProtectedRoute({ children }) {
+	const { user } = useAuthStore();
+	const location = useLocation();
 
 	if (!user) {
-		return <Navigate to="/login" replace />;
-	}
-
-	if (allowedRoles && !allowedRoles.includes(role)) {
-		return <Navigate to="/unauthorized" replace />;
+		return <Navigate to="/login" replace state={{ from: location }} />;
 	}
 
 	return children;
