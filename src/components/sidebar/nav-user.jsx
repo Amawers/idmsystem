@@ -24,16 +24,35 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { toast } from "sonner";
 import Profile from "@/pages/Profile";
+import { useNavigate } from "react-router-dom";
 
 export function NavUser({ user, avatar }) {
 	const { isMobile } = useSidebar();
 	const logout = useAuthStore((s) => s.logout);
 	const role = useAuthStore((s) => s.role);
+	const navigate = useNavigate();
 
 	const [openDialog, setOpenDialog] = useState(false);
 
 	const roleLabels = {
 		social_worker: "Social Worker",
+	};
+
+	const handleLogout = async () => {
+		const result = await logout();
+
+		if (!result?.success) {
+			toast.error(result?.message || "Logout failed. Please try again.", {
+				icon: <IconLogout className="text-red-500" size={20} />,
+			});
+			return;
+		}
+
+		toast.success("Account logged out.", {
+			icon: <IconLogout className="text-red-500" size={20} />,
+		});
+
+		navigate("/login", { replace: true });
 	};
 
 	return (
@@ -102,12 +121,7 @@ export function NavUser({ user, avatar }) {
 
 							{/* LOGOUT */}
 							<DropdownMenuItem
-								onClick={() => {
-									logout();
-									toast.success("Account logged out.", {
-										icon: <IconLogout className="text-red-500" size={20} />,
-									});
-								}}
+								onClick={handleLogout}
 								className="cursor-pointer"
 							>
 								<IconLogout />
