@@ -43,21 +43,6 @@ export default function CaseDashboard() {
 		].filter(Boolean).length;
 	}, [filters]);
 
-	/**
-	 * When transitioning from offline -> online, force a reload to reinitialize data-fetching logic.
-	 * `caseDashboard.forceSync` is a one-shot hint other components can read on mount.
-	 */
-	useEffect(() => {
-		if (!previousOnline.current && isOnline) {
-			// Coming back online - set flag and reload
-			if (typeof window !== "undefined") {
-				sessionStorage.setItem("caseDashboard.forceSync", "true");
-				window.location.reload();
-			}
-		}
-		previousOnline.current = isOnline;
-	}, [isOnline]);
-
 	return (
 		<div className="flex flex-col gap-1">
 			<DashboardFilters

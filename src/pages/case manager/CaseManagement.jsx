@@ -26,111 +26,6 @@ import { Card, CardContent } from "@/components/ui/card";
 const FORCED_TAB_AFTER_RELOAD_KEY = "caseManagement.forceTabAfterReload";
 
 export default function CaseManagement() {
-	// Load dynamic CASE rows from Supabase with offline support
-	const {
-		data: caseRows,
-		loading: casesLoading,
-		error: casesError,
-		reload,
-		deleteCase,
-		pendingCount: casePendingCount,
-		syncing: caseSyncing,
-		syncStatus: caseSyncStatus,
-		runSync: runCaseSync,
-	} = useCasesOffline();
-	const {
-		data: ciclcarRows,
-		loading: ciclcarLoading,
-		error: ciclcarError,
-		reload: reloadCiclcar,
-		deleteCiclcarCase,
-		pendingCount: ciclcarPendingCount,
-		syncing: ciclcarSyncing,
-		syncStatus: ciclcarSyncStatus,
-		runSync: runCiclcarSync,
-		programEnrollments: ciclcarProgramEnrollments,
-		programEnrollmentsLoading: ciclcarProgramEnrollmentsLoading,
-	} = useCiclcarCases();
-	const {
-		data: farRows,
-		loading: farLoading,
-		error: farError,
-		reload: reloadFar,
-		deleteFarCase,
-		pendingCount: farPendingCount,
-		syncing: farSyncing,
-		syncStatus: farSyncStatus,
-		runSync: runFarSync,
-	} = useFarCases();
-	const {
-		data: facRows,
-		loading: facLoading,
-		error: facError,
-		reload: reloadFac,
-		deleteFacCase,
-		pendingCount: facPendingCount,
-		syncing: facSyncing,
-		syncStatus: facSyncStatus,
-		runSync: runFacSync,
-	} = useFacCases();
-	const {
-		data: ivacRows,
-		loading: ivacLoading,
-		error: ivacError,
-		reload: reloadIvac,
-		deleteIvacCase,
-		pendingCount: ivacPendingCount,
-		syncing: ivacSyncing,
-		syncStatus: ivacSyncStatus,
-		runSync: runIvacSync,
-	} = useIvacCases();
-	const {
-		data: spRows,
-		loading: spLoading,
-		error: spError,
-		reload: reloadSp,
-		deleteSpCase,
-		pendingCount: spPendingCount,
-		syncing: spSyncing,
-		syncStatus: spSyncStatus,
-		runSync: runSpSync,
-	} = useSpCases();
-	const {
-		data: faRows,
-		loading: faLoading,
-		error: faError,
-		reload: reloadFa,
-		deleteFaCase,
-		pendingCount: faPendingCount,
-		syncing: faSyncing,
-		syncStatus: faSyncStatus,
-		runSync: runFaSync,
-	} = useFaCases();
-	const {
-		data: pwdRows,
-		loading: pwdLoading,
-		error: pwdError,
-		reload: reloadPwd,
-		deletePwdCase,
-		pendingCount: pwdPendingCount,
-		syncing: pwdSyncing,
-		syncStatus: pwdSyncStatus,
-		runSync: runPwdSync,
-	} = usePwdCases();
-	const {
-		data: scRows,
-		loading: scLoading,
-		error: scError,
-		reload: reloadSc,
-		deleteScCase,
-		pendingCount: scPendingCount,
-		syncing: scSyncing,
-		syncStatus: scSyncStatus,
-		runSync: runScSync,
-	} = useScCases();
-
-	// Filter hidden cases for case managers
-	const { filterVisibleCases } = useHiddenCases();
 	/** @type {[CaseManagementTabId, (t: CaseManagementTabId) => void]} */
 	const [initialTab, setInitialTab] = useState("CASE");
 	/** @type {[CaseManagementTabId | null, (t: CaseManagementTabId | null) => void]} */
@@ -359,16 +254,6 @@ export default function CaseManagement() {
 		}
 		previousOnline.current = isOnline;
 	}, [
-		isOnline,
-		casePendingCount,
-		ciclcarPendingCount,
-		facPendingCount,
-		farPendingCount,
-		ivacPendingCount,
-		spPendingCount,
-		faPendingCount,
-		pwdPendingCount,
-		scPendingCount,
 	]);
 
 	/**
@@ -403,17 +288,6 @@ export default function CaseManagement() {
 			.catch((err) => console.error("Auto sync failed:", err))
 			.finally(() => setAutoSyncAfterReloadTab(null));
 	}, [
-		autoSyncAfterReloadTab,
-		isOnline,
-		runCaseSync,
-		runCiclcarSync,
-		runFacSync,
-		runFarSync,
-		runIvacSync,
-		runSpSync,
-		runPwdSync,
-		runScSync,
-		runFaSync,
 	]);
 
 	/**
@@ -512,35 +386,6 @@ export default function CaseManagement() {
 				});
 		}
 	}, [
-		isOnline,
-		autoSyncAfterReloadTab,
-		runCaseSync,
-		runCiclcarSync,
-		runFacSync,
-		runFarSync,
-		runIvacSync,
-		runSpSync,
-		runPwdSync,
-		runScSync,
-		runFaSync,
-		casePendingCount,
-		ciclcarPendingCount,
-		facPendingCount,
-		farPendingCount,
-		ivacPendingCount,
-		spPendingCount,
-		faPendingCount,
-		pwdPendingCount,
-		scPendingCount,
-		caseSyncing,
-		ciclcarSyncing,
-		facSyncing,
-		farSyncing,
-		ivacSyncing,
-		spSyncing,
-		faSyncing,
-		pwdSyncing,
-		scSyncing,
 	]);
 
 	/** Applies visibility filtering to each dataset before handing to the table UI. */
