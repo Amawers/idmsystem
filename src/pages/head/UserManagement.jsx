@@ -332,20 +332,20 @@ export default function UserManagement() {
 
 				const createdUserId = result?.user?.id || null;
 
-				await createAuditLog({
-					actionType: AUDIT_ACTIONS.CREATE_USER,
-					actionCategory: AUDIT_CATEGORIES.USER,
-					description: `Created user account for ${email}`,
-					resourceType: "user",
-					resourceId: createdUserId,
-					metadata: {
-						fullName,
-						email,
-						role: "social_worker",
-						status: "active",
-					},
-					severity: "info",
-				});
+				// await createAuditLog({
+				// 	actionType: AUDIT_ACTIONS.CREATE_USER,
+				// 	actionCategory: AUDIT_CATEGORIES.USER,
+				// 	description: `Created user account for ${email}`,
+				// 	resourceType: "user",
+				// 	resourceId: createdUserId,
+				// 	metadata: {
+				// 		fullName,
+				// 		email,
+				// 		role: "social_worker",
+				// 		status: "active",
+				// 	},
+				// 	severity: "info",
+				// });
 
 				await fetchUsers();
 
