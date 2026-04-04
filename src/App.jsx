@@ -17,6 +17,7 @@ import UnauthorizedPage from "@/pages/UnauthorizedPage";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { SiteHeader } from "./components/site-header";
 import { Loader2 } from "lucide-react";
+import { WifiOff } from "lucide-react";
 import Case from "./pages/Case";
 import TestFileGenerator from "./pages/TestFileGenerator";
 import CaseDashboard from "./pages/case manager/CaseDashboard";
@@ -36,6 +37,7 @@ import SecurityAudit from "./pages/security/SecurityAudit";
 import AuditTrail from "./pages/security/AuditTrail";
 import RolePermissions from "./pages/security/RolePermissions";
 import DocumentManagement from "./pages/security/DocumentManagement";
+import useNetworkStatus from "@/hooks/useNetworkStatus";
 
 /**
  * Layout wrapper for authenticated pages.
@@ -96,18 +98,49 @@ function AppLoadingOverlay() {
 }
 
 /**
+ * Full-screen message shown when app startup requires internet.
+ */
+function OnlineRequiredOverlay() {
+	return (
+		<div className="fixed inset-0 z-[1000] flex items-center justify-center bg-background px-6">
+			<div className="flex max-w-md flex-col items-center gap-4 rounded-2xl border bg-card p-8 text-center shadow-xl">
+				<div className="rounded-full bg-muted p-4">
+					<WifiOff className="h-6 w-6 text-destructive" />
+				</div>
+				<div className="space-y-2">
+					<p className="text-lg font-semibold">Internet required</p>
+					<p className="text-sm text-muted-foreground">
+						This app now requires an online connection to verify
+						your account before you can continue.
+					</p>
+				</div>
+				<button
+					type="button"
+					onClick={() => window.location.reload()}
+					className="inline-flex h-10 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
+				>
+					Retry connection
+				</button>
+			</div>
+		</div>
+	);
+}
+
+/**
  * Root React component.
  * Initializes auth state on first render, then renders routes.
  */
 export default function App() {
-	const { init, loading } = useAuthStore();
+	const { init, loading, user } = useAuthStore();
+	const isOnline = useNetworkStatus();
 
 	useEffect(() => {
-		// Bootstrap auth state (online session or offline fallback).
+		// Bootstrap auth state.
 		init();
 	}, [init]);
 
 	if (loading) return <AppLoadingOverlay />;
+	if (!isOnline && !user) return <OnlineRequiredOverlay />;
 
 	return (
 		<HashRouter>

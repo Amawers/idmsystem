@@ -43,7 +43,7 @@ The IDMS features robust offline functionality to ensure uninterrupted service d
    - Reloads the page
    - Syncs queued operations in chronological order
    - Updates cache with latest data from server
-5. **Offline Login Cache**: Enabling "Remember me for offline access" on the login screen stores a sanitized session snapshot (valid for 7 days) so the desktop build can reopen without internet access.
+5. **Authentication Requirement**: Login now requires an internet connection so user sessions can be verified online. If the app starts offline without an active verified session, access is blocked until connectivity is restored.
 
 ### User Experience
 
