@@ -11,7 +11,7 @@
  * - Status is currently forced to `active` on create.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -36,6 +36,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff, RefreshCw, Copy, Check } from "lucide-react";
+import electronBridge from "@/lib/electronBridge";
 
 /**
  * @typedef {"social_worker"} UserRole
@@ -73,6 +74,9 @@ const createUserSchema = z.object({
 	autoGeneratePassword: z.boolean().default(false),
 });
 
+const RELOAD_REQUEST_TIMEOUT_MS = 400;
+const RELOAD_COMPLETION_WATCHDOG_MS = 8000;
+
 /**
  * @param {CreateUserDialogProps} props
  * @returns {import("react").ReactNode}
@@ -87,6 +91,8 @@ export function CreateUserDialog({
 	const [showPassword, setShowPassword] = useState(false);
 	const [generatedPassword, setGeneratedPassword] = useState("");
 	const [copied, setCopied] = useState(false);
+	const [isReloading, setIsReloading] = useState(false);
+	const isBusy = loading || isReloading;
 
 	const form = useForm({
 		resolver: zodResolver(createUserSchema),
@@ -99,6 +105,45 @@ export function CreateUserDialog({
 	});
 
 	const autoGenerate = form.watch("autoGeneratePassword");
+
+	useEffect(() => {
+		if (!open) {
+			setIsReloading(false);
+		}
+	}, [open]);
+
+	const triggerImmediateReload = async () => {
+		try {
+			const result = await Promise.race([
+				electronBridge.reloadWindow(),
+				new Promise((_, reject) => {
+					setTimeout(() => {
+						reject(new Error("Reload request timed out."));
+					}, RELOAD_REQUEST_TIMEOUT_MS);
+				}),
+			]);
+
+			if (result?.success) {
+				return true;
+			}
+		} catch {
+			// Ignore bridge failures and continue with browser-level fallback.
+		}
+
+		try {
+			window.location.reload();
+			return true;
+		} catch {
+			// Try one more fallback in environments where reload throws.
+		}
+
+		try {
+			window.location.replace(window.location.href);
+			return true;
+		} catch {
+			return false;
+		}
+	};
 
 	/**
 	 * Generates a random password for display/copy and sets the form `password`.
@@ -120,6 +165,10 @@ export function CreateUserDialog({
 	 * @param {boolean} checked
 	 */
 	const handleAutoGenerateToggle = (checked) => {
+		if (isBusy) {
+			return;
+		}
+
 		form.setValue("autoGeneratePassword", checked);
 		if (checked) {
 			generatePassword();
@@ -153,6 +202,10 @@ export function CreateUserDialog({
 	 * @param {CreateUserFormValues} data
 	 */
 	const onSubmit = async (data) => {
+		if (isReloading) {
+			return;
+		}
+
 		try {
 			const plainPassword = data.autoGeneratePassword
 				? generatedPassword
@@ -172,17 +225,32 @@ export function CreateUserDialog({
 				password: plainPassword,
 			});
 
+			setIsReloading(true);
+
 			toast.success("User created successfully", {
-				description: data.autoGeneratePassword
-					? `Password: ${plainPassword} (Save this - it won't be shown again)`
-					: "User can now log in with their credentials",
+				description: "Account created. Reloading now...",
 			});
 
-			form.reset();
-			setGeneratedPassword("");
-			onOpenChange(false);
 			onSuccess?.();
+
+			const reloadTriggered = await triggerImmediateReload();
+
+			if (!reloadTriggered) {
+				setIsReloading(false);
+				toast.error("Automatic reload failed", {
+					description: "Please press Ctrl+R to continue.",
+				});
+				return;
+			}
+
+			setTimeout(() => {
+				setIsReloading(false);
+				toast.error("Automatic reload timed out", {
+					description: "Please press Ctrl+R to continue.",
+				});
+			}, RELOAD_COMPLETION_WATCHDOG_MS);
 		} catch (error) {
+			setIsReloading(false);
 			toast.error("Failed to create user", {
 				description:
 					error instanceof Error
@@ -192,14 +260,23 @@ export function CreateUserDialog({
 		}
 	};
 
+	const handleOpenChange = (nextOpen) => {
+		if (isReloading) {
+			return;
+		}
+
+		onOpenChange(nextOpen);
+	};
+
 	return (
-		<Dialog open={open} onOpenChange={onOpenChange}>
+		<Dialog open={open} onOpenChange={handleOpenChange}>
 			<DialogContent className="sm:max-w-[800px]">
 				<DialogHeader>
 					<DialogTitle>Create New User Account</DialogTitle>
 					<DialogDescription>
-						Create a new social worker account. All fields are
-						required.
+						{isReloading
+							? "Finalizing account setup. Reloading the application now."
+							: "Create a new social worker account. All fields are required."}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -220,6 +297,7 @@ export function CreateUserDialog({
 												<Input
 													placeholder="Juan Dela Cruz"
 													type="text"
+																	disabled={isBusy}
 													{...field}
 												/>
 											</FormControl>
@@ -238,6 +316,7 @@ export function CreateUserDialog({
 												<Input
 													placeholder="user@example.com"
 													type="email"
+																	disabled={isBusy}
 													{...field}
 												/>
 											</FormControl>
@@ -280,6 +359,7 @@ export function CreateUserDialog({
 															!field.value,
 														)
 													}
+																	disabled={isBusy}
 												>
 													{field.value ? "ON" : "OFF"}
 												</Button>
@@ -302,6 +382,7 @@ export function CreateUserDialog({
 														: "password"
 												}
 												readOnly
+																	disabled={isBusy}
 												placeholder="Click generate to create password"
 												className="font-mono"
 											/>
@@ -329,6 +410,7 @@ export function CreateUserDialog({
 													)
 												}
 												title="Toggle password visibility"
+																	disabled={isBusy}
 											>
 												{showPassword ? (
 													<EyeOff className="h-4 w-4" />
@@ -342,6 +424,7 @@ export function CreateUserDialog({
 												size="icon"
 												onClick={generatePassword}
 												title="Generate new password"
+																	disabled={isBusy}
 											>
 												<RefreshCw className="h-4 w-4" />
 											</Button>
@@ -368,6 +451,7 @@ export function CreateUserDialog({
 																	: "password"
 															}
 															placeholder="Enter password (min 6 characters)"
+																		disabled={isBusy}
 															{...field}
 														/>
 														<Button
@@ -379,6 +463,7 @@ export function CreateUserDialog({
 																	!showPassword,
 																)
 															}
+																		disabled={isBusy}
 														>
 															{showPassword ? (
 																<EyeOff className="h-4 w-4" />
@@ -400,16 +485,18 @@ export function CreateUserDialog({
 							<Button
 								type="button"
 								variant="outline"
-								onClick={() => onOpenChange(false)}
-								disabled={loading}
+								onClick={() => handleOpenChange(false)}
+								disabled={isBusy}
 							>
 								Cancel
 							</Button>
-							<Button type="submit" disabled={loading}>
-								{loading && (
+							<Button type="submit" disabled={isBusy}>
+								{isBusy && (
 									<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 								)}
-								Create User
+								{isReloading
+									? "Reloading..."
+									: "Create User"}
 							</Button>
 						</DialogFooter>
 					</form>

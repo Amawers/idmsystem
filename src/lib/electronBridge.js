@@ -9,6 +9,7 @@
 /**
  * @typedef {Object} ElectronAPI
  * @property {() => Promise<string>} getAppVersion
+ * @property {() => Promise<{success: boolean, message?: string}>} reloadWindow
  */
 
 /**
@@ -20,6 +21,10 @@ const safeBridge =
 		? window.electronAPI
 		: {
 				getAppVersion: async () => "web",
+				reloadWindow: async () => ({
+					success: false,
+					message: "Electron bridge is unavailable.",
+				}),
 			};
 
 export default safeBridge;

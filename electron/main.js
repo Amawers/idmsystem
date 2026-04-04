@@ -72,3 +72,18 @@ app.on("window-all-closed", () => {
 });
 
 ipcMain.handle("app:get-version", () => app.getVersion());
+
+ipcMain.handle("app:reload-window", (event) => {
+	const senderWindow = BrowserWindow.fromWebContents(event.sender);
+
+	if (!senderWindow || senderWindow.isDestroyed()) {
+		return {
+			success: false,
+			message: "No active window is available for reload.",
+		};
+	}
+
+	senderWindow.webContents.reloadIgnoringCache();
+
+	return { success: true };
+});

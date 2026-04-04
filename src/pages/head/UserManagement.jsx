@@ -68,6 +68,21 @@ import {
 } from "@/lib/auditLog";
 
 const ITEMS_PER_PAGE = 10;
+const ACCOUNT_CREATION_TIMEOUT_MS = 15000;
+
+const withTimeout = (promise, timeoutMs, timeoutMessage) => {
+	let timeoutId;
+
+	const timeoutPromise = new Promise((_, reject) => {
+		timeoutId = setTimeout(() => {
+			reject(new Error(timeoutMessage));
+		}, timeoutMs);
+	});
+
+	return Promise.race([promise, timeoutPromise]).finally(() => {
+		clearTimeout(timeoutId);
+	});
+};
 
 /**
  * @typedef {"active"|"inactive"|"banned"} UserStatus
@@ -154,8 +169,6 @@ const getStatusBadge = (status) => {
  * @returns {JSX.Element}
  */
 export default function UserManagement() {
-	const signup = useAuthStore((state) => state.signup);
-	const initializeAuth = useAuthStore((state) => state.initialize);
 	const currentUser = useAuthStore((state) => state.user);
 
 	const [users, setUsers] = useState([]);
@@ -255,82 +268,31 @@ export default function UserManagement() {
 		return filteredUsers.slice(startIndex, endIndex);
 	}, [filteredUsers, startIndex, endIndex]);
 
-	const restorePreviousSession = useCallback(
-		async (previousSession, previousUserId) => {
-			if (!previousUserId) {
-				return { restored: true };
-			}
-
-			const {
-				data: { session: currentSession },
-			} = await supabase.auth.getSession();
-
-			if (currentSession?.user?.id === previousUserId) {
-				return { restored: true };
-			}
-
-			if (
-				!previousSession?.access_token ||
-				!previousSession?.refresh_token
-			) {
-				return {
-					restored: false,
-					message: "Previous session snapshot is unavailable.",
-				};
-			}
-
-			const { error } = await supabase.auth.setSession({
-				access_token: previousSession.access_token,
-				refresh_token: previousSession.refresh_token,
-			});
-
-			if (error) {
-				return {
-					restored: false,
-					message:
-						error.message || "Unable to restore previous session.",
-				};
-			}
-
-			await initializeAuth();
-			return { restored: true };
-		},
-		[initializeAuth],
-	);
-
 	const handleCreateUser = useCallback(
 		async ({ fullName, email, password }) => {
 			setMutationLoading(true);
 
-			const previousSession = useAuthStore.getState().session;
-			const previousUserId = useAuthStore.getState().user?.id || null;
-
 			try {
-				const result = await signup({
-					fullName,
-					email,
-					password,
-					role: "social_worker",
-				});
-
-				if (!result?.success) {
-					throw new Error(result?.message || "Failed to create user.");
-				}
-
-				const restoreResult = await restorePreviousSession(
-					previousSession,
-					previousUserId,
+				const { data, error } = await withTimeout(
+					supabase.auth.signUp({
+						email,
+						password,
+						options: {
+							data: {
+								full_name: fullName,
+								role: "social_worker",
+							},
+						},
+					}),
+					ACCOUNT_CREATION_TIMEOUT_MS,
+					"Account creation timed out. Please try again.",
 				);
 
-				if (!restoreResult.restored) {
-					toast.warning("User created but session restore failed", {
-						description:
-							restoreResult.message ||
-							"Please sign in again to continue.",
-					});
+				if (error) {
+					throw new Error(error.message || "Failed to create user.");
 				}
 
-				const createdUserId = result?.user?.id || null;
+				const createdUserId = data?.user?.id || null;
 
 				// await createAuditLog({
 				// 	actionType: AUDIT_ACTIONS.CREATE_USER,
@@ -347,7 +309,7 @@ export default function UserManagement() {
 				// 	severity: "info",
 				// });
 
-				await fetchUsers();
+				void fetchUsers();
 
 				return {
 					userId: createdUserId,
@@ -363,7 +325,7 @@ export default function UserManagement() {
 				setMutationLoading(false);
 			}
 		},
-		[fetchUsers, restorePreviousSession, signup],
+		[fetchUsers],
 	);
 
 	const updateUserStatus = useCallback(
