@@ -5,7 +5,7 @@
  * - Fetch and display user accounts (via `useUserManagementStore`).
  * - Provide client-side search and status filtering (delegated to the store selectors).
  * - Present create/edit/ban dialogs that refresh the list on success.
- * - Gate the experience when offline (online-only view).
+ * - Show an online-required message when internet is unavailable.
  *
  * Notes:
  * - Pagination in this view is client-side over `getFilteredUsers()`.
@@ -13,6 +13,7 @@
 
 import { useEffect, useState } from "react";
 import { useUserManagementStore } from "@/store/useUserManagementStore";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { CreateUserDialog } from "@/components/user-management/CreateUserDialog";
 import { EditUserDialog } from "@/components/user-management/EditUserDialog";
 import { BanUserDialog } from "@/components/user-management/BanUserDialog";
@@ -100,30 +101,13 @@ export default function UserManagement() {
 	const [createDialogOpen, setCreateDialogOpen] = useState(false);
 	const [editUser, setEditUser] = useState(null);
 	const [banAction, setBanAction] = useState(null);
-
-	// Online state gates network-backed operations.
-	const [isOnline, setIsOnline] = useState(
-		typeof navigator !== "undefined" ? navigator.onLine : true,
-	);
-
-	useEffect(() => {
-		const goOnline = () => setIsOnline(true);
-		const goOffline = () => setIsOnline(false);
-
-		window.addEventListener("online", goOnline);
-		window.addEventListener("offline", goOffline);
-
-		return () => {
-			window.removeEventListener("online", goOnline);
-			window.removeEventListener("offline", goOffline);
-		};
-	}, []);
+	const isOnline = useNetworkStatus();
 
 	// Pagination state (client-side).
 	const [currentPage, setCurrentPage] = useState(1);
 	const itemsPerPage = 3;
 
-	// Fetch users on mount or when coming back online
+	// Fetch users whenever the page is online.
 	useEffect(() => {
 		if (isOnline) {
 			fetchUsers();
@@ -210,7 +194,7 @@ export default function UserManagement() {
 		);
 	};
 
-	// If offline, hide all controls and show a clear offline message
+	// Account management is online-only.
 	if (!isOnline) {
 		return (
 			<div className="container mx-auto px-6 py-12 flex items-center justify-center">
@@ -218,7 +202,7 @@ export default function UserManagement() {
 					<div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-muted/20">
 						<WifiOff className="h-10 w-10 text-muted-foreground" />
 					</div>
-					<h2 className="text-lg font-semibold">You’re offline</h2>
+					<h2 className="text-lg font-semibold">Internet required</h2>
 					<p className="text-sm text-muted-foreground">
 						User management requires an internet connection.
 					</p>
