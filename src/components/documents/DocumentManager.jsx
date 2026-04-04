@@ -112,7 +112,7 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 		e.target.value = "";
 		if (!file) return;
 		if (!isOnline) {
-			toast.error("Offline", {
+			toast.error("Internet required", {
 				description: "Connect to the internet to upload documents.",
 			});
 			return;
@@ -136,7 +136,7 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 	const onDownload = async (row) => {
 		if (!row?.storage_path) return;
 		if (!isOnline) {
-			toast.error("Offline", {
+			toast.error("Internet required", {
 				description: "Connect to the internet to download documents.",
 			});
 			return;
@@ -165,7 +165,7 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 	const confirmDelete = async () => {
 		if (!rowToDelete) return;
 		if (!isOnline) {
-			toast.error("Offline", {
+			toast.error("Internet required", {
 				description: "Connect to the internet to delete documents.",
 			});
 			return;
@@ -221,7 +221,8 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 			<CardContent>
 				{!isOnline && (
 					<div className="mb-3 text-sm text-muted-foreground">
-						Offline mode: uploads/downloads are disabled.
+						Internet required: uploads, downloads, and deletions are
+						unavailable.
 					</div>
 				)}
 

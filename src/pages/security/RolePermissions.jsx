@@ -5,13 +5,13 @@
  * Changes are staged locally and saved in batch, with an audit log entry
  * created for each permission change.
  *
- * Offline behavior:
- * - When offline, this page is read-only and shows an offline message.
+ * This page is online-only and shows an internet-required message when offline.
  */
 
 import React, { useState, useEffect } from "react";
 import supabase from "@/../config/supabase";
 import { useAuthStore } from "@/store/authStore";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import {
 	createAuditLog,
 	AUDIT_ACTIONS,
@@ -85,23 +85,7 @@ import HiddenCasesManager from "./HiddenCasesManager";
  */
 
 export default function RolePermissions() {
-	/** Tracks whether the browser is currently online. */
-	const [isOnline, setIsOnline] = useState(
-		typeof navigator !== "undefined" ? navigator.onLine : true,
-	);
-
-	useEffect(() => {
-		const goOnline = () => setIsOnline(true);
-		const goOffline = () => setIsOnline(false);
-
-		window.addEventListener("online", goOnline);
-		window.addEventListener("offline", goOffline);
-
-		return () => {
-			window.removeEventListener("online", goOnline);
-			window.removeEventListener("offline", goOffline);
-		};
-	}, []);
+	const isOnline = useNetworkStatus();
 	/** Current authenticated user (used as the `granted_by` actor + audit log actor). */
 	const currentUser = useAuthStore((state) => state.user);
 
@@ -128,6 +112,15 @@ export default function RolePermissions() {
 		loadUsers();
 		loadUserPermissions();
 	}, [isOnline]);
+
+	const handleRefresh = async () => {
+		if (!isOnline) return;
+		await Promise.all([
+			loadPermissions(),
+			loadUsers(),
+			loadUserPermissions(),
+		]);
+	};
 
 	/** Loads the canonical list of available permissions. */
 	const loadPermissions = async () => {
@@ -423,7 +416,7 @@ export default function RolePermissions() {
 
 	const hasPendingChanges = Object.keys(pendingChanges).length > 0;
 
-	// If offline, show focused offline message and hide all controls
+	// Role permissions is online-only.
 	if (!isOnline) {
 		return (
 			<div className="px-4 lg:px-6 py-12 flex items-center justify-center">
@@ -431,7 +424,7 @@ export default function RolePermissions() {
 					<div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-muted/20">
 						<WifiOff className="h-10 w-10 text-muted-foreground" />
 					</div>
-					<h2 className="text-lg font-semibold">You’re offline</h2>
+					<h2 className="text-lg font-semibold">Internet required</h2>
 					<p className="text-sm text-muted-foreground">
 						Role Permissions requires an internet connection.
 					</p>
@@ -458,7 +451,7 @@ export default function RolePermissions() {
 				<Button
 					variant="outline"
 					size="sm"
-					onClick={() => window.location.reload()}
+					onClick={handleRefresh}
 				>
 					<RefreshCw className="mr-2 h-4 w-4" />
 					Refresh

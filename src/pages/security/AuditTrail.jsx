@@ -4,14 +4,14 @@
  * Responsibilities:
  * - Display audit log entries returned from `useAuditLogs`.
  * - Provide client-side search, server-side filters (category/severity/date range), and pagination.
- * - Poll for updates while online (no realtime subscription).
+ * - Support manual refresh of online audit data.
  * - Offer a CSV export of the currently loaded dataset.
  *
  * Notes:
  * - This view is intentionally online-only; when offline it shows a focused message instead of stale data.
  */
 
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
 	Activity,
 	AlertCircle,
@@ -28,6 +28,7 @@ import {
 	X,
 } from "lucide-react";
 import { useAuditLogs } from "@/hooks/useAuditLogs";
+import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { AUDIT_CATEGORIES, AUDIT_SEVERITY } from "@/lib/auditLog";
 import {
 	Table,
@@ -117,46 +118,8 @@ export default function AuditTrail() {
 	const { data, count, loading, error, reload, setFilters } =
 		useAuditLogs(filterState);
 
-	// Online/offline state gates polling and avoids showing stale data.
-	const [isOnline, setIsOnline] = useState(
-		typeof navigator !== "undefined" ? navigator.onLine : true,
-	);
-	/** @type {import("react").MutableRefObject<number | null>} */
-	const pollRef = useRef(null);
-
-	useEffect(() => {
-		const goOnline = () => setIsOnline(true);
-		const goOffline = () => setIsOnline(false);
-
-		window.addEventListener("online", goOnline);
-		window.addEventListener("offline", goOffline);
-
-		return () => {
-			window.removeEventListener("online", goOnline);
-			window.removeEventListener("offline", goOffline);
-		};
-	}, []);
-
-	// Poll audit logs while online (there is no Supabase realtime subscription here).
-	useEffect(() => {
-		if (pollRef.current) {
-			clearInterval(pollRef.current);
-			pollRef.current = null;
-		}
-
-		if (!isOnline) return undefined;
-
-		pollRef.current = window.setInterval(() => {
-			reload();
-		}, 30_000);
-
-		return () => {
-			if (pollRef.current) {
-				clearInterval(pollRef.current);
-				pollRef.current = null;
-			}
-		};
-	}, [reload, isOnline]);
+	// Online/offline state is shared across pages.
+	const isOnline = useNetworkStatus();
 
 	// Map preset date ranges to explicit start/end Date values.
 	useEffect(() => {
@@ -372,7 +335,7 @@ export default function AuditTrail() {
 	const hasNextPage = currentPage < totalPages;
 	const hasPrevPage = currentPage > 1;
 
-	// If offline, show a focused offline message and hide controls
+	// Audit trail is online-only.
 	if (!isOnline) {
 		return (
 			<div className="px-4 lg:px-6 py-12 flex items-center justify-center">
@@ -380,7 +343,7 @@ export default function AuditTrail() {
 					<div className="mx-auto flex items-center justify-center h-20 w-20 rounded-full bg-muted/20">
 						<WifiOff className="h-10 w-10 text-muted-foreground" />
 					</div>
-					<h2 className="text-lg font-semibold">You’re offline</h2>
+					<h2 className="text-lg font-semibold">Internet required</h2>
 					<p className="text-sm text-muted-foreground">
 						Audit Trail requires an internet connection.
 					</p>
@@ -402,7 +365,7 @@ export default function AuditTrail() {
 					</h2>
 					<p className="text-muted-foreground text-[11px]">
 						Track and monitor all user activities and system events
-						in real-time
+						from online audit records
 					</p>
 				</div>
 				<div className="flex gap-2">
@@ -426,7 +389,7 @@ export default function AuditTrail() {
 					<Button
 						variant="outline"
 						size="sm"
-						onClick={() => window.location.reload()}
+						onClick={reload}
 						disabled={loading}
 					>
 						<RefreshCw

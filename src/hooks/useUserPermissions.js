@@ -3,12 +3,13 @@
  *
  * Responsibilities:
  * - Load the current user's permissions from Supabase.
- * - Cache permissions briefly in `localStorage` to reduce refetching.
+ * - Cache permissions briefly in localStorage to reduce refetching.
  * - Provide helpers (`hasPermission`, `hasAnyPermission`, `hasAllPermissions`) for UI control.
  *
  * Design notes:
  * - `social_worker` is treated as an “all permissions” role.
- * - When cached permissions exist, the hook returns them immediately and revalidates in the background.
+ * - Cache-first load keeps UI responsive while network revalidation runs.
+ * - In-flight request dedupe avoids duplicate concurrent permission fetches.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -17,12 +18,6 @@ import { useAuthStore } from "@/store/authStore";
 
 /**
  * @typedef {string} PermissionName
- */
-
-/**
- * @typedef {Object} PermissionsCacheRecord
- * @property {PermissionName[]} permissions
- * @property {number} timestamp
  */
 
 /**
@@ -35,7 +30,12 @@ import { useAuthStore } from "@/store/authStore";
  * @property {(forceNetwork?: boolean) => void} reload
  */
 
-// Cache permissions in localStorage to avoid repeated network fetches for case managers
+/**
+ * @typedef {Object} PermissionsCacheRecord
+ * @property {PermissionName[]} permissions
+ * @property {number} timestamp
+ */
+
 const CACHE_KEY_PREFIX = "idm_permissions_cache";
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
@@ -61,8 +61,9 @@ function readCachedPermissions(userId) {
 
 		/** @type {PermissionsCacheRecord} */
 		const parsed = JSON.parse(raw);
-		if (!parsed?.permissions || !Array.isArray(parsed.permissions))
+		if (!parsed?.permissions || !Array.isArray(parsed.permissions)) {
 			return null;
+		}
 
 		const isFresh = Date.now() - (parsed.timestamp || 0) < CACHE_TTL_MS;
 		if (!isFresh) return null;
@@ -105,6 +106,46 @@ function clearCachedPermissions(userId) {
 	}
 }
 
+/** @type {Map<string, Promise<PermissionName[]>>} */
+const inFlightPermissionLoads = new Map();
+
+/**
+ * Fetch permission names for a user with in-flight request deduplication.
+ * @param {string} userId
+ * @returns {Promise<PermissionName[]>}
+ */
+async function fetchPermissionNames(userId) {
+	const existingRequest = inFlightPermissionLoads.get(userId);
+	if (existingRequest) return existingRequest;
+
+	const request = (async () => {
+		const { data, error } = await supabase
+			.from("user_permissions")
+			.select(
+				`
+			permissions:permission_id (
+				name
+			)
+		`,
+			)
+			.eq("user_id", userId);
+
+		if (error) throw error;
+
+		return (data || [])
+			.map((up) => up.permissions?.name)
+			.filter(Boolean);
+	})();
+
+	inFlightPermissionLoads.set(userId, request);
+
+	try {
+		return await request;
+	} finally {
+		inFlightPermissionLoads.delete(userId);
+	}
+}
+
 /**
  * Hook to check permissions for the currently logged-in user.
  * @returns {UseUserPermissionsResult}
@@ -123,8 +164,8 @@ export function useUserPermissions() {
 	/**
 	 * Load permissions for the current user.
 	 *
-	 * When `forceNetwork` is false, the function will use a fresh local cache when available,
-	 * and always revalidate against the network in the background.
+	 * If cache exists and `forceNetwork` is false, permissions are set from cache
+	 * immediately, then refreshed from the network in background.
 	 *
 	 * @param {boolean} [forceNetwork=false]
 	 */
@@ -191,10 +232,10 @@ export function useUserPermissions() {
 				return;
 			}
 
-			// Fallback: try cached per-user permissions first
 			const cached = !forceNetwork
 				? readCachedPermissions(user.id)
 				: null;
+
 			if (cached) {
 				setPermissions(cached);
 				setLoading(false);
@@ -203,23 +244,7 @@ export function useUserPermissions() {
 			}
 
 			try {
-				// Always revalidate in background to ensure freshness
-				const { data, error } = await supabase
-					.from("user_permissions")
-					.select(
-						`
-					permissions:permission_id (
-						name
-					)
-				`,
-					)
-					.eq("user_id", user.id);
-
-				if (error) throw error;
-
-				const permissionNames = (data || [])
-					.map((up) => up.permissions?.name)
-					.filter(Boolean);
+				const permissionNames = await fetchPermissionNames(user.id);
 
 				setPermissions(permissionNames);
 				writeCachedPermissions(user.id, permissionNames);
