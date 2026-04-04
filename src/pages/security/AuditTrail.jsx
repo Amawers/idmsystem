@@ -96,66 +96,12 @@ import { toast } from "sonner";
  * @returns {JSX.Element}
  */
 export default function AuditTrail() {
-	/** @type {[AuditTrailFilters, import("react").Dispatch<import("react").SetStateAction<AuditTrailFilters>>]} */
-	const [filterState, setFilterState] = useState({
-		actionCategory: null,
-		severity: null,
-		startDate: null,
-		endDate: null,
-		limit: 10,
-		offset: 0,
-	});
 
 	// Search + UI state (purely client-side).
 	const [searchTerm, setSearchTerm] = useState("");
 	const [selectedLog, setSelectedLog] = useState(null);
 	const [dateRange, setDateRange] = useState("all");
 	const [showStats, setShowStats] = useState(true);
-
-	// Load audit logs with server-side filtering + pagination.
-	const { data, count, loading, error, reload, setFilters } =
-		useAuditLogs(filterState);
-
-	// Online/offline state gates polling and avoids showing stale data.
-	const [isOnline, setIsOnline] = useState(
-		typeof navigator !== "undefined" ? navigator.onLine : true,
-	);
-	/** @type {import("react").MutableRefObject<number | null>} */
-	const pollRef = useRef(null);
-
-	useEffect(() => {
-		const goOnline = () => setIsOnline(true);
-		const goOffline = () => setIsOnline(false);
-
-		window.addEventListener("online", goOnline);
-		window.addEventListener("offline", goOffline);
-
-		return () => {
-			window.removeEventListener("online", goOnline);
-			window.removeEventListener("offline", goOffline);
-		};
-	}, []);
-
-	// Poll audit logs while online (there is no Supabase realtime subscription here).
-	useEffect(() => {
-		if (pollRef.current) {
-			clearInterval(pollRef.current);
-			pollRef.current = null;
-		}
-
-		if (!isOnline) return undefined;
-
-		pollRef.current = window.setInterval(() => {
-			reload();
-		}, 30_000);
-
-		return () => {
-			if (pollRef.current) {
-				clearInterval(pollRef.current);
-				pollRef.current = null;
-			}
-		};
-	}, [reload, isOnline]);
 
 	// Map preset date ranges to explicit start/end Date values.
 	useEffect(() => {
