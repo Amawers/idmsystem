@@ -370,7 +370,7 @@ export async function createOrUpdateLocalCase({
 	familyMembers = [],
 	targetId = null,
 	localId = null,
-	mode = "create",
+	_mode = "create",
 }) {
 	if (!casePayload) throw new Error("Missing case payload");
 	await localIdReady;

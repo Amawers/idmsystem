@@ -35,12 +35,7 @@ import {
 } from "@/components/ui/select";
 import { usePrograms } from "@/hooks/usePrograms";
 import { usePartners } from "@/hooks/usePartners";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import { toast } from "sonner";
-import {
-	scheduleProgramSyncReload,
-	markProgramReloadOnReconnect,
-} from "./programSyncUtils";
 
 // Program form schema
 const programSchema = z
@@ -128,7 +123,6 @@ export default function CreateProgramDialog({
 
 	const { createProgram, updateProgram } = usePrograms();
 	const { partners, loading: partnersLoading } = usePartners();
-	const isOnline = useNetworkStatus();
 
 	const {
 		register,
@@ -205,42 +199,19 @@ export default function CreateProgramDialog({
 
 			let result;
 			if (program) {
-				// Update existing program (works offline by queuing changes when needed)
-				result = await updateProgram(program.id, programData, {
-					localId: program.localId,
+				result = await updateProgram(program.id, programData);
+				toast.success("Program Updated", {
+					description: "Program updated successfully",
 				});
-				toast.success(
-					result?.queued ? "Update Queued" : "Program Updated",
-					{
-						description: result?.queued
-							? `${program.program_name} will sync once you're back online.`
-							: "Program updated successfully",
-					},
-				);
 			} else {
-				// Create new program
 				result = await createProgram(programData);
-				toast.success(
-					result?.queued
-						? "Program Saved Offline"
-						: "Program Created",
-					{
-						description: result?.queued
-							? `${result?.program_name || programData.program_name} will be synced when online.`
-							: `${result?.program_name || programData.program_name} has been created successfully`,
-					},
-				);
+				toast.success("Program Created", {
+					description: `${result?.program_name || programData.program_name} has been created successfully`,
+				});
 			}
 
 			reset();
 			onOpenChange(false);
-
-			if (!result?.queued && isOnline) {
-				scheduleProgramSyncReload("programs");
-				return;
-			}
-
-			markProgramReloadOnReconnect();
 
 			if (onSuccess) {
 				onSuccess(result);

@@ -7,16 +7,15 @@
  * - transactions/disbursements
  * - alerts
  *
- * Offline behavior:
- * - Some fetch methods short-circuit when offline to avoid long/hanging network calls.
- * - Inventory snapshots are cached to IndexedDB for read-only access while offline.
+ * Data behavior:
+ * - Uses Supabase as the single source of truth.
+ * - Network failures are surfaced through store error state.
  */
 
 import { create } from "zustand";
 import supabase from "@/../config/supabase";
-import offlineCaseDb from "@/db/offlineCaseDb";
 
-/** @typedef {{ from: string, to: string }} DateRange */
+/** @typedef {{ from?: string, to?: string }} DateRange */
 /**
  * @typedef {Object} ResourceRequestFilters
  * @property {string} [status]
@@ -38,54 +37,79 @@ import offlineCaseDb from "@/db/offlineCaseDb";
  * @property {string} [search]
  */
 
+const EMPTY_REQUEST_STATS = {
+	total: 0,
+	submitted: 0,
+	approved: 0,
+	rejected: 0,
+	disbursed: 0,
+	totalAmount: 0,
+	pendingAmount: 0,
+};
+
+const EMPTY_INVENTORY_STATS = {
+	totalItems: 0,
+	totalValue: 0,
+	lowStock: 0,
+	criticalStock: 0,
+	available: 0,
+	depleted: 0,
+};
+
+const toNumber = (value, fallback = 0) => {
+	if (value === null || value === undefined || value === "") return fallback;
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const computeInventoryStatus = (currentStock, minimumStock) => {
+	if (currentStock <= 0) return "depleted";
+	if (currentStock < minimumStock * 0.5) return "critical_stock";
+	if (currentStock <= minimumStock) return "low_stock";
+	return "available";
+};
+
+const INVENTORY_REQUEST_TIMEOUT_MS = 20000;
+
+const withTimeout = async (promise, timeoutMs, label) => {
+	let timeoutId;
+	const timeoutPromise = new Promise((_, reject) => {
+		timeoutId = setTimeout(() => {
+			reject(
+				new Error(
+					`${label} timed out. Please check your connection and try again.`,
+				),
+			);
+		}, timeoutMs);
+	});
+
+	try {
+		return await Promise.race([promise, timeoutPromise]);
+	} finally {
+		clearTimeout(timeoutId);
+	}
+};
+
 /**
  * Hook-style access to the resource store.
  *
  * @example
  * const { requests, fetchRequests, submitRequest } = useResourceStore();
- * await fetchRequests({ status: 'submitted' });
  */
 export const useResourceStore = create((set, get) => ({
 	// State
-	// Resource Requests
 	requests: [],
 	filteredRequests: [],
-
-	// Inventory Management
 	inventoryItems: [],
 	filteredInventory: [],
-
-	// Transactions & History
 	transactions: [],
 	disbursements: [],
-
-	// Alerts & Notifications
 	alerts: [],
 	unresolvedAlerts: [],
-
-	// UI State
 	loading: false,
 	error: null,
-
-	// Statistics
-	requestStats: {
-		total: 0,
-		submitted: 0,
-		approved: 0,
-		rejected: 0,
-		disbursed: 0,
-		totalAmount: 0,
-	},
-
-	inventoryStats: {
-		totalItems: 0,
-		totalValue: 0,
-		lowStock: 0,
-		criticalStock: 0,
-		available: 0,
-	},
-
-	// Resource request actions
+	requestStats: { ...EMPTY_REQUEST_STATS },
+	inventoryStats: { ...EMPTY_INVENTORY_STATS },
 
 	/**
 	 * Fetches resource requests with optional filters.
@@ -94,187 +118,140 @@ export const useResourceStore = create((set, get) => ({
 	fetchRequests: async (filters = {}) => {
 		set({ loading: true, error: null });
 
-		// Short-circuit when browser is offline to avoid long/hanging network calls
-		if (typeof navigator !== "undefined" && !navigator.onLine) {
-			set({ loading: false });
-			return;
-		}
-
 		try {
-			// First, fetch resource requests
 			let query = supabase
 				.from("resource_requests")
 				.select("*")
 				.order("created_at", { ascending: false });
 
-			// Apply filters
-			if (filters.status) {
-				query = query.eq("status", filters.status);
-			}
-
-			if (filters.program_id) {
+			if (filters.status) query = query.eq("status", filters.status);
+			if (filters.program_id)
 				query = query.eq("program_id", filters.program_id);
-			}
-
-			if (filters.barangay) {
-				query = query.eq("barangay", filters.barangay);
-			}
-
-			if (filters.request_type) {
+			if (filters.barangay) query = query.eq("barangay", filters.barangay);
+			if (filters.request_type)
 				query = query.eq("request_type", filters.request_type);
-			}
-
-			if (filters.beneficiary_type) {
+			if (filters.beneficiary_type)
 				query = query.eq("beneficiary_type", filters.beneficiary_type);
-			}
-
-			if (filters.priority) {
+			if (filters.priority)
 				query = query.eq("priority", filters.priority);
+
+			if (filters.dateRange?.from) {
+				query = query.gte("created_at", filters.dateRange.from);
+			}
+			if (filters.dateRange?.to) {
+				query = query.lte("created_at", filters.dateRange.to);
 			}
 
-			// Date range filter
-			if (filters.dateRange) {
-				const { from, to } = filters.dateRange;
-				query = query.gte("created_at", from).lte("created_at", to);
-			}
+			const { data: requestsData, error } = await query;
+			if (error) throw error;
 
-			const { data: requests, error } = await query;
-
-			if (error) {
-				console.error("Supabase error:", error);
-				set({
-					requests: [],
-					filteredRequests: [],
-					requestStats: {
-						total: 0,
-						submitted: 0,
-						approved: 0,
-						rejected: 0,
-						disbursed: 0,
-						totalAmount: 0,
-					},
-					loading: false,
-					error: "Database connection issue",
-				});
-				return;
-			}
-
-			// Manually join with profile table
-			// Get unique user IDs from requested_by field
+			const requests = Array.isArray(requestsData) ? requestsData : [];
 			const userIds = [
-				...new Set(
-					(requests || [])
-						.map((req) => req.requested_by)
-						.filter((id) => id !== null),
-				),
+				...new Set(requests.map((req) => req.requested_by).filter(Boolean)),
 			];
 
-			let profiles = {};
-
-			// Fetch profiles for all requesters
+			let profileMap = {};
 			if (userIds.length > 0) {
-				const { data: profileData, error: profileError } =
-					await supabase
-						.from("profile")
-						.select("id, full_name, email, role")
-						.in("id", userIds);
+				const { data: profileData, error: profileError } = await supabase
+					.from("profile")
+					.select("id, full_name, email, role")
+					.in("id", userIds);
 
-				if (!profileError && profileData) {
-					// Create a map of user_id -> profile for quick lookup
-					profiles = profileData.reduce((acc, profile) => {
+				if (profileError) {
+					console.warn("Failed to join profile records for requests", profileError);
+				} else {
+					profileMap = (profileData || []).reduce((acc, profile) => {
 						acc[profile.id] = profile;
 						return acc;
 					}, {});
 				}
 			}
 
-			// Attach requester profile to each request
-			const data = (requests || []).map((request) => ({
+			const rows = requests.map((request) => ({
 				...request,
 				requester: request.requested_by
-					? profiles[request.requested_by] || null
+					? profileMap[request.requested_by] || null
 					: null,
 			}));
 
-			// Compute statistics
-			const stats = get().computeRequestStats(data || []);
-
 			set({
-				requests: data || [],
-				filteredRequests: data || [],
-				requestStats: stats,
+				requests: rows,
+				filteredRequests: rows,
+				requestStats: get().computeRequestStats(rows),
 				loading: false,
 			});
+
+			return rows;
 		} catch (err) {
 			console.error("Error fetching requests:", err);
-			set({ error: err.message, loading: false });
+			set({
+				error: err.message,
+				loading: false,
+				requests: [],
+				filteredRequests: [],
+				requestStats: { ...EMPTY_REQUEST_STATS },
+			});
+			return [];
 		}
 	},
 
 	/**
-	 * Submit a new resource request to Supabase
-	 * @param {Object} requestData - Request details
-	 * @returns {Object} Created request
+	 * Submit a new resource request to Supabase.
+	 * @param {Object} requestData
 	 */
 	submitRequest: async (requestData) => {
 		set({ loading: true, error: null });
 
 		try {
-			// Get current user
 			const {
 				data: { user },
 			} = await supabase.auth.getUser();
 
 			if (!user) {
-				throw new Error(
-					"User not authenticated. Please log in and try again.",
-				);
+				throw new Error("User not authenticated. Please log in and try again.");
 			}
 
-			const newRequest = {
+			const payload = {
 				...requestData,
 				requested_by: user.id,
 				status: "submitted",
 				submitted_at: new Date().toISOString(),
 			};
 
-			// Remove any undefined or null values that aren't needed
-			Object.keys(newRequest).forEach((key) => {
-				if (
-					newRequest[key] === undefined ||
-					(newRequest[key] === null && key !== "item_id")
-				) {
-					delete newRequest[key];
-				}
+			Object.keys(payload).forEach((key) => {
+				if (payload[key] === undefined) delete payload[key];
+				if (payload[key] === null && key !== "item_id") delete payload[key];
 			});
-
-			console.log("Submitting request:", newRequest); // Debug log
 
 			const { data, error } = await supabase
 				.from("resource_requests")
-				.insert([newRequest])
-				.select()
+				.insert([payload])
+				.select("*")
 				.single();
 
-			if (error) {
-				console.error("Supabase insert error:", error);
-				throw new Error(
-					error.message || "Failed to submit request to database",
-				);
-			}
+			if (error) throw error;
 
-			// Optimistic update
-			set((state) => ({
-				requests: [data, ...state.requests],
-				filteredRequests: [data, ...state.filteredRequests],
-				loading: false,
-			}));
+			const created = {
+				...data,
+				requester: {
+					id: user.id,
+					full_name: user.user_metadata?.full_name || user.email || "You",
+					email: user.email || null,
+					role: user.user_metadata?.role || null,
+				},
+			};
 
-			// Recompute stats
-			const stats = get().computeRequestStats(get().filteredRequests);
-			set({ requestStats: stats });
+			set((state) => {
+				const next = [created, ...state.requests];
+				return {
+					requests: next,
+					filteredRequests: next,
+					requestStats: get().computeRequestStats(next),
+					loading: false,
+				};
+			});
 
-			return data;
+			return created;
 		} catch (err) {
 			console.error("Error submitting request:", err);
 			set({ error: err.message, loading: false });
@@ -283,10 +260,10 @@ export const useResourceStore = create((set, get) => ({
 	},
 
 	/**
-	 * Update request status (for Head approval/rejection) in Supabase
-	 * @param {string} requestId - Request ID
-	 * @param {string} newStatus - New status
-	 * @param {string} notes - Optional notes/reason
+	 * Update request status in Supabase.
+	 * @param {string} requestId
+	 * @param {string} newStatus
+	 * @param {string} notes
 	 */
 	updateRequestStatus: async (requestId, newStatus, notes = "") => {
 		set({ loading: true, error: null });
@@ -297,35 +274,44 @@ export const useResourceStore = create((set, get) => ({
 				updated_at: new Date().toISOString(),
 			};
 
-			if (newStatus === "rejected" && notes) {
-				updateData.rejection_reason = notes;
+			if (newStatus === "rejected") {
+				updateData.rejection_reason = notes || "No reason provided";
+			}
+
+			if (newStatus === "disbursed") {
+				updateData.disbursement_date = new Date().toISOString();
 			}
 
 			const { data, error } = await supabase
 				.from("resource_requests")
 				.update(updateData)
 				.eq("id", requestId)
-				.select()
+				.select("*")
 				.single();
 
-			if (error) {
-				console.error("Supabase update error:", error);
-				throw error;
-			}
+			if (error) throw error;
 
-			set((state) => ({
-				requests: state.requests.map((req) =>
-					req.id === requestId ? data : req,
-				),
-				filteredRequests: state.filteredRequests.map((req) =>
-					req.id === requestId ? data : req,
-				),
-				loading: false,
-			}));
+			set((state) => {
+				const updateRow = (row) => {
+					if (row.id !== requestId) return row;
+					return {
+						...data,
+						requester: row.requester || null,
+					};
+				};
 
-			// Update stats
-			const stats = get().computeRequestStats(get().filteredRequests);
-			set({ requestStats: stats });
+				const nextRequests = state.requests.map(updateRow);
+				const nextFiltered = state.filteredRequests.map(updateRow);
+
+				return {
+					requests: nextRequests,
+					filteredRequests: nextFiltered,
+					requestStats: get().computeRequestStats(nextFiltered),
+					loading: false,
+				};
+			});
+
+			return data;
 		} catch (err) {
 			console.error("Error updating request status:", err);
 			set({ error: err.message, loading: false });
@@ -334,78 +320,25 @@ export const useResourceStore = create((set, get) => ({
 	},
 
 	/**
-	 * Record a disbursement for an approved request
-	 * @param {Object} disbursementData - Disbursement details
+	 * Record a disbursement by moving the request to disbursed status.
+	 * @param {Object} disbursementData
 	 */
 	recordDisbursement: async (disbursementData) => {
-		set({ loading: true, error: null });
-
-		try {
-			await new Promise((resolve) => setTimeout(resolve, 700));
-
-			const newDisbursement = {
-				id: `disb-${Date.now()}`,
-				voucher_number: `DV-2025-${String(get().disbursements.length + 1).padStart(4, "0")}`,
-				...disbursementData,
-				created_at: new Date().toISOString(),
-			};
-
-			// Update request status to disbursed
-			set((state) => ({
-				requests: state.requests.map((req) =>
-					req.id === disbursementData.request_id
-						? {
-								...req,
-								status: "disbursed",
-								disbursement_date:
-									disbursementData.disbursement_date,
-								disbursement_method:
-									disbursementData.disbursement_method,
-								updated_at: new Date().toISOString(),
-							}
-						: req,
-				),
-				disbursements: [...state.disbursements, newDisbursement],
-				loading: false,
-			}));
-
-			return newDisbursement;
-		} catch (err) {
-			set({ error: err.message, loading: false });
-			throw err;
-		}
+		const result = await get().updateRequestStatus(
+			disbursementData.request_id,
+			"disbursed",
+			disbursementData.notes || "",
+		);
+		await get().fetchDisbursements();
+		return result;
 	},
-
-	// Inventory actions
 
 	/**
 	 * Fetches inventory items with optional filters.
-	 *
-	 * When offline, returns the last cached inventory snapshot from IndexedDB.
 	 * @param {InventoryFilters} filters
 	 */
 	fetchInventory: async (filters = {}) => {
 		set({ loading: true, error: null });
-
-		// If offline, load cached inventory snapshot from IndexedDB
-		if (typeof navigator !== "undefined" && !navigator.onLine) {
-			try {
-				const cached = await offlineCaseDb.inventory_items.toArray();
-				const items = Array.isArray(cached) ? cached : [];
-				const stats = get().computeInventoryStats(items || []);
-				set({
-					inventoryItems: items || [],
-					filteredInventory: items || [],
-					inventoryStats: stats,
-					loading: false,
-				});
-				return;
-			} catch (cacheErr) {
-				console.error("Error loading inventory from cache:", cacheErr);
-				set({ loading: false });
-				return;
-			}
-		}
 
 		try {
 			let query = supabase
@@ -413,94 +346,61 @@ export const useResourceStore = create((set, get) => ({
 				.select("*")
 				.order("item_name", { ascending: true });
 
-			// Apply filters
-			if (filters.category) {
-				query = query.eq("category", filters.category);
-			}
-
-			if (filters.status) {
-				query = query.eq("status", filters.status);
-			}
-
-			if (filters.location) {
-				query = query.eq("location", filters.location);
-			}
-
-			if (filters.low_stock) {
-				query = query.lte(
-					"current_stock",
-					supabase.raw("minimum_stock"),
-				);
-			}
-
+			if (filters.category) query = query.eq("category", filters.category);
+			if (filters.status) query = query.eq("status", filters.status);
+			if (filters.location) query = query.eq("location", filters.location);
 			if (filters.critical_stock) {
 				query = query.eq("status", "critical_stock");
 			}
-
-			// Search by name or code
 			if (filters.search) {
 				query = query.or(
 					`item_name.ilike.%${filters.search}%,item_code.ilike.%${filters.search}%`,
 				);
 			}
 
-			const { data, error } = await query;
+			const { data, error } = await withTimeout(
+				query,
+				INVENTORY_REQUEST_TIMEOUT_MS,
+				"Fetching inventory",
+			);
+			if (error) throw error;
 
-			if (error) {
-				console.error("Supabase error:", error);
-				set({
-					inventoryItems: [],
-					filteredInventory: [],
-					inventoryStats: {
-						totalItems: 0,
-						totalValue: 0,
-						lowStock: 0,
-						criticalStock: 0,
-						available: 0,
-					},
-					loading: false,
-					error: "Database connection issue",
-				});
-				return;
-			}
-
-			// Compute statistics
-			const stats = get().computeInventoryStats(data || []);
+			const source = Array.isArray(data) ? data : [];
+			const filtered = filters.low_stock
+				? source.filter(
+						(item) =>
+							Number(item.current_stock) <= Number(item.minimum_stock) &&
+							Number(item.current_stock) > 0,
+					)
+				: source;
 
 			set({
-				inventoryItems: data || [],
-				filteredInventory: data || [],
-				inventoryStats: stats,
+				inventoryItems: source,
+				filteredInventory: filtered,
+				inventoryStats: get().computeInventoryStats(filtered),
 				loading: false,
 			});
 
-			// Persist a snapshot to IndexedDB for offline use (best-effort)
-			try {
-				await offlineCaseDb.inventory_items.clear();
-				if (Array.isArray(data) && data.length > 0) {
-					// Bulk add plain objects
-					await offlineCaseDb.inventory_items.bulkAdd(
-						data.map((d) => ({ ...d })),
-					);
-				}
-			} catch (cacheErr) {
-				console.warn(
-					"Failed to save inventory snapshot to cache:",
-					cacheErr,
-				);
-			}
+			return filtered;
 		} catch (err) {
 			console.error("Error fetching inventory:", err);
-			set({ error: err.message, loading: false });
+			set({
+				error: err.message,
+				loading: false,
+				inventoryItems: [],
+				filteredInventory: [],
+				inventoryStats: { ...EMPTY_INVENTORY_STATS },
+			});
+			return [];
 		}
 	},
 
 	/**
-	 * Update stock level for an item
-	 * @param {string} itemId - Item ID
-	 * @param {number} quantity - Quantity change (positive or negative)
-	 * @param {string} transactionType - Type of transaction (stock_in, stock_out, adjustment, allocation, transfer)
-	 * @param {string} notes - Transaction notes
+	 * Update stock level for an item.
+	 * @param {string} itemId
+	 * @param {number} quantity
+	 * @param {string} transactionType
+	 * @param {string} notes
 	 */
 	updateStock: async (
 		itemId,
@@ -511,82 +411,111 @@ export const useResourceStore = create((set, get) => ({
 		set({ loading: true, error: null });
 
 		try {
-			// Get current user
+			const sessionResult = await withTimeout(
+				supabase.auth.getUser(),
+				INVENTORY_REQUEST_TIMEOUT_MS,
+				"Verifying user session",
+			);
+
 			const {
 				data: { user },
-			} = await supabase.auth.getUser();
+			} = sessionResult;
 
-			if (!user) {
-				throw new Error("User not authenticated");
-			}
+			if (!user) throw new Error("User not authenticated");
 
-			// Get current item
-			const { data: currentItem, error: fetchError } = await supabase
-				.from("inventory_items")
-				.select("*")
-				.eq("id", itemId)
-				.single();
+			const { data: currentItem, error: fetchError } = await withTimeout(
+				supabase
+					.from("inventory_items")
+					.select("*")
+					.eq("id", itemId)
+					.single(),
+				INVENTORY_REQUEST_TIMEOUT_MS,
+				"Loading inventory item",
+			);
 
 			if (fetchError) throw fetchError;
 
-			// Calculate new stock
+			const currentStock = toNumber(currentItem.current_stock);
+			const minStock = toNumber(currentItem.minimum_stock);
 			const newStock =
 				transactionType === "adjustment"
-					? quantity
-					: currentItem.current_stock + quantity;
+					? toNumber(quantity)
+					: currentStock + toNumber(quantity);
 
 			if (newStock < 0) {
-				throw new Error(
-					"Insufficient stock. Cannot reduce below zero.",
-				);
+				throw new Error("Insufficient stock. Cannot reduce below zero.");
 			}
 
-			// Determine new status
-			let newStatus = "available";
-			if (newStock <= 0) {
-				newStatus = "depleted";
-			} else if (newStock < currentItem.minimum_stock * 0.5) {
-				newStatus = "critical_stock";
-			} else if (newStock <= currentItem.minimum_stock) {
-				newStatus = "low_stock";
-			}
+			const newStatus = computeInventoryStatus(newStock, minStock);
 
-			// Update inventory item in Supabase
-			const { error: updateError } = await supabase
-				.from("inventory_items")
-				.update({
-					current_stock: newStock,
-					status: newStatus,
-					updated_at: new Date().toISOString(),
-				})
-				.eq("id", itemId);
+			const { data: updatedItem, error: updateError } = await withTimeout(
+				supabase
+					.from("inventory_items")
+					.update({
+						current_stock: newStock,
+						status: newStatus,
+						updated_at: new Date().toISOString(),
+					})
+					.eq("id", itemId)
+					.select("*")
+					.single(),
+				INVENTORY_REQUEST_TIMEOUT_MS,
+				"Updating inventory stock",
+			);
 
 			if (updateError) throw updateError;
 
-			// Create transaction record
-			const transactionData = {
-				item_id: itemId,
-				transaction_type: transactionType,
-				quantity:
-					transactionType === "adjustment"
-						? quantity - currentItem.current_stock
-						: quantity,
-				unit_cost: currentItem.unit_cost,
-				performed_by: user.id,
-				notes: notes || `${transactionType} transaction`,
-			};
+			const quantityDelta =
+				transactionType === "adjustment"
+					? newStock - currentStock
+					: toNumber(quantity);
 
-			const { error: transactionError } = await supabase
-				.from("inventory_transactions")
-				.insert([transactionData]);
+			if (quantityDelta !== 0) {
+				const performedByName =
+					user.user_metadata?.full_name || user.email || "System User";
 
-			if (transactionError)
-				console.error("Transaction log error:", transactionError);
+				try {
+					const { error: transactionError } = await withTimeout(
+						supabase
+							.from("inventory_transactions")
+							.insert([
+								{
+									item_id: itemId,
+									transaction_type: transactionType,
+									quantity: quantityDelta,
+									unit_cost: toNumber(currentItem.unit_cost),
+									performed_by: user.id,
+									performed_by_name: performedByName,
+									notes: notes || `${transactionType} transaction`,
+								},
+							]),
+						INVENTORY_REQUEST_TIMEOUT_MS,
+						"Recording stock transaction",
+					);
 
-			// Refresh inventory to update local state
-			await get().fetchInventory();
+					if (transactionError) {
+						console.error("Transaction log error:", transactionError);
+					}
+				} catch (transactionError) {
+					console.error("Transaction log timeout/error:", transactionError);
+				}
+			}
 
-			set({ loading: false });
+			set((state) => {
+				const mapUpdate = (item) =>
+					item.id === updatedItem.id ? updatedItem : item;
+				const nextInventory = state.inventoryItems.map(mapUpdate);
+				const nextFiltered = state.filteredInventory.map(mapUpdate);
+				return {
+					inventoryItems: nextInventory,
+					filteredInventory: nextFiltered,
+					inventoryStats: get().computeInventoryStats(nextFiltered),
+					loading: false,
+				};
+			});
+
+			void get().fetchTransactions({ item_id: itemId, silent: true });
+			return updatedItem;
 		} catch (err) {
 			console.error("Error updating stock:", err);
 			set({ error: err.message, loading: false });
@@ -595,66 +524,51 @@ export const useResourceStore = create((set, get) => ({
 	},
 
 	/**
-	 * Add new inventory item
-	 * @param {Object} itemData - New item data
+	 * Add a new inventory item.
+	 * @param {Object} itemData
 	 */
 	addInventoryItem: async (itemData) => {
 		set({ loading: true, error: null });
 
 		try {
-			// Get current user
-			const {
-				data: { user },
-			} = await supabase.auth.getUser();
+			const currentStock = toNumber(itemData.current_stock);
+			const minimumStock = toNumber(itemData.minimum_stock);
+			const status = computeInventoryStatus(currentStock, minimumStock);
 
-			if (!user) {
-				throw new Error("User not authenticated");
-			}
-
-			// Determine initial status based on stock level
-			let status = "available";
-			const currentStock = parseFloat(itemData.current_stock);
-			const minStock = parseFloat(itemData.minimum_stock);
-
-			if (currentStock <= 0) {
-				status = "depleted";
-			} else if (currentStock < minStock * 0.5) {
-				status = "critical_stock";
-			} else if (currentStock <= minStock) {
-				status = "low_stock";
-			}
-
-			// Prepare item data (total_value removed - computed on read)
-			const newItem = {
+			const payload = {
 				item_name: itemData.item_name,
 				category: itemData.category,
 				current_stock: currentStock,
-				minimum_stock: minStock,
-				unit_cost: parseFloat(itemData.unit_cost),
+				minimum_stock: minimumStock,
+				unit_cost: toNumber(itemData.unit_cost),
 				unit_of_measure: itemData.unit_of_measure,
 				location: itemData.location || null,
 				description: itemData.description || null,
-				status: status,
+				status,
 			};
 
-			// Insert into Supabase
-			const { data, error } = await supabase
-				.from("inventory_items")
-				.insert([newItem])
-				.select()
-				.single();
+			const { data, error } = await withTimeout(
+				supabase
+					.from("inventory_items")
+					.insert([payload])
+					.select("*")
+					.single(),
+				INVENTORY_REQUEST_TIMEOUT_MS,
+				"Adding inventory item",
+			);
 
-			if (error) {
-				console.error("Supabase insert error:", error);
-				throw error;
-			} // Update local state
-			set((state) => ({
-				inventoryItems: [...state.inventoryItems, data],
-				loading: false,
-			}));
+			if (error) throw error;
 
-			// Refresh inventory to update stats
-			await get().fetchInventory();
+			set((state) => {
+				const nextInventory = [...state.inventoryItems, data];
+				const nextFiltered = [...state.filteredInventory, data];
+				return {
+					inventoryItems: nextInventory,
+					filteredInventory: nextFiltered,
+					inventoryStats: get().computeInventoryStats(nextFiltered),
+					loading: false,
+				};
+			});
 
 			return data;
 		} catch (err) {
@@ -665,38 +579,38 @@ export const useResourceStore = create((set, get) => ({
 	},
 
 	/**
-	 * Delete inventory item
-	 * @param {string} itemId - Item ID to delete
+	 * Delete inventory item.
+	 * @param {string} itemId
 	 */
 	deleteInventoryItem: async (itemId) => {
 		set({ loading: true, error: null });
 
 		try {
-			// Delete from Supabase
-			const { error } = await supabase
-				.from("inventory_items")
-				.delete()
-				.eq("id", itemId);
+			const { error } = await withTimeout(
+				supabase
+					.from("inventory_items")
+					.delete()
+					.eq("id", itemId),
+				INVENTORY_REQUEST_TIMEOUT_MS,
+				"Deleting inventory item",
+			);
 
-			if (error) {
-				console.error("Supabase delete error:", error);
-				throw error;
-			}
+			if (error) throw error;
 
-			// Update local state
-			set((state) => ({
-				inventoryItems: state.inventoryItems.filter(
+			set((state) => {
+				const nextInventory = state.inventoryItems.filter(
 					(item) => item.id !== itemId,
-				),
-				filteredInventory: state.filteredInventory.filter(
+				);
+				const nextFiltered = state.filteredInventory.filter(
 					(item) => item.id !== itemId,
-				),
-				loading: false,
-			}));
-
-			// Recompute stats
-			const stats = get().computeInventoryStats(get().inventoryItems);
-			set({ inventoryStats: stats });
+				);
+				return {
+					inventoryItems: nextInventory,
+					filteredInventory: nextFiltered,
+					inventoryStats: get().computeInventoryStats(nextFiltered),
+					loading: false,
+				};
+			});
 		} catch (err) {
 			console.error("Error deleting inventory item:", err);
 			set({ error: err.message, loading: false });
@@ -705,53 +619,49 @@ export const useResourceStore = create((set, get) => ({
 	},
 
 	/**
-	 * Update inventory item details (excluding stock quantity)
-	 * @param {string} itemId - Item ID to update
-	 * @param {Object} updateData - Updated item data
+	 * Update inventory item metadata (excluding stock quantity).
+	 * @param {string} itemId
+	 * @param {Object} updateData
 	 */
 	updateInventoryItem: async (itemId, updateData) => {
 		set({ loading: true, error: null });
 
 		try {
-			// Prepare update data
 			const updates = {
 				item_name: updateData.item_name,
 				category: updateData.category,
-				unit_cost: parseFloat(updateData.unit_cost),
-				minimum_stock: parseFloat(updateData.minimum_stock),
+				unit_cost: toNumber(updateData.unit_cost),
+				minimum_stock: toNumber(updateData.minimum_stock),
 				unit_of_measure: updateData.unit_of_measure,
 				location: updateData.location || null,
 				description: updateData.description || null,
 				updated_at: new Date().toISOString(),
 			};
 
-			// Update in Supabase
-			const { data, error } = await supabase
-				.from("inventory_items")
-				.update(updates)
-				.eq("id", itemId)
-				.select()
-				.single();
+			const { data, error } = await withTimeout(
+				supabase
+					.from("inventory_items")
+					.update(updates)
+					.eq("id", itemId)
+					.select("*")
+					.single(),
+				INVENTORY_REQUEST_TIMEOUT_MS,
+				"Updating inventory item",
+			);
 
-			if (error) {
-				console.error("Supabase update error:", error);
-				throw error;
-			}
+			if (error) throw error;
 
-			// Update local state
-			set((state) => ({
-				inventoryItems: state.inventoryItems.map((item) =>
-					item.id === itemId ? data : item,
-				),
-				filteredInventory: state.filteredInventory.map((item) =>
-					item.id === itemId ? data : item,
-				),
-				loading: false,
-			}));
-
-			// Recompute stats
-			const stats = get().computeInventoryStats(get().inventoryItems);
-			set({ inventoryStats: stats });
+			set((state) => {
+				const mapUpdate = (item) => (item.id === itemId ? data : item);
+				const nextInventory = state.inventoryItems.map(mapUpdate);
+				const nextFiltered = state.filteredInventory.map(mapUpdate);
+				return {
+					inventoryItems: nextInventory,
+					filteredInventory: nextFiltered,
+					inventoryStats: get().computeInventoryStats(nextFiltered),
+					loading: false,
+				};
+			});
 
 			return data;
 		} catch (err) {
@@ -762,64 +672,27 @@ export const useResourceStore = create((set, get) => ({
 	},
 
 	/**
-	 * Allocate inventory items to a program/request
-	 * @param {Object} allocationData - Allocation details
+	 * Allocate resource by applying stock-out transaction.
+	 * @param {Object} allocationData
 	 */
 	allocateResource: async (allocationData) => {
-		set({ loading: true, error: null });
-
-		try {
-			await new Promise((resolve) => setTimeout(resolve, 700));
-
-			const { item_id, quantity, program_id, to_location, notes } =
-				allocationData;
-
-			// Reduce stock
-			await get().updateStock(item_id, -quantity, "allocation");
-
-			// Create allocation transaction
-			const item = get().inventoryItems.find((i) => i.id === item_id);
-			const newTransaction = {
-				id: `txn-${Date.now()}`,
-				item_id,
-				item_name: item?.item_name,
-				transaction_type: "allocation",
-				quantity,
-				transaction_date: new Date().toISOString(),
-				from_location: item?.location,
-				to_location,
-				program_id,
-				performed_by: "current-user",
-				performed_by_name: "Current User",
-				notes,
-				created_at: new Date().toISOString(),
-			};
-
-			set((state) => ({
-				transactions: [newTransaction, ...state.transactions],
-				loading: false,
-			}));
-
-			return newTransaction;
-		} catch (err) {
-			set({ error: err.message, loading: false });
-			throw err;
-		}
+		const { item_id, quantity, notes } = allocationData;
+		return get().updateStock(
+			item_id,
+			-Math.abs(toNumber(quantity)),
+			"allocation",
+			notes || "Allocation transaction",
+		);
 	},
 
-	// Transaction & alert actions
-
 	/**
-	 * Fetch inventory transactions
-	 * @param {Object} filters - Filter criteria
+	 * Fetch inventory transactions.
+	 * @param {Object} filters
 	 */
 	fetchTransactions: async (filters = {}) => {
-		set({ loading: true, error: null });
-
-		// Short-circuit when offline to avoid waiting on network requests
-		if (typeof navigator !== "undefined" && !navigator.onLine) {
-			set({ loading: false });
-			return;
+		const { silent = false, ...queryFilters } = filters || {};
+		if (!silent) {
+			set({ loading: true, error: null });
 		}
 
 		try {
@@ -828,79 +701,72 @@ export const useResourceStore = create((set, get) => ({
 				.select("*")
 				.order("created_at", { ascending: false });
 
-			// Apply filters
-			if (filters.item_id) {
-				query = query.eq("item_id", filters.item_id);
+			if (queryFilters.item_id) query = query.eq("item_id", queryFilters.item_id);
+			if (queryFilters.transaction_type) {
+				query = query.eq("transaction_type", queryFilters.transaction_type);
+			}
+			if (queryFilters.program_id) {
+				query = query.eq("program_id", queryFilters.program_id);
 			}
 
-			if (filters.transaction_type) {
-				query = query.eq("transaction_type", filters.transaction_type);
-			}
+			const { data, error } = await withTimeout(
+				query,
+				INVENTORY_REQUEST_TIMEOUT_MS,
+				"Fetching inventory transactions",
+			);
+			if (error) throw error;
 
-			if (filters.program_id) {
-				query = query.eq("program_id", filters.program_id);
-			}
-
-			const { data, error } = await query;
-
-			if (error) {
-				console.error("Supabase error:", error);
+			if (silent) {
+				set({ transactions: data || [] });
+			} else {
 				set({
-					transactions: [],
+					transactions: data || [],
 					loading: false,
-					error: "Database connection issue",
 				});
-				return;
 			}
 
-			set({
-				transactions: data || [],
-				loading: false,
-			});
+			return data || [];
 		} catch (err) {
-			set({ error: err.message, loading: false });
+			console.error("Error fetching transactions:", err);
+			if (silent) {
+				set({ transactions: [] });
+			} else {
+				set({ transactions: [], error: err.message, loading: false });
+			}
+			return [];
 		}
 	},
 
 	/**
-	 * Fetch disbursement records
+	 * Fetch disbursement records from disbursed resource requests.
 	 */
 	fetchDisbursements: async () => {
 		set({ loading: true, error: null });
 
-		// Avoid remote fetch when offline
-		if (typeof navigator !== "undefined" && !navigator.onLine) {
-			set({ loading: false });
-			return;
-		}
-
 		try {
 			const { data, error } = await supabase
-				.from("resource_disbursements")
+				.from("resource_requests")
 				.select("*")
-				.order("created_at", { ascending: false });
+				.eq("status", "disbursed")
+				.order("updated_at", { ascending: false });
 
-			if (error) {
-				console.error("Supabase error:", error);
-				set({
-					disbursements: [],
-					loading: false,
-					error: "Database connection issue",
-				});
-				return;
-			}
+			if (error) throw error;
 
 			set({
 				disbursements: data || [],
 				loading: false,
 			});
+
+			return data || [];
 		} catch (err) {
-			set({ error: err.message, loading: false });
+			console.error("Error fetching disbursements:", err);
+			set({ disbursements: [], error: err.message, loading: false });
+			return [];
 		}
 	},
 
 	/**
-	 * Fetch inventory alerts from Supabase
+	 * Fetch inventory alerts from Supabase.
 	 */
 	fetchAlerts: async () => {
 		set({ loading: true, error: null });
@@ -911,35 +777,33 @@ export const useResourceStore = create((set, get) => ({
 				.select("*")
 				.order("created_at", { ascending: false });
 
-			if (error) {
-				console.error("Supabase error:", error);
-				set({
-					alerts: [],
-					unresolvedAlerts: [],
-					loading: false,
-					error: "Database connection issue",
-				});
-				return;
-			}
+			if (error) throw error;
 
-			const unresolvedAlerts = (data || []).filter(
-				(alert) => !alert.is_resolved,
-			);
+			const alerts = data || [];
+			const unresolvedAlerts = alerts.filter((alert) => !alert.is_resolved);
 
 			set({
-				alerts: data || [],
+				alerts,
 				unresolvedAlerts,
 				loading: false,
 			});
+
+			return alerts;
 		} catch (err) {
 			console.error("Error fetching alerts:", err);
-			set({ error: err.message, loading: false });
+			set({
+				alerts: [],
+				unresolvedAlerts: [],
+				error: err.message,
+				loading: false,
+			});
+			return [];
 		}
 	},
 
 	/**
-	 * Resolve an alert in Supabase
-	 * @param {string} alertId - Alert ID
+	 * Resolve an alert in Supabase.
+	 * @param {string} alertId
 	 */
 	resolveAlert: async (alertId) => {
 		set({ loading: true, error: null });
@@ -954,104 +818,96 @@ export const useResourceStore = create((set, get) => ({
 				.update({
 					is_resolved: true,
 					resolved_at: new Date().toISOString(),
-					resolved_by: user?.id,
+					resolved_by: user?.id || null,
 				})
 				.eq("id", alertId)
-				.select()
+				.select("*")
 				.single();
 
 			if (error) throw error;
 
-			set((state) => ({
-				alerts: state.alerts.map((alert) =>
+			set((state) => {
+				const nextAlerts = state.alerts.map((alert) =>
 					alert.id === alertId ? data : alert,
-				),
-				loading: false,
-			}));
+				);
+				return {
+					alerts: nextAlerts,
+					unresolvedAlerts: nextAlerts.filter((alert) => !alert.is_resolved),
+					loading: false,
+				};
+			});
 
-			// Update unresolved alerts
-			const unresolvedAlerts = get().alerts.filter(
-				(alert) => !alert.is_resolved,
-			);
-			set({ unresolvedAlerts });
+			return data;
 		} catch (err) {
 			console.error("Error resolving alert:", err);
 			set({ error: err.message, loading: false });
+			throw err;
 		}
 	},
 
-	// Statistics computation helpers
-
 	/**
-	 * Compute request statistics
-	 * @param {Array} requests - Array of requests
-	 * @returns {Object} Statistics object
+	 * Compute request statistics.
+	 * @param {Array} requests
+	 * @returns {Object}
 	 */
 	computeRequestStats: (requests) => {
+		const rows = Array.isArray(requests) ? requests : [];
 		return {
-			total: requests.length,
-			submitted: requests.filter((r) => r.status === "submitted").length,
-			approved: requests.filter((r) => r.status === "head_approved")
-				.length,
-			rejected: requests.filter((r) => r.status === "rejected").length,
-			disbursed: requests.filter((r) => r.status === "disbursed").length,
-			totalAmount: requests.reduce(
-				(sum, r) => sum + (r.total_amount || 0),
-				0,
-			),
-			pendingAmount: requests
+			total: rows.length,
+			submitted: rows.filter((r) => r.status === "submitted").length,
+			approved: rows.filter((r) => r.status === "head_approved").length,
+			rejected: rows.filter((r) => r.status === "rejected").length,
+			disbursed: rows.filter((r) => r.status === "disbursed").length,
+			totalAmount: rows.reduce((sum, r) => sum + toNumber(r.total_amount), 0),
+			pendingAmount: rows
 				.filter(
-					(r) =>
-						r.status === "submitted" ||
-						r.status === "head_approved",
+					(r) => r.status === "submitted" || r.status === "head_approved",
 				)
-				.reduce((sum, r) => sum + (r.total_amount || 0), 0),
+				.reduce((sum, r) => sum + toNumber(r.total_amount), 0),
 		};
 	},
 
 	/**
-	 * Compute inventory statistics
-	 * @param {Array} items - Array of inventory items
-	 * @returns {Object} Statistics object
+	 * Compute inventory statistics.
+	 * @param {Array} items
+	 * @returns {Object}
 	 */
 	computeInventoryStats: (items) => {
+		const rows = Array.isArray(items) ? items : [];
 		return {
-			totalItems: items.length,
-			totalValue: items.reduce(
-				(sum, item) => sum + item.current_stock * item.unit_cost,
+			totalItems: rows.length,
+			totalValue: rows.reduce(
+				(sum, item) =>
+					sum + toNumber(item.current_stock) * toNumber(item.unit_cost),
 				0,
 			),
-			lowStock: items.filter(
+			lowStock: rows.filter(
 				(item) =>
-					item.current_stock <= item.minimum_stock &&
-					item.current_stock > 0,
+					toNumber(item.current_stock) <= toNumber(item.minimum_stock) &&
+					toNumber(item.current_stock) > 0,
 			).length,
-			criticalStock: items.filter(
+			criticalStock: rows.filter(
 				(item) =>
-					item.status === "critical_stock" ||
-					item.current_stock === 0,
+					item.status === "critical_stock" || toNumber(item.current_stock) === 0,
 			).length,
-			available: items.filter((item) => item.status === "available")
-				.length,
-			depleted: items.filter((item) => item.status === "depleted").length,
+			available: rows.filter((item) => item.status === "available").length,
+			depleted: rows.filter((item) => item.status === "depleted").length,
 		};
 	},
 
-	// Utility actions
-
-	/**
-	 * Reset error state
-	 */
+	/** Reset error state. */
 	clearError: () => set({ error: null }),
 
 	/**
-	 * Initialize store (load all data)
+	 * Initialize store (load all resource datasets).
 	 */
 	init: async () => {
-		await get().fetchRequests();
-		await get().fetchInventory();
-		await get().fetchTransactions();
-		await get().fetchDisbursements();
-		await get().fetchAlerts();
+		await Promise.all([
+			get().fetchRequests(),
+			get().fetchInventory(),
+			get().fetchTransactions(),
+			get().fetchDisbursements(),
+			get().fetchAlerts(),
+		]);
 	},
 }));

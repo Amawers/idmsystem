@@ -12,7 +12,7 @@
  * - Transaction history tracking
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,14 +74,11 @@ import {
   ChevronRight,
   Eye,
   Trash2,
-  WifiOff,
-  CloudUpload,
 } from "lucide-react";
 import PermissionGuard from "@/components/PermissionGuard";
 import { useResourceStore } from "@/store/useResourceStore";
 import { useAuthStore } from "@/store/authStore";
-import { useInventoryOffline, INVENTORY_FORCE_SYNC_KEY } from "@/hooks/useInventoryOffline";
-import useNetworkStatus from "@/hooks/useNetworkStatus";
+import { useInventory } from "@/hooks/useInventory";
 import RequestSubmissionDialog from "./RequestSubmissionDialog";
 
 /**
@@ -124,7 +121,6 @@ function StockAdjustmentDialog({ item, open, onClose, onSuccess, onAdjustStock }
       const delta = type === "stock_out" ? -Math.abs(numericQuantity) : numericQuantity;
       await onAdjustStock?.({
         itemId: item?.id ?? null,
-        localId: item?.localId ?? null,
         quantity: type === "adjustment" ? numericQuantity : delta,
         transactionType: type,
       });
@@ -701,6 +697,7 @@ export default function StockManagement() {
   const [showDetailsDialog, setShowDetailsDialog] = useState(false);
   const [showRequestDialog, setShowRequestDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
 
@@ -708,30 +705,22 @@ export default function StockManagement() {
     items: inventoryItems,
     statistics: inventoryStats,
     loading,
-    refreshInventory,
-    createItem,
-    updateItem,
-    adjustStock,
-    deleteItem,
-    pendingCount,
-    syncing,
-    syncStatus,
-    runSync,
-    offline,
-  } = useInventoryOffline();
+    addInventoryItem,
+    updateInventoryItem,
+    updateStock,
+    deleteInventoryItem,
+  } = useInventory();
   const submitRequest = useResourceStore((state) => state.submitRequest);
 
   const { user } = useAuthStore();
-  const isOnline = useNetworkStatus();
-  const [autoSyncPending, setAutoSyncPending] = useState(false);
-  const runSyncRef = useRef(runSync);
-
-  useEffect(() => {
-    runSyncRef.current = runSync;
-  }, [runSync]);
 
   const handleRefresh = () => {
-    refreshInventory();
+    setIsRefreshing(true);
+    if (typeof window !== "undefined") {
+      window.location.reload();
+      return;
+    }
+    setIsRefreshing(false);
   };
 
   const handleAdjustStock = (item) => {
@@ -750,7 +739,8 @@ export default function StockManagement() {
   };
 
   const handleSuccess = () => {
-    refreshInventory();
+    // CRUD actions already update local store state; avoid automatic refetch
+    // here so a slow network call does not keep the table in loading mode.
   };
 
   const handleDeleteClick = (item) => {
@@ -762,7 +752,7 @@ export default function StockManagement() {
     if (!selectedItem) return;
 
     try {
-      await deleteItem({ itemId: selectedItem.id ?? null, localId: selectedItem.localId ?? null });
+      await deleteInventoryItem(selectedItem.id);
       setShowDeleteDialog(false);
       setSelectedItem(null);
     } catch (error) {
@@ -784,54 +774,21 @@ export default function StockManagement() {
     }
   };
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const flagged = window.sessionStorage.getItem(INVENTORY_FORCE_SYNC_KEY);
-    if (flagged === "true") {
-      window.sessionStorage.removeItem(INVENTORY_FORCE_SYNC_KEY);
-      setAutoSyncPending(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!autoSyncPending) return;
-    if (!isOnline) {
-      setAutoSyncPending(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const runAutoSync = async () => {
-      try {
-        await runSyncRef.current?.();
-      } catch (err) {
-        console.error("Auto inventory sync failed", err);
-      } finally {
-        if (!cancelled) setAutoSyncPending(false);
-      }
-    };
-
-    runAutoSync();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [autoSyncPending, isOnline]);
-
   const handleAddItem = async (values) => {
-    await createItem(values);
+    await addInventoryItem(values);
   };
 
   const handleEditSubmit = async (item, values) => {
-    await updateItem(item.id ?? null, values, { localId: item.localId ?? null });
+    await updateInventoryItem(item.id, values);
   };
 
-  const handleAdjustSubmit = async ({ itemId = null, localId = null, quantity, transactionType }) => {
-    await adjustStock({ itemId, localId, quantity, transactionType, performedBy: user });
+  const handleAdjustSubmit = async ({ itemId = null, quantity, transactionType }) => {
+    if (!itemId) throw new Error("Missing inventory item id");
+    await updateStock(itemId, quantity, transactionType, `Stock ${transactionType} by ${user?.email || "current user"}`);
   };
 
   const sourceItems = Array.isArray(inventoryItems) ? inventoryItems : [];
+  const showTableLoading = (loading || isRefreshing) && sourceItems.length === 0;
 
   // Filter items
   const filteredItems = sourceItems.filter((item) => {
@@ -919,41 +876,16 @@ export default function StockManagement() {
               <CardDescription className="text-xs leading-snug mt-0">Manage and track inventory stock levels</CardDescription>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <div className="flex items-center gap-2 flex-wrap justify-end">
-                {offline && (
-                  <Badge variant="secondary" className="text-[10px] font-medium uppercase">
-                    <WifiOff className="mr-1 h-3 w-3" /> Offline Mode
-                  </Badge>
-                )}
-                {pendingCount > 0 && (
-                  <Badge variant="outline" className="text-[10px] font-medium">
-                    {pendingCount} pending change{pendingCount !== 1 ? "s" : ""}
-                  </Badge>
-                )}
-                {syncStatus && (
-                  <p className="text-[11px] text-muted-foreground">{syncStatus}</p>
-                )}
-              </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={handleRefresh}
-                  disabled={loading}
+                  disabled={isRefreshing}
                   className="cursor-pointer"
                 >
-                  <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+                  <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
                   Refresh
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => runSync().catch((err) => console.error("Inventory sync failed", err))}
-                  disabled={pendingCount === 0 || syncing}
-                  className="cursor-pointer"
-                >
-                  <CloudUpload className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-                  {syncing ? "Syncing..." : "Sync Changes"}
                 </Button>
                 <PermissionGuard permission="create_resource_request">
                   <Button onClick={() => setShowRequestDialog(true)} size="sm" className="cursor-pointer">
@@ -1028,7 +960,7 @@ export default function StockManagement() {
                 </TableRow>
                 </TableHeader>
                 <TableBody>
-                {loading ? (
+                {showTableLoading ? (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-8 text-xs text-muted-foreground">
                       Loading inventory...
@@ -1043,7 +975,7 @@ export default function StockManagement() {
                 ) : (
                   pageItems.map((item) => (
                     <TableRow 
-                      key={item.id ?? `local-${item.localId}`}
+                      key={item.id}
                       className="text-xs cursor-pointer hover:bg-muted/50"
                       onClick={() => handleViewDetails(item)}
                     >

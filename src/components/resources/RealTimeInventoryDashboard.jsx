@@ -10,7 +10,7 @@
  * - Quick action buttons
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,7 +31,6 @@ import {
 import { useResourceStore } from "@/store/useResourceStore";
 import { usePrograms } from "@/hooks/usePrograms";
 import supabase from "@/../config/supabase";
-import offlineCaseDb from "@/db/offlineCaseDb";
 
 /**
  * Metric Card Component
@@ -320,29 +319,9 @@ export default function RealTimeInventoryDashboard() {
   const { programs, loading: programsLoading, fetchPrograms } = usePrograms();
 
   // Fetch staff assignments
-  const fetchStaffAssignments = async () => {
+  const fetchStaffAssignments = useCallback(async () => {
     setStaffLoading(true);
     try {
-      // If offline, load cached case managers and fabricate assignments
-      if (typeof navigator !== 'undefined' && !navigator.onLine) {
-        try {
-          const cachedManagers = await offlineCaseDb.case_managers.toArray();
-          const mockAssignments = (cachedManagers || []).map(cm => ({
-            id: cm.id,
-            staff_id: cm.id,
-            availability_status: 'available',
-            staff_name: cm.full_name,
-            staff_role: cm.role || 'social_worker',
-            profile: cm,
-          }));
-          setStaffAssignments(mockAssignments);
-          setStaffLoading(false);
-          return;
-        } catch (cacheErr) {
-          console.warn('Failed to load cached staff assignments:', cacheErr);
-          // fallthrough to attempt remote fetch behaviour (which will likely fail)
-        }
-      }
       // Try to fetch from staff_assignments table first
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('staff_assignments')
@@ -360,19 +339,6 @@ export default function RealTimeInventoryDashboard() {
 
       if (!assignmentsError && assignmentsData && assignmentsData.length > 0) {
         setStaffAssignments(assignmentsData);
-        // Persist case manager snapshot for offline use
-        try {
-          const caseManagers = assignmentsData
-            .map(a => a.profile)
-            .filter(Boolean)
-            .map(p => ({ id: p.id, full_name: p.full_name, role: p.role }));
-          if (caseManagers.length > 0) {
-            await offlineCaseDb.case_managers.clear();
-            await offlineCaseDb.case_managers.bulkAdd(caseManagers);
-          }
-        } catch (cacheErr) {
-          console.warn('Failed to cache case managers for offline use:', cacheErr);
-        }
       } else {
         // Fallback: Fetch case managers from profile table and create mock assignments
         const { data: caseManagers, error: profileError } = await supabase
@@ -395,17 +361,6 @@ export default function RealTimeInventoryDashboard() {
         }));
 
         setStaffAssignments(mockAssignments);
-
-        // Persist case managers for offline use
-        try {
-          const caseManagersToCache = (caseManagers || []).map(p => ({ id: p.id, full_name: p.full_name, role: p.role }));
-          if (caseManagersToCache.length > 0) {
-            await offlineCaseDb.case_managers.clear();
-            await offlineCaseDb.case_managers.bulkAdd(caseManagersToCache);
-          }
-        } catch (cacheErr) {
-          console.warn('Failed to cache case managers for offline use:', cacheErr);
-        }
       }
     } catch (error) {
       console.error('Error fetching staff assignments:', error);
@@ -413,12 +368,12 @@ export default function RealTimeInventoryDashboard() {
     } finally {
       setStaffLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchInventory();
     fetchStaffAssignments();
-  }, [fetchInventory]);
+  }, [fetchInventory, fetchStaffAssignments]);
 
   // Refresh on network reconnect
   useEffect(() => {
@@ -432,7 +387,7 @@ export default function RealTimeInventoryDashboard() {
 
     window.addEventListener('online', onOnline);
     return () => window.removeEventListener('online', onOnline);
-  }, []);
+  }, [fetchInventory, fetchPrograms, fetchStaffAssignments]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -445,7 +400,7 @@ export default function RealTimeInventoryDashboard() {
     }, 30000);
 
     return () => clearInterval(interval);
-  }, [autoRefresh, fetchInventory]);
+  }, [autoRefresh, fetchInventory, fetchStaffAssignments]);
 
   const handleRefresh = () => {
     fetchInventory();

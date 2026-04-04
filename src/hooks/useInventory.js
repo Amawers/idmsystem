@@ -79,6 +79,9 @@ import { useResourceStore } from "@/store/useResourceStore";
  * @property {any} error
  * @property {(filters?: InventoryFilters) => any} fetchInventory
  * @property {(payload: any) => any} updateStock
+ * @property {(payload: any) => any} addInventoryItem
+ * @property {(itemId: string, payload: any) => any} updateInventoryItem
+ * @property {(itemId: string) => any} deleteInventoryItem
  * @property {(payload: any) => any} allocateResource
  * @property {() => any} refresh
  * @property {() => any} clearError
@@ -109,6 +112,9 @@ export function useInventory(options = {}) {
 		error,
 		fetchInventory,
 		updateStock,
+		addInventoryItem,
+		updateInventoryItem,
+		deleteInventoryItem,
 		allocateResource,
 		clearError,
 	} = useResourceStore();
@@ -284,6 +290,9 @@ export function useInventory(options = {}) {
 		// Actions
 		fetchInventory: (filters) => fetchInventory(filters),
 		updateStock,
+		addInventoryItem,
+		updateInventoryItem,
+		deleteInventoryItem,
 		allocateResource,
 		refresh: () =>
 			fetchInventory({

@@ -125,7 +125,6 @@ export function useResourceAllocations(options = {}) {
 		error,
 		fetchTransactions,
 		fetchRequests,
-		fetchDisbursements,
 	} = useResourceStore();
 
 	const { programs } = usePrograms({ status: "active" });
@@ -135,7 +134,6 @@ export function useResourceAllocations(options = {}) {
 		if (autoFetch) {
 			fetchTransactions({ program_id });
 			fetchRequests({ program_id, barangay, dateRange });
-			fetchDisbursements();
 		}
 	}, [
 		program_id,
@@ -144,7 +142,6 @@ export function useResourceAllocations(options = {}) {
 		autoFetch,
 		fetchTransactions,
 		fetchRequests,
-		fetchDisbursements,
 	]);
 
 	/**
@@ -367,7 +364,6 @@ export function useResourceAllocations(options = {}) {
 			return Promise.all([
 				fetchTransactions({ program_id }),
 				fetchRequests({ program_id, barangay, dateRange }),
-				fetchDisbursements(),
 			]);
 		},
 	};

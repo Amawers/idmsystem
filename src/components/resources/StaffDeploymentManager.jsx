@@ -20,7 +20,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { AlertCircle, RefreshCw, WifiOff } from "lucide-react";
+import { AlertCircle, RefreshCw } from "lucide-react";
 import { useCaseWorkload } from "@/hooks/useCaseWorkload";
 
 function StaffAvailabilityCard({ staff }) {
@@ -94,7 +94,6 @@ export default function StaffDeploymentManager() {
     loading: workloadLoading, 
     error: workloadError,
     reload: reloadWorkload,
-    offline: workloadOffline,
     lastSyncedDisplay,
     syncStatus,
   } = useCaseWorkload();
@@ -141,11 +140,6 @@ export default function StaffDeploymentManager() {
       {/* Sync + Status */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {workloadOffline && (
-            <Badge variant="secondary" className="text-[10px] font-semibold uppercase">
-              <WifiOff className="mr-1 h-3 w-3" /> Offline Mode
-            </Badge>
-          )}
           {syncStatus && <span className="text-[11px] text-muted-foreground">{syncStatus}</span>}
           {lastSyncedDisplay && (
             <span className="text-[11px]">Last synced {lastSyncedDisplay}</span>
