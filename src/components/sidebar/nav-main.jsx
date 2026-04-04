@@ -17,6 +17,30 @@ import {
 export function NavMain({ items }) {
   const location = useLocation()
 
+  /**
+   * Force a hard reload for major module navigation.
+   * This mimics Ctrl+R behavior after selecting a section page.
+   */
+  const handleNavClick = (event, path) => {
+    const shouldHardReload =
+      path.startsWith("/case") ||
+      path.startsWith("/program") ||
+      path.startsWith("/resource") ||
+      path.startsWith("/controls") ||
+      path === "/account"
+
+    if (!shouldHardReload) return
+
+    const isModifiedEvent =
+      event.metaKey || event.altKey || event.ctrlKey || event.shiftKey
+
+    if (event.button !== 0 || isModifiedEvent) return
+
+    event.preventDefault()
+    window.location.hash = `#${path}`
+    window.location.reload()
+  }
+
   return (
     <SidebarMenu>
       {items.map((item) => {
@@ -59,6 +83,9 @@ export function NavMain({ items }) {
                           >
                             <Link 
                               to={subItem.path}
+                              onClick={(event) =>
+                                handleNavClick(event, subItem.path)
+                              }
                               className={isSubActive ? "underline underline-offset-4 decoration-primary decoration-2" : ""}
                             >
                               {subItem.icon && <subItem.icon className="size-4" />}
@@ -81,6 +108,7 @@ export function NavMain({ items }) {
             <SidebarMenuButton asChild>
               <Link
                 to={item.path}
+                onClick={(event) => handleNavClick(event, item.path)}
                 className={
                   isActive
                     ? // ================= ACTIVE STYLE =================
