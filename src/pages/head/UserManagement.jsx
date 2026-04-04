@@ -537,7 +537,9 @@ export default function UserManagement() {
 			<CreateUserDialog
 				open={createDialogOpen}
 				onOpenChange={setCreateDialogOpen}
-				onSuccess={() => fetchUsers()}
+				onSuccess={async () => {
+					await fetchUsers();
+				}}
 			/>
 
 			<EditUserDialog

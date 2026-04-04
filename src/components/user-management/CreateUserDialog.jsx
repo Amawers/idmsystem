@@ -52,7 +52,7 @@ import {
  * @typedef {Object} CreateUserDialogProps
  * @property {boolean} open
  * @property {(open: boolean) => void} onOpenChange
- * @property {(() => void)=} onSuccess
+ * @property {(() => void | Promise<void>)=} onSuccess
  */
 
 /**
@@ -161,6 +161,11 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 	 * @param {CreateUserFormValues} data
 	 */
 	const onSubmit = async (data) => {
+		// Failsafe: if create flow gets stuck, force a full reload after 5 seconds.
+		const reloadTimeoutId = window.setTimeout(() => {
+			window.location.reload();
+		}, 5000);
+
 		try {
 			/** @type {CreateUserResult} */
 			const result = await createUser({
@@ -197,8 +202,9 @@ export function CreateUserDialog({ open, onOpenChange, onSuccess }) {
 			form.reset();
 			setGeneratedPassword("");
 			onOpenChange(false);
-			onSuccess?.();
+			await onSuccess?.();
 		} catch (error) {
+			window.clearTimeout(reloadTimeoutId);
 			toast.error("Failed to create user", {
 				description: error.message,
 			});
