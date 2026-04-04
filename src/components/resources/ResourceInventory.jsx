@@ -22,6 +22,7 @@ import InventoryAlerts from "./InventoryAlerts";
 import InventoryByCategory from "./InventoryByCategory";
 import StockUpdateDialog from "./StockUpdateDialog";
 import PermissionGuard from "@/components/PermissionGuard";
+import { useInventory } from "@/hooks/useInventory";
 
 /**
  * Resource Inventory Dashboard Component

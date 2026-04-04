@@ -10,7 +10,7 @@
  * - Bulk approval actions
  */
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,8 +43,6 @@ import {
   ChevronRight,
   RefreshCw,
   Plus,
-  CloudUpload,
-  WifiOff,
 } from "lucide-react";
 import {
   Select,
@@ -54,6 +52,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuthStore } from "@/store/authStore";
+import { useInventoryManager } from "@/hooks/useInventoryManager";
+import { useResourceApprovals } from "@/hooks/useResourceApprovals";
 import RequestSubmissionDialog from "./RequestSubmissionDialog";
 import PermissionGuard from "@/components/PermissionGuard";
 
@@ -292,7 +292,6 @@ export default function ApprovalWorkflowManager() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(8);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [autoSyncPending, setAutoSyncPending] = useState(false);
 
   const {
     requests,
@@ -300,45 +299,10 @@ export default function ApprovalWorkflowManager() {
     updateRequestStatus,
     refreshRequests,
     loading,
-    pendingCount: pendingQueueCount,
-    offline,
-    syncStatus,
-    syncing,
-    runSync,
-  } = useResourceApprovalsOffline();
-  const { adjustStock } = useInventoryOffline();
+  } = useResourceApprovals();
+  const { adjustStock } = useInventoryManager();
   const { role, user } = useAuthStore();
   const canSubmitResourceRequest = role === "social_worker";
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const flagged = window.sessionStorage.getItem(APPROVALS_FORCE_SYNC_KEY);
-    if (flagged === "true") {
-      window.sessionStorage.removeItem(APPROVALS_FORCE_SYNC_KEY);
-      setAutoSyncPending(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!autoSyncPending) return;
-    let cancelled = false;
-
-    const syncPendingOps = async () => {
-      try {
-        await runSync();
-      } catch (error) {
-        console.error("Approvals auto-sync failed", error);
-      } finally {
-        if (!cancelled) setAutoSyncPending(false);
-      }
-    };
-
-    syncPendingOps();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [autoSyncPending, runSync]);
 
   // Handle refresh
   const handleRefresh = async () => {
@@ -477,19 +441,6 @@ export default function ApprovalWorkflowManager() {
 
         <div className="flex flex-col items-end gap-1">
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {offline && (
-              <Badge variant="secondary" className="text-[10px] font-medium uppercase">
-                <WifiOff className="mr-1 h-3 w-3" /> Offline Mode
-              </Badge>
-            )}
-            {pendingQueueCount > 0 && (
-              <Badge variant="outline" className="text-[10px] font-medium">
-                {pendingQueueCount} pending change{pendingQueueCount !== 1 ? "s" : ""}
-              </Badge>
-            )}
-            {syncStatus && <p className="text-[11px] text-muted-foreground">{syncStatus}</p>}
-          </div>
-          <div className="flex flex-wrap items-center justify-end gap-2">
             {canSubmitResourceRequest ? (
               <Button
                 variant="default"
@@ -522,16 +473,6 @@ export default function ApprovalWorkflowManager() {
             >
               <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
               Refresh
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => runSync().catch((err) => console.error("Approvals sync failed", err))}
-              disabled={pendingQueueCount === 0 || syncing}
-              className="cursor-pointer"
-            >
-              <CloudUpload className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-              {syncing ? "Syncing..." : "Sync Changes"}
             </Button>
           </div>
         </div>

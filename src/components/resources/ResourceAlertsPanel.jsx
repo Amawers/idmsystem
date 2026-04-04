@@ -87,20 +87,6 @@ export default function ResourceAlertsPanel() {
   const [loading, setLoading] = useState(false);
   const { resolveAlert } = useResourceStore();
   const pollRef = useRef(null);
-  const [isOnline, setIsOnline] = useState(typeof navigator === "undefined" ? true : navigator.onLine);
-
-  useEffect(() => {
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
-
-    window.addEventListener("online", goOnline);
-    window.addEventListener("offline", goOffline);
-
-    return () => {
-      window.removeEventListener("online", goOnline);
-      window.removeEventListener("offline", goOffline);
-    };
-  }, []);
 
   useEffect(() => {
     // Initial load + polling (no Supabase realtime)
@@ -111,11 +97,9 @@ export default function ResourceAlertsPanel() {
       pollRef.current = null;
     }
 
-    if (isOnline) {
-      pollRef.current = window.setInterval(() => {
-        fetchAlerts();
-      }, 60_000);
-    }
+    pollRef.current = window.setInterval(() => {
+      fetchAlerts();
+    }, 60_000);
 
     return () => {
       if (pollRef.current) {
@@ -124,7 +108,7 @@ export default function ResourceAlertsPanel() {
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, isOnline]);
+  }, [filter]);
 
   const fetchAlerts = async () => {
     setLoading(true);

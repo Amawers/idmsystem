@@ -12,7 +12,7 @@
  * - Transaction history tracking
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -74,11 +74,11 @@ import {
   ChevronRight,
   Eye,
   Trash2,
-  WifiOff,
-  CloudUpload,
 } from "lucide-react";
 import PermissionGuard from "@/components/PermissionGuard";
 import { useAuthStore } from "@/store/authStore";
+import { useResourceStore } from "@/store/useResourceStore";
+import { useInventoryManager } from "@/hooks/useInventoryManager";
 import RequestSubmissionDialog from "./RequestSubmissionDialog";
 
 /**
@@ -710,21 +710,10 @@ export default function StockManagement() {
     updateItem,
     adjustStock,
     deleteItem,
-    pendingCount,
-    syncing,
-    syncStatus,
-    runSync,
-    offline,
-  } = useInventoryOffline();
+  } = useInventoryManager();
   const submitRequest = useResourceStore((state) => state.submitRequest);
 
   const { user } = useAuthStore();
-  const [autoSyncPending, setAutoSyncPending] = useState(false);
-  const runSyncRef = useRef(runSync);
-
-  useEffect(() => {
-    runSyncRef.current = runSync;
-  }, [runSync]);
 
   const handleRefresh = () => {
     refreshInventory();
@@ -779,41 +768,6 @@ export default function StockManagement() {
       alert(`Failed to submit request: ${errorMessage}\n\nPlease try again.`);
     }
   };
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const flagged = window.sessionStorage.getItem(INVENTORY_FORCE_SYNC_KEY);
-    if (flagged === "true") {
-      window.sessionStorage.removeItem(INVENTORY_FORCE_SYNC_KEY);
-      setAutoSyncPending(true);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!autoSyncPending) return;
-    if (!isOnline) {
-      setAutoSyncPending(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const runAutoSync = async () => {
-      try {
-        await runSyncRef.current?.();
-      } catch (err) {
-        console.error("Auto inventory sync failed", err);
-      } finally {
-        if (!cancelled) setAutoSyncPending(false);
-      }
-    };
-
-    runAutoSync();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [autoSyncPending, isOnline]);
 
   const handleAddItem = async (values) => {
     await createItem(values);
@@ -915,21 +869,6 @@ export default function StockManagement() {
               <CardDescription className="text-xs leading-snug mt-0">Manage and track inventory stock levels</CardDescription>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <div className="flex items-center gap-2 flex-wrap justify-end">
-                {offline && (
-                  <Badge variant="secondary" className="text-[10px] font-medium uppercase">
-                    <WifiOff className="mr-1 h-3 w-3" /> Offline Mode
-                  </Badge>
-                )}
-                {pendingCount > 0 && (
-                  <Badge variant="outline" className="text-[10px] font-medium">
-                    {pendingCount} pending change{pendingCount !== 1 ? "s" : ""}
-                  </Badge>
-                )}
-                {syncStatus && (
-                  <p className="text-[11px] text-muted-foreground">{syncStatus}</p>
-                )}
-              </div>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
@@ -940,16 +879,6 @@ export default function StockManagement() {
                 >
                   <RefreshCw className={`mr-2 h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                   Refresh
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => runSync().catch((err) => console.error("Inventory sync failed", err))}
-                  disabled={pendingCount === 0 || syncing}
-                  className="cursor-pointer"
-                >
-                  <CloudUpload className={`mr-2 h-4 w-4 ${syncing ? "animate-spin" : ""}`} />
-                  {syncing ? "Syncing..." : "Sync Changes"}
                 </Button>
                 <PermissionGuard permission="create_resource_request">
                   <Button onClick={() => setShowRequestDialog(true)} size="sm" className="cursor-pointer">
