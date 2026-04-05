@@ -211,10 +211,61 @@ export const useAuthStore = create((set) => {
 				return;
 			}
 
+			const syncSessionUser = async (sessionUser) => {
+				try {
+					const { data: profile, error: profileError } = await supabase
+						.from("profile")
+						.select("role, avatar_url, status")
+						.eq("id", sessionUser.id)
+						.maybeSingle();
+
+					if (profileError) {
+						console.error("Profile fetch error:", profileError);
+						return;
+					}
+
+					if (
+						profile?.status === "banned" ||
+						profile?.status === "inactive"
+					) {
+						await supabase.auth.signOut();
+						set({
+							user: null,
+							avatar_url: null,
+							role: null,
+							loading: false,
+						});
+						return;
+					}
+
+					// Refresh signed URL for avatar.
+					let avatarSignedUrl = null;
+					if (profile?.avatar_url) {
+						const { data: signedData, error: urlError } =
+							await supabase.storage
+								.from("profile_pictures")
+								.createSignedUrl(profile.avatar_url, 60 * 60);
+
+						if (!urlError) avatarSignedUrl = signedData?.signedUrl;
+					}
+
+					set({
+						user: sessionUser,
+						avatar_url: avatarSignedUrl,
+						role: normalizeRole(profile?.role),
+						loading: false,
+					});
+				} catch (error) {
+					console.error("Session user sync failed:", error);
+				}
+			};
+
 			// Keep state in sync with auth events (sign out, refresh).
+			// Important: this callback must stay synchronous; awaiting Supabase calls
+			// directly here can deadlock other in-flight requests.
 			const {
 				data: { subscription },
-			} = supabase.auth.onAuthStateChange(async (event, session) => {
+			} = supabase.auth.onAuthStateChange((event, session) => {
 				console.log("Auth state changed:", event);
 
 				if (event === "SIGNED_OUT" || event === "USER_DELETED") {
@@ -224,59 +275,16 @@ export const useAuthStore = create((set) => {
 						role: null,
 						loading: false,
 					});
-				} else if (
-					event === "SIGNED_IN" ||
-					event === "TOKEN_REFRESHED"
+					return;
+				}
+
+				if (
+					(event === "SIGNED_IN" || event === "TOKEN_REFRESHED") &&
+					session?.user
 				) {
-					if (session?.user) {
-						const { data: profile, error: profileError } =
-							await supabase
-								.from("profile")
-								.select("role, avatar_url, status")
-								.eq("id", session.user.id)
-								.maybeSingle();
-
-						if (profileError) {
-							console.error("Profile fetch error:", profileError);
-							return;
-						}
-
-						if (
-							profile?.status === "banned" ||
-							profile?.status === "inactive"
-						) {
-							await supabase.auth.signOut();
-							set({
-								user: null,
-								avatar_url: null,
-								role: null,
-								loading: false,
-							});
-							return;
-						}
-
-						// Refresh signed URL for avatar.
-						let avatarSignedUrl = null;
-						if (profile?.avatar_url) {
-							const { data: signedData, error: urlError } =
-								await supabase.storage
-									.from("profile_pictures")
-									.createSignedUrl(
-										profile.avatar_url,
-										60 * 60,
-									);
-
-							if (!urlError)
-								avatarSignedUrl = signedData?.signedUrl;
-						}
-
-						set({
-							user: session.user,
-							avatar_url: avatarSignedUrl,
-							role: normalizeRole(profile?.role),
-							loading: false,
-						});
-					}
+					setTimeout(() => {
+						void syncSessionUser(session.user);
+					}, 0);
 				}
 			});
 
