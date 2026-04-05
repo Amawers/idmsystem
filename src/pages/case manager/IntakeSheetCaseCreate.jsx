@@ -5,13 +5,11 @@
  *
  * Responsibilities:
  * - Renders a multi-tab intake flow backed by `useIntakeFormStore`.
- * - On the final step, builds a normalized payload from store sections and queues a local create via
- *   `createOrUpdateLocalCase` (offline-first).
- * - When online, triggers a tab reload/sync signal via `sessionStorage` keys to refresh the Case list.
+ * - On the final step, builds a normalized payload from store sections and creates records in Supabase.
+ * - Closes the dialog and invokes `onSuccess` so the parent can refresh or reload data.
  *
  * Notes:
- * - This component currently initializes `currentTabIndex` to the last step, which effectively
- *   bypasses step-by-step navigation (intentional per existing behavior).
+ * - This flow is intentionally kept to one schema-aligned pass (no duplicated Part 2 tabs).
  */
 import { useState, useEffect, useRef } from "react";
 import {
@@ -32,24 +30,7 @@ import { AssessmentForm } from "@/components/intake sheet/AssessmentForm";
 import { RecommendationForm } from "@/components/intake sheet/RecommendationForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { toast } from "sonner";
-import { createOrUpdateLocalCase } from "@/services/caseOfflineService";
-
-/** @returns {boolean} True when the browser reports an online network state. */
-const isBrowserOnline = () =>
-	typeof navigator !== "undefined" ? navigator.onLine : true;
-
-/**
- * Forces the Case Management view to reopen the CASE tab after a full reload.
- *
- * Used as a simple way to refresh data/sync state after a successful create while online.
- */
-const forceCaseTabReload = () => {
-	if (typeof window === "undefined") return;
-	sessionStorage.setItem("caseManagement.activeTab", "CASE");
-	sessionStorage.setItem("caseManagement.forceTabAfterReload", "CASE");
-	sessionStorage.setItem("caseManagement.forceCaseSync", "true");
-	window.location.reload();
-};
+import supabase from "@/../config/supabase";
 
 /**
  * @typedef {(
@@ -61,14 +42,6 @@ const forceCaseTabReload = () => {
  *   | "community-information"
  *   | "assessment"
  *   | "recommendation"
- *   | "identifying-data2"
- *   | "family-composition2"
- *   | "victim-information2"
- *   | "presenting-problem2"
- *   | "background-information2"
- *   | "community-information2"
- *   | "assessment2"
- *   | "recommendation2"
  * )} CaseCreateTabId
  */
 
@@ -76,7 +49,7 @@ const forceCaseTabReload = () => {
  * @typedef IntakeSheetCaseCreateProps
  * @property {boolean} open Controls dialog visibility.
  * @property {(open: boolean) => void} setOpen Dialog open-state setter.
- * @property {() => void} [onSuccess] Optional callback fired after a successful create is queued.
+ * @property {() => void} [onSuccess] Optional callback fired after a successful create.
  */
 
 /** @type {CaseCreateTabId[]} */
@@ -89,23 +62,57 @@ const tabOrder = [
 	"community-information",
 	"assessment",
 	"recommendation",
-	"identifying-data2",
-	"family-composition2",
-	"victim-information2",
-	"presenting-problem2",
-	"background-information2",
-	"community-information2",
-	"assessment2",
-	"recommendation2",
 ];
+
+// Keep Case writes aligned with the current public.case schema.
+const CASE_TABLE_COLUMNS = new Set([
+	"case_manager",
+	"status",
+	"priority",
+	"identifying_intake_date",
+	"identifying_name",
+	"identifying_referral_source",
+	"identifying_alias",
+	"identifying_age",
+	"identifying_status",
+	"identifying_occupation",
+	"identifying_income",
+	"identifying_sex",
+	"identifying_address",
+	"identifying_case_type",
+	"identifying_religion",
+	"identifying_educational_attainment",
+	"identifying_contact_person",
+	"identifying_birth_place",
+	"identifying_respondent_name",
+	"identifying_birthday",
+	"perpetrator_name",
+	"perpetrator_age",
+	"perpetrator_alias",
+	"perpetrator_sex",
+	"perpetrator_address",
+	"perpetrator_victim_relation",
+	"perpetrator_offence_type",
+	"perpetrator_commission_datetime",
+	"presenting_problem",
+	"background_info",
+	"community_info",
+	"assessment",
+	"recommendation",
+]);
+
+const toCaseTablePayload = (payload) =>
+	Object.fromEntries(
+		Object.entries(payload).filter(([column]) =>
+			CASE_TABLE_COLUMNS.has(column),
+		),
+	);
 
 /**
  * @param {IntakeSheetCaseCreateProps} props
  */
 export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
-	// DISABLED: Skip directly to the last form (recommendation2)
-	// Set currentTabIndex to last tab index (15 = recommendation2)
-	const [currentTabIndex, setCurrentTabIndex] = useState(15);
+	const [currentTabIndex, setCurrentTabIndex] = useState(0);
 	const [completedTabs, setCompletedTabs] = useState(new Set());
 	const { getAllData, resetAll } = useIntakeFormStore();
 	const [isSaving, setIsSaving] = useState(false);
@@ -141,8 +148,7 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 	};
 
 	/**
-	 * Builds the case payload from store sections and queues a local create.
-	 * When online, signals the parent Case view to refresh/sync via a full reload.
+	 * Builds the case payload from store sections and creates the record in Supabase.
 	 */
 	const handleCreate = async () => {
 		if (createInFlightRef.current) {
@@ -166,25 +172,10 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 			const recommendation = all.Recommendation || {};
 			const caseDetails = all.caseDetails || {};
 
-			// Part 2 data
-			const identifying2 = all.IdentifyingData2 || {};
-			const familyData2 = all.FamilyData2 || {};
-			const victim2 = all.VictimInfo2 || {};
-			const problem2 = all.PresentingProblem2 || {};
-			const background2 = all.BackgroundInfo2 || {};
-			const community2 = all.CommunityInfo2 || {};
-			const assessment2 = all.Assessment2 || {};
-			const recommendation2 = all.Recommendation2 || {};
-
 			// Extract family members
-			const familyMembers = [
-				...(Array.isArray(familyData?.members)
-					? familyData.members
-					: []),
-				...(Array.isArray(familyData2?.members)
-					? familyData2.members
-					: []),
-			];
+			const familyMembers = Array.isArray(familyData?.members)
+				? familyData.members
+				: [];
 
 			// Build case payload
 			const casePayload = {
@@ -261,97 +252,48 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 					pick(community, "communityInfo", "community") ?? null,
 				assessment: pick(assessment, "assessment") ?? null,
 				recommendation: pick(recommendation, "recommendation") ?? null,
-
-				// Part 2 - Identifying data
-				identifying2_intake_date:
-					normalizeDate(
-						pick(identifying2, "intakeDate", "intake_date"),
-					) ?? null,
-				identifying2_name:
-					pick(identifying2, "name", "fullName") ?? null,
-				identifying2_referral_source:
-					pick(identifying2, "referralSource", "referral_source") ??
-					null,
-				identifying2_alias: pick(identifying2, "alias") ?? null,
-				identifying2_age: pick(identifying2, "age") ?? null,
-				identifying2_status:
-					pick(identifying2, "civilStatus", "status") ?? null,
-				identifying2_occupation:
-					pick(identifying2, "occupation") ?? null,
-				identifying2_income: pick(identifying2, "income") ?? null,
-				identifying2_sex: pick(identifying2, "sex") ?? null,
-				identifying2_address: pick(identifying2, "address") ?? null,
-				identifying2_case_type:
-					pick(identifying2, "caseType", "case_type") ?? null,
-				identifying2_religion: pick(identifying2, "religion") ?? null,
-				identifying2_educational_attainment:
-					pick(
-						identifying2,
-						"educationalAttainment",
-						"educational_attainment",
-					) ?? null,
-				identifying2_contact_person:
-					pick(identifying2, "contactPerson", "contact_person") ??
-					null,
-				identifying2_birth_place:
-					pick(identifying2, "birthPlace", "birth_place") ?? null,
-				identifying2_respondent_name:
-					pick(identifying2, "respondentName", "respondent_name") ??
-					null,
-				identifying2_birthday:
-					normalizeDate(
-						pick(identifying2, "birthday", "birth_date"),
-					) ?? null,
-
-				// Part 2 - Victim data
-				victim2_name: pick(victim2, "name") ?? null,
-				victim2_age: pick(victim2, "age") ?? null,
-				victim2_alias: pick(victim2, "alias") ?? null,
-				victim2_sex: pick(victim2, "sex") ?? null,
-				victim2_address: pick(victim2, "address") ?? null,
-				victim2_victim_relation:
-					pick(victim2, "victimRelation", "victim_relation") ?? null,
-				victim2_offence_type:
-					pick(victim2, "offenceType", "offence_type") ?? null,
-				victim2_commission_datetime:
-					normalizeDate(
-						pick(
-							victim2,
-							"commissionDatetime",
-							"commission_datetime",
-						),
-					) ?? null,
-
-				// Part 2 - Problems/Assessment/Recommendation
-				presenting_problem2:
-					pick(problem2, "problem", "presentingProblem") ?? null,
-				background_info2:
-					pick(background2, "backgroundInfo", "background") ?? null,
-				community_info2:
-					pick(community2, "communityInfo", "community") ?? null,
-				assessment2: pick(assessment2, "assessment") ?? null,
-				recommendation2:
-					pick(recommendation2, "recommendation") ?? null,
 			};
 
-			console.log("💾 Final case payload:", casePayload);
+			const casePayloadForInsert = toCaseTablePayload(casePayload);
+
+			console.log("💾 Final case payload:", casePayloadForInsert);
 			console.log("👨‍👩‍👧‍👦 Family members:", familyMembers);
 
-			await createOrUpdateLocalCase({
-				casePayload,
-				familyMembers,
-				mode: "create",
-			});
+			const { data: insertedCase, error: caseError } = await supabase
+				.from("case")
+				.insert([casePayloadForInsert])
+				.select("id")
+				.single();
+
+			if (caseError) throw caseError;
+
+			const createdCaseId = insertedCase?.id;
+			if (createdCaseId && familyMembers.length > 0) {
+				const familyRows = familyMembers.map((member, index) => ({
+					case_id: createdCaseId,
+					group_no: member?.group_no || index + 1,
+					name: member?.name || null,
+					age: member?.age || null,
+					relation: member?.relation || null,
+					status: member?.status || null,
+					education: member?.education || null,
+					occupation: member?.occupation || null,
+					income: member?.income || null,
+				}));
+
+				const { error: familyError } = await supabase
+					.from("case_family_member")
+					.insert(familyRows);
+
+				if (familyError) throw familyError;
+			}
 
 			// Done - close modal and clean up
 			resetAll();
 			setOpen(false);
 
-			const online = isBrowserOnline();
-			toast.success(online ? "Case Saved" : "Case Saved Offline", {
-				description: online
-					? "Case was stored and will sync shortly."
-					: "Changes were stored locally and will sync once you're reconnected.",
+			toast.success("Case Saved", {
+				description: "Case was stored successfully.",
 			});
 
 			// Fire-and-forget parent refresh
@@ -366,9 +308,6 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 				}
 			}
 
-			if (online) {
-				setTimeout(forceCaseTabReload, 0);
-			}
 		} catch (err) {
 			console.error("Failed to create case record:", err);
 			toast.error("Creation Failed", {
@@ -403,7 +342,7 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 	/** Resets local navigation state when the dialog closes. */
 	useEffect(() => {
 		if (!open) {
-			setCurrentTabIndex(15); // Reset to last tab (disabled step-by-step)
+			setCurrentTabIndex(0);
 			setCompletedTabs(new Set());
 		}
 	}, [open]);
@@ -457,8 +396,6 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 									value={tab}
 									className="flex items-center whitespace-nowrap data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
 									onClick={() => setCurrentTabIndex(index)}
-									// DISABLED: Allow navigation to all tabs
-									disabled={false}
 								>
 									{completedTabs.has(index) ? (
 										<Badge
@@ -548,74 +485,11 @@ export default function IntakeSheetCaseCreate({ open, setOpen, onSuccess }) {
 								sectionKey="Recommendation"
 								goNext={goNext}
 								goBack={goBack}
-							/>
-						</TabsContent>
-
-						<TabsContent value="identifying-data2">
-							<IdentifyingDataForm
-								sectionKey="IdentifyingData2"
-								goNext={goNext}
-								goBack={goBack}
-							/>
-						</TabsContent>
-
-						<TabsContent value="family-composition2">
-							<FamilyCompositionForm
-								sectionKey="FamilyData2"
-								goNext={goNext}
-								goBack={goBack}
-							/>
-						</TabsContent>
-
-						<TabsContent value="victim-information2">
-							<PerpetratorInfoForm
-								sectionKey="VictimInfo2"
-								goNext={goNext}
-								goBack={goBack}
-							/>
-						</TabsContent>
-
-						<TabsContent value="presenting-problem2">
-							<ProblemForm
-								sectionKey="PresentingProblem2"
-								goNext={goNext}
-								goBack={goBack}
-							/>
-						</TabsContent>
-
-						<TabsContent value="background-information2">
-							<BackgroundInfoForm
-								sectionKey="BackgroundInfo2"
-								goNext={goNext}
-								goBack={goBack}
-							/>
-						</TabsContent>
-
-						<TabsContent value="community-information2">
-							<CommunityInfoForm
-								sectionKey="CommunityInfo2"
-								goNext={goNext}
-								goBack={goBack}
-							/>
-						</TabsContent>
-
-						<TabsContent value="assessment2">
-							<AssessmentForm
-								sectionKey="Assessment2"
-								goNext={goNext}
-								goBack={goBack}
-							/>
-						</TabsContent>
-
-						<TabsContent value="recommendation2">
-							<RecommendationForm
-								sectionKey="Recommendation2"
-								goNext={goNext}
-								goBack={goBack}
 								isSecond={true}
+								submitLabel="Save Case"
 								setOpen={setOpen}
 								submitDisabled={isSaving}
-								useOfflineSubmit={true}
+								deferSubmit={true}
 							/>
 						</TabsContent>
 					</div>

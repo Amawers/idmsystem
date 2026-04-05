@@ -5,9 +5,8 @@
  *
  * Responsibilities:
  * - Collect a multi-step intake form across tabs.
- * - Build an SC case payload and stage it locally via the offline service.
- * - When saving while online, trigger a reload with sessionStorage flags so the
- *   Case Management view can restore context and prompt syncing.
+ * - Build an SC case payload and create/update records in Supabase.
+ * - Close the dialog and invoke `onSuccess` so the parent can refresh or reload data.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -25,7 +24,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { buildSCCasePayload } from "@/lib/scSubmission";
-import { createOrUpdateLocalScCase } from "@/services/scOfflineService";
+import supabase from "@/../config/supabase";
 
 /**
  * @typedef {Object} IntakeSheetSeniorCitizenProps
@@ -347,27 +346,6 @@ export default function IntakeSheetSeniorCitizen({
 	const [isSubmitting, setIsSubmitting] = useState(false);
 	const [activeTab, setActiveTab] = useState("identifying");
 	const isEditMode = Boolean(editingRecord);
-
-	/**
-	 * Read the browser's online state.
-	 * @returns {boolean}
-	 */
-	const isBrowserOnline = () =>
-		typeof navigator !== "undefined" ? navigator.onLine : true;
-
-	/**
-	 * Force the Case Management UI back to the SC tab after save.
-	 *
-	 * Uses sessionStorage flags + reload to reset downstream hook state and encourage a sync.
-	 * @returns {void}
-	 */
-	const forceScTabReload = () => {
-		if (typeof window === "undefined") return;
-		sessionStorage.setItem("caseManagement.activeTab", "SC");
-		sessionStorage.setItem("caseManagement.forceTabAfterReload", "SC");
-		sessionStorage.setItem("caseManagement.forceScSync", "true");
-		window.location.reload();
-	};
 
 	useEffect(() => {
 		if (!open) {
@@ -718,7 +696,7 @@ export default function IntakeSheetSeniorCitizen({
 	);
 
 	/**
-	 * Build and stage the SC case locally, then optionally trigger a sync flow.
+	 * Creates or updates an SC case directly in Supabase.
 	 * @param {import("react").FormEvent | undefined} event
 	 * @returns {Promise<void>}
 	 */
@@ -727,30 +705,30 @@ export default function IntakeSheetSeniorCitizen({
 		setIsSubmitting(true);
 		try {
 			const casePayload = buildSCCasePayload(formState);
-			await createOrUpdateLocalScCase({
-				casePayload,
-				targetId: isEditMode ? (editingRecord?.id ?? null) : null,
-				localId: isEditMode ? (editingRecord?.localId ?? null) : null,
-				mode: isEditMode ? "update" : "create",
-			});
 
-			const online = isBrowserOnline();
-			toast.success(
-				isEditMode
-					? "Senior Citizen case update queued"
-					: "Senior Citizen case queued",
-				{
-				description: online
-					? "Sync queued and will push shortly."
-					: "Stored locally. Sync once you're online.",
-				},
-			);
+			if (isEditMode && editingRecord?.id) {
+				const { error } = await supabase
+					.from("sc_case")
+					.update(casePayload)
+					.eq("id", editingRecord.id);
+				if (error) throw error;
+
+				toast.success("Senior Citizen case updated", {
+					description: "Changes were saved successfully.",
+				});
+			} else {
+				const { error } = await supabase
+					.from("sc_case")
+					.insert([casePayload]);
+				if (error) throw error;
+
+				toast.success("Senior Citizen case created", {
+					description: "Record saved successfully.",
+				});
+			}
+
 			setOpen(false);
 			onSuccess?.();
-
-			if (online) {
-				setTimeout(forceScTabReload, 0);
-			}
 		} catch (error) {
 			toast.error("Save failed", {
 				description: error?.message || "Please try again.",

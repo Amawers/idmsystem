@@ -3,13 +3,11 @@
  *
  * Responsibilities:
  * - Owns the dashboard filter state and exposes it to the shared `DynamicDashboard` renderer.
- * - Tracks online/offline transitions and forces a reload on reconnection to ensure fresh data.
  */
 
-import { useState, useCallback, useMemo, useEffect, useRef } from "react";
+import { useState, useCallback, useMemo } from "react";
 import DynamicDashboard from "@/components/dashboard/DynamicDashboard";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 /**
  * @typedef {Object} CaseDashboardFilters
@@ -23,8 +21,6 @@ export default function CaseDashboard() {
 	/** @type {[CaseDashboardFilters, (next: CaseDashboardFilters) => void]} */
 	const [filters, setFilters] = useState({});
 	const [isFiltersOpen, setIsFiltersOpen] = useState(false);
-	const isOnline = useNetworkStatus();
-	const previousOnline = useRef(isOnline);
 
 	/** @param {CaseDashboardFilters} newFilters */
 	const handleFilterChange = useCallback((newFilters) => {
@@ -45,21 +41,6 @@ export default function CaseDashboard() {
 			filters.datePreset !== "month" && filters.datePreset,
 		].filter(Boolean).length;
 	}, [filters]);
-
-	/**
-	 * When transitioning from offline -> online, force a reload to reinitialize data-fetching logic.
-	 * `caseDashboard.forceSync` is a one-shot hint other components can read on mount.
-	 */
-	useEffect(() => {
-		if (!previousOnline.current && isOnline) {
-			// Coming back online - set flag and reload
-			if (typeof window !== "undefined") {
-				sessionStorage.setItem("caseDashboard.forceSync", "true");
-				window.location.reload();
-			}
-		}
-		previousOnline.current = isOnline;
-	}, [isOnline]);
 
 	return (
 		<div className="flex flex-col gap-1">

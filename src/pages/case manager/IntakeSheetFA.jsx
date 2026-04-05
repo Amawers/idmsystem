@@ -3,12 +3,11 @@
  * FA (Financial Assistance) intake dialog.
  *
  * Responsibilities:
- * - Collect a single-page intake payload and queue it via the offline service.
- * - When online, trigger a one-time reload into the FA tab to encourage immediate sync.
+ * - Collect a single-page intake payload and create/update records in Supabase.
+ * - Close the dialog and invoke `onSuccess` so the parent can refresh or reload data.
  *
  * Notes:
  * - This component maintains local form state (not `useIntakeFormStore`).
- * - Tab forcing is coordinated via `sessionStorage` keys consumed by the case management page.
  */
 import { useEffect, useState } from "react";
 import {
@@ -30,7 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { buildFACasePayload } from "@/lib/faSubmission";
-import { createOrUpdateLocalFaCase } from "@/services/faOfflineService";
+import supabase from "@/../config/supabase";
 
 /**
  * @typedef {Object} FaFormState
@@ -66,27 +65,6 @@ const initialFormState = {
 	four_ps_member: "",
 	transaction: "",
 	notes: "",
-};
-
-/**
- * Safe online check for browser-like environments.
- * @returns {boolean} True when the browser reports connectivity, otherwise true by default.
- */
-const isBrowserOnline = () =>
-	typeof navigator !== "undefined" ? navigator.onLine : true;
-
-/**
- * Forces the Case Management view to reopen on the FA tab.
- *
- * Used after queuing a create while online so the FA list can refresh/sync.
- * @returns {void}
- */
-const forceFaTabReload = () => {
-	if (typeof window === "undefined") return;
-	sessionStorage.setItem("caseManagement.activeTab", "FA");
-	sessionStorage.setItem("caseManagement.forceTabAfterReload", "FA");
-	sessionStorage.setItem("caseManagement.forceFaSync", "true");
-	window.location.reload();
 };
 
 /**
@@ -171,7 +149,7 @@ export default function IntakeSheetFA({
 	};
 
 	/**
-	 * Queues a new FA record via the offline service.
+	 * Creates or updates an FA record directly in Supabase.
 	 * @param {React.FormEvent<HTMLFormElement>} event
 	 * @returns {Promise<void>}
 	 */
@@ -180,30 +158,31 @@ export default function IntakeSheetFA({
 		setIsSubmitting(true);
 		try {
 			const casePayload = buildFACasePayload(formState);
-			await createOrUpdateLocalFaCase({
-				casePayload,
-				targetId: isEditMode ? (editingRecord?.id ?? null) : null,
-				localId: isEditMode ? (editingRecord?.localId ?? null) : null,
-				mode: isEditMode ? "update" : "create",
-			});
 
-			const online = isBrowserOnline();
-			toast.success(
-				isEditMode
-					? "Financial Assistance case update queued"
-					: "Financial Assistance case queued",
-				{
-					description: online
-						? "Sync queued and will push shortly."
-						: "Stored locally. Sync once you're online.",
-				},
-			);
+			if (isEditMode && editingRecord?.id) {
+				const { error } = await supabase
+					.from("fa_case")
+					.update(casePayload)
+					.eq("id", editingRecord.id);
+				if (error) throw error;
+
+				toast.success("Financial Assistance case updated", {
+					description:
+						"Changes were saved successfully.",
+				});
+			} else {
+				const { error } = await supabase
+					.from("fa_case")
+					.insert([casePayload]);
+				if (error) throw error;
+
+				toast.success("Financial Assistance case created", {
+					description: "Record saved successfully.",
+				});
+			}
+
 			setOpen(false);
 			onSuccess?.();
-
-			if (online) {
-				setTimeout(forceFaTabReload, 0);
-			}
 		} catch (error) {
 			toast.error("Save failed", {
 				description: error?.message || "Please try again.",

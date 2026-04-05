@@ -42,7 +42,7 @@ const schema = z.object({
     ),
 });
 
-export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submitLabel, onSuccess, setOpen, isEditMode, submitDisabled = false, useOfflineSubmit = false }) {
+export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submitLabel, onSuccess, setOpen, isEditMode, submitDisabled = false, deferSubmit = false }) {
   const { data, setSectionField } = useIntakeFormStore();
 
   const form = useForm({
@@ -142,8 +142,8 @@ export function RecommendationForm({ sectionKey, goNext, goBack, isSecond, submi
       return;
     }
 
-    // If using offline submit (from IntakeSheetCaseCreate), just call goNext which will handle submission
-    if (useOfflineSubmit) {
+    // Some parent flows handle final submit; in those cases defer to goNext.
+    if (deferSubmit) {
       goNext();
       return;
     }

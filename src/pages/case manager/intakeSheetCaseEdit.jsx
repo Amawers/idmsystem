@@ -3,15 +3,14 @@
  * Case intake edit dialog.
  *
  * Responsibilities:
- * - Prefill `useIntakeFormStore` from a selected case row for a two-part intake flow.
+ * - Prefill `useIntakeFormStore` from a selected case row for a schema-aligned intake flow.
  * - Normalize date/datetime values to what form controls expect.
- * - Merge Part 1 + Part 2 family members with a stable `group_no` offset.
- * - Queue the update via the offline service; when online, force a one-time tab reload to
- *   encourage immediate sync.
+ * - Prefill family-member rows from `case_family_member`.
+ * - Update case and family-member rows directly in Supabase.
+ * - Close the dialog and invoke `onSuccess` so the parent can refresh or reload data.
  *
  * Notes:
  * - The flow uses index-based tab state + a completed set (similar to FAC) to keep UX stable.
- * - Tab forcing is coordinated via `sessionStorage` keys consumed by the case management page.
  */
 import { useState, useEffect } from "react";
 import {
@@ -32,28 +31,7 @@ import { AssessmentForm } from "@/components/intake sheet/AssessmentForm";
 import { RecommendationForm } from "@/components/intake sheet/RecommendationForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { toast } from "sonner";
-import { createOrUpdateLocalCase } from "@/services/caseOfflineService";
-
-/**
- * Safe online check for browser-like environments.
- * @returns {boolean} True when the browser reports connectivity, otherwise true by default.
- */
-const isBrowserOnline = () =>
-	typeof navigator !== "undefined" ? navigator.onLine : true;
-
-/**
- * Forces the Case Management view to reopen on the CASE tab.
- *
- * Used after queuing an update while online so the list can refresh/sync.
- * @returns {void}
- */
-const forceCaseTabReload = () => {
-	if (typeof window === "undefined") return;
-	sessionStorage.setItem("caseManagement.activeTab", "CASE");
-	sessionStorage.setItem("caseManagement.forceTabAfterReload", "CASE");
-	sessionStorage.setItem("caseManagement.forceCaseSync", "true");
-	window.location.reload();
-};
+import supabase from "@/../config/supabase";
 
 /**
  * @typedef {(
@@ -65,14 +43,6 @@ const forceCaseTabReload = () => {
  *   | "community-information"
  *   | "assessment"
  *   | "recommendation"
- *   | "identifying-data2"
- *   | "family-composition2"
- *   | "victim-information2"
- *   | "presenting-problem2"
- *   | "background-information2"
- *   | "community-information2"
- *   | "assessment2"
- *   | "recommendation2"
  * )} CaseEditTabId
  */
 
@@ -85,15 +55,51 @@ const tabOrder = [
 	"community-information",
 	"assessment",
 	"recommendation",
-	"identifying-data2",
-	"family-composition2",
-	"victim-information2",
-	"presenting-problem2",
-	"background-information2",
-	"community-information2",
-	"assessment2",
-	"recommendation2",
 ];
+
+// Keep Case writes aligned with the current public.case schema.
+const CASE_TABLE_COLUMNS = new Set([
+	"case_manager",
+	"status",
+	"priority",
+	"identifying_intake_date",
+	"identifying_name",
+	"identifying_referral_source",
+	"identifying_alias",
+	"identifying_age",
+	"identifying_status",
+	"identifying_occupation",
+	"identifying_income",
+	"identifying_sex",
+	"identifying_address",
+	"identifying_case_type",
+	"identifying_religion",
+	"identifying_educational_attainment",
+	"identifying_contact_person",
+	"identifying_birth_place",
+	"identifying_respondent_name",
+	"identifying_birthday",
+	"perpetrator_name",
+	"perpetrator_age",
+	"perpetrator_alias",
+	"perpetrator_sex",
+	"perpetrator_address",
+	"perpetrator_victim_relation",
+	"perpetrator_offence_type",
+	"perpetrator_commission_datetime",
+	"presenting_problem",
+	"background_info",
+	"community_info",
+	"assessment",
+	"recommendation",
+]);
+
+const toCaseTablePayload = (payload) =>
+	Object.fromEntries(
+		Object.entries(payload).filter(([column]) =>
+			CASE_TABLE_COLUMNS.has(column),
+		),
+	);
 
 /**
  * @typedef {Object} IntakeSheetCaseEditProps
@@ -166,9 +172,6 @@ export default function IntakeSheetCaseEdit({
 		}
 		return "";
 	};
-
-	// Distinguish Part 2 family members with a stable group offset
-	const PART2_GROUP_BASE = 2000;
 
 	/**
 	 * Prefills `useIntakeFormStore` from the selected row.
@@ -252,17 +255,13 @@ export default function IntakeSheetCaseEdit({
 				recommendation: row.recommendation || "",
 			});
 
-			// Family members: split into Part 1 and Part 2 using group_no offset
+			// Family members
 			if (
 				Array.isArray(row.family_members) &&
 				row.family_members.length
 			) {
-				const part1 = [];
-				const part2 = [];
-				for (const fm of row.family_members) {
-					const base = Number(fm.group_no) || 0;
-					const target = base >= PART2_GROUP_BASE ? part2 : part1;
-					target.push({
+				setSectionField("FamilyData", {
+					members: row.family_members.map((fm) => ({
 						name: fm.name || "",
 						age: fm.age || "",
 						relation: fm.relation || "",
@@ -270,71 +269,9 @@ export default function IntakeSheetCaseEdit({
 						education: fm.education || "",
 						occupation: fm.occupation || "",
 						income: fm.income || "",
-					});
-				}
-				setSectionField("FamilyData", { members: part1 });
-				setSectionField("FamilyData2", { members: part2 });
+					})),
+				});
 			}
-
-			// Part 2: Identifying2
-			setSectionField("IdentifyingData2", {
-				intakeDate: toLocalDate(row.identifying2_intake_date),
-				name: row.identifying2_name || undefined,
-				referralSource: row.identifying2_referral_source || undefined,
-				alias: row.identifying2_alias || undefined,
-				age: row.identifying2_age || undefined,
-				status: (row.identifying2_status ?? undefined)
-					?.toString?.()
-					.toLowerCase?.(),
-				occupation: row.identifying2_occupation || undefined,
-				income: row.identifying2_income || undefined,
-				sex: (row.identifying2_sex ?? undefined)
-					?.toString?.()
-					.toLowerCase?.(),
-				address: row.identifying2_address || undefined,
-				caseType: row.identifying2_case_type || undefined,
-				religion: row.identifying2_religion || undefined,
-				educationalAttainment:
-					row.identifying2_educational_attainment || undefined,
-				contactPerson: row.identifying2_contact_person || undefined,
-				birthday: toLocalDate(row.identifying2_birthday),
-				birthPlace: row.identifying2_birth_place || undefined,
-				respondentName: row.identifying2_respondent_name || undefined,
-			});
-
-			// Part 2: Victim2
-			setSectionField("VictimInfo2", {
-				name: row.victim2_name || undefined,
-				age: row.victim2_age || undefined,
-				alias: row.victim2_alias || undefined,
-				sex: row.victim2_sex || undefined,
-				address: row.victim2_address || undefined,
-				victimRelation: row.victim2_victim_relation || undefined,
-				offenceType: row.victim2_offence_type || undefined,
-				commissionDateTime: toLocalDateTime(
-					row.victim2_commission_datetime,
-				),
-			});
-
-			// Part 2: Narratives
-			setSectionField("PresentingProblem2", {
-				presentingProblem: row.presenting_problem2 || "",
-			});
-			setSectionField("BackgroundInfo2", {
-				backgroundInfo: row.background_info2 || "",
-			});
-			setSectionField("CommunityInfo2", {
-				communityInfo: row.community_info2 || "",
-			});
-			setSectionField("Assessment2", {
-				assessment: row.assessment2 || "",
-			});
-			setSectionField("Recommendation2", {
-				recommendation: row.recommendation2 || "",
-			});
-
-			// If you maintain separate second-group family members in the future,
-			// setSectionField("FamilyData2", { members: [...] });
 
 			setPrefilled(true);
 		} catch (e) {
@@ -378,7 +315,7 @@ export default function IntakeSheetCaseEdit({
 	};
 
 	/**
-	 * Queues an update for the current record via the offline service.
+	 * Updates the current case record and related family-member rows in Supabase.
 	 * @returns {Promise<void>}
 	 */
 	const handleUpdate = async () => {
@@ -400,35 +337,13 @@ export default function IntakeSheetCaseEdit({
 			const recommendation = all.Recommendation || {};
 			const caseDetails = all.caseDetails || {};
 
-			// Part 2 data
-			const identifying2 = all.IdentifyingData2 || {};
-			const familyData2 = all.FamilyData2 || {};
-			const victim2 = all.VictimInfo2 || {};
-			const problem2 = all.PresentingProblem2 || {};
-			const background2 = all.BackgroundInfo2 || {};
-			const community2 = all.CommunityInfo2 || {};
-			const assessment2 = all.Assessment2 || {};
-			const recommendation2 = all.Recommendation2 || {};
-
 			// Extract family members
-			const members1 = Array.isArray(familyData?.members)
-				? familyData.members
-				: [];
-			const members2 = Array.isArray(familyData2?.members)
-				? familyData2.members
-				: [];
-
-			// Merge with proper group_no offset
-			const familyMembers = [
-				...members1.map((m, idx) => ({
-					...m,
+			const familyMembers = Array.isArray(familyData?.members)
+				? familyData.members.map((member, idx) => ({
+					...member,
 					group_no: idx + 1,
-				})),
-				...members2.map((m, idx) => ({
-					...m,
-					group_no: PART2_GROUP_BASE + idx + 1,
-				})),
-			];
+				}))
+				: [];
 
 			// Build case payload
 			const casePayload = {
@@ -505,89 +420,43 @@ export default function IntakeSheetCaseEdit({
 					pick(community, "communityInfo", "community") ?? null,
 				assessment: pick(assessment, "assessment") ?? null,
 				recommendation: pick(recommendation, "recommendation") ?? null,
-
-				// Part 2 - Identifying data
-				identifying2_intake_date:
-					normalizeDate(
-						pick(identifying2, "intakeDate", "intake_date"),
-					) ?? null,
-				identifying2_name:
-					pick(identifying2, "name", "fullName") ?? null,
-				identifying2_referral_source:
-					pick(identifying2, "referralSource", "referral_source") ??
-					null,
-				identifying2_alias: pick(identifying2, "alias") ?? null,
-				identifying2_age: pick(identifying2, "age") ?? null,
-				identifying2_status:
-					pick(identifying2, "civilStatus", "status") ?? null,
-				identifying2_occupation:
-					pick(identifying2, "occupation") ?? null,
-				identifying2_income: pick(identifying2, "income") ?? null,
-				identifying2_sex: pick(identifying2, "sex") ?? null,
-				identifying2_address: pick(identifying2, "address") ?? null,
-				identifying2_case_type:
-					pick(identifying2, "caseType", "case_type") ?? null,
-				identifying2_religion: pick(identifying2, "religion") ?? null,
-				identifying2_educational_attainment:
-					pick(
-						identifying2,
-						"educationalAttainment",
-						"educational_attainment",
-					) ?? null,
-				identifying2_contact_person:
-					pick(identifying2, "contactPerson", "contact_person") ??
-					null,
-				identifying2_birth_place:
-					pick(identifying2, "birthPlace", "birth_place") ?? null,
-				identifying2_respondent_name:
-					pick(identifying2, "respondentName", "respondent_name") ??
-					null,
-				identifying2_birthday:
-					normalizeDate(
-						pick(identifying2, "birthday", "birth_date"),
-					) ?? null,
-
-				// Part 2 - Victim data
-				victim2_name: pick(victim2, "name") ?? null,
-				victim2_age: pick(victim2, "age") ?? null,
-				victim2_alias: pick(victim2, "alias") ?? null,
-				victim2_sex: pick(victim2, "sex") ?? null,
-				victim2_address: pick(victim2, "address") ?? null,
-				victim2_victim_relation:
-					pick(victim2, "victimRelation", "victim_relation") ?? null,
-				victim2_offence_type:
-					pick(victim2, "offenceType", "offence_type") ?? null,
-				victim2_commission_datetime:
-					normalizeDate(
-						pick(
-							victim2,
-							"commissionDatetime",
-							"commission_datetime",
-						),
-					) ?? null,
-
-				// Part 2 - Problems/Assessment/Recommendation
-				presenting_problem2:
-					pick(problem2, "problem", "presentingProblem") ?? null,
-				background_info2:
-					pick(background2, "backgroundInfo", "background") ?? null,
-				community_info2:
-					pick(community2, "communityInfo", "community") ?? null,
-				assessment2: pick(assessment2, "assessment") ?? null,
-				recommendation2:
-					pick(recommendation2, "recommendation") ?? null,
 			};
 
-			console.log("💾 Final update payload:", casePayload);
+			const casePayloadForUpdate = toCaseTablePayload(casePayload);
+
+			console.log("💾 Final update payload:", casePayloadForUpdate);
 			console.log("👨‍👩‍👧‍👦 Family members:", familyMembers);
 
-			await createOrUpdateLocalCase({
-				casePayload,
-				familyMembers,
-				targetId: row.id,
-				localId: row.localId,
-				mode: "update",
-			});
+			const { error: updateError } = await supabase
+				.from("case")
+				.update(casePayloadForUpdate)
+				.eq("id", row.id);
+			if (updateError) throw updateError;
+
+			const { error: deleteFamilyError } = await supabase
+				.from("case_family_member")
+				.delete()
+				.eq("case_id", row.id);
+			if (deleteFamilyError) throw deleteFamilyError;
+
+			if (familyMembers.length > 0) {
+				const familyRows = familyMembers.map((member, index) => ({
+					case_id: row.id,
+					group_no: member?.group_no || index + 1,
+					name: member?.name || null,
+					age: member?.age || null,
+					relation: member?.relation || null,
+					status: member?.status || null,
+					education: member?.education || null,
+					occupation: member?.occupation || null,
+					income: member?.income || null,
+				}));
+
+				const { error: familyInsertError } = await supabase
+					.from("case_family_member")
+					.insert(familyRows);
+				if (familyInsertError) throw familyInsertError;
+			}
 
 			// Done - close modal and clean up
 			resetAll();
@@ -605,16 +474,9 @@ export default function IntakeSheetCaseEdit({
 				}
 			}
 
-			const online = isBrowserOnline();
-			toast.success(online ? "Case Updated" : "Case Updated Offline", {
-				description: online
-					? "Case was updated and will sync shortly."
-					: "Changes were stored locally and will sync once you're reconnected.",
+			toast.success("Case Updated", {
+				description: "Changes were saved successfully.",
 			});
-
-			if (online) {
-				setTimeout(forceCaseTabReload, 0);
-			}
 		} catch (e) {
 			console.error("Failed to update case record:", e);
 			toast.error("Update Failed", {
@@ -805,76 +667,10 @@ export default function IntakeSheetCaseEdit({
 									sectionKey="Recommendation"
 									goNext={goNext}
 									goBack={goBack}
-									isEditMode={true}
-								/>
-							</TabsContent>
-
-							<TabsContent value="identifying-data2">
-								<IdentifyingDataForm
-									sectionKey="IdentifyingData2"
-									goNext={goNext}
-									goBack={goBack}
-								/>
-							</TabsContent>
-
-							<TabsContent value="family-composition2">
-								<FamilyCompositionForm
-									sectionKey="FamilyData2"
-									goNext={goNext}
-									goBack={goBack}
-								/>
-							</TabsContent>
-
-							<TabsContent value="victim-information2">
-								<PerpetratorInfoForm
-									sectionKey="VictimInfo2"
-									goNext={goNext}
-									goBack={goBack}
-								/>
-							</TabsContent>
-
-							<TabsContent value="presenting-problem2">
-								<ProblemForm
-									sectionKey="PresentingProblem2"
-									goNext={goNext}
-									goBack={goBack}
-								/>
-							</TabsContent>
-
-							<TabsContent value="background-information2">
-								<BackgroundInfoForm
-									sectionKey="BackgroundInfo2"
-									goNext={goNext}
-									goBack={goBack}
-								/>
-							</TabsContent>
-
-							<TabsContent value="community-information2">
-								<CommunityInfoForm
-									sectionKey="CommunityInfo2"
-									goNext={goNext}
-									goBack={goBack}
-								/>
-							</TabsContent>
-
-							<TabsContent value="assessment2">
-								<AssessmentForm
-									sectionKey="Assessment2"
-									goNext={goNext}
-									goBack={goBack}
-								/>
-							</TabsContent>
-
-							<TabsContent value="recommendation2">
-								<RecommendationForm
-									sectionKey="Recommendation2"
-									goNext={goNext}
-									goBack={goBack}
-									submitLabel="Update"
 									isSecond={true}
 									isEditMode={true}
-									onSuccess={onSuccess}
-									setOpen={onOpenChange}
+									submitLabel="Update"
+									submitDisabled={saving}
 								/>
 							</TabsContent>
 						</div>

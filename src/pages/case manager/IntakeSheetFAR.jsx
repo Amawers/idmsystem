@@ -3,13 +3,12 @@
  * FAR intake dialog.
  *
  * Responsibilities:
- * - Hydrate the intake store for edit mode (prefer offline cache when available).
- * - Build a submission payload and queue create/update via the FAR offline service.
- * - When online, trigger a one-time reload into the FAR tab to encourage immediate sync.
+ * - Hydrate the intake store for edit mode from the selected row and latest database data.
+ * - Build a submission payload and create/update records directly in Supabase.
+ * - Close the dialog and invoke `onSuccess` so the parent can refresh or reload data.
  *
  * Notes:
  * - Form state is persisted in `useIntakeFormStore` under `familyAssistanceRecord`.
- * - Tab forcing is coordinated via `sessionStorage` keys consumed by the case management page.
  */
 import { useState, useEffect } from "react";
 import {
@@ -21,33 +20,8 @@ import {
 import { FamilyAssistanceForm } from "@/components/intake sheet FAR/FamilyAssistanceForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { buildFARCasePayload } from "@/lib/farSubmission";
-import {
-	createOrUpdateLocalFarCase,
-	getFarCaseById,
-	getFarCaseByLocalId,
-} from "@/services/farOfflineService";
 import { toast } from "sonner";
-
-/**
- * Safe online check for browser-like environments.
- * @returns {boolean} True when the browser reports connectivity, otherwise true by default.
- */
-const isBrowserOnline = () =>
-	typeof navigator !== "undefined" ? navigator.onLine : true;
-
-/**
- * Forces the Case Management view to reopen on the FAR tab.
- *
- * Used after queuing a create/update while online so the FAR list can refresh/sync.
- * @returns {void}
- */
-const forceFarTabReload = () => {
-	if (typeof window === "undefined") return;
-	sessionStorage.setItem("caseManagement.activeTab", "FAR");
-	sessionStorage.setItem("caseManagement.forceTabAfterReload", "FAR");
-	sessionStorage.setItem("caseManagement.forceFarSync", "true");
-	window.location.reload();
-};
+import supabase from "@/../config/supabase";
 
 /**
  * @typedef {Object} FarCaseDetails
@@ -79,7 +53,7 @@ const forceFarTabReload = () => {
  * @property {boolean} open
  * @property {(open: boolean) => void} setOpen
  * @property {() => void} [onSuccess]
- * @property {any} [editingRecord] Record to edit; may be a remote row or offline cached row.
+ * @property {any} [editingRecord] Record to edit; typically a selected table row.
  */
 
 /**
@@ -99,8 +73,8 @@ export default function IntakeSheetFAR({
 	/**
 	 * Hydrates `useIntakeFormStore` for edit mode.
 	 *
-	 * Prefers offline cache when `editingRecord.localId` is available; otherwise uses cached
-	 * remote record when `editingRecord.id` exists.
+	 * Fetches latest remote values when `editingRecord.id` exists; otherwise uses the
+	 * provided row snapshot.
 	 * @returns {void}
 	 */
 	useEffect(() => {
@@ -116,14 +90,14 @@ export default function IntakeSheetFAR({
 			console.log("🔄 Pre-filling FAR form with:", editingRecord);
 			try {
 				let sourceRecord = editingRecord;
-				if (editingRecord?.localId != null) {
-					const local = await getFarCaseByLocalId(
-						editingRecord.localId,
-					);
-					if (local) sourceRecord = local;
-				} else if (editingRecord?.id) {
-					const cached = await getFarCaseById(editingRecord.id);
-					if (cached) sourceRecord = cached;
+				if (editingRecord?.id) {
+					const { data, error } = await supabase
+						.from("far_case")
+						.select("*")
+						.eq("id", editingRecord.id)
+						.single();
+					if (error) throw error;
+					if (data) sourceRecord = data;
 				}
 
 				if (!isActive) return;
@@ -167,12 +141,11 @@ export default function IntakeSheetFAR({
 	}, [open, editingRecord, resetAll, setSectionField]);
 
 	/**
-	 * Queues a FAR create/update.
+	 * Creates or updates a FAR record directly in Supabase.
 	 *
 	 * Flow:
 	 * - Build payload from intake store snapshot.
-	 * - Write to offline queue (and local cache) via `createOrUpdateLocalFarCase`.
-	 * - When online, force a one-time reload into the FAR tab to pick up sync.
+	 * - Submit with `insert` for create and `update` for edit.
 	 * @returns {Promise<void>}
 	 */
 	const handleSubmit = async () => {
@@ -183,33 +156,33 @@ export default function IntakeSheetFAR({
 			console.log("🔍 Full FAR intake data:", allData);
 
 			const casePayload = buildFARCasePayload(allData);
-			await createOrUpdateLocalFarCase({
-				casePayload,
-				targetId: editingRecord?.id ?? null,
-				localId: editingRecord?.localId ?? null,
-				mode: isEditMode ? "update" : "create",
-			});
 
-			const online = isBrowserOnline();
-			toast.success(
-				isEditMode
-					? "Family Assistance Record saved"
-					: "Family Assistance Record queued",
-				{
-					description: online
-						? "Sync queued and will push shortly."
-						: "Stored locally. Sync once you're online.",
-				},
-			);
+			if (isEditMode && editingRecord?.id) {
+				const { error } = await supabase
+					.from("far_case")
+					.update(casePayload)
+					.eq("id", editingRecord.id);
+				if (error) throw error;
+
+				toast.success("Family Assistance Record updated", {
+					description:
+						"Changes were saved successfully.",
+				});
+			} else {
+				const { error } = await supabase
+					.from("far_case")
+					.insert([casePayload]);
+				if (error) throw error;
+
+				toast.success("Family Assistance Record created", {
+					description: "Record saved successfully.",
+				});
+			}
 
 			resetAll();
 			setOpen(false);
 			if (onSuccess) {
 				onSuccess();
-			}
-
-			if (online) {
-				setTimeout(forceFarTabReload, 0);
 			}
 		} catch (err) {
 			console.error("❌ Unexpected error:", err);

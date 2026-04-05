@@ -5,12 +5,8 @@
  *
  * Responsibilities:
  * - Collect multi-step intake data across tabs and build a case payload.
- * - Stage the case locally via the offline service, then optionally trigger a sync flow.
+ * - Create/update records directly in Supabase.
  * - Reset both local form state and the shared intake store when closing.
- *
- * Notes:
- * - When saving while online, this view triggers a reload with sessionStorage flags to
- *   restore the Case Management tab context and prompt syncing.
  */
 
 import { useState, useEffect } from "react";
@@ -37,7 +33,7 @@ import { FamilyCompositionForm } from "@/components/intake sheet SP/FamilyCompos
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import { useCaseManagerStore } from "@/store/useCaseManagerStore";
 import { buildSPCasePayload } from "@/lib/spSubmission";
-import { createOrUpdateLocalSpCase } from "@/services/spOfflineService";
+import supabase from "@/../config/supabase";
 
 /**
  * @typedef {Object} IntakeSheetSpProps
@@ -153,27 +149,6 @@ const mapRecordToSpFormState = (record) => {
 };
 
 /**
- * Read the browser's online state.
- * @returns {boolean}
- */
-const isBrowserOnline = () =>
-	typeof navigator !== "undefined" ? navigator.onLine : true;
-
-/**
- * Force the Case Management UI back to the SP tab after save.
- *
- * Uses sessionStorage flags + reload to reset downstream hook state and encourage a sync.
- * @returns {void}
- */
-const forceSpTabReload = () => {
-	if (typeof window === "undefined") return;
-	sessionStorage.setItem("caseManagement.activeTab", "SP");
-	sessionStorage.setItem("caseManagement.forceTabAfterReload", "SP");
-	sessionStorage.setItem("caseManagement.forceSpSync", "true");
-	window.location.reload();
-};
-
-/**
  * SP intake dialog.
  * @param {IntakeSheetSpProps} props
  * @returns {JSX.Element}
@@ -242,7 +217,7 @@ export default function IntakeSheetSP({
 	};
 
 	/**
-	 * Build and stage the SP case locally, then optionally trigger a sync flow.
+	 * Creates or updates an SP case directly in Supabase.
 	 * @param {import("react").FormEvent} event
 	 * @returns {Promise<void>}
 	 */
@@ -251,32 +226,32 @@ export default function IntakeSheetSP({
 		setIsSubmitting(true);
 		try {
 			const casePayload = buildSPCasePayload(formState, intakeData);
-			await createOrUpdateLocalSpCase({
-				casePayload,
-				targetId: isEditMode ? (editingRecord?.id ?? null) : null,
-				localId: isEditMode ? (editingRecord?.localId ?? null) : null,
-				mode: isEditMode ? "update" : "create",
-			});
 
-			const online = isBrowserOnline();
-			toast.success(
-				isEditMode
-					? "Single Parent case update queued"
-					: "Single Parent case queued",
-				{
-					description: online
-						? "Sync queued and will push shortly."
-						: "Stored locally. Sync once you're online.",
-				},
-			);
+			if (isEditMode && editingRecord?.id) {
+				const { error } = await supabase
+					.from("sp_case")
+					.update(casePayload)
+					.eq("id", editingRecord.id);
+				if (error) throw error;
+
+				toast.success("Single Parent case updated", {
+					description:
+						"Changes were saved successfully.",
+				});
+			} else {
+				const { error } = await supabase
+					.from("sp_case")
+					.insert([casePayload]);
+				if (error) throw error;
+
+				toast.success("Single Parent case created", {
+					description: "Record saved successfully.",
+				});
+			}
 
 			resetAll();
 			setOpen(false);
 			onSuccess?.();
-
-			if (online) {
-				setTimeout(forceSpTabReload, 0);
-			}
 		} catch (err) {
 			toast.error("Save failed", {
 				description: err?.message || "Please try again.",

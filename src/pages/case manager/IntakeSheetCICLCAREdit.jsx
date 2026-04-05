@@ -5,13 +5,12 @@
  * Responsibilities:
  * - Hydrate `useIntakeFormStore` from the provided row (and related rows when online).
  * - Normalize mixed naming/date formats to what form controls expect.
- * - Queue create/update via the offline service, then optionally force a tab reload to
- *   encourage immediate sync when online.
+ * - Create/update records directly in Supabase.
+ * - Close the dialog and invoke `onSuccess` so the parent can refresh or reload data.
  *
  * Notes:
  * - This file contains defensive mapping (`pick`, date normalizers) to support legacy field
- *   names and different record shapes coming from offline cache vs. remote.
- * - Tab forcing is coordinated via `sessionStorage` keys consumed by the case management page.
+ *   names and different record shapes coming from table rows vs. fetched records.
  */
 import { useState, useEffect } from "react";
 import {
@@ -32,28 +31,6 @@ import { ReferralForm } from "@/components/intake sheet CICLCAR/ReferralForm";
 import { useIntakeFormStore } from "@/store/useIntakeFormStore";
 import supabase from "@/../config/supabase";
 import { toast } from "sonner";
-import { createOrUpdateLocalCase } from "@/services/ciclcarOfflineService";
-
-/**
- * Safe online check for browser-like environments.
- * @returns {boolean} True when the browser reports connectivity, otherwise true by default.
- */
-const isBrowserOnline = () =>
-	typeof navigator !== "undefined" ? navigator.onLine : true;
-
-/**
- * Forces the Case Management view to reopen on the CICLCAR tab.
- *
- * Used after queuing an update while online so the list can refresh/sync.
- * @returns {void}
- */
-const forceCiclcarTabReload = () => {
-	if (typeof window === "undefined") return;
-	sessionStorage.setItem("caseManagement.activeTab", "CICLCAR");
-	sessionStorage.setItem("caseManagement.forceTabAfterReload", "CICLCAR");
-	sessionStorage.setItem("caseManagement.forceCiclcarSync", "true");
-	window.location.reload();
-};
 
 /**
  * Picks the first non-empty value from `obj` by key.
@@ -267,7 +244,7 @@ export default function IntakeSheetCICLCAREdit({
 						return;
 					}
 
-					if (!isBrowserOnline() || !row.id) return;
+					if (!row.id) return;
 
 					const { data, error } = await supabase
 						.from("ciclcar_family_background")
@@ -308,7 +285,7 @@ export default function IntakeSheetCICLCAREdit({
 	}, [open, row, setSectionField]);
 
 	/**
-	 * Queues create/update of the CICL/CAR case and related family background rows.
+	 * Creates/updates the CICL/CAR case and related family background rows.
 	 *
 	 * Uses defensive mapping to support older section keys (`referal`) and mixed field naming.
 	 * @returns {Promise<void>}
@@ -488,13 +465,56 @@ export default function IntakeSheetCICLCAREdit({
 
 			console.log("💾 Final case payload:", casePayload);
 
-			await createOrUpdateLocalCase({
-				casePayload,
-				familyMembers: familyRows,
-				targetId: row?.id ?? null,
-				localId: row?.localId ?? null,
-				mode: isEditing ? "update" : "create",
-			});
+			let targetCaseId = row?.id ?? null;
+
+			if (isEditing && targetCaseId) {
+				const { error: updateError } = await supabase
+					.from("ciclcar_case")
+					.update(casePayload)
+					.eq("id", targetCaseId);
+				if (updateError) throw updateError;
+
+				const { error: deleteFamilyError } = await supabase
+					.from("ciclcar_family_background")
+					.delete()
+					.eq("ciclcar_case_id", targetCaseId);
+				if (deleteFamilyError) throw deleteFamilyError;
+			} else {
+				const { data: createdCase, error: createError } = await supabase
+					.from("ciclcar_case")
+					.insert([casePayload])
+					.select("id")
+					.single();
+				if (createError) throw createError;
+				targetCaseId = createdCase?.id ?? null;
+			}
+
+			if (targetCaseId && familyRows.length > 0) {
+				const normalizedFamilyRows = familyRows.map((member) => ({
+					ciclcar_case_id: targetCaseId,
+					name: pick(member, "name") ?? null,
+					relationship:
+						pick(member, "relationship", "relation") ?? null,
+					age: pick(member, "age") ?? null,
+					sex: pick(member, "sex") ?? null,
+					status: pick(member, "status") ?? null,
+					contact_number:
+						pick(member, "contactNumber", "contact_number") ?? null,
+					educational_attainment:
+						pick(
+							member,
+							"educationalAttainment",
+							"educational_attainment",
+						) ?? null,
+					employment:
+						pick(member, "employment", "occupation") ?? null,
+				}));
+
+				const { error: familyError } = await supabase
+					.from("ciclcar_family_background")
+					.insert(normalizedFamilyRows);
+				if (familyError) throw familyError;
+			}
 
 			// Done - close modal and clean up
 			resetAll();
@@ -512,16 +532,9 @@ export default function IntakeSheetCICLCAREdit({
 				}
 			}
 
-			const online = isBrowserOnline();
 			toast.success(isEditing ? "Changes Saved" : "Case Saved", {
-				description: online
-					? "Sync queued. Remote data will update shortly."
-					: "Changes stored locally and will sync once reconnected.",
+				description: "Changes were saved successfully.",
 			});
-
-			if (online) {
-				setTimeout(forceCiclcarTabReload, 0);
-			}
 		} catch (err) {
 			console.error("Failed to create/update CICL/CAR record:", err);
 			toast.error(isEditing ? "Update Failed" : "Creation Failed", {
