@@ -29,6 +29,7 @@ import {
 } from "lucide-react";
 import { useAuditLogs } from "@/hooks/useAuditLogs";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { triggerFullPageReload } from "@/lib/fullPageReload";
 import { AUDIT_CATEGORIES, AUDIT_SEVERITY } from "@/lib/auditLog";
 import {
 	Table,
@@ -115,7 +116,7 @@ export default function AuditTrail() {
 	const [showStats, setShowStats] = useState(true);
 
 	// Load audit logs with server-side filtering + pagination.
-	const { data, count, loading, error, reload, setFilters } =
+	const { data, count, loading, error, setFilters } =
 		useAuditLogs(filterState);
 
 	// Online/offline state is shared across pages.
@@ -389,7 +390,7 @@ export default function AuditTrail() {
 					<Button
 						variant="outline"
 						size="sm"
-						onClick={reload}
+						onClick={triggerFullPageReload}
 						disabled={loading}
 					>
 						<RefreshCw

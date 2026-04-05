@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { useCaseWorkload } from "@/hooks/useCaseWorkload";
+import { triggerFullPageReload } from "@/lib/fullPageReload";
 
 function StaffAvailabilityCard({ staff }) {
   const getAvailabilityColor = (status) => {
@@ -93,7 +94,6 @@ export default function StaffDeploymentManager() {
     data: caseWorkloadData, 
     loading: workloadLoading, 
     error: workloadError,
-    reload: reloadWorkload,
     lastSyncedDisplay,
     syncStatus,
   } = useCaseWorkload();
@@ -132,7 +132,7 @@ export default function StaffDeploymentManager() {
   }, [caseWorkloadData]);
 
   const handleRefresh = () => {
-    reloadWorkload();
+    triggerFullPageReload();
   };
 
   return (

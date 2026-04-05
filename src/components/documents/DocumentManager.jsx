@@ -44,6 +44,7 @@ import {
 	AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { triggerFullPageReload } from "@/lib/fullPageReload";
 import {
 	createDocumentSignedUrl,
 	deleteDocument,
@@ -211,7 +212,7 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 					</PermissionGuard>
 					<Button
 						variant="outline"
-						onClick={reload}
+						onClick={triggerFullPageReload}
 						disabled={loading}
 					>
 						Refresh

@@ -79,6 +79,7 @@ import PermissionGuard from "@/components/PermissionGuard";
 import { useResourceStore } from "@/store/useResourceStore";
 import { useAuthStore } from "@/store/authStore";
 import { useInventory } from "@/hooks/useInventory";
+import { triggerFullPageReload } from "@/lib/fullPageReload";
 import RequestSubmissionDialog from "./RequestSubmissionDialog";
 
 /**
@@ -716,8 +717,7 @@ export default function StockManagement() {
 
   const handleRefresh = () => {
     setIsRefreshing(true);
-    if (typeof window !== "undefined") {
-      window.location.reload();
+    if (triggerFullPageReload()) {
       return;
     }
     setIsRefreshing(false);
@@ -765,7 +765,6 @@ export default function StockManagement() {
     try {
       await submitRequest(requestData);
       setShowRequestDialog(false);
-      refreshInventory();
     } catch (error) {
       console.error("Failed to submit request:", error);
       // Show error details to help diagnose the issue

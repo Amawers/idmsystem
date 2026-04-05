@@ -54,6 +54,7 @@ import {
 import { useAuthStore } from "@/store/authStore";
 import { useResourceApprovals } from "@/hooks/useResourceApprovals";
 import { useInventory } from "@/hooks/useInventory";
+import { triggerFullPageReload } from "@/lib/fullPageReload";
 import RequestSubmissionDialog from "./RequestSubmissionDialog";
 import PermissionGuard from "@/components/PermissionGuard";
 
@@ -297,21 +298,16 @@ export default function ApprovalWorkflowManager() {
     requests,
     submitRequest,
     updateRequestStatus,
-    refreshRequests,
     loading,
   } = useResourceApprovals();
   const { updateStock } = useInventory();
   const { role } = useAuthStore();
   const canSubmitResourceRequest = role === "social_worker";
 
-  // Handle refresh
-  const handleRefresh = async () => {
+  // Trigger a full page reload for a clean state reset.
+  const handleRefresh = () => {
     setIsRefreshing(true);
-    try {
-      await refreshRequests();
-    } catch (error) {
-      console.error("Error refreshing requests:", error);
-    } finally {
+    if (!triggerFullPageReload()) {
       setIsRefreshing(false);
     }
   };

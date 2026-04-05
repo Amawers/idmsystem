@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { usePrograms } from "@/hooks/usePrograms";
 import { useResourceAllocations } from "@/hooks/useResourceAllocations";
+import { triggerFullPageReload } from "@/lib/fullPageReload";
 
 /**
  * Get status icon and styling based on program status
@@ -171,25 +172,17 @@ function ProgramCard({ program, allocations }) {
 
 export default function ProgramAllocationTracker() {
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const { programs, loading: programsLoading, fetchPrograms } = usePrograms({ status: 'active' });
-  const { allocations, loading: allocationsLoading, refresh: refreshAllocations } = useResourceAllocations();
+  const { programs, loading: programsLoading } = usePrograms({ status: 'active' });
+  const { allocations, loading: allocationsLoading } = useResourceAllocations();
   
   const loading = programsLoading || allocationsLoading;
 
   /**
-   * Handle manual refresh of programs and allocations data
-   * @async
+   * Trigger a full page reload for a clean state reset.
    */
-  const handleRefresh = async () => {
+  const handleRefresh = () => {
     setIsRefreshing(true);
-    try {
-      await Promise.all([
-        fetchPrograms(),
-        refreshAllocations ? refreshAllocations() : Promise.resolve()
-      ]);
-    } catch (error) {
-      console.error("Error refreshing data:", error);
-    } finally {
+    if (!triggerFullPageReload()) {
       setIsRefreshing(false);
     }
   };

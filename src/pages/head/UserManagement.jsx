@@ -14,6 +14,7 @@
 import { useEffect, useState } from "react";
 import { useUserManagementStore } from "@/store/useUserManagementStore";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { triggerFullPageReload } from "@/lib/fullPageReload";
 import { CreateUserDialog } from "@/components/user-management/CreateUserDialog";
 import { EditUserDialog } from "@/components/user-management/EditUserDialog";
 import { BanUserDialog } from "@/components/user-management/BanUserDialog";
@@ -326,7 +327,7 @@ export default function UserManagement() {
 
 						<Button
 							variant="outline"
-							onClick={() => fetchUsers()}
+							onClick={triggerFullPageReload}
 							disabled={loading}
 						>
 							{loading ? (

@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { useResourceStore } from "@/store/useResourceStore";
 import { usePrograms } from "@/hooks/usePrograms";
+import { triggerFullPageReload } from "@/lib/fullPageReload";
 import supabase from "@/../config/supabase";
 
 /**
@@ -305,7 +306,6 @@ function SuppliesInventory({ inventoryItems, loading }) {
  */
 export default function RealTimeInventoryDashboard() {
   const [lastUpdate, setLastUpdate] = useState(new Date());
-  const [autoRefresh] = useState(true);
   const [staffAssignments, setStaffAssignments] = useState([]);
   const [staffLoading, setStaffLoading] = useState(false);
 
@@ -389,23 +389,8 @@ export default function RealTimeInventoryDashboard() {
     return () => window.removeEventListener('online', onOnline);
   }, [fetchInventory, fetchPrograms, fetchStaffAssignments]);
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    if (!autoRefresh) return;
-
-    const interval = setInterval(() => {
-      fetchInventory();
-      fetchStaffAssignments();
-      setLastUpdate(new Date());
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [autoRefresh, fetchInventory, fetchStaffAssignments]);
-
   const handleRefresh = () => {
-    fetchInventory();
-    fetchStaffAssignments();
-    setLastUpdate(new Date());
+    triggerFullPageReload();
   };
 
   const loading = inventoryLoading || programsLoading || staffLoading;

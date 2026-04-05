@@ -12,6 +12,7 @@ import React, { useState, useEffect } from "react";
 import supabase from "@/../config/supabase";
 import { useAuthStore } from "@/store/authStore";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { triggerFullPageReload } from "@/lib/fullPageReload";
 import {
 	createAuditLog,
 	AUDIT_ACTIONS,
@@ -113,13 +114,9 @@ export default function RolePermissions() {
 		loadUserPermissions();
 	}, [isOnline]);
 
-	const handleRefresh = async () => {
+	const handleRefresh = () => {
 		if (!isOnline) return;
-		await Promise.all([
-			loadPermissions(),
-			loadUsers(),
-			loadUserPermissions(),
-		]);
+		triggerFullPageReload();
 	};
 
 	/** Loads the canonical list of available permissions. */
