@@ -171,10 +171,30 @@ export function usePrograms(options = {}) {
 		setError(null);
 
 		const { user } = useAuthStore.getState();
+		let coordinatorId = programData.coordinator_id ?? user?.id ?? null;
+
+		if (coordinatorId) {
+			const { data: coordinatorProfile, error: profileError } = await supabase
+				.from("profile")
+				.select("id")
+				.eq("id", coordinatorId)
+				.maybeSingle();
+
+			if (profileError) {
+				setError(profileError);
+				throw profileError;
+			}
+
+			// Avoid FK violations when auth user exists but has no profile row.
+			if (!coordinatorProfile) {
+				coordinatorId = null;
+			}
+		}
+
 		const payload = normalizeProgramInput(
 			{
 				...programData,
-				coordinator_id: programData.coordinator_id ?? user?.id ?? null,
+				coordinator_id: coordinatorId,
 			},
 			{ mode: "create" },
 		);

@@ -15,7 +15,6 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useEnrollments } from "@/hooks/useEnrollments";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 import CreateEnrollmentDialog from "./CreateEnrollmentDialog";
 import UpdateEnrollmentDialog from "./UpdateEnrollmentDialog";
 import {
@@ -36,7 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, MoreHorizontal, Plus, Trash2, Edit, AlertCircle, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
+import { Search, Plus, Trash2, Edit, AlertCircle, ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import PermissionGuard from "@/components/PermissionGuard";
@@ -58,6 +57,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { PROGRAM_CASE_TYPE_OPTIONS } from "@/lib/programCaseTypes";
 
 const statusColors = {
   active: "bg-green-500",
@@ -92,9 +92,6 @@ export default function EnrollmentTable() {
   const [page, setPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  
-  // Network status
-  const isOnline = useNetworkStatus();
 
   // Read URL query parameters on mount
   useEffect(() => {
@@ -123,10 +120,6 @@ export default function EnrollmentTable() {
     error, 
     deleteEnrollment, 
     fetchEnrollments,
-    pendingCount,
-    syncing,
-    syncStatus,
-    runSync,
   } = useEnrollments(filterOptions);
 
   const filteredEnrollments = (enrollments || []).filter(
@@ -191,22 +184,10 @@ export default function EnrollmentTable() {
    * Handle refresh
    */
   const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      await fetchEnrollments();
-    } catch (error) {
-      console.error("Error refreshing enrollments:", error);
-    } finally {
-      setIsRefreshing(false);
+    if (typeof window !== "undefined") {
+      setIsRefreshing(true);
+      window.location.reload();
     }
-  };
-
-  /**
-   * Handle manual sync
-   */
-  const handleSync = async () => {
-    if (!isOnline || syncing || pendingCount === 0) return;
-    await runSync();
   };
 
   /**
@@ -323,18 +304,6 @@ export default function EnrollmentTable() {
                 <CardTitle className="text-base leading-tight">Program Enrollments</CardTitle>
                 <CardDescription className="text-xs leading-snug mt-0">Track case enrollment and progress in programs</CardDescription>
               </div>
-              {/* Offline Badge */}
-              {!isOnline && (
-                <Badge variant="destructive" className="h-6">
-                  Offline
-                </Badge>
-              )}
-              {/* Pending Changes Badge */}
-              {isOnline && pendingCount > 0 && (
-                <Badge variant="outline" className="h-6 border-amber-500 text-amber-700">
-                  {pendingCount} Pending
-                </Badge>
-              )}
             </div>
             <div className="flex gap-2">
               <Button 
@@ -347,17 +316,6 @@ export default function EnrollmentTable() {
                 <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 Refresh
               </Button>
-              {/* Sync Button */}
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={handleSync}
-                disabled={!isOnline || syncing || pendingCount === 0}
-                className="cursor-pointer"
-              >
-                <RefreshCw className={`mr-2 h-4 w-4 ${syncing ? 'animate-spin' : ''}`} />
-                Sync ({pendingCount})
-              </Button>
               <PermissionGuard permission="create_enrollment">
                 <Button onClick={() => setCreateDialogOpen(true)} className="cursor-pointer">
                   <Plus className="mr-2 h-4 w-4" />
@@ -366,16 +324,6 @@ export default function EnrollmentTable() {
               </PermissionGuard>
             </div>
           </div>
-          {/* Sync Status Message */}
-          {syncStatus && (
-            <div className="mt-2">
-              <Alert className={syncing ? "border-blue-500" : pendingCount > 0 ? "border-amber-500" : "border-green-500"}>
-                <AlertDescription className="text-xs">
-                  {syncStatus}
-                </AlertDescription>
-              </Alert>
-            </div>
-          )}
         </CardHeader>
         <CardContent>
           {/* Program Filter Badge - Show when filtering by program */}
@@ -416,11 +364,11 @@ export default function EnrollmentTable() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Case Types</SelectItem>
-                <SelectItem value="CICL/CAR">CICL/CAR</SelectItem>
-                <SelectItem value="VAC">VAC</SelectItem>
-                <SelectItem value="FAC">FAC</SelectItem>
-                <SelectItem value="FAR">FAR</SelectItem>
-                <SelectItem value="IVAC">IVAC</SelectItem>
+                {PROGRAM_CASE_TYPE_OPTIONS.map((caseType) => (
+                  <SelectItem key={caseType.value} value={caseType.value}>
+                    {caseType.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
 

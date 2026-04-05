@@ -9,8 +9,8 @@
  * - Partnership agreements
  */
 
-import { useState, useEffect, useRef } from "react";
-import { usePartners, PARTNERS_FORCE_SYNC_KEY } from "@/hooks/usePartners";
+import { useState, useEffect } from "react";
+import { usePartners } from "@/hooks/usePartners";
 import { ORGANIZATION_TYPES, SERVICE_TYPES } from "@/lib/partnerSubmission";
 import {
   Table,
@@ -49,15 +49,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Search, Plus, Building2, Phone, Mail, AlertCircle, Loader2, RefreshCw, Edit, AlertTriangle, ChevronLeft, ChevronRight, CloudUpload } from "lucide-react";
+import { Search, Plus, Building2, Phone, Mail, AlertCircle, Loader2, RefreshCw, Edit, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 import PermissionGuard from "@/components/PermissionGuard";
-import useNetworkStatus from "@/hooks/useNetworkStatus";
 
 /**
  * Partners Table Component
  * @returns {JSX.Element} Partners table
  */
-export default function PartnersTable({ autoSync = false, onAutoSyncHandled = () => {} }) {
+export default function PartnersTable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -92,50 +91,13 @@ export default function PartnersTable({ autoSync = false, onAutoSyncHandled = ()
     updatePartner,
     deletePartner,
     getMOUStatus,
-    fetchPartners,
-    pendingCount,
-    syncing,
-    syncStatus,
-    runSync,
-    offline,
   } = usePartners();
 
-  const isOnline = useNetworkStatus();
-  const runSyncRef = useRef(runSync);
-
-  useEffect(() => {
-    runSyncRef.current = runSync;
-  }, [runSync]);
-
-  useEffect(() => {
-    if (!autoSync) return;
-    if (!isOnline) {
-      onAutoSyncHandled?.();
-      return;
+  const performFullReload = () => {
+    if (typeof window !== "undefined") {
+      window.location.reload();
     }
-
-    let cancelled = false;
-
-    const syncAfterReload = async () => {
-      try {
-        await runSyncRef.current?.();
-      } catch (err) {
-        console.error("Automatic partners sync failed", err);
-      } finally {
-        if (!cancelled) {
-          onAutoSyncHandled?.();
-        }
-      }
-    };
-
-    syncAfterReload();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [autoSync, isOnline, onAutoSyncHandled]);
-
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  };
 
   const filteredPartners = (partners || []).filter((partner) => {
     const name = partner.organization_name ? partner.organization_name.toLowerCase() : "";
@@ -228,9 +190,8 @@ export default function PartnersTable({ autoSync = false, onAutoSyncHandled = ()
       // Submit to backend
       await createPartner(partnerData);
 
-      // Success - close dialog and reset
-      setIsAddDialogOpen(false);
-      resetForm();
+      // Force full reset to avoid stale Program Management state.
+      performFullReload();
     } catch (error) {
       console.error("Error creating partner:", error);
       setFormError(
@@ -269,12 +230,10 @@ export default function PartnersTable({ autoSync = false, onAutoSyncHandled = ()
       };
 
       // Update partner
-      await updatePartner(selectedPartner.id, updates, { localId: selectedPartner.localId });
+      await updatePartner(selectedPartner.id, updates);
 
-      // Success - close dialog and reset
-      setIsEditDialogOpen(false);
-      resetForm();
-      setSelectedPartner(null);
+      // Force full reset to avoid stale Program Management state.
+      performFullReload();
     } catch (error) {
       console.error("Error updating partner:", error);
       setFormError(
@@ -325,9 +284,10 @@ export default function PartnersTable({ autoSync = false, onAutoSyncHandled = ()
 
     setIsDeleting(true);
     try {
-      await deletePartner(selectedPartner.id, { localId: selectedPartner.localId });
-      setIsDeleteDialogOpen(false);
-      setSelectedPartner(null);
+      await deletePartner(selectedPartner.id);
+
+      // Force full reset to avoid stale Program Management state.
+      performFullReload();
     } catch (error) {
       console.error("Error deleting partner:", error);
       alert("Failed to delete partner. Please try again.");
@@ -338,20 +298,7 @@ export default function PartnersTable({ autoSync = false, onAutoSyncHandled = ()
 
   // Handle refresh
   const handleRefresh = async () => {
-    setIsRefreshing(true);
-    try {
-      if (typeof window !== "undefined") {
-        sessionStorage.setItem(PARTNERS_FORCE_SYNC_KEY, "true");
-        window.location.reload();
-        return;
-      }
-
-      await fetchPartners();
-    } catch (error) {
-      console.error("Error refreshing partners:", error);
-    } finally {
-      setIsRefreshing(false);
-    }
+    performFullReload();
   };
 
   if (loading) {
@@ -424,45 +371,16 @@ export default function PartnersTable({ autoSync = false, onAutoSyncHandled = ()
               <CardDescription>
                 Manage partner organizations and service providers
               </CardDescription>
-              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                {offline && (
-                  <Badge variant="outline" className="border-amber-300 bg-amber-50 text-amber-700">
-                    Offline data
-                  </Badge>
-                )}
-                {pendingCount > 0 && (
-                  <Badge variant="outline" className="border-dashed border-slate-300 text-slate-700">
-                    {pendingCount} pending changes
-                  </Badge>
-                )}
-                {syncStatus && (
-                  <span className="text-muted-foreground">{syncStatus}</span>
-                )}
-              </div>
             </div>
             <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant={pendingCount ? "default" : "outline"}
-                onClick={runSync}
-                disabled={syncing || pendingCount === 0}
-                className="cursor-pointer"
-              >
-                {syncing ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <CloudUpload className="mr-2 h-4 w-4" />
-                )}
-                {syncing ? "Syncing" : pendingCount ? `Sync ${pendingCount}` : "Sync"}
-              </Button>
               <Button 
                 size="sm" 
                 variant="outline"
                 onClick={handleRefresh}
-                disabled={isRefreshing || loading}
+                disabled={loading}
                 className="cursor-pointer"
               >
-                <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <RefreshCw className="mr-2 h-4 w-4" />
                 Refresh
               </Button>
               <PermissionGuard permission="create_partner">
@@ -519,21 +437,13 @@ export default function PartnersTable({ autoSync = false, onAutoSyncHandled = ()
                       : [];
                     const rowKey = partner.id ?? `local-${partner.localId ?? idx}`;
                     return (
-                      <TableRow
-                        key={rowKey}
-                        className={partner.hasPendingWrites ? "bg-amber-50/60" : undefined}
-                      >
+                      <TableRow key={rowKey}>
                         <TableCell className="font-medium">
                           <div className="flex items-center gap-2">
                             <Building2 className="h-4 w-4 text-muted-foreground" />
                             <div>
                               <div className="flex items-center gap-2">
                                 <span>{partner.organization_name || "Unnamed partner"}</span>
-                                {partner.hasPendingWrites && (
-                                  <Badge variant="outline" className="border-dashed text-amber-700">
-                                    Pending sync
-                                  </Badge>
-                                )}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {partner.organization_type || "N/A"}

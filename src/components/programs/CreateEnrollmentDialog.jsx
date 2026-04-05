@@ -11,13 +11,13 @@
  * - Auto-populate case details
  */
 
-import { useMemo, useState, useEffect } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import { useEnrollments } from "@/hooks/useEnrollments";
-import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import supabase from "@/../config/supabase";
 import {
-	getCachedCasesByType,
-	getCachedPrograms,
-} from "@/services/enrollmentOfflineService";
+	PROGRAM_CASE_TYPE_OPTIONS,
+	getProgramCaseTypeCandidates,
+} from "@/lib/programCaseTypes";
 import {
 	Dialog,
 	DialogContent,
@@ -39,7 +39,86 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2, AlertCircle, WifiOff } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
+
+const asString = (value) =>
+	typeof value === "string" ? value.trim() : "";
+
+const joinNameParts = (...parts) =>
+	parts
+		.map((part) => asString(part))
+		.filter(Boolean)
+		.join(" ")
+		.trim();
+
+const extractCaseManager = (caseItem) => {
+	if (asString(caseItem.case_manager)) {
+		return asString(caseItem.case_manager);
+	}
+
+	if (!Array.isArray(caseItem.case_managers)) {
+		return "Unassigned";
+	}
+
+	const managers = caseItem.case_managers
+		.map((entry) => {
+			if (typeof entry === "string") return asString(entry);
+			if (!entry || typeof entry !== "object") return "";
+			return (
+				asString(entry.name) ||
+				asString(entry.case_manager) ||
+				asString(entry.full_name)
+			);
+		})
+		.filter(Boolean);
+
+	return managers.length ? managers.join(", ") : "Unassigned";
+};
+
+const formatCasesForDisplay = (data, caseType) => {
+	return (data || []).map((caseItem) => {
+		let displayName = "";
+
+		if (caseType === "CICL/CAR") {
+			displayName = caseItem.profile_name || "Unknown";
+		} else if (caseType === "CASE") {
+			displayName = caseItem.identifying_name || "Unknown";
+		} else if (caseType === "FAC") {
+			displayName =
+				`${caseItem.head_first_name || ""} ${caseItem.head_last_name || ""}`.trim() ||
+				"Unknown";
+		} else if (caseType === "FAR") {
+			displayName = caseItem.receiving_member || "Unknown";
+		} else if (caseType === "IVAC") {
+			displayName = `IVAC - ${caseItem.reporting_period ? new Date(caseItem.reporting_period).toLocaleDateString() : "Unknown"}`;
+		} else if (caseType === "SP") {
+			displayName =
+				caseItem.full_name ||
+				joinNameParts(caseItem.first_name, caseItem.last_name) ||
+				"Unknown";
+		} else if (caseType === "FA") {
+			displayName =
+				caseItem.client_name ||
+				caseItem.benificiary_name ||
+				"Unknown";
+		} else if (caseType === "PWD") {
+			displayName =
+				joinNameParts(
+					caseItem.first_name,
+					caseItem.middle_name,
+					caseItem.last_name,
+				) || "Unknown";
+		} else if (caseType === "SC") {
+			displayName = caseItem.senior_name || "Unknown";
+		}
+
+		return {
+			...caseItem,
+			displayName,
+			case_manager: extractCaseManager(caseItem),
+		};
+	});
+};
 
 /**
  * Create Enrollment Dialog Component
@@ -55,12 +134,11 @@ export default function CreateEnrollmentDialog({
 	onSuccess,
 }) {
 	const { createEnrollment } = useEnrollments();
-	const isOnline = useNetworkStatus();
 
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 	const [searchingCase, setSearchingCase] = useState(false);
-	const [cachedPrograms, setCachedPrograms] = useState([]);
+	const [programs, setPrograms] = useState([]);
 	const [caseSearch, setCaseSearch] = useState("");
 	const [selectedCaseIds, setSelectedCaseIds] = useState([]);
 
@@ -88,17 +166,150 @@ export default function CreateEnrollmentDialog({
 		});
 	}, [cases, caseSearch]);
 
-	// Load programs from cache on dialog open (already pre-fetched by page)
+	/**
+	 * Load active programs from Supabase.
+	 */
+	const loadPrograms = useCallback(async () => {
+		try {
+			const { data, error: programsError } = await supabase
+				.from("programs")
+				.select(
+					"id, program_name, status, target_beneficiary, current_enrollment, capacity",
+				)
+				.eq("status", "active")
+				.order("created_at", { ascending: false });
+
+			if (programsError) throw programsError;
+			setPrograms(Array.isArray(data) ? data : []);
+		} catch (err) {
+			console.error("[Dialog] Error loading programs:", err);
+			setPrograms([]);
+			setError("Failed to load active programs. Please try again.");
+		}
+	}, []);
+
+	/**
+	 * Fetch cases directly from Supabase by case type.
+	 */
+	const fetchCasesByType = useCallback(async (caseType) => {
+		let query;
+
+		switch (caseType) {
+			case "CICL/CAR":
+				query = supabase
+					.from("ciclcar_case")
+					.select("id, profile_name, case_manager, status")
+					.in("status", ["Filed", "Assessed", "In Process", "Resolved"])
+					.order("created_at", { ascending: false })
+					.limit(100);
+				break;
+			case "CASE":
+			case "VAC":
+				query = supabase
+					.from("case")
+					.select("id, identifying_name, case_manager, status")
+					.order("created_at", { ascending: false })
+					.limit(100);
+				break;
+			case "FAC":
+				query = supabase
+					.from("fac_case")
+					.select("id, head_first_name, head_last_name, case_manager, status")
+					.eq("status", "active")
+					.order("created_at", { ascending: false })
+					.limit(100);
+				break;
+			case "FAR":
+				query = supabase
+					.from("far_case")
+					.select("id, receiving_member, case_manager, status, date")
+					.order("date", { ascending: false })
+					.limit(100);
+				break;
+			case "IVAC":
+				query = supabase
+					.from("ivac_cases")
+					.select("id, records, status, reporting_period")
+					.eq("status", "Active")
+					.order("created_at", { ascending: false })
+					.limit(100);
+				break;
+			case "SP":
+				query = supabase
+					.from("sp_case")
+					.select("id, full_name, first_name, last_name, case_manager, status")
+					.eq("status", "active")
+					.order("updated_at", { ascending: false })
+					.limit(100);
+				break;
+			case "FA":
+				query = supabase
+					.from("fa_case")
+					.select("id, client_name, benificiary_name, case_manager, status")
+					.eq("status", "active")
+					.order("updated_at", { ascending: false })
+					.limit(100);
+				break;
+			case "PWD":
+				query = supabase
+					.from("pwd_case")
+					.select("id, first_name, middle_name, last_name, case_manager, status")
+					.eq("status", "active")
+					.order("updated_at", { ascending: false })
+					.limit(100);
+				break;
+			case "SC":
+				query = supabase
+					.from("sc_case")
+					.select("id, senior_name, case_manager, status")
+					.eq("status", "active")
+					.order("updated_at", { ascending: false })
+					.limit(100);
+				break;
+			default:
+				return [];
+		}
+
+		const { data, error: caseError } = await query;
+		if (caseError) throw caseError;
+		return Array.isArray(data) ? data : [];
+	}, []);
+
+	/**
+	 * Load cases for a case type from Supabase.
+	 */
+	const loadCasesByType = useCallback(async (caseType) => {
+		setSearchingCase(true);
+		setError(null);
+
+		try {
+			const caseRows = await fetchCasesByType(caseType);
+			
+			if (caseRows.length > 0) {
+				const formatted = formatCasesForDisplay(caseRows, caseType);
+				setCases(formatted);
+			} else {
+				setError(`No ${caseType} cases found.`);
+			}
+		} catch (err) {
+			console.error("[Dialog] Error loading cases:", err);
+			setError(`Failed to load ${caseType} cases: ${err.message}`);
+		} finally {
+			setSearchingCase(false);
+		}
+	}, [fetchCasesByType]);
+
+	// Load active programs when dialog opens.
 	useEffect(() => {
 		if (open) {
 			loadPrograms();
 		}
-	}, [open]);
+	}, [open, loadPrograms]);
 
-	// Load cases from cache when case type changes (already pre-fetched by page)
+	// Load cases for the selected case type.
 	useEffect(() => {
 		if (formData.case_type && open) {
-			loadCasesFromCache(formData.case_type);
+			loadCasesByType(formData.case_type);
 		} else {
 			setCases([]);
 			setSelectedCaseIds([]);
@@ -111,86 +322,7 @@ export default function CreateEnrollmentDialog({
 				case_worker: "",
 			}));
 		}
-	}, [formData.case_type, open]);
-
-	/**
-	 * Load programs from cache (pre-fetched by page)
-	 */
-	const loadPrograms = async () => {
-		try {
-			console.log("[Dialog] Loading programs from cache...");
-			const cached = await getCachedPrograms();
-			console.log(`[Dialog] Found ${cached.length} cached programs`);
-			
-			if (cached.length > 0) {
-				setCachedPrograms(cached.filter(p => p.status === "active"));
-			} else if (!isOnline) {
-				console.warn("[Dialog] No cached programs and offline");
-			}
-		} catch (err) {
-			console.error("[Dialog] Error loading programs:", err);
-		}
-	};
-
-	/**
-	 * Load cases from cache (pre-fetched by page)
-	 */
-	const loadCasesFromCache = async (caseType) => {
-		setSearchingCase(true);
-		setError(null);
-
-		console.log(`[Dialog] Loading ${caseType} cases from cache...`);
-
-		try {
-			const cachedData = await getCachedCasesByType(caseType);
-			console.log(`[Dialog] Found ${cachedData.length} cached ${caseType} cases`);
-			
-			if (cachedData.length > 0) {
-				const formatted = formatCasesForDisplay(cachedData, caseType);
-				console.log(`[Dialog] Formatted ${formatted.length} ${caseType} cases for display`);
-				setCases(formatted);
-			} else {
-				// No cached data available
-				if (isOnline) {
-					setError(`No ${caseType} cases found. They may still be loading. Please try again in a moment.`);
-				} else {
-					setError(`No cached ${caseType} cases available offline. Please connect to the internet and reload the page.`);
-				}
-			}
-		} catch (err) {
-			console.error("[Dialog] Error loading cases from cache:", err);
-			setError(`Failed to load ${caseType} cases: ${err.message}`);
-		} finally {
-			setSearchingCase(false);
-		}
-	};
-
-	/**
-	 * Format cases for display in dropdown
-	 */
-	const formatCasesForDisplay = (data, caseType) => {
-		return (data || []).map((caseItem) => {
-			let displayName = "";
-
-			if (caseType === "CICL/CAR") {
-				displayName = caseItem.profile_name || "Unknown";
-			} else if (caseType === "VAC") {
-				displayName = caseItem.identifying_name || "Unknown";
-			} else if (caseType === "FAC") {
-				displayName = `${caseItem.head_first_name || ""} ${caseItem.head_last_name || ""}`.trim() || "Unknown";
-			} else if (caseType === "FAR") {
-				displayName = caseItem.receiving_member || "Unknown";
-			} else if (caseType === "IVAC") {
-				displayName = `IVAC - ${caseItem.reporting_period ? new Date(caseItem.reporting_period).toLocaleDateString() : "Unknown"}`;
-			}
-
-			return {
-				...caseItem,
-				displayName,
-				case_manager: caseItem.case_manager || "Unassigned",
-			};
-		});
-	};
+	}, [formData.case_type, open, loadCasesByType]);
 
 	/**
 	 * Toggle a case selection (bulk enrollment)
@@ -378,14 +510,20 @@ export default function CreateEnrollmentDialog({
 	 */
 	const getAvailablePrograms = () => {
 		if (!formData.case_type) return [];
+		const caseTypeCandidates = getProgramCaseTypeCandidates(formData.case_type);
 
-		return cachedPrograms.filter((program) => {
+		return programs.filter((program) => {
 			// Check if program has capacity
 			const hasCapacity = (program.current_enrollment || 0) < (program.capacity || 0);
 
 			// Check if program targets this case type
-			const targetsType = program.target_beneficiary?.includes(
-				formData.case_type
+			const targetBeneficiary = Array.isArray(program.target_beneficiary)
+				? program.target_beneficiary
+				: program.target_beneficiary
+					? [program.target_beneficiary]
+					: [];
+			const targetsType = targetBeneficiary.some((value) =>
+				caseTypeCandidates.includes(value),
 			);
 
 			return hasCapacity && targetsType;
@@ -400,16 +538,9 @@ export default function CreateEnrollmentDialog({
 				<DialogHeader>
 					<DialogTitle className="flex items-center gap-2">
 						Enroll Case in Program
-						{!isOnline && (
-							<span className="inline-flex items-center gap-1 text-sm font-normal text-red-600">
-								<WifiOff className="h-4 w-4" />
-								Offline
-							</span>
-						)}
 					</DialogTitle>
 					<DialogDescription>
 						Select one or more cases and a program to create enrollments
-						{!isOnline && " (Changes will be synced when back online)"}
 					</DialogDescription>
 				</DialogHeader>
 
@@ -472,11 +603,11 @@ export default function CreateEnrollmentDialog({
 										<SelectValue placeholder="Select case type" />
 									</SelectTrigger>
 									<SelectContent>
-										<SelectItem value="CICL/CAR">CICL/CAR</SelectItem>
-										<SelectItem value="VAC">VAC</SelectItem>
-										<SelectItem value="FAC">FAC</SelectItem>
-										<SelectItem value="FAR">FAR</SelectItem>
-										<SelectItem value="IVAC">IVAC</SelectItem>
+										{PROGRAM_CASE_TYPE_OPTIONS.map((caseType) => (
+											<SelectItem key={caseType.value} value={caseType.value}>
+												{caseType.label}
+											</SelectItem>
+										))}
 									</SelectContent>
 								</Select>
 							</div>

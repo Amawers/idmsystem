@@ -262,7 +262,11 @@ export default function ProgramCatalog() {
 
           <Button
             variant="outline"
-            onClick={() => fetchPrograms()}
+            onClick={() => {
+              if (typeof window !== "undefined") {
+                window.location.reload();
+              }
+            }}
             disabled={loading}
             title="Refresh programs"
             className="cursor-pointer"

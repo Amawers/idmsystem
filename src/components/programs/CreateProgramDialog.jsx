@@ -35,6 +35,10 @@ import {
 } from "@/components/ui/select";
 import { usePrograms } from "@/hooks/usePrograms";
 import { usePartners } from "@/hooks/usePartners";
+import {
+	PROGRAM_CASE_TYPE_OPTIONS,
+	normalizeProgramCaseType,
+} from "@/lib/programCaseTypes";
 import { toast } from "sonner";
 
 // Program form schema
@@ -92,14 +96,6 @@ const PROGRAM_TYPES = [
 	{ value: "recreational", label: "Recreational" },
 ];
 
-const BENEFICIARY_TYPES = [
-	{ value: "CASE", label: "CASE" },
-	{ value: "CICL/CAR", label: "CICL/CAR" },
-	{ value: "IVAC", label: "IVAC" },
-	{ value: "FAC", label: "FAC" },
-	{ value: "FA", label: "Financial Assistance (FA)" },
-];
-
 /**
  * Create Program Dialog Component
  * @param {Object} props - Component props
@@ -142,9 +138,10 @@ export default function CreateProgramDialog({
 		if (open) {
 			if (program) {
 				// Edit mode - populate form with program data
-				const targetBenef = Array.isArray(program.target_beneficiary)
+				const rawTargetBenef = Array.isArray(program.target_beneficiary)
 					? program.target_beneficiary[0]
 					: program.target_beneficiary || "";
+				const targetBenef = normalizeProgramCaseType(rawTargetBenef);
 
 				setProgramType(program.program_type || "");
 				setTargetBeneficiary(targetBenef);
@@ -332,7 +329,7 @@ export default function CreateProgramDialog({
 										<SelectValue placeholder="Select target beneficiary" />
 									</SelectTrigger>
 									<SelectContent>
-										{BENEFICIARY_TYPES.map(
+										{PROGRAM_CASE_TYPE_OPTIONS.map(
 											(beneficiary) => (
 												<SelectItem
 													key={beneficiary.value}

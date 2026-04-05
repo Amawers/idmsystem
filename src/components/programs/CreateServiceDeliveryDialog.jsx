@@ -75,7 +75,7 @@ export default function CreateServiceDeliveryDialog({ open, onOpenChange, onSucc
   const [selectedEnrollment, setSelectedEnrollment] = useState(null);
   const [serviceDate, setServiceDate] = useState(new Date());
 
-  // Hook already uses offline cache via enrollmentsLiveQuery
+  // Pull active enrollments directly from online data hook
   const { enrollments = [], loading: enrollmentsLoading } = useEnrollments({ status: "active" });
   const { caseManagers, loading: caseManagersLoading } = useCaseManagers();
 

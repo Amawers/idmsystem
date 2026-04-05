@@ -1,15 +1,10 @@
 /**
- * Program enrollments hook (offline-first).
+ * Program enrollments hook (online-only).
  *
  * Responsibilities:
- * - Keep UI state in sync with the local/offline cache via `enrollmentsLiveQuery()`.
- * - When online, hydrate/refresh the cache from Supabase (optionally scoped to a program).
- * - Queue create/update/delete operations while offline and expose a sync runner.
- * - Provide derived statistics for the currently filtered enrollments.
- *
- * Notes:
- * - The hook uses an online-first strategy for mutations; on failure it falls back to offline queueing.
- * - A background refresh runs periodically while online to keep the cache warm.
+ * - Load enrollments directly from Supabase.
+ * - Perform create/update/delete mutations directly against Supabase.
+ * - Provide derived enrollment statistics and lookup helpers.
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
@@ -20,61 +15,7 @@ import {
 	AUDIT_CATEGORIES,
 } from "@/lib/auditLog";
 import { useAuthStore } from "@/store/authStore";
-import {
-	enrollmentsLiveQuery,
-	loadRemoteSnapshotIntoCache,
-	refreshProgramEnrollments,
-	getPendingOperationCount,
-	syncEnrollmentQueue,
-	createOrUpdateLocalEnrollment,
-	deleteEnrollmentNow,
-	markLocalDelete,
-} from "@/services/enrollmentOfflineService";
-
-/**
- * @typedef {Object} UseEnrollmentsOptions
- * @property {boolean} [enabled]
- * @property {string} [programId]
- * @property {string} [status]
- * @property {string} [caseType]
- * @property {string} [caseId]
- */
-
-/**
- * @typedef {Object<string, any>} EnrollmentRow
- * Cached enrollment row shape (loose).
- */
-
-/**
- * @typedef {Object} EnrollmentStatistics
- * @property {number} total
- * @property {number} active
- * @property {number} completed
- * @property {number} dropped
- * @property {number} atRisk
- * @property {number} averageAttendance
- * @property {number} averageProgress
- */
-
-/**
- * @typedef {Object} UseEnrollmentsResult
- * @property {EnrollmentRow[]} enrollments
- * @property {boolean} loading
- * @property {string|null} error
- * @property {EnrollmentStatistics} statistics
- * @property {boolean} offline
- * @property {number} pendingCount
- * @property {boolean} syncing
- * @property {string} syncStatus
- * @property {() => Promise<any>} fetchEnrollments
- * @property {() => Promise<any>} runSync
- * @property {(enrollmentData: any) => Promise<any>} createEnrollment
- * @property {(enrollmentId: string, updates: any) => Promise<any>} updateEnrollment
- * @property {(enrollmentId: string) => Promise<any>} deleteEnrollment
- * @property {(enrollmentId: string) => (EnrollmentRow|null)} getEnrollmentById
- * @property {(caseId: string) => EnrollmentRow[]} getEnrollmentsByCaseId
- * @property {(programId: string) => EnrollmentRow[]} getEnrollmentsByProgramId
- */
+import { getProgramCaseTypeCandidates } from "@/lib/programCaseTypes";
 
 const EMPTY_STATS = {
 	total: 0,
@@ -86,158 +27,106 @@ const EMPTY_STATS = {
 	averageProgress: 0,
 };
 
-/**
- * Guarded browser online check for environments without `navigator`.
- */
-const isBrowserOnline = () =>
-	typeof navigator !== "undefined" ? navigator.onLine : true;
+const ENROLLMENT_SELECT = `
+	*,
+	program:programs(
+		id,
+		program_name,
+		program_type,
+		coordinator,
+		status
+	)
+`;
 
-/**
- * Subscribe to and manage program enrollments.
- * @param {UseEnrollmentsOptions} [options]
- * @returns {UseEnrollmentsResult}
- */
+const toNumber = (value, fallback = 0) => {
+	if (value === null || value === undefined || value === "") return fallback;
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : fallback;
+};
+
+const computeStats = (rows = []) => {
+	if (!Array.isArray(rows) || rows.length === 0) return { ...EMPTY_STATS };
+
+	const total = rows.length;
+	const sumAttendance = rows.reduce(
+		(acc, item) => acc + toNumber(item.attendance_rate, 0),
+		0,
+	);
+	const sumProgress = rows.reduce(
+		(acc, item) => acc + toNumber(item.progress_percentage, 0),
+		0,
+	);
+
+	return {
+		total,
+		active: rows.filter((e) => e.status === "active").length,
+		completed: rows.filter((e) => e.status === "completed").length,
+		dropped: rows.filter((e) => e.status === "dropped").length,
+		atRisk: rows.filter((e) => e.status === "at_risk").length,
+		averageAttendance: sumAttendance / total,
+		averageProgress: sumProgress / total,
+	};
+};
+
 export function useEnrollments(options = {}) {
 	const enabled = options.enabled ?? true;
 	const [rows, setRows] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
-	const [statistics, setStatistics] = useState(EMPTY_STATS);
-	const [usingOfflineData, setUsingOfflineData] =
-		useState(!isBrowserOnline());
-	const [pendingCount, setPendingCount] = useState(0);
-	const [syncing, setSyncing] = useState(false);
-	const [syncStatus, setSyncStatus] = useState("");
 
 	const fetchEnrollments = useCallback(async () => {
 		if (!enabled) {
-			setLoading(false);
-			return { success: true, skipped: true };
-		}
-		try {
-			setError(null);
-			if (!isBrowserOnline()) {
-				setUsingOfflineData(true);
-				setLoading(false);
-				return { success: true, offline: true };
-			}
-			if (options.programId) {
-				await refreshProgramEnrollments(options.programId);
-			} else {
-				await loadRemoteSnapshotIntoCache();
-			}
-			setUsingOfflineData(false);
-			return { success: true };
-		} catch (err) {
-			console.error("Error refreshing enrollments cache:", err);
-			setError(err.message);
-			setUsingOfflineData(true);
-			return { success: false, error: err };
-		}
-	}, [enabled, options.programId]);
-
-	const updatePendingCount = useCallback(async () => {
-		const count = await getPendingOperationCount();
-		setPendingCount(count);
-	}, []);
-
-	const runSync = useCallback(async () => {
-		if (!isBrowserOnline()) {
-			setSyncStatus("Cannot sync while offline");
-			return { success: false, offline: true };
-		}
-
-		setSyncing(true);
-		setSyncStatus("Starting sync...");
-
-		try {
-			const result = await syncEnrollmentQueue((status) => {
-				setSyncStatus(status);
-			});
-
-			if (result.success) {
-				setSyncStatus(
-					`Successfully synced ${result.synced} operations`,
-				);
-				await updatePendingCount();
-				await fetchEnrollments();
-			} else if (result.offline) {
-				setSyncStatus("Cannot sync while offline");
-			} else {
-				setSyncStatus(
-					`Sync failed: ${result.errors?.[0]?.error || "Unknown error"}`,
-				);
-			}
-
-			return result;
-		} catch (err) {
-			console.error("Sync error:", err);
-			setSyncStatus(`Sync error: ${err.message}`);
-			return { success: false, error: err };
-		} finally {
-			setSyncing(false);
-		}
-	}, [fetchEnrollments, updatePendingCount]);
-
-	useEffect(() => {
-		if (!enabled) {
 			setRows([]);
-			setStatistics(EMPTY_STATS);
+			setError(null);
 			setLoading(false);
-			return undefined;
+			return [];
 		}
 
-		const subscription = enrollmentsLiveQuery().subscribe({
-			next: (data) => {
-				setRows(Array.isArray(data) ? data : []);
-				setLoading(false);
-			},
-			error: (err) => {
-				console.error("Enrollments live query error:", err);
-				setError(err.message ?? "Failed to read cached enrollments");
-				setLoading(false);
-			},
-		});
+		setLoading(true);
+		setError(null);
 
-		return () => subscription.unsubscribe();
-	}, [enabled]);
+		try {
+			let query = supabase
+				.from("program_enrollments")
+				.select(ENROLLMENT_SELECT)
+				.order("enrollment_date", { ascending: false });
 
-	useEffect(() => {
-		fetchEnrollments();
-		updatePendingCount();
-	}, [fetchEnrollments, updatePendingCount]);
+			if (options.programId) {
+				query = query.eq("program_id", options.programId);
+			}
+			if (options.status) {
+				query = query.eq("status", options.status);
+			}
+			if (options.caseType) {
+				const caseTypeCandidates = getProgramCaseTypeCandidates(
+					options.caseType,
+				);
+				if (caseTypeCandidates.length > 1) {
+					query = query.in("case_type", caseTypeCandidates);
+				} else if (caseTypeCandidates.length === 1) {
+					query = query.eq("case_type", caseTypeCandidates[0]);
+				}
+			}
+			if (options.caseId) {
+				query = query.eq("case_id", options.caseId);
+			}
 
-	useEffect(() => {
-		if (!enabled) return undefined;
-		if (!isBrowserOnline()) return undefined;
+			const { data, error: queryError } = await query;
+			if (queryError) throw queryError;
 
-		const intervalId = window.setInterval(() => {
-			if (!isBrowserOnline()) return;
-			fetchEnrollments();
-		}, 60_000);
-
-		return () => {
-			clearInterval(intervalId);
-		};
-	}, [enabled, fetchEnrollments]);
-
-	const filteredEnrollments = useMemo(() => {
-		let data = rows;
-		if (options.programId) {
-			data = data.filter((row) => row.program_id === options.programId);
+			const nextRows = Array.isArray(data) ? data : [];
+			setRows(nextRows);
+			setLoading(false);
+			return nextRows;
+		} catch (err) {
+			console.error("Error fetching enrollments:", err);
+			setRows([]);
+			setError(err.message || "Failed to load enrollments");
+			setLoading(false);
+			return [];
 		}
-		if (options.status) {
-			data = data.filter((row) => row.status === options.status);
-		}
-		if (options.caseType) {
-			data = data.filter((row) => row.case_type === options.caseType);
-		}
-		if (options.caseId) {
-			data = data.filter((row) => row.case_id === options.caseId);
-		}
-		return data;
 	}, [
-		rows,
+		enabled,
 		options.programId,
 		options.status,
 		options.caseType,
@@ -245,34 +134,11 @@ export function useEnrollments(options = {}) {
 	]);
 
 	useEffect(() => {
-		if (!filteredEnrollments.length) {
-			setStatistics(EMPTY_STATS);
-			return;
-		}
-		const total = filteredEnrollments.length;
-		const sum = (key) =>
-			filteredEnrollments.reduce(
-				(acc, item) => acc + (parseFloat(item[key]) || 0),
-				0,
-			);
-		setStatistics({
-			total,
-			active: filteredEnrollments.filter((e) => e.status === "active")
-				.length,
-			completed: filteredEnrollments.filter(
-				(e) => e.status === "completed",
-			).length,
-			dropped: filteredEnrollments.filter((e) => e.status === "dropped")
-				.length,
-			atRisk: filteredEnrollments.filter((e) => e.status === "at_risk")
-				.length,
-			averageAttendance: sum("attendance_rate") / total,
-			averageProgress: sum("progress_percentage") / total,
-		});
-	}, [filteredEnrollments]);
+		fetchEnrollments();
+	}, [fetchEnrollments]);
 
-	const createEnrollment = async (enrollmentData) => {
-		try {
+	const createEnrollment = useCallback(
+		async (enrollmentData) => {
 			const { user } = useAuthStore.getState();
 			const sanitizeDate = (value) => {
 				if (
@@ -282,7 +148,8 @@ export function useEnrollments(options = {}) {
 					return null;
 				return value;
 			};
-			const formattedData = {
+
+			const payload = {
 				case_id: enrollmentData.case_id,
 				case_number: enrollmentData.case_number,
 				case_type: enrollmentData.case_type,
@@ -295,263 +162,191 @@ export function useEnrollments(options = {}) {
 					enrollmentData.expected_completion_date,
 				),
 				status: enrollmentData.status || "active",
-				progress_percentage: enrollmentData.progress_percentage || 0,
+				progress_percentage: toNumber(
+					enrollmentData.progress_percentage,
+					0,
+				),
 				progress_level: enrollmentData.progress_level || null,
-				sessions_total:
-					parseInt(enrollmentData.sessions_total, 10) || 0,
-				sessions_attended: 0,
-				sessions_completed: 0,
-				sessions_absent_unexcused: 0,
-				sessions_absent_excused: 0,
-				attendance_rate: 0,
+				sessions_total: toNumber(enrollmentData.sessions_total, 0),
+				sessions_attended: toNumber(
+					enrollmentData.sessions_attended,
+					0,
+				),
+				sessions_completed: toNumber(
+					enrollmentData.sessions_completed,
+					0,
+				),
+				sessions_absent_unexcused: toNumber(
+					enrollmentData.sessions_absent_unexcused,
+					0,
+				),
+				sessions_absent_excused: toNumber(
+					enrollmentData.sessions_absent_excused,
+					0,
+				),
+				attendance_rate: toNumber(enrollmentData.attendance_rate, 0),
 				assigned_by: user?.id ?? null,
-				assigned_by_name: user?.full_name ?? null,
+				assigned_by_name:
+					user?.user_metadata?.full_name || user?.email || null,
 				case_worker: enrollmentData.case_worker || null,
 				notes: enrollmentData.notes || null,
 			};
 
-			// Try online-first if connected
-			if (isBrowserOnline()) {
-				try {
-					const { data, error } = await supabase
-						.from("program_enrollments")
-						.insert([formattedData])
-						.select(
-							`
-              *,
-              program:programs(
-                id,
-                program_name,
-                program_type,
-                coordinator,
-                status
-              )
-            `,
-						)
-						.single();
+			const { data, error: insertError } = await supabase
+				.from("program_enrollments")
+				.insert([payload])
+				.select(ENROLLMENT_SELECT)
+				.single();
 
-					if (error) throw error;
+			if (insertError) throw insertError;
 
-					await createAuditLog({
-						actionType: AUDIT_ACTIONS.CREATE_ENROLLMENT,
-						actionCategory: AUDIT_CATEGORIES.PROGRAM,
-						description: `Enrolled ${data.beneficiary_name} in program ${data.program?.program_name || "Unknown"}`,
-						resourceType: "enrollment",
-						resourceId: data.id,
-						metadata: {
-							beneficiaryName: data.beneficiary_name,
-							caseId: data.case_id,
-							caseNumber: data.case_number,
-							caseType: data.case_type,
-							programId: data.program_id,
-							programName: data.program?.program_name,
-							enrollmentDate: data.enrollment_date,
-						},
-						severity: "info",
-					});
+			await createAuditLog({
+				actionType: AUDIT_ACTIONS.CREATE_ENROLLMENT,
+				actionCategory: AUDIT_CATEGORIES.PROGRAM,
+				description: `Enrolled ${data.beneficiary_name} in program ${data.program?.program_name || "Unknown"}`,
+				resourceType: "enrollment",
+				resourceId: data.id,
+				metadata: {
+					beneficiaryName: data.beneficiary_name,
+					caseId: data.case_id,
+					caseNumber: data.case_number,
+					caseType: data.case_type,
+					programId: data.program_id,
+					programName: data.program?.program_name,
+					enrollmentDate: data.enrollment_date,
+				},
+				severity: "info",
+			});
 
-					if (data?.program_id) {
-						await refreshProgramEnrollments(data.program_id).catch(
-							() => {},
-						);
-					} else {
-						await fetchEnrollments();
-					}
+			await fetchEnrollments();
+			return data;
+		},
+		[fetchEnrollments],
+	);
 
-					return data;
-				} catch (onlineError) {
-					console.warn(
-						"Online create failed, falling back to offline:",
-						onlineError,
-					);
-					// Fall through to offline mode
-				}
-			}
-
-			// Offline mode: queue the operation
-			await createOrUpdateLocalEnrollment(formattedData);
-			await updatePendingCount();
-			setSyncStatus("Enrollment queued for sync");
-
-			return { success: true, offline: true };
-		} catch (err) {
-			console.error("Error creating enrollment:", err);
-			throw err;
-		}
-	};
-
-	const updateEnrollment = async (enrollmentId, updates) => {
-		try {
+	const updateEnrollment = useCallback(
+		async (enrollmentId, updates) => {
 			const existing = rows.find((row) => row.id === enrollmentId);
-			const formattedUpdates = {
+			const payload = {
 				...updates,
 				updated_at: new Date().toISOString(),
 			};
-			Object.keys(formattedUpdates).forEach((key) => {
-				if (formattedUpdates[key] === undefined) {
-					delete formattedUpdates[key];
+
+			Object.keys(payload).forEach((key) => {
+				if (payload[key] === undefined) {
+					delete payload[key];
 				}
 			});
 
-			// Try online-first if connected
-			if (isBrowserOnline()) {
-				try {
-					const { data, error } = await supabase
-						.from("program_enrollments")
-						.update(formattedUpdates)
-						.eq("id", enrollmentId)
-						.select(
-							`
-              *,
-              program:programs(
-                id,
-                program_name,
-                program_type,
-                coordinator,
-                status
-              )
-            `,
-						)
-						.single();
+			const { data, error: updateError } = await supabase
+				.from("program_enrollments")
+				.update(payload)
+				.eq("id", enrollmentId)
+				.select(ENROLLMENT_SELECT)
+				.single();
 
-					if (error) throw error;
+			if (updateError) throw updateError;
 
-					const changes = existing
-						? Object.keys(updates).reduce((acc, key) => {
-								if (existing[key] !== updates[key]) {
-									acc[key] = {
-										old: existing[key],
-										new: updates[key],
-									};
-								}
-								return acc;
-							}, {})
-						: updates;
+			const changes = existing
+				? Object.keys(updates).reduce((acc, key) => {
+						if (existing[key] !== updates[key]) {
+							acc[key] = {
+								old: existing[key],
+								new: updates[key],
+							};
+						}
+						return acc;
+					}, {})
+				: updates;
 
-					await createAuditLog({
-						actionType: AUDIT_ACTIONS.UPDATE_ENROLLMENT,
-						actionCategory: AUDIT_CATEGORIES.PROGRAM,
-						description: `Updated enrollment for ${data.beneficiary_name}`,
-						resourceType: "enrollment",
-						resourceId: enrollmentId,
-						metadata: {
-							beneficiaryName: data.beneficiary_name,
-							caseId: data.case_id,
-							programName: data.program?.program_name,
-							changes,
-						},
-						severity: "info",
-					});
+			await createAuditLog({
+				actionType: AUDIT_ACTIONS.UPDATE_ENROLLMENT,
+				actionCategory: AUDIT_CATEGORIES.PROGRAM,
+				description: `Updated enrollment for ${data.beneficiary_name}`,
+				resourceType: "enrollment",
+				resourceId: enrollmentId,
+				metadata: {
+					beneficiaryName: data.beneficiary_name,
+					caseId: data.case_id,
+					programName: data.program?.program_name,
+					changes,
+				},
+				severity: "info",
+			});
 
-					if (data?.program_id) {
-						await refreshProgramEnrollments(data.program_id).catch(
-							() => {},
-						);
-					} else {
-						await fetchEnrollments();
-					}
+			await fetchEnrollments();
+			return data;
+		},
+		[fetchEnrollments, rows],
+	);
 
-					return data;
-				} catch (onlineError) {
-					console.warn(
-						"Online update failed, falling back to offline:",
-						onlineError,
-					);
-					// Fall through to offline mode
-				}
-			}
-
-			// Offline mode: queue the operation
-			await createOrUpdateLocalEnrollment(formattedUpdates, enrollmentId);
-			await updatePendingCount();
-			setSyncStatus("Update queued for sync");
-
-			return { success: true, offline: true };
-		} catch (err) {
-			console.error("Error updating enrollment:", err);
-			throw err;
-		}
-	};
-
-	const deleteEnrollment = async (enrollmentId) => {
-		try {
+	const deleteEnrollment = useCallback(
+		async (enrollmentId) => {
 			const enrollmentToDelete = rows.find(
 				(row) => row.id === enrollmentId,
 			);
 
-			// Try online-first if connected
-			if (isBrowserOnline()) {
-				try {
-					await deleteEnrollmentNow(enrollmentId);
+			const { error: deleteError } = await supabase
+				.from("program_enrollments")
+				.delete()
+				.eq("id", enrollmentId);
 
-					if (enrollmentToDelete) {
-						await createAuditLog({
-							actionType: AUDIT_ACTIONS.DELETE_ENROLLMENT,
-							actionCategory: AUDIT_CATEGORIES.PROGRAM,
-							description: `Deleted enrollment for ${enrollmentToDelete.beneficiary_name}`,
-							resourceType: "enrollment",
-							resourceId: enrollmentId,
-							metadata: {
-								beneficiaryName:
-									enrollmentToDelete.beneficiary_name,
-								caseId: enrollmentToDelete.case_id,
-								caseNumber: enrollmentToDelete.case_number,
-								programId: enrollmentToDelete.program_id,
-							},
-							severity: "warning",
-						});
-					}
+			if (deleteError) throw deleteError;
 
-					if (enrollmentToDelete?.program_id) {
-						await refreshProgramEnrollments(
-							enrollmentToDelete.program_id,
-						).catch(() => {});
-					} else {
-						await fetchEnrollments();
-					}
-
-					return { success: true };
-				} catch (onlineError) {
-					console.warn(
-						"Online delete failed, falling back to offline:",
-						onlineError,
-					);
-					// Fall through to offline mode
-				}
+			if (enrollmentToDelete) {
+				await createAuditLog({
+					actionType: AUDIT_ACTIONS.DELETE_ENROLLMENT,
+					actionCategory: AUDIT_CATEGORIES.PROGRAM,
+					description: `Deleted enrollment for ${enrollmentToDelete.beneficiary_name}`,
+					resourceType: "enrollment",
+					resourceId: enrollmentId,
+					metadata: {
+						beneficiaryName:
+							enrollmentToDelete.beneficiary_name,
+						caseId: enrollmentToDelete.case_id,
+						caseNumber: enrollmentToDelete.case_number,
+						programId: enrollmentToDelete.program_id,
+					},
+					severity: "warning",
+				});
 			}
 
-			// Offline mode: queue the operation
-			await markLocalDelete(enrollmentId);
-			await updatePendingCount();
-			setSyncStatus("Delete queued for sync");
+			await fetchEnrollments();
+			return { success: true };
+		},
+		[fetchEnrollments, rows],
+	);
 
-			return { success: true, offline: true };
-		} catch (err) {
-			console.error("Error deleting enrollment:", err);
-			throw err;
-		}
-	};
+	const statistics = useMemo(() => computeStats(rows), [rows]);
 
-	const enrollments = filteredEnrollments;
+	const getEnrollmentById = useCallback(
+		(enrollmentId) =>
+			rows.find((enrollment) => enrollment.id === enrollmentId) || null,
+		[rows],
+	);
 
-	const getEnrollmentById = (enrollmentId) =>
-		enrollments.find((e) => e.id === enrollmentId) || null;
-	const getEnrollmentsByCaseId = (caseId) =>
-		enrollments.filter((e) => e.case_id === caseId);
-	const getEnrollmentsByProgramId = (programId) =>
-		enrollments.filter((e) => e.program_id === programId);
+	const getEnrollmentsByCaseId = useCallback(
+		(caseId) => rows.filter((enrollment) => enrollment.case_id === caseId),
+		[rows],
+	);
+
+	const getEnrollmentsByProgramId = useCallback(
+		(programId) =>
+			rows.filter((enrollment) => enrollment.program_id === programId),
+		[rows],
+	);
 
 	return {
-		enrollments,
+		enrollments: rows,
 		loading,
 		error,
 		statistics,
-		offline: usingOfflineData,
-		pendingCount,
-		syncing,
-		syncStatus,
+		offline: false,
+		pendingCount: 0,
+		syncing: false,
+		syncStatus: null,
 		fetchEnrollments,
-		runSync,
+		runSync: async () => ({ success: true, onlineOnly: true }),
 		createEnrollment,
 		updateEnrollment,
 		deleteEnrollment,
