@@ -7,8 +7,7 @@
  * - Expose a delete helper and a `reload` function.
  *
  * Note:
- * - This hook is the direct Supabase implementation; the offline-first variant lives in
- *   `useCasesOffline()`.
+ * - This hook is the canonical online implementation for CASE data access.
  */
 
 import { useEffect, useMemo, useState, useCallback } from "react";
