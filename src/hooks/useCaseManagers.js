@@ -2,17 +2,17 @@
  * Case managers hook.
  *
  * Responsibilities:
- * - Load active users with the `social_worker` role from the `profile` table.
+ * - Load assignable case managers (supports `social_worker` and `case_manager`).
  * - Poll periodically while online to keep the list fresh.
  * - Expose a `refetch` helper for manual refresh.
  *
  * Notes:
  * - Despite the legacy header mentioning subscriptions, this hook currently uses polling.
- * - The query attempts an "active" status filter first, then retries without it for compatibility.
+ * - Data loading is delegated to the shared case manager directory helper.
  */
 
 import { useState, useEffect, useRef } from "react";
-import supabase from "@/../config/supabase";
+import { fetchAssignableCaseManagers } from "@/lib/caseManagersDirectory";
 
 /**
  * @typedef {Object} CaseManagerRow
@@ -43,42 +43,15 @@ export function useCaseManagers() {
 		typeof navigator === "undefined" ? true : navigator.onLine,
 	);
 
-	/**
-	 * Fetch case managers from the Supabase `profile` table.
-	 *
-	 * Behavior:
-	 * - Tries `status = active` first.
-	 * - If that fails or returns empty, retries without the status filter.
-	 */
+	/** Fetch assignable case managers from the shared directory helper. */
 	const fetchCaseManagers = async () => {
 		try {
 			setLoading(true);
 			setError(null);
 
-			// Try with status filter first
-			let { data, error: fetchError } = await supabase
-				.from("profile")
-				.select("id, full_name, email, role")
-				.eq("role", "social_worker")
-				.eq("status", "active")
-				.order("full_name", { ascending: true });
+			const { data, source } = await fetchAssignableCaseManagers();
 
-			// If no results or error, try without status filter
-			if (!data || data.length === 0 || fetchError) {
-				console.log("Retrying without status filter...");
-				const retry = await supabase
-					.from("profile")
-					.select("id, full_name, email, role")
-					.eq("role", "social_worker")
-					.order("full_name", { ascending: true });
-
-				data = retry.data;
-				fetchError = retry.error;
-			}
-
-			if (fetchError) throw fetchError;
-
-			console.log("Case managers loaded:", data);
+			console.log("Case managers loaded from", source, data);
 			setCaseManagers(data || []);
 		} catch (err) {
 			console.error("Error fetching case managers:", err);

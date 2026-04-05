@@ -40,7 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { IconX, IconPlus, IconFilter, IconEye, IconEyeOff, IconChevronDown } from "@tabler/icons-react";
-import supabase from "@/../config/supabase";
+import { useCaseManagers } from "@/store/useCaseManagerStore";
 
 // Fixed list of barangays
 const BARANGAYS = [
@@ -133,7 +133,7 @@ const initializeRecords = () => {
 
 export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditMode }) {
   const { data, setSectionField } = useIntakeFormStore();
-  const [availableCaseManagers, setAvailableCaseManagers] = useState([]);
+  const { caseManagers: availableCaseManagers, loading: loadingCaseManagers } = useCaseManagers();
   const [isCaseManagerDropdownOpen, setIsCaseManagerDropdownOpen] = useState(false);
   const [selectedCaseManagerValue, setSelectedCaseManagerValue] = useState("");
   const [selectedBarangays, setSelectedBarangays] = useState(BARANGAYS); // All barangays selected by default
@@ -157,31 +157,6 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
       status: data[sectionKey]?.status || "",
     },
   });
-
-  // Fetch case managers on component mount
-  useEffect(() => {
-    const fetchCaseManagers = async () => {
-      try {
-        const { data: users, error } = await supabase
-          .from("profile")
-          .select("id, full_name, role")
-          .eq("role", "social_worker")
-          .eq("status", "active")
-          .order("full_name", { ascending: true });
-
-        if (error) {
-          console.error("Error fetching case managers:", error);
-          return;
-        }
-
-        setAvailableCaseManagers(users || []);
-      } catch (err) {
-        console.error("Failed to fetch case managers:", err);
-      }
-    };
-
-    fetchCaseManagers();
-  }, []);
 
   // Update form values when data changes (for edit mode)
   useEffect(() => {
@@ -296,7 +271,7 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
   // Handle adding a case manager from dropdown
   const handleAddCaseManager = (managerId) => {
     const manager = availableCaseManagers.find(m => m.id === managerId);
-    if (manager && !caseManagers.includes(manager.full_name)) {
+    if (manager?.full_name && !caseManagers.includes(manager.full_name)) {
       const updated = [...caseManagers, manager.full_name];
       form.setValue("caseManagers", updated);
       setSectionField(sectionKey, "caseManagers", updated);
@@ -425,17 +400,34 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
                 onOpenChange={setIsCaseManagerDropdownOpen}
                 onValueChange={handleAddCaseManager}
               >
-                <SelectTrigger className="w-full cursor-pointer">
-                  <SelectValue placeholder="Add Case Manager" />
+                <SelectTrigger
+                  className="w-full cursor-pointer"
+                  disabled={loadingCaseManagers}
+                >
+                  <SelectValue
+                    placeholder={
+                      loadingCaseManagers
+                        ? "Loading case managers..."
+                        : "Add Case Manager"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableCaseManagers.length === 0 ? (
+                  {loadingCaseManagers ? (
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      Loading case managers...
+                    </div>
+                  ) : availableCaseManagers.length === 0 ? (
                     <div className="px-2 py-1.5 text-sm text-muted-foreground">
                       No available case managers
                     </div>
                   ) : (
                     availableCaseManagers
-                      .filter(manager => !caseManagers.includes(manager.full_name))
+                      .filter(
+                        (manager) =>
+                          manager.full_name &&
+                          !caseManagers.includes(manager.full_name),
+                      )
                       .map((manager) => (
                         <SelectItem key={manager.id} value={manager.id}>
                           {manager.full_name}

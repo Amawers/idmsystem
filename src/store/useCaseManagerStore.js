@@ -7,8 +7,8 @@
 
 import { create } from "zustand";
 import { useEffect } from "react";
-import supabase from "@/../config/supabase";
 import offlineCaseDb from "@/db/offlineCaseDb";
+import { fetchAssignableCaseManagers } from "@/lib/caseManagersDirectory";
 
 const CASE_MANAGER_TABLE = offlineCaseDb.table("case_managers");
 
@@ -38,7 +38,7 @@ export const useCaseManagerStore = create((set, get) => ({
 	isInitialized: false,
 
 	/**
-	 * Fetches case managers from Supabase.
+	 * Fetches assignable case managers.
 	 *
 	 * Uses an in-memory TTL to reduce network calls.
 	 * @param {boolean} [skipCache=false] If true, bypass the in-memory TTL.
@@ -65,34 +65,12 @@ export const useCaseManagerStore = create((set, get) => ({
 				return state.caseManagers;
 			}
 
-			// Try with status filter first
-			let { data, error: fetchError } = await supabase
-				.from("profile")
-				.select("id, full_name, email, role")
-				.eq("role", "social_worker")
-				.eq("status", "active")
-				.order("full_name", { ascending: true });
-
-			// If no results or error, try without status filter
-			if (!data || data.length === 0 || fetchError) {
-				console.log(
-					"[CaseManagerStore] Retrying without status filter...",
-				);
-				const retry = await supabase
-					.from("profile")
-					.select("id, full_name, email, role")
-					.eq("role", "social_worker")
-					.order("full_name", { ascending: true });
-
-				data = retry.data;
-				fetchError = retry.error;
-			}
-
-			if (fetchError) throw fetchError;
-
-			const managers = data || [];
+			const { data: managers, source } =
+				await fetchAssignableCaseManagers();
 			console.log(
-				"[CaseManagerStore] Fetched from Supabase:",
+				"[CaseManagerStore] Fetched case managers from",
+				source,
+				":",
 				managers.length,
 				"managers",
 			);
