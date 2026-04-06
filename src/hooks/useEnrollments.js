@@ -15,7 +15,10 @@ import {
 	AUDIT_CATEGORIES,
 } from "@/lib/auditLog";
 import { useAuthStore } from "@/store/authStore";
-import { getProgramCaseTypeCandidates } from "@/lib/programCaseTypes";
+import {
+	getProgramCaseTypeCandidates,
+	toProgramEnrollmentCaseType,
+} from "@/lib/programCaseTypes";
 
 const EMPTY_STATS = {
 	total: 0,
@@ -152,7 +155,9 @@ export function useEnrollments(options = {}) {
 			const payload = {
 				case_id: enrollmentData.case_id,
 				case_number: enrollmentData.case_number,
-				case_type: enrollmentData.case_type,
+				case_type: toProgramEnrollmentCaseType(
+					enrollmentData.case_type,
+				),
 				beneficiary_name: enrollmentData.beneficiary_name,
 				program_id: enrollmentData.program_id,
 				enrollment_date:
