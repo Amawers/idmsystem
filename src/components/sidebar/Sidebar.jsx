@@ -24,7 +24,9 @@ import {
 	IconDashboard,
 	IconFolders,
 	IconShieldLock,
-	IconKey,
+  // TEMP-HIDE: Role Permissions nav item is disabled for now.
+  // ROLLBACK: Uncomment IconKey and the /controls/permissions nav item below.
+  // IconKey,
 	IconPackage,
 	IconCircleCheck,
 	IconUserCheck
@@ -84,7 +86,9 @@ export default function Sidebar(props) {
         items: [
           { path: "/controls/audit", label: "Audit Trail", icon: IconShieldLock },
           { path: "/controls/documents", label: "Documents", icon: IconFolders },
-          { path: "/controls/permissions", label: "Role Permissions", icon: IconKey },
+          // TEMP-HIDE: Role Permissions is intentionally hidden for now.
+          // ROLLBACK: Uncomment this line to restore the sub-page in sidebar.
+          // { path: "/controls/permissions", label: "Role Permissions", icon: IconKey },
         ]
       },
     ],

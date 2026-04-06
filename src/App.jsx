@@ -35,7 +35,9 @@ import ResourceStaff from "./pages/head/ResourceStaff";
 import ResourcePrograms from "./pages/head/ResourcePrograms";
 import SecurityAudit from "./pages/security/SecurityAudit";
 import AuditTrail from "./pages/security/AuditTrail";
-import RolePermissions from "./pages/security/RolePermissions";
+// TEMP-HIDE: Role Permissions sub-page is disabled for now.
+// ROLLBACK: Uncomment this import together with the commented route block below.
+// import RolePermissions from "./pages/security/RolePermissions";
 import DocumentManagement from "./pages/security/DocumentManagement";
 import useNetworkStatus from "@/hooks/useNetworkStatus";
 
@@ -355,18 +357,6 @@ export default function App() {
 					}
 				/>
 
-				{/* Protected route: Role Permissions (social worker) */}
-				<Route
-					path="/controls/permissions"
-					element={
-						<ProtectedRoute allowedRoles={["social_worker"]}>
-							<Layout>
-								<RolePermissions />
-							</Layout>
-						</ProtectedRoute>
-					}
-				/>
-
 				{/* Protected route: Document Management (social worker) */}
 				<Route
 					path="/controls/documents"
@@ -378,6 +368,22 @@ export default function App() {
 						</ProtectedRoute>
 					}
 				/>
+
+				{/* TEMP-HIDE: Role Permissions route is intentionally disabled for now. */}
+				{/* ROLLBACK: Uncomment the route block below to restore the sub-page. */}
+
+				{/*
+				<Route
+					path="/controls/permissions"
+					element={
+						<ProtectedRoute allowedRoles={["social_worker"]}>
+							<Layout>
+								<RolePermissions />
+							</Layout>
+						</ProtectedRoute>
+					}
+				/>
+				*/}
 
 				{/* Unauthorized route (when role doesn’t match) */}
 				<Route path="/unauthorized" element={<UnauthorizedPage />} />

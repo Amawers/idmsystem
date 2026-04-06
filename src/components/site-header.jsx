@@ -50,7 +50,9 @@ const pageTitles = {
 	"/controls": "Security & Audit",
 	"/controls/audit": "Audit Trail",
 	"/controls/documents": "Documents",
-	"/controls/permissions": "Role Permissions",
+	// TEMP-HIDE: Role Permissions title mapping is disabled.
+	// ROLLBACK: Uncomment to restore title when /controls/permissions is re-enabled.
+	// "/controls/permissions": "Role Permissions",
 };
 
 /** @type {Record<string, string>} */
@@ -76,7 +78,9 @@ const parentSections = {
 	// Security & Audit sub-pages
 	"/controls/audit": "Security & Audit",
 	"/controls/documents": "Security & Audit",
-	"/controls/permissions": "Security & Audit",
+	// TEMP-HIDE: Role Permissions breadcrumb mapping is disabled.
+	// ROLLBACK: Uncomment when /controls/permissions route is restored.
+	// "/controls/permissions": "Security & Audit",
 };
 
 export function SiteHeader() {
