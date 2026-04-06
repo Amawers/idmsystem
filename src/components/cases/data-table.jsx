@@ -686,7 +686,7 @@ const farColumns = (
 						<DropdownMenuItem
 							onClick={(e) => {
 								e.stopPropagation();
-								handleEditClick(row.original, "FA");
+								handleEditClick(row.original, "FAR");
 							}}
 						>
 							Edit
@@ -696,7 +696,7 @@ const farColumns = (
 						<DropdownMenuItem
 							onClick={(e) => {
 								e.stopPropagation();
-								handleDocumentsClick(row.original, "FA");
+								handleDocumentsClick(row.original, "FAR");
 							}}
 						>
 							Documents
@@ -705,7 +705,7 @@ const farColumns = (
 					<DropdownMenuItem
 						onClick={(e) => {
 							e.stopPropagation();
-							handleEnrollClick(row.original, "FA");
+							handleEnrollClick(row.original, "FAR");
 						}}
 					>
 						Enroll Program
@@ -716,7 +716,7 @@ const farColumns = (
 							variant="destructive"
 							onClick={(e) => {
 								e.stopPropagation();
-								handleDeleteClick(row.original, "FA");
+								handleDeleteClick(row.original, "FAR");
 							}}
 						>
 							Delete
