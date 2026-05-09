@@ -381,7 +381,6 @@ export default function EnrollmentTable() {
                 <SelectItem value="active">Active</SelectItem>
                 <SelectItem value="completed">Completed</SelectItem>
                 <SelectItem value="dropped">Dropped</SelectItem>
-                <SelectItem value="at_risk">At Risk</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -242,7 +242,6 @@ export default function ViewEnrollmentsDialog({ program, open, onOpenChange }) {
                   <SelectItem value="active">Active ({statistics.active})</SelectItem>
                   <SelectItem value="completed">Completed ({statistics.completed})</SelectItem>
                   <SelectItem value="dropped">Dropped ({statistics.dropped})</SelectItem>
-                  <SelectItem value="at_risk">At Risk ({statistics.atRisk})</SelectItem>
                 </SelectContent>
               </Select>
               {statusFilter !== 'all' && (

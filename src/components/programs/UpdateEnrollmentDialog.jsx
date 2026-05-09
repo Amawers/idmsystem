@@ -223,10 +223,14 @@ export default function UpdateEnrollmentDialog({ open, onOpenChange, enrollment,
                     <SelectValue placeholder="Select status" />
                   </SelectTrigger>
                   <SelectContent>
+                    {formData.status === "at_risk" && (
+                      <SelectItem value="at_risk" disabled>
+                        At Risk
+                      </SelectItem>
+                    )}
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="completed">Completed</SelectItem>
                     <SelectItem value="dropped">Dropped</SelectItem>
-                    <SelectItem value="at_risk">At Risk</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
