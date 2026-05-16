@@ -95,6 +95,49 @@ import { createAuditLog, AUDIT_ACTIONS, AUDIT_CATEGORIES } from "./auditLog";
  */
 export function validateIVACData(formData) {
 	const errors = [];
+	const toInt = (value) => {
+		const parsed = parseInt(value, 10);
+		return Number.isNaN(parsed) ? 0 : parsed;
+	};
+	const getRecordGroupTotals = (record) => {
+		const genderTotal =
+			toInt(record.genderMale) + toInt(record.genderFemale);
+		const ageTotal =
+			toInt(record.age0to4) +
+			toInt(record.age5to9) +
+			toInt(record.age10to14) +
+			toInt(record.age15to17) +
+			toInt(record.age18Plus);
+		const violenceTotal =
+			toInt(record.physicalAbuse) +
+			toInt(record.sexualAbuse) +
+			toInt(record.psychologicalAbuse) +
+			toInt(record.neglect) +
+			toInt(record.violenceOthers);
+		const perpetratorsTotal =
+			toInt(record.perpImmediateFamily) +
+			toInt(record.perpCloseRelative) +
+			toInt(record.perpAcquaintance) +
+			toInt(record.perpStranger) +
+			toInt(record.perpLocalOfficial) +
+			toInt(record.perpLawOfficer) +
+			toInt(record.perpOthers);
+		const actionsTotal =
+			toInt(record.actionLSWDO) +
+			toInt(record.actionPNP) +
+			toInt(record.actionNBI) +
+			toInt(record.actionMedical) +
+			toInt(record.actionLegal) +
+			toInt(record.actionOthers);
+
+		return {
+			gender: genderTotal,
+			age: ageTotal,
+			violence: violenceTotal,
+			perpetrators: perpetratorsTotal,
+			actions: actionsTotal,
+		};
+	};
 
 	if (!formData.incidenceOnVAC) {
 		errors.push("Missing IVAC form data");
@@ -116,6 +159,45 @@ export function validateIVACData(formData) {
 		errors.push("Records must be an array");
 	} else if (ivacData.records.length === 0) {
 		errors.push("At least one barangay record is required");
+	}
+
+	if (Array.isArray(ivacData.records)) {
+		const groupLabels = {
+			gender: "Gender",
+			age: "Age",
+			violence: "Violence",
+			perpetrators: "Perpetrators",
+			actions: "Actions",
+		};
+
+		ivacData.records.forEach((record) => {
+			const safeRecord = record || {};
+			const totals = getRecordGroupTotals(safeRecord);
+			const maxTotal = Math.max(...Object.values(totals));
+			const vacVictimsValue = toInt(safeRecord.vacVictims);
+			const mismatchedGroups = Object.entries(totals)
+				.filter(([, value]) => value !== maxTotal)
+				.map(([key]) => groupLabels[key]);
+			const mismatchLabels = [];
+
+			if (vacVictimsValue !== maxTotal) {
+				mismatchLabels.push("VAC Total");
+			}
+			mismatchedGroups.forEach((label) => {
+				if (!mismatchLabels.includes(label)) {
+					mismatchLabels.push(label);
+				}
+			});
+
+			if (mismatchLabels.length > 0) {
+				const barangayLabel = safeRecord.barangay
+					? `Barangay ${safeRecord.barangay}`
+					: "Barangay record";
+				errors.push(
+					`${barangayLabel}: category totals must all match the VAC total (${maxTotal}). Mismatched: ${mismatchLabels.join(", ")}.`,
+				);
+			}
+		});
 	}
 
 	// Validate status

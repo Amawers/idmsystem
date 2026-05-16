@@ -214,6 +214,72 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
     return totals;
   };
 
+  const toInt = (value) => {
+    const parsed = parseInt(value, 10);
+    return Number.isNaN(parsed) ? 0 : parsed;
+  };
+
+  const getRecordGroupTotals = (record) => {
+    const genderTotal = toInt(record.genderMale) + toInt(record.genderFemale);
+    const ageTotal =
+      toInt(record.age0to4) +
+      toInt(record.age5to9) +
+      toInt(record.age10to14) +
+      toInt(record.age15to17) +
+      toInt(record.age18Plus);
+    const violenceTotal =
+      toInt(record.physicalAbuse) +
+      toInt(record.sexualAbuse) +
+      toInt(record.psychologicalAbuse) +
+      toInt(record.neglect) +
+      toInt(record.violenceOthers);
+    const perpetratorsTotal =
+      toInt(record.perpImmediateFamily) +
+      toInt(record.perpCloseRelative) +
+      toInt(record.perpAcquaintance) +
+      toInt(record.perpStranger) +
+      toInt(record.perpLocalOfficial) +
+      toInt(record.perpLawOfficer) +
+      toInt(record.perpOthers);
+    const actionsTotal =
+      toInt(record.actionLSWDO) +
+      toInt(record.actionPNP) +
+      toInt(record.actionNBI) +
+      toInt(record.actionMedical) +
+      toInt(record.actionLegal) +
+      toInt(record.actionOthers);
+
+    return {
+      gender: genderTotal,
+      age: ageTotal,
+      violence: violenceTotal,
+      perpetrators: perpetratorsTotal,
+      actions: actionsTotal,
+    };
+  };
+
+  const getVacVictimSummary = (record) => {
+    const totals = getRecordGroupTotals(record);
+    const maxTotal = Math.max(...Object.values(totals));
+    const groupLabels = {
+      gender: "Gender",
+      age: "Age",
+      violence: "Violence",
+      perpetrators: "Perpetrators",
+      actions: "Actions",
+    };
+    const mismatchedGroups = Object.entries(totals)
+      .filter(([, value]) => value !== maxTotal)
+      .map(([key]) => groupLabels[key]);
+    const vacVictimsValue = toInt(record.vacVictims);
+
+    return {
+      maxTotal,
+      mismatchedGroups,
+      vacVictimsMismatch: vacVictimsValue !== maxTotal,
+    };
+  };
+
   const records = form.watch("records");
   const caseManagers = form.watch("caseManagers");
   
@@ -223,33 +289,8 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
 
   // Calculate VAC victims count for a single record
   const calculateVacVictims = (record) => {
-    const sum = 
-      parseInt(record.genderMale || 0, 10) +
-      parseInt(record.genderFemale || 0, 10) +
-      parseInt(record.age0to4 || 0, 10) +
-      parseInt(record.age5to9 || 0, 10) +
-      parseInt(record.age10to14 || 0, 10) +
-      parseInt(record.age15to17 || 0, 10) +
-      parseInt(record.age18Plus || 0, 10) +
-      parseInt(record.physicalAbuse || 0, 10) +
-      parseInt(record.sexualAbuse || 0, 10) +
-      parseInt(record.psychologicalAbuse || 0, 10) +
-      parseInt(record.neglect || 0, 10) +
-      parseInt(record.violenceOthers || 0, 10) +
-      parseInt(record.perpImmediateFamily || 0, 10) +
-      parseInt(record.perpCloseRelative || 0, 10) +
-      parseInt(record.perpAcquaintance || 0, 10) +
-      parseInt(record.perpStranger || 0, 10) +
-      parseInt(record.perpLocalOfficial || 0, 10) +
-      parseInt(record.perpLawOfficer || 0, 10) +
-      parseInt(record.perpOthers || 0, 10) +
-      parseInt(record.actionLSWDO || 0, 10) +
-      parseInt(record.actionPNP || 0, 10) +
-      parseInt(record.actionNBI || 0, 10) +
-      parseInt(record.actionMedical || 0, 10) +
-      parseInt(record.actionLegal || 0, 10) +
-      parseInt(record.actionOthers || 0, 10);
-    return sum.toString();
+    const { maxTotal } = getVacVictimSummary(record);
+    return maxTotal.toString();
   };
 
   // Handle input change for individual cell
@@ -739,15 +780,31 @@ export function IncidenceVACForm({ sectionKey, goNext, goBack, isSaving, isEditM
                 .map((record, index) => {
                   // Find the original index for handleCellChange
                   const originalIndex = records.findIndex(r => r.barangay === record.barangay);
+                  const vacSummary = getVacVictimSummary(record);
+                  const mismatchLabels = [];
+                  if (vacSummary.vacVictimsMismatch) {
+                    mismatchLabels.push("VAC Total");
+                  }
+                  vacSummary.mismatchedGroups.forEach((label) => {
+                    if (!mismatchLabels.includes(label)) {
+                      mismatchLabels.push(label);
+                    }
+                  });
+                  const hasMismatch = mismatchLabels.length > 0;
                   return (
                 <tr key={index} className="border-b border-border hover:bg-muted/30">
                   <td className="sticky left-0 z-10 border border-border p-2 font-medium bg-muted text-center shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] relative after:content-[''] after:absolute after:top-0 after:bottom-0 after:right-0 after:w-[2px] after:bg-primary">{record.barangay}</td>
                   {/* VAC Victims - Blue (Auto-calculated, Read-only) */}
                   {visibleColumns.vacVictims && (
-                    <td className="border border-border p-2 bg-blue-50/50 dark:bg-blue-950/20">
-                      <div className="h-8 flex items-center justify-center font-semibold text-blue-700 dark:text-blue-300">
+                    <td className={`border border-border p-2 ${hasMismatch ? "bg-red-50/60 dark:bg-red-950/30" : "bg-blue-50/50 dark:bg-blue-950/20"}`}>
+                      <div className={`h-8 flex items-center justify-center font-semibold ${hasMismatch ? "text-red-700 dark:text-red-300" : "text-blue-700 dark:text-blue-300"}`}>
                         {record.vacVictims}
                       </div>
+                      {hasMismatch && (
+                        <div className="text-[10px] text-red-600 dark:text-red-300 text-center">
+                          Mismatch: {mismatchLabels.join(", ")}
+                        </div>
+                      )}
                     </td>
                   )}
                   {/* Gender - Green */}
