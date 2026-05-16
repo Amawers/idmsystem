@@ -230,8 +230,8 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 				<Table>
 					<TableHeader>
 						<TableRow>
-							<TableHead>File</TableHead>
-							<TableHead>Type</TableHead>
+							<TableHead className="w-[40%]">File</TableHead>
+							<TableHead className="w-[25%]">Type</TableHead>
 							<TableHead>Size</TableHead>
 							<TableHead>Date</TableHead>
 							<TableHead className="text-right">
@@ -261,11 +261,21 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 						) : (
 							rows.map((row) => (
 								<TableRow key={row.id}>
-									<TableCell className="font-medium">
-										{row.original_filename}
+									<TableCell className="font-medium w-[40%]">
+										<div
+											className="line-clamp-1 break-all whitespace-normal"
+											title={row.original_filename || ""}
+										>
+											{row.original_filename}
+										</div>
 									</TableCell>
-									<TableCell className="text-sm text-muted-foreground">
-										{row.mime_type || "—"}
+									<TableCell className="text-sm text-muted-foreground w-[25%]">
+										<div
+											className="line-clamp-1 break-all whitespace-normal"
+											title={row.mime_type || ""}
+										>
+											{row.mime_type || "—"}
+										</div>
 									</TableCell>
 									<TableCell className="text-sm text-muted-foreground">
 										{formatBytes(row.size_bytes)}
