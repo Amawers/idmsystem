@@ -18,6 +18,107 @@ import supabase from "@/../config/supabase";
 
 const DOCUMENT_BUCKET = "documents";
 
+function isNotFoundError(error) {
+	const status = error?.statusCode ?? error?.status;
+	const message = `${error?.message || error?.error || ""}`.toLowerCase();
+	return status === 404 || status === "404" || message.includes("not found");
+}
+
+function safeDecodeURIComponent(value) {
+	if (!value) return null;
+	try {
+		return decodeURIComponent(value);
+	} catch {
+		return null;
+	}
+}
+
+function extractStoragePathFromUrl(value) {
+	try {
+		const url = new URL(value);
+		const pathname = url.pathname || "";
+		const marker = "/storage/v1/object/";
+		const markerIndex = pathname.indexOf(marker);
+		if (markerIndex !== -1) {
+			let rest = pathname.slice(markerIndex + marker.length);
+			rest = rest.replace(/^public\//, "").replace(/^sign\//, "");
+			rest = rest.replace(/^\/+/, "");
+			if (rest.startsWith(`${DOCUMENT_BUCKET}/`)) {
+				rest = rest.slice(DOCUMENT_BUCKET.length + 1);
+			}
+			return safeDecodeURIComponent(rest) || rest || null;
+		}
+
+		let path = pathname.replace(/^\/+/, "");
+		if (path.startsWith(`${DOCUMENT_BUCKET}/`)) {
+			path = path.slice(DOCUMENT_BUCKET.length + 1);
+		}
+		return safeDecodeURIComponent(path) || path || null;
+	} catch {
+		return null;
+	}
+}
+
+function buildStoragePathCandidates(storagePath) {
+	if (!storagePath) return [];
+	const raw = `${storagePath}`.trim();
+	if (!raw) return [];
+	const candidates = new Set();
+	const add = (value) => {
+		if (value) candidates.add(value);
+	};
+
+	add(raw);
+
+	const withoutQuery = raw.split("?")[0];
+	add(withoutQuery);
+
+	const withoutLeading = withoutQuery.replace(/^\/+/, "");
+	add(withoutLeading);
+
+	if (withoutLeading.startsWith(`${DOCUMENT_BUCKET}/`)) {
+		add(withoutLeading.slice(DOCUMENT_BUCKET.length + 1));
+	}
+
+	if (withoutQuery.includes("/storage/v1/object/")) {
+		const pathPart = withoutQuery.split("/storage/v1/object/")[1];
+		if (pathPart) {
+			let rest = pathPart.replace(/^public\//, "").replace(/^sign\//, "");
+			rest = rest.replace(/^\/+/, "");
+			if (rest.startsWith(`${DOCUMENT_BUCKET}/`)) {
+				rest = rest.slice(DOCUMENT_BUCKET.length + 1);
+			}
+			add(rest);
+			add(safeDecodeURIComponent(rest));
+		}
+	}
+
+	const fromUrl = extractStoragePathFromUrl(withoutQuery);
+	add(fromUrl);
+	add(safeDecodeURIComponent(withoutQuery));
+	if (withoutLeading !== withoutQuery) {
+		add(safeDecodeURIComponent(withoutLeading));
+	}
+
+	return Array.from(candidates);
+}
+
+function pickPublicPath(candidates) {
+	for (const candidate of candidates) {
+		if (!candidate) continue;
+		if (candidate.startsWith("http://") || candidate.startsWith("https://")) {
+			continue;
+		}
+		if (candidate.includes("/storage/v1/object/")) continue;
+		let path = candidate.replace(/^\/+/, "");
+		if (path.startsWith(`${DOCUMENT_BUCKET}/`)) {
+			path = path.slice(DOCUMENT_BUCKET.length + 1);
+		}
+		return path;
+	}
+	return null;
+}
+
 /**
  * @typedef {"case"|"program"|"operation"} DocumentRelatedType
  */
@@ -192,12 +293,35 @@ export async function createDocumentSignedUrl({
 	storagePath,
 	expiresInSeconds = 300,
 }) {
-	const { data, error } = await supabase.storage
-		.from(DOCUMENT_BUCKET)
-		.createSignedUrl(storagePath, expiresInSeconds);
+	const candidates = buildStoragePathCandidates(storagePath);
+	if (candidates.length === 0) {
+		throw new Error("Missing storage path");
+	}
 
-	if (error) throw error;
-	return data?.signedUrl || null;
+	let lastError = null;
+	for (const candidate of candidates) {
+		const { data, error } = await supabase.storage
+			.from(DOCUMENT_BUCKET)
+			.createSignedUrl(candidate, expiresInSeconds);
+
+		if (error) {
+			lastError = error;
+			if (isNotFoundError(error)) continue;
+			throw error;
+		}
+
+		if (data?.signedUrl) return data.signedUrl;
+	}
+
+	const publicPath = pickPublicPath(candidates);
+	if (publicPath) {
+		const { data } = supabase.storage
+			.from(DOCUMENT_BUCKET)
+			.getPublicUrl(publicPath);
+		if (data?.publicUrl) return data.publicUrl;
+	}
+
+	throw lastError || new Error("Failed to create download link");
 }
 
 /**

@@ -64,6 +64,23 @@ function formatBytes(bytes) {
 	return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
+async function downloadFromUrl(url, filename) {
+	const response = await fetch(url);
+	if (!response.ok) {
+		throw new Error(`Download failed (${response.status})`);
+	}
+	const blob = await response.blob();
+	const objectUrl = URL.createObjectURL(blob);
+	const link = document.createElement("a");
+	link.href = objectUrl;
+	link.download = filename || "document";
+	link.style.display = "none";
+	document.body.appendChild(link);
+	link.click();
+	link.remove();
+	setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+}
+
 /**
  * @param {Object} props
  * @param {'case'|'program'|'operation'} props.relatedType
@@ -149,7 +166,10 @@ export default function DocumentManager({ relatedType, relatedId, open }) {
 				expiresInSeconds: 300,
 			});
 			if (!signedUrl) throw new Error("Failed to create download link");
-			window.open(signedUrl, "_blank", "noopener,noreferrer");
+			await downloadFromUrl(
+				signedUrl,
+				row.original_filename || "document",
+			);
 		} catch (err) {
 			console.error("Download failed:", err);
 			toast.error("Download failed", {
